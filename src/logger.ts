@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 export type LogLevel = 'info' | 'warn' | 'error';
 
 const LOG_PATH = join(process.cwd(), 'logs', 'pipeline.log');
+const ESCAPED_QUOTE = String.raw`\"`;
 let logDirReady = false;
 
 const ensureLogDir = (): void => {
@@ -31,7 +32,7 @@ function escape(v: unknown): string {
       s = '[Unserializable]';
     }
   }
-  return s.includes(' ') || s.includes('"') ? `"${s.replaceAll('"', String.raw`\"`)}"` : s;
+  return s.includes(' ') || s.includes('"') ? `"${s.replaceAll('"', ESCAPED_QUOTE)}"` : s;
 }
 
 export function log(level: LogLevel, event: string, fields: Record<string, unknown> = {}): void {
