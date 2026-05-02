@@ -72,4 +72,4 @@ The translation engine and downloader require no changes.
 
 ## License
 
-[Polyform Shield 1.0.0](LICENSE) — free to use, not free to compete.
+[Polyform Shield 1.0.0](LICENSE)
