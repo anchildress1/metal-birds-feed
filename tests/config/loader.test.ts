@@ -4,6 +4,7 @@ import { writeFileSync, unlinkSync } from 'node:fs';
 import { loadSourceConfig } from '../../src/config/loader.js';
 
 const FAA_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'faa.yaml');
+const TC_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'tc-ca.yaml');
 
 describe('loadSourceConfig', () => {
   it('loads valid FAA config', () => {
@@ -36,6 +37,57 @@ describe('loadSourceConfig', () => {
     writeFileSync(tmp, 'id: test\nlabel: test\n');
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('loads valid TC-CA config with compound transforms and explicit columns', () => {
+    const config = loadSourceConfig(TC_CONFIG);
+    expect(config.id).toBe('tc-ca');
+    expect(config.country).toBe('CA');
+    expect(config.encoding).toBe('latin1');
+    expect(config.columns?.carscurr).toHaveLength(47);
+    expect(config.columns?.carsownr).toHaveLength(20);
+    expect(config.mapping['airframe_type']).toMatchObject({
+      compound_transform: 'tc_airframe',
+      fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES'],
+    });
+  });
+
+  it('rejects compound_transform without fields', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_compound_no_fields.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { compound_transform: tc_airframe }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/compound_transform requires fields/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects fields without compound_transform', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_fields_no_compound.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { fields: ['A', 'B'] }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/compound_transform requires fields/i);
     } finally {
       unlinkSync(tmp);
     }

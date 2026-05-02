@@ -1,0 +1,232 @@
+id: tc-ca
+label: Transport Canada Civil Aircraft Register
+country: CA
+encoding: latin1
+trim_all: true
+
+download:
+  url: https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip
+  format: zip
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    carscurr: carscurr.txt
+    carsownr: carsownr.txt
+
+primary: carscurr
+delimiter: ','
+
+# TC files have no header row; supply column names explicitly.
+columns:
+  carscurr:
+    - MARK
+    - REGISTRATION_SUB_TYPE_E
+    - REGISTRATION_SUB_TYPE_F
+    - COMMON_NAME
+    - MODEL_NAME
+    - MANUFACTURERS_SERIAL_NUMBER
+    - MANUFACTURER_SERIAL_COMPRESSED
+    - ID_PLATE_MANUFACTURERS_NAME
+    - BASIS_FOR_REGISTRATION
+    - BASIS_FOR_REGISTRATION_F
+    - AIRCRAFT_CATEGORY_E
+    - AIRCRAFT_CATEGORY_F
+    - DATE_OF_IMPORT
+    - ENGINE_MANUF
+    - POWERGLIDER_FLAG
+    - ENGINE_CATEGORY_E
+    - ENGINE_CATEGORY_F
+    - NUMBER_OF_ENGINES
+    - NUMBER_OF_SEATS
+    - AIR_WEIGHT_KILOS
+    - SALE_REPORTED
+    - ISSUE_DATE
+    - EFFECTIVE_DATE
+    - INEFFECTIVE_DATE
+    - REGISTERED_PURPOSE_E
+    - REGISTERED_PURPOSE_F
+    - FLIGHT_AUTHORITY_E
+    - FLIGHT_AUTHORITY_F
+    - MANUFACTURE_OR_ASSEMBLY
+    - COUNTRY_MANUFACTURE_ASS_E
+    - COUNTRY_MANUFACTURE_ASS_F
+    - DATE_MANUFACTURE_ASSEMBLY
+    - BASE_OF_OPERATIONS_CTRY_E
+    - BASE_OF_OPERATIONS_CTRY_F
+    - BASE_PROVINCE_OR_STATE_E
+    - BASE_PROVINCE_OR_STATE_F
+    - CITY_AIRPORT
+    - TYPE_CERTIFICATE_NUMBER
+    - REGISTRATION_AUTH_STATUS_E
+    - REGISTRATION_AUTH_STATUS_F
+    - MULTIPLE_OWNER_FLAG
+    - MODIFIED_DATE
+    - MODE_S_TRANSPONDER_BINARY
+    - PHYSICAL_FILE_REGION_E
+    - PHYSICAL_FILE_REGION_F
+    - EX_MILITARY_MARK
+    - TRIMMED_MARK
+  # PII columns (STREET_NAME, STREET_NAME2, CITY, POSTAL_CODE, CARE_OF) are
+  # listed below for parser completeness. They are intentionally NOT mapped
+  # below — TC owner addresses are dropped per AGENTS.md PII policy.
+  carsownr:
+    - MARK_LINK
+    - FULL_NAME
+    - TRADE_NAME
+    - STREET_NAME
+    - STREET_NAME2
+    - CITY
+    - PROVINCE_OR_STATE_E
+    - PROVINCE_OR_STATE_F
+    - POSTAL_CODE
+    - COUNTRY_E
+    - COUNTRY_F
+    - TYPE_OF_OWNER_E
+    - TYPE_OF_OWNER_F
+    - ACTIVE_FLAG
+    - CARE_OF
+    - REGION_E
+    - REGION_F
+    - OWNER_NAME_OLD_FORMAT
+    - MAIL_RECIPIENT
+    - TRIMMED_MARK
+
+joins:
+  - name: ownr
+    file: carsownr
+    on: TRIMMED_MARK
+    key: TRIMMED_MARK
+
+source_id: TRIMMED_MARK
+registration: TRIMMED_MARK
+
+mapping:
+  registration:
+    field: TRIMMED_MARK
+    transform: tc_full_registration
+    default: ''
+
+  icao_hex:
+    field: MODE_S_TRANSPONDER_BINARY
+    transform: binary_to_hex_or_null
+
+  icao_type_code:
+    constant: ~
+
+  status:
+    field: REGISTRATION_AUTH_STATUS_E
+    transform: trim_or_null
+    lookup:
+      Registered: valid
+      'Registration Cancelled': cancelled
+      'Registration Expired': expired
+    default: other
+
+  country:
+    constant: CA
+
+  manufacturer:
+    field: COMMON_NAME
+    transform: trim_or_null
+
+  model:
+    field: MODEL_NAME
+    transform: trim_or_null
+
+  serial_number:
+    field: MANUFACTURERS_SERIAL_NUMBER
+    transform: trim_or_null
+
+  # TC publishes DATE_MANUFACTURE_ASSEMBLY as a full YYYY/MM/DD; v2 does not
+  # extract the year. Field-coverage gap documented in DATA_LICENSES.md.
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES']
+    compound_transform: tc_airframe
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    field: FLIGHT_AUTHORITY_E
+    transform: trim_or_null
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    field: ENGINE_MANUF
+    transform: trim_or_null
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    field: ENGINE_CATEGORY_E
+    transform: trim_or_null
+    lookup:
+      Piston: reciprocating
+      'Turbo Shaft': turbo-shaft
+      'Turbo Prop': turbo-prop
+      'Turbo Fan': turbo-fan
+      'Turbo Jet': turbo-jet
+      Electric: electric
+      Other: other
+    default: ~
+
+  engine.count:
+    field: NUMBER_OF_ENGINES
+    transform: int_or_null
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: 'ownr.FULL_NAME'
+    transform: trim_or_null
+
+  owner.kind:
+    field: 'ownr.TYPE_OF_OWNER_E'
+    transform: trim_or_null
+    lookup:
+      Individual: individual
+      Entity: other
+    default: other
+
+  owner.state:
+    field: 'ownr.PROVINCE_OR_STATE_E'
+    transform: trim_or_null
+
+  owner.country:
+    field: 'ownr.COUNTRY_E'
+    transform: trim_or_null
+
+  certification_date:
+    field: ISSUE_DATE
+    transform: date_yyyy_slash_or_null
+
+  airworthiness_date:
+    field: EFFECTIVE_DATE
+    transform: date_yyyy_slash_or_null
+
+  expiration_date:
+    field: INEFFECTIVE_DATE
+    transform: date_yyyy_slash_or_null
+
+  last_action_date:
+    field: MODIFIED_DATE
+    transform: date_yyyy_slash_or_null
+
+  cruise_speed_ktas:
+    constant: ~

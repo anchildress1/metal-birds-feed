@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { SourceConfig, FieldMapping } from './types/config.js';
-import { applyScalar, applyArray } from './transforms.js';
+import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import { parseCSV, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
@@ -9,6 +9,7 @@ export interface EngineStats {
   total: number;
   ok: number;
   failed: number;
+  skipped: number;
 }
 
 export async function translate(
@@ -21,10 +22,12 @@ export async function translate(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
-  const rows = await parseCSV(primaryBuf, config.encoding, config.delimiter);
+  const primaryColumns = config.columns?.[config.primary];
+  const rows = await parseCSV(primaryBuf, config.encoding, config.delimiter, primaryColumns);
 
   const records = new Map<string, Aircraft>();
   let failed = 0;
+  let skipped = 0;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -37,7 +40,7 @@ export async function translate(
     );
     if (!rawId) {
       log('warn', 'translate_skip', { source: config.id, row: i + 2, reason: 'missing source_id' });
-      failed++;
+      skipped++;
       continue;
     }
 
@@ -66,7 +69,7 @@ export async function translate(
     }
   }
 
-  const stats: EngineStats = { total: rows.length, ok: records.size, failed };
+  const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }
@@ -79,7 +82,8 @@ async function buildJoinMaps(
     config.joins.map(async (join) => {
       const buf = files.get(join.file);
       if (!buf) throw new Error(`Join file "${join.file}" not found`);
-      const rows = await parseCSV(buf, config.encoding, config.delimiter);
+      const cols = config.columns?.[join.file];
+      const rows = await parseCSV(buf, config.encoding, config.delimiter, cols);
       const index = new Map<string, Row>();
       for (const row of rows) {
         const key = row[join.key]?.trim() ?? '';
@@ -116,8 +120,26 @@ function resolveLookup(
   throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
 }
 
+function resolveCompound(row: Row, mapping: FieldMapping, trimAll: boolean): string | null {
+  const fields = mapping.fields ?? [];
+  const transform = mapping.compound_transform;
+  if (!transform) return mapping.default ?? null;
+  const values = fields.map((f) => {
+    const raw = row[f] ?? '';
+    return trimAll ? raw.trim() : raw;
+  });
+  const transformed = applyCompound(transform, values);
+  if (transformed === null) return mapping.default ?? null;
+  if (mapping.lookup) {
+    return resolveLookup(transformed, mapping.lookup, mapping.default, fields.join(','));
+  }
+  return transformed;
+}
+
 function resolveScalar(row: Row, mapping: FieldMapping, trimAll: boolean): string | null {
   if (mapping.constant !== undefined) return mapping.constant;
+
+  if (mapping.compound_transform) return resolveCompound(row, mapping, trimAll);
 
   const field = mapping.field;
   if (!field) return mapping.default ?? null;

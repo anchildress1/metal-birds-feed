@@ -17,11 +17,24 @@ registry source used by metal-birds-feed. Update this file whenever a new source
 
 ## Transport Canada (TC-CA) — v2
 
-- **Source URL:** https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimp.aspx
-- **License:** Open Government Licence — Canada (OGL-Canada 2.0)
-- **Attribution required:** Yes. Per OGL-Canada: reproduce the licence notice and
-  acknowledge the source as Government of Canada.
-- **Update cadence:** Monthly
+- **Bulk download URL:** https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip
+- **Search interface:** https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimp.aspx
+- **Bulk archive:** ZIP containing `carscurr.txt` (current marks + aircraft),
+  `carsownr.txt` (owners, joined by mark), and `carslayout.txt` (column layout).
+  ASCII (latin1), comma-separated, double-quote delimited. No header row.
+- **License:** Open Government Licence — Canada
+  (https://open.canada.ca/en/open-government-licence-canada)
+- **Attribution required:** Yes. Per OGL-Canada: include the OGL notice and
+  acknowledge the source as the Government of Canada.
+- **Update cadence:** Monthly (file `Last-Modified` typically the 1st of the month).
+- **PII dropped at ingest:** street1/street2/city/postal-code/care-of fields in
+  `carsownr.txt` are not mapped or stored. Owner records expose name, kind,
+  province (state-equivalent), and country only.
+- **Field-coverage gaps vs. canonical schema:** these stay null for TC records —
+  `category`, `build_certification`, `operating_environment`, `icao_type_code`,
+  `year_manufactured`, `cruise_speed_ktas`, `engine.model`, `engine.horsepower`,
+  `engine.thrust_lbs`. `airframe_type` is null for `Aeroplane` rows that lack
+  a usable `NUMBER_OF_ENGINES` value.
 
 ---
 

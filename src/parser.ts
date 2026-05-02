@@ -5,7 +5,8 @@ export type Row = Record<string, string>;
 export async function parseCSV(
   buf: Buffer,
   encoding: 'utf8' | 'latin1',
-  delimiter: string
+  delimiter: string,
+  columns?: string[]
 ): Promise<Row[]> {
   const text = new TextDecoder(encoding).decode(buf);
   return new Promise((resolve, reject) => {
@@ -13,7 +14,7 @@ export async function parseCSV(
       text,
       {
         delimiter,
-        columns: true,
+        columns: columns ?? true,
         skip_empty_lines: true,
         relax_column_count: true,
         relax_quotes: true,

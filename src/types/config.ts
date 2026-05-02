@@ -6,17 +6,24 @@ export type ScalarTransformName =
   | 'int_or_null'
   | 'float_or_null'
   | 'date_yyyymmdd_or_null'
+  | 'date_yyyy_slash_or_null'
   | 'mph_to_ktas_or_null'
+  | 'binary_to_hex_or_null'
   | 'faa_n_number'
-  | 'faa_cert_class';
+  | 'faa_cert_class'
+  | 'tc_full_registration';
 
 export type ArrayTransformName = 'faa_cert_ops';
 
+export type CompoundTransformName = 'tc_airframe';
+
 export interface FieldMapping {
   field?: string;
+  fields?: string[];
   constant?: string | null;
   transform?: ScalarTransformName;
   array_transform?: ArrayTransformName;
+  compound_transform?: CompoundTransformName;
   lookup?: Record<string, string>;
   default?: string | null;
 }
@@ -44,6 +51,7 @@ export interface SourceConfig {
   primary: string;
   delimiter: string;
   trim_all: boolean;
+  columns?: Record<string, string[]>;
   joins: JoinConfig[];
   source_id: string;
   registration: string;
