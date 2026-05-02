@@ -58,6 +58,9 @@ Runtime: Bun. No web framework. Runs on GitHub Actions monthly cron or `workflow
 - Prefer `const fn = () =>` over `function fn()` declarations.
 - Prefer `const` over `let`. Never `var`.
 - No type assertions (`as T`) unless TypeScript cannot narrow and there is no structural alternative.
+- Prefer `await` over `.then()`/`.catch()` promise chaining.
+- Prefer `Promise.allSettled` or `Promise.all` over sequential awaits when operations are independent.
+- Maximum cognitive complexity per function: 15.
 
 ## Test Standards
 
