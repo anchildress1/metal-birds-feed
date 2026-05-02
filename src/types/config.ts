@@ -42,6 +42,12 @@ export interface DownloadConfig {
   headers?: Record<string, string>;
 }
 
+export interface AllowedMissingSourceIdRowsConfig {
+  max: number;
+  field: string;
+  pattern: string;
+}
+
 export interface SourceConfig {
   id: string;
   label: string;
@@ -52,6 +58,7 @@ export interface SourceConfig {
   delimiter: string;
   trim_all: boolean;
   columns?: Record<string, string[]>;
+  allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
   source_id: string;
   registration: string;

@@ -24,6 +24,15 @@ const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
 const COMPOUND_TRANSFORMS = ['tc_airframe'] as const;
 
+const isValidRegex = (pattern: string): boolean => {
+  try {
+    new RegExp(pattern);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const FieldMappingSchema = z
   .object({
     field: z.string().optional(),
@@ -57,6 +66,15 @@ const SourceConfigSchema = z.object({
   delimiter: z.string().min(1),
   trim_all: z.boolean().default(false),
   columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
+  allowed_missing_source_id_rows: z
+    .object({
+      max: z.number().int().nonnegative(),
+      field: z.string().min(1),
+      pattern: z.string().min(1).refine(isValidRegex, {
+        message: 'pattern must be a valid regular expression',
+      }),
+    })
+    .optional(),
   joins: z
     .array(
       z.object({

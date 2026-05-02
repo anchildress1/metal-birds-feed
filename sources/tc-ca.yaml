@@ -91,6 +91,13 @@ columns:
     - MAIL_RECIPIENT
     - TRIMMED_MARK
 
+# TC appends an Oracle-style footer row ("N rows selected.") to the headerless
+# export. Allow only that bounded footer to miss TRIMMED_MARK.
+allowed_missing_source_id_rows:
+  max: 1
+  field: MARK
+  pattern: '^\d+ rows selected\.$'
+
 joins:
   - name: ownr
     file: carsownr

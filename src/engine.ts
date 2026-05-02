@@ -12,11 +12,18 @@ export interface EngineStats {
   skipped: number;
 }
 
+interface MissingSourceIdPolicy {
+  max: number;
+  field: string;
+  pattern: RegExp;
+}
+
 export async function translate(
   config: SourceConfig,
   files: Map<string, Buffer>
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   const joinMaps = await buildJoinMaps(config, files);
+  const missingSourceIdPolicy = buildMissingSourceIdPolicy(config);
 
   const primaryBuf = files.get(config.primary);
   if (!primaryBuf)
@@ -39,8 +46,21 @@ export async function translate(
       config.trim_all
     );
     if (!rawId) {
-      log('warn', 'translate_skip', { source: config.id, row: i + 2, reason: 'missing source_id' });
-      skipped++;
+      if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
+        log('warn', 'translate_skip', {
+          source: config.id,
+          row: i + 2,
+          reason: 'allowed missing source_id',
+        });
+        skipped++;
+      } else {
+        log('error', 'translate_invalid', {
+          source: config.id,
+          row: i + 2,
+          reason: 'missing source_id',
+        });
+        failed++;
+      }
       continue;
     }
 
@@ -93,6 +113,26 @@ async function buildJoinMaps(
     })
   );
   return new Map(entries);
+}
+
+function buildMissingSourceIdPolicy(config: SourceConfig): MissingSourceIdPolicy | null {
+  const policy = config.allowed_missing_source_id_rows;
+  if (!policy) return null;
+  return {
+    max: policy.max,
+    field: policy.field,
+    pattern: new RegExp(policy.pattern),
+  };
+}
+
+function isAllowedMissingSourceIdRow(
+  row: Row,
+  policy: MissingSourceIdPolicy | null,
+  skipped: number
+): boolean {
+  if (!policy || skipped >= policy.max) return false;
+  const value = row[policy.field]?.trim() ?? '';
+  return policy.pattern.test(value);
 }
 
 function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<string, Row>>): Row {

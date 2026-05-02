@@ -393,7 +393,7 @@ describe('engine — negative and edge cases', () => {
     expect(r.get('00001001')?.status).toBe('other');
   });
 
-  it('skips rows with missing source_id', async () => {
+  it('fails rows with missing source_id unless the source config allows them', async () => {
     const config = loadSourceConfig(CONFIG_PATH);
     const masterWithBlankId = Buffer.from(
       readFileSync(resolve(FIXTURES, 'input', 'MASTER.txt'), 'latin1').replace(
@@ -408,9 +408,34 @@ describe('engine — negative and edge cases', () => {
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
     const { stats } = await translate(config, files);
-    expect(stats.skipped).toBe(1);
-    expect(stats.failed).toBe(0);
+    expect(stats.skipped).toBe(0);
+    expect(stats.failed).toBe(1);
     expect(records.size).toBe(10); // original records unaffected
+  });
+
+  it('fails missing source_id rows that do not match the configured skip pattern', async () => {
+    const config = loadSourceConfig(TC_CONFIG_PATH);
+    const text = new TextDecoder('latin1').decode(tcFixtureBuffer('carscurr.txt'));
+    const munged = text.replace(/,"AAC"$/m, ',""');
+    const files = new Map([
+      ['carscurr', Buffer.from(munged, 'latin1')],
+      ['carsownr', tcFixtureBuffer('carsownr.txt')],
+    ]);
+    const { stats } = await translate(config, files);
+    expect(stats.skipped).toBe(1);
+    expect(stats.failed).toBe(1);
+  });
+
+  it('fails missing source_id rows that exceed the configured skip max', async () => {
+    const config = loadSourceConfig(TC_CONFIG_PATH);
+    const text = new TextDecoder('latin1').decode(tcFixtureBuffer('carscurr.txt'));
+    const files = new Map([
+      ['carscurr', Buffer.from(`${text}11 rows selected.\n`, 'latin1')],
+      ['carsownr', tcFixtureBuffer('carsownr.txt')],
+    ]);
+    const { stats } = await translate(config, files);
+    expect(stats.skipped).toBe(1);
+    expect(stats.failed).toBe(1);
   });
 
   it('records schema validation failure (non-integer year_manufactured)', async () => {

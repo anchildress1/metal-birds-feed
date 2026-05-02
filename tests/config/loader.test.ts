@@ -49,6 +49,11 @@ describe('loadSourceConfig', () => {
     expect(config.encoding).toBe('latin1');
     expect(config.columns?.carscurr).toHaveLength(47);
     expect(config.columns?.carsownr).toHaveLength(20);
+    expect(config.allowed_missing_source_id_rows).toEqual({
+      max: 1,
+      field: 'MARK',
+      pattern: '^\\d+ rows selected\\.$',
+    });
     expect(config.mapping['airframe_type']).toMatchObject({
       compound_transform: 'tc_airframe',
       fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES'],
@@ -88,6 +93,19 @@ describe('loadSourceConfig', () => {
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/compound_transform requires fields/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects invalid allowed missing source_id row regex', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_bad_regex.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_missing_source_id_rows:\n  max: 1\n  field: FOOTER\n  pattern: '['\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/valid regular expression/i);
     } finally {
       unlinkSync(tmp);
     }
