@@ -24,12 +24,12 @@ lookups. Consumed by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.p
 
 ## R2 Key Structure
 
-| Path | Contents |
-|---|---|
-| `aircraft/by-id/<source>/<id>.json` | Canonical aircraft record |
-| `aircraft/by-icao-hex/<hex>.json` | `{"refs": ["source:id", ...]}` |
-| `aircraft/by-registration/<reg>.json` | `{"refs": ["source:id", ...]}` |
-| `aircraft/_manifest/<source>.json` | Content-hash manifest for diff-write |
+| Path                                  | Contents                             |
+| ------------------------------------- | ------------------------------------ |
+| `aircraft/by-id/<source>/<id>.json`   | Canonical aircraft record            |
+| `aircraft/by-icao-hex/<hex>.json`     | `{"refs": ["source:id", ...]}`       |
+| `aircraft/by-registration/<reg>.json` | `{"refs": ["source:id", ...]}`       |
+| `aircraft/_manifest/<source>.json`    | Content-hash manifest for diff-write |
 
 ## Setup
 
@@ -40,27 +40,27 @@ make install
 
 ## Available Commands
 
-| Command | Description |
-|---|---|
-| `make install` | Install dependencies and git hooks |
-| `make format` | Format code with Prettier |
+| Command             | Description                                    |
+| ------------------- | ---------------------------------------------- |
+| `make install`      | Install dependencies and git hooks             |
+| `make format`       | Format code with Prettier                      |
 | `make format-check` | Check formatting (non-destructive, used in CI) |
-| `make lint` | Run ESLint |
-| `make typecheck` | TypeScript type check |
-| `make test` | Run unit tests with coverage |
-| `make build` | Compile TypeScript to `dist/` |
-| `make secret-scan` | Scan for accidentally committed secrets |
-| `make clean` | Remove build artifacts |
+| `make lint`         | Run ESLint                                     |
+| `make typecheck`    | TypeScript type check                          |
+| `make test`         | Run unit tests with coverage                   |
+| `make build`        | Compile TypeScript to `dist/`                  |
+| `make secret-scan`  | Scan for accidentally committed secrets        |
+| `make clean`        | Remove build artifacts                         |
 
 ## Required Secrets (GitHub Actions)
 
-| Secret | Purpose |
-|---|---|
-| `MBF_R2_ACCOUNT_ID` | Cloudflare account ID |
-| `MBF_R2_ACCESS_KEY_ID` | R2 S3-compatible access key |
+| Secret                     | Purpose                     |
+| -------------------------- | --------------------------- |
+| `MBF_R2_ACCOUNT_ID`        | Cloudflare account ID       |
+| `MBF_R2_ACCESS_KEY_ID`     | R2 S3-compatible access key |
 | `MBF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
-| `MBF_R2_BUCKET_NAME` | Target R2 bucket name |
-| `SONAR_TOKEN` | SonarCloud analysis token |
+| `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
+| `SONAR_TOKEN`              | SonarCloud analysis token   |
 
 ## Adding a New Registry Source
 

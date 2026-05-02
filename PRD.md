@@ -17,10 +17,10 @@
 
 ## Goals
 
-1. **FAA registry, fully translated, in R2.** Every field FAA exposes in MASTER + ACFTREF + ENGINE, normalized into the canonical schema. ~300k US-registered aircraft queryable by registration ID or ICAO hex. *(v1)*
-2. **Transport Canada registry, same shape.** ~37k Canadian aircraft, same canonical schema, no consumer-side code changes. Proves the engine generalizes — the second source is a config file, not a code change. *(v2)*
-3. **UK CAA registry.** Single national registry, G-prefix, ~20k aircraft. Structurally similar to FAA/Canada (clean bulk download), but tests our engine against a third independent schema dialect. *(v3)*
-4. **Georgia (country) registry, GCAA.** 4L prefix, small fleet (~hundreds of aircraft). Sentimental priority — operator's site lives there. First source where we may not have a clean bulk download; doubles as the proving ground for the long tail of registries that publish data inconveniently. *(v4)*
+1. **FAA registry, fully translated, in R2.** Every field FAA exposes in MASTER + ACFTREF + ENGINE, normalized into the canonical schema. ~300k US-registered aircraft queryable by registration ID or ICAO hex. _(v1)_
+2. **Transport Canada registry, same shape.** ~37k Canadian aircraft, same canonical schema, no consumer-side code changes. Proves the engine generalizes — the second source is a config file, not a code change. _(v2)_
+3. **UK CAA registry.** Single national registry, G-prefix, ~20k aircraft. Structurally similar to FAA/Canada (clean bulk download), but tests our engine against a third independent schema dialect. _(v3)_
+4. **Georgia (country) registry, GCAA.** 4L prefix, small fleet (~hundreds of aircraft). Sentimental priority — operator's site lives there. First source where we may not have a clean bulk download; doubles as the proving ground for the long tail of registries that publish data inconveniently. _(v4)_
 
 EU member-state registries (Germany LBA, France DGAC, Italy ENAC, etc.) are explicitly **post-v4 / future**, not part of the top goals. EASA does not maintain an aircraft registry, so there is no single "EU" source — only 27 national ones, added incrementally if/when there is reason to.
 
@@ -43,16 +43,19 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 ## User Stories
 
 **Consumer: `metal-birds-watch` runtime**
+
 - As the metal-birds-watch backend, I want to look up an aircraft by its ICAO hex code so that I can enrich a live ADS-B blip with manufacturer, model, owner, and airframe type.
 - As the metal-birds-watch backend, I want to look up an aircraft by its registration (N-number, C-prefix, G-prefix) so that I can resolve user-entered tail numbers without already knowing the hex.
 - As the metal-birds-watch backend, I want a stable JSON shape across all source countries so that I do not branch enrichment logic per registry.
 
 **Operator: Ashley**
+
 - As the operator, I want to add a new national registry by writing a config file (no engine changes) so that growing geographic coverage is bounded effort.
 - As the operator, I want monthly refreshes to run unattended so that I do not have to babysit the pipeline.
 - As the operator, I want clear logs when a source row fails to translate so that I can fix the mapping config and re-run.
 
 **Future: forks / contributors**
+
 - As a forker building a different consumer (a different flight tracker, a research tool), I want to read R2 directly without going through metal-birds-watch so that the feed is reusable.
 - As a contributor adding a new country, I want a documented mapping-config schema and a test fixture pattern so that I can submit a PR without reverse-engineering the engine.
 
@@ -67,6 +70,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 **R0.2 FAA bulk downloader.** Pulls the monthly Aircraft Registry ZIP from `https://registry.faa.gov`, extracts MASTER.txt + ACFTREF.txt + ENGINE.txt. Idempotent — re-running with the same dump produces the same R2 state.
 
 **R0.3 FAA mapping config.** Declarative YAML (`sources/faa.yaml`) that maps FAA columns to canonical fields, including:
+
 - Field renames
 - Code → enum lookups (TYPE REGISTRANT 1–9 → `owner.kind`; STATUS CODE → `status`; TYPE AIRCRAFT → `airframe_type`; TYPE ENGINE → `engine.type`; AC-CAT → `category`; BUILD-CERT-IND → `build_certification`)
 - Unit conversions (mph → knots for cruise speed)
@@ -77,6 +81,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 **R0.4 Translation engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
 
 **R0.5 R2 writer.** Writes:
+
 - `aircraft/by-id/faa/<UNIQUE_ID>.json` — canonical record
 - `aircraft/by-icao-hex/<HEX>.json` — `{"refs": ["faa:<UNIQUE_ID>", ...]}` lookup
 - `aircraft/by-registration/<REG>.json` — `{"refs": ["faa:<UNIQUE_ID>", ...]}` lookup
@@ -102,6 +107,7 @@ Implementation: list current `aircraft/by-id/<source>/` objects, fetch each (or 
 This is the deliberate trade: operator's costs stay $0 regardless of external interest, and anyone who needs unthrottled access has a self-serve path that doesn't involve operator infrastructure.
 
 **Acceptance criteria for FAA milestone:**
+
 - Given a fresh R2 bucket and the latest FAA monthly dump
 - When the GHA refresh workflow runs to completion
 - Then `aircraft/by-id/faa/*.json` count is within 1% of the FAA MASTER row count (allowing for parse failures, which are logged)
@@ -190,6 +196,7 @@ R2 storage cost. The whole point is that this fits in the free tier. If FAA + TC
 No hard external deadlines. This is a personal project gating a personal site (`metalbirdswatch.pilotronica.com`). Sanity-preservation is an explicit constraint.
 
 Suggested phasing:
+
 - **v1 — FAA only:** target completion when FAA is end-to-end working and `metal-birds-watch` can read from R2 via R2 binding. No deadline.
 - **v2 — Transport Canada + public read API:** delta from v1 is small (one config file, one downloader, fixtures, one Workers endpoint). Start when v1 has run cleanly through at least one monthly refresh.
 - **v3 — UK CAA:** start when v2 is stable. Should be straightforward — clean bulk download, English schema, similar shape to FAA/Canada.
@@ -197,6 +204,7 @@ Suggested phasing:
 - **Future** — EU member states, photo-URL hook, schema migration tooling, NTSB sibling project. No commitment, added when motivated.
 
 Dependencies:
+
 - ICAO type-code lookup decision (Open Questions) blocks complete FAA enrichment but not v1 ship.
 - R3.1 (Georgia data acquisition research) gates all of v4 but is independent of v1/v2/v3.
 
