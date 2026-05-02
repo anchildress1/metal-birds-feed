@@ -8,3 +8,5 @@ coverage/
 .secrets.baseline.tmp
 *.log
 logs/
+.DS_Store
+TTD.md

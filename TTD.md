@@ -1,5 +1,0 @@
-- [ ] Add `STREAM_THRESHOLD_BYTES = 256 * 1024 * 1024` constant to `src/downloader.ts` (export for testability)
-- [ ] Add `extractZipStream()` to `src/downloader.ts` using `unzipper.Parse` pipe
-- [ ] Add dispatch logic in `download()` — stream when `Content-Length` ≥ threshold or absent, buffer otherwise
-- [ ] Log download mode selection (`buffer` vs `stream`) with content length
-- [ ] Add stream path tests to `tests/downloader.test.ts` (below threshold, at threshold, absent `Content-Length`, unwanted entries autodrained, missing entry throws)
