@@ -51,20 +51,18 @@ async function main(): Promise<void> {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
   const sources = sourceEnv ? [sourceEnv] : ['faa'];
 
-  const errors: string[] = [];
-  for (const source of sources) {
-    try {
-      await run(source);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log('error', 'pipeline_failed', { source, msg });
-      errors.push(source);
+  const results = await Promise.allSettled(sources.map((source) => run(source)));
+
+  let anyFailed = false;
+  for (const [i, result] of results.entries()) {
+    if (result.status === 'rejected') {
+      const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      log('error', 'pipeline_failed', { source: sources[i], msg });
+      anyFailed = true;
     }
   }
 
-  if (errors.length > 0) {
-    process.exit(1);
-  }
+  if (anyFailed) process.exit(1);
 }
 
 main().catch((err) => {

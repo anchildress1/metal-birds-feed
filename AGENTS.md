@@ -59,6 +59,7 @@ Runtime: Bun. No web framework. Runs on GitHub Actions monthly cron or `workflow
 - Prefer `const` over `let`. Never `var`.
 - No type assertions (`as T`) unless TypeScript cannot narrow and there is no structural alternative.
 - Prefer `await` over `.then()`/`.catch()` promise chaining.
+- Never use `await` inside a `for`/`while` loop. Use `Promise.all` or `Promise.allSettled` with `.map()` instead.
 - Prefer `Promise.allSettled` or `Promise.all` over sequential awaits when operations are independent.
 - Maximum cognitive complexity per function: 15.
 

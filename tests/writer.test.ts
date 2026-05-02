@@ -271,18 +271,21 @@ describe('R2DiffWriter — live mode', () => {
     const r1 = makeAircraft('id001', 'N12345', 'a4e294');
     const records = new Map([['id001', r1]]);
 
-    mockSend
-      .mockResolvedValueOnce(
-        manifestResponse({
-          id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
-        })
-      )
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce(refsResponse(['tc:foreign-id', 'faa:old-id']))
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce(refsResponse(['caa:foreign-reg', 'faa:old-id']))
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({});
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get') {
+        if (cmd.a.Key === 'aircraft/_manifest/faa.json')
+          return Promise.resolve(
+            manifestResponse({
+              id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
+            })
+          );
+        if (cmd.a.Key === 'aircraft/by-icao-hex/a4e294.json')
+          return Promise.resolve(refsResponse(['tc:foreign-id', 'faa:old-id']));
+        if (cmd.a.Key === 'aircraft/by-registration/N12345.json')
+          return Promise.resolve(refsResponse(['caa:foreign-reg', 'faa:old-id']));
+      }
+      return Promise.resolve({});
+    });
 
     const writer = new R2DiffWriter(R2_CONFIG, false);
     await writer.write(records, 'faa');

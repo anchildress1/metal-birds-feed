@@ -75,19 +75,20 @@ async function buildJoinMaps(
   config: SourceConfig,
   files: Map<string, Buffer>
 ): Promise<Map<string, Map<string, Row>>> {
-  const maps = new Map<string, Map<string, Row>>();
-  for (const join of config.joins) {
-    const buf = files.get(join.file);
-    if (!buf) throw new Error(`Join file "${join.file}" not found`);
-    const rows = await parseCSV(buf, config.encoding, config.delimiter);
-    const index = new Map<string, Row>();
-    for (const row of rows) {
-      const key = row[join.key]?.trim() ?? '';
-      if (key) index.set(key, row);
-    }
-    maps.set(join.name, index);
-  }
-  return maps;
+  const entries = await Promise.all(
+    config.joins.map(async (join) => {
+      const buf = files.get(join.file);
+      if (!buf) throw new Error(`Join file "${join.file}" not found`);
+      const rows = await parseCSV(buf, config.encoding, config.delimiter);
+      const index = new Map<string, Row>();
+      for (const row of rows) {
+        const key = row[join.key]?.trim() ?? '';
+        if (key) index.set(key, row);
+      }
+      return [join.name, index] as const;
+    })
+  );
+  return new Map(entries);
 }
 
 function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<string, Row>>): Row {

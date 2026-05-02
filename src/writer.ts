@@ -102,40 +102,43 @@ export class R2DiffWriter {
       regToIds.set(entry.registration, ids);
     }
 
-    for (const id of toWrite) {
-      const rec = records.get(id);
-      if (rec) await this.put(`aircraft/by-id/${source}/${id}.json`, rec);
-    }
-
-    for (const id of toDelete) {
-      await this.del(`aircraft/by-id/${source}/${id}.json`);
-    }
-
-    for (const hex of dirtyHex) {
-      const refs = await this.mergeIndexRefs(
-        `aircraft/by-icao-hex/${hex}.json`,
-        (hexToIds.get(hex) ?? []).map((id) => `${source}:${id}`),
-        source
-      );
-      if (refs.length > 0) {
-        await this.put(`aircraft/by-icao-hex/${hex}.json`, { refs });
-      } else {
-        await this.del(`aircraft/by-icao-hex/${hex}.json`);
-      }
-    }
-
-    for (const reg of dirtyReg) {
-      const refs = await this.mergeIndexRefs(
-        `aircraft/by-registration/${reg}.json`,
-        (regToIds.get(reg) ?? []).map((id) => `${source}:${id}`),
-        source
-      );
-      if (refs.length > 0) {
-        await this.put(`aircraft/by-registration/${reg}.json`, { refs });
-      } else {
-        await this.del(`aircraft/by-registration/${reg}.json`);
-      }
-    }
+    await Promise.all([
+      Promise.all(
+        [...toWrite].map(async (id) => {
+          const rec = records.get(id);
+          if (rec) await this.put(`aircraft/by-id/${source}/${id}.json`, rec);
+        })
+      ),
+      Promise.all([...toDelete].map((id) => this.del(`aircraft/by-id/${source}/${id}.json`))),
+      Promise.all(
+        [...dirtyHex].map(async (hex) => {
+          const refs = await this.mergeIndexRefs(
+            `aircraft/by-icao-hex/${hex}.json`,
+            (hexToIds.get(hex) ?? []).map((id) => `${source}:${id}`),
+            source
+          );
+          if (refs.length > 0) {
+            await this.put(`aircraft/by-icao-hex/${hex}.json`, { refs });
+          } else {
+            await this.del(`aircraft/by-icao-hex/${hex}.json`);
+          }
+        })
+      ),
+      Promise.all(
+        [...dirtyReg].map(async (reg) => {
+          const refs = await this.mergeIndexRefs(
+            `aircraft/by-registration/${reg}.json`,
+            (regToIds.get(reg) ?? []).map((id) => `${source}:${id}`),
+            source
+          );
+          if (refs.length > 0) {
+            await this.put(`aircraft/by-registration/${reg}.json`, { refs });
+          } else {
+            await this.del(`aircraft/by-registration/${reg}.json`);
+          }
+        })
+      ),
+    ]);
 
     await this.put(`aircraft/_manifest/${source}.json`, newManifest);
 
