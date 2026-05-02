@@ -1,9 +1,6 @@
 name: Registry Refresh
 
 on:
-  push:
-    paths:
-      - .github/workflows/refresh.yml
   schedule:
     - cron: '0 6 1 * *' # 1st of every month at 06:00 UTC
   workflow_dispatch:
@@ -30,14 +27,6 @@ jobs:
     permissions:
       contents: read
 
-    env:
-      MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
-      MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
-      MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
-      MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
-      REFRESH_SOURCE: ${{ inputs.source || '' }}
-      DRY_RUN: ${{ inputs.dry_run || 'false' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -48,12 +37,19 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build
         run: make build
 
       - name: Run refresh pipeline
+        env:
+          MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+          MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+          MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+          MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
+          REFRESH_SOURCE: ${{ inputs.source || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: bun run dist/pipeline.js
 
       - name: Upload refresh logs
