@@ -1,13 +1,15 @@
-# metal-birds-feed
+<div align="center">
+<img src="https://repository-images.githubusercontent.com/1226992141/2accc14a-5128-4d70-87df-03b2a8692b62" alt="Social banner image" />
 
-<!-- Banner image: add one at docs/banner.png and uncomment below -->
-<!-- ![Banner](./docs/banner.png) -->
+# metal-birds-feed
 
 [![CI](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml) [![License: Polyform Shield](https://img.shields.io/badge/license-Polyform%20Shield-blue)](LICENSE) [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=alert_status)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=coverage)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed)
 
+</div>
+
 Translates national aviation registries (FAA, Transport Canada, UK CAA, GCAA) into a
 single normalized JSON schema stored in Cloudflare R2 for O(1) tail-number and ICAO hex
-lookups. Written for by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.pilotronica.com) at [https://github.com/georgekobaidze/metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
+lookups. Inspired by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.pilotronica.com) ([github.com/georgekobaidze/metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)).
 
 ## How It Works
 
