@@ -1,28 +1,31 @@
-.PHONY: install dev format format-check lint typecheck test build e2e perf secret-scan clean
+.PHONY: install dev format format-check lint typecheck test build e2e perf secret-scan commitlint clean
+
+BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
+BUNX := $(BUN) x
 
 install:
-	bun install && bunx lefthook install
+	$(BUN) install && $(BUNX) lefthook install
 
 dev:
 	@echo "This is a data pipeline — run 'bun run src/pipeline.ts' to execute locally, or trigger via GitHub Actions."
 
 format:
-	bunx prettier --write .
+	$(BUNX) prettier --write .
 
 format-check:
-	bunx prettier --check .
+	$(BUNX) prettier --check .
 
 lint:
-	bunx eslint .
+	$(BUNX) eslint .
 
 typecheck:
-	bunx tsc --noEmit
+	$(BUNX) tsc --noEmit
 
 test:
-	bunx vitest run --coverage
+	$(BUNX) vitest run --coverage
 
 build:
-	bunx tsc
+	$(BUNX) tsc
 
 e2e:
 	@echo "No E2E tests — this is a data pipeline, not a web app."
@@ -61,6 +64,9 @@ secret-scan:
 	else \
 		echo "⚠️ detect-secrets not found. Skipping scan."; \
 	fi
+
+commitlint:
+	$(BUNX) commitlint --edit $(COMMIT_MSG_FILE)
 
 clean:
 	rm -rf dist coverage node_modules .secrets.baseline.tmp

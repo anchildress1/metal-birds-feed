@@ -11,13 +11,13 @@ pre-commit:
       run: make secret-scan
       stage_fixed: true
     actionlint:
-      glob: ".github/workflows/*.yml"
+      glob: '.github/workflows/*.yml'
       run: actionlint {staged_files}
 
 commit-msg:
   commands:
     commitlint:
-      run: bunx commitlint --edit {1}
+      run: make commitlint COMMIT_MSG_FILE={1}
 
 pre-push:
   parallel: true
