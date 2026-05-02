@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
@@ -16,7 +17,7 @@ function validateSourceId(sourceId: string): void {
     throw new Error(`Path traversal rejected: ${sourceId}`);
 }
 
-async function run(sourceId: string): Promise<void> {
+export async function run(sourceId: string): Promise<void> {
   log('info', 'pipeline_start', { source: sourceId });
   const start = Date.now();
 
@@ -28,6 +29,11 @@ async function run(sourceId: string): Promise<void> {
   const { records, stats } = await translate(config, files);
 
   log('info', 'translate_summary', { source: sourceId, ...stats });
+  if (stats.failed > 0) {
+    throw new Error(
+      `Translation failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`
+    );
+  }
 
   const dryRun = process.env['DRY_RUN'] === 'true';
 
@@ -48,7 +54,7 @@ async function run(sourceId: string): Promise<void> {
   log('info', 'pipeline_complete', { source: sourceId, elapsed_ms: Date.now() - start });
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
   const sources = sourceEnv ? [sourceEnv] : ['faa'];
 
@@ -66,7 +72,14 @@ async function main(): Promise<void> {
   if (anyFailed) process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const isCliEntryPoint = (): boolean =>
+  process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isCliEntryPoint()) {
+  try {
+    await main();
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+}
