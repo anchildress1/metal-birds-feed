@@ -28,10 +28,10 @@ jobs:
       contents: read
 
     env:
-      CF_R2_ACCOUNT_ID: ${{ secrets.CF_R2_ACCOUNT_ID }}
-      CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
-      CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
-      CF_R2_BUCKET_NAME: ${{ secrets.CF_R2_BUCKET_NAME }}
+      MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+      MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+      MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+      MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
       REFRESH_SOURCE: ${{ inputs.source || '' }}
       DRY_RUN: ${{ inputs.dry_run || 'false' }}
 

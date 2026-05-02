@@ -56,10 +56,10 @@ make install
 
 | Secret | Purpose |
 |---|---|
-| `CF_R2_ACCOUNT_ID` | Cloudflare account ID |
-| `CF_R2_ACCESS_KEY_ID` | R2 S3-compatible access key |
-| `CF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
-| `CF_R2_BUCKET_NAME` | Target R2 bucket name |
+| `MBF_R2_ACCOUNT_ID` | Cloudflare account ID |
+| `MBF_R2_ACCESS_KEY_ID` | R2 S3-compatible access key |
+| `MBF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
+| `MBF_R2_BUCKET_NAME` | Target R2 bucket name |
 | `SONAR_TOKEN` | SonarCloud analysis token |
 
 ## Adding a New Registry Source
