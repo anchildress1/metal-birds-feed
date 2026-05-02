@@ -1,0 +1,7 @@
+# False positives: hashed_secret values in the detect-secrets baseline file were
+# flagged as generic-api-key by gitleaks. The file no longer exists (replaced by
+# gitleaks in 599f9ff); these fingerprints suppress the historical-commit findings.
+3d77e16e55b5360465defd8db8f41c165c90aa6e:.secrets.baseline:generic-api-key:136
+2f12fe7d95af0fd6352d0b22ae0cc0dbe5e39558:.secrets.baseline:generic-api-key:136
+2f12fe7d95af0fd6352d0b22ae0cc0dbe5e39558:.secrets.baseline:generic-api-key:143
+2f12fe7d95af0fd6352d0b22ae0cc0dbe5e39558:.secrets.baseline:generic-api-key:150
