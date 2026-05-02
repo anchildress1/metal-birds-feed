@@ -37,7 +37,8 @@ async function extractZip(
             f.stream()
               .on('data', (c: Buffer) => chunks.push(c))
               .on('end', () => {
-                result.set(wanted.get(f.path)!, Buffer.concat(chunks));
+                const alias = wanted.get(f.path);
+                if (alias) result.set(alias, Buffer.concat(chunks));
                 resolve();
               })
               .on('error', reject);

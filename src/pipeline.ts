@@ -12,7 +12,8 @@ function requireEnv(name: string): string {
 }
 
 function validateSourceId(sourceId: string): void {
-  if (sourceId.includes('..')) throw new Error(`Path traversal rejected: ${sourceId}`);
+  if (sourceId.includes('..') || sourceId.includes('/') || sourceId.includes('\\'))
+    throw new Error(`Path traversal rejected: ${sourceId}`);
 }
 
 async function run(sourceId: string): Promise<void> {

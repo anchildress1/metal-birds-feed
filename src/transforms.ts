@@ -54,6 +54,10 @@ export function applyScalar(name: ScalarTransformName, value: string): string | 
       const v = value.trim();
       return v.length > 0 ? v[0] : null;
     }
+    default: {
+      const _exhaustive: never = name;
+      throw new Error(`Unknown transform: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -62,6 +66,10 @@ export function applyArray(name: ArrayTransformName, value: string): string[] {
     case 'faa_cert_ops': {
       const v = value.trim();
       return v.length > 1 ? v.slice(1).split('') : [];
+    }
+    default: {
+      const _exhaustive: never = name;
+      throw new Error(`Unknown array transform: ${String(_exhaustive)}`);
     }
   }
 }

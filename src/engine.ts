@@ -106,7 +106,8 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 function resolveScalar(row: Row, mapping: FieldMapping, trimAll: boolean): string | null {
   if (mapping.constant !== undefined) return mapping.constant;
 
-  const field = mapping.field!;
+  const field = mapping.field;
+  if (!field) return mapping.default ?? null;
   let value = row[field] ?? '';
   if (trimAll) value = value.trim();
 
@@ -131,7 +132,8 @@ function resolveScalar(row: Row, mapping: FieldMapping, trimAll: boolean): strin
 }
 
 function resolveArray(row: Row, mapping: FieldMapping, trimAll: boolean): string[] {
-  const field = mapping.field!;
+  const field = mapping.field;
+  if (!field) return [];
   let value = row[field] ?? '';
   if (trimAll) value = value.trim();
   if (!mapping.array_transform) return [];

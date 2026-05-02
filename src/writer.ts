@@ -10,13 +10,14 @@ import type { Aircraft } from './schema.js';
 import { contentHash } from './engine.js';
 import { log } from './logger.js';
 
-interface ManifestEntry {
-  hash: string;
-  icao_hex: string | null;
-  registration: string;
-}
+const ManifestEntrySchema = z.object({
+  hash: z.string(),
+  icao_hex: z.string().nullable(),
+  registration: z.string(),
+});
+const ManifestSchema = z.record(z.string(), ManifestEntrySchema);
 
-type Manifest = Record<string, ManifestEntry>;
+type Manifest = z.infer<typeof ManifestSchema>;
 
 const RefIndexSchema = z.object({ refs: z.array(z.string()).optional() });
 
@@ -106,6 +107,7 @@ export class R2DiffWriter {
       Promise.all(
         [...toWrite].map(async (id) => {
           const rec = records.get(id);
+          /* v8 ignore next 2 — toWrite IDs are always present in records */
           if (rec) await this.put(`aircraft/by-id/${source}/${id}.json`, rec);
         })
       ),
@@ -157,7 +159,11 @@ export class R2DiffWriter {
         new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_manifest/${source}.json` })
       );
       const body = await res.Body?.transformToString();
-      return body ? (JSON.parse(body) as Manifest) : {};
+      if (!body) return {};
+      const parsed = ManifestSchema.safeParse(JSON.parse(body));
+      if (!parsed.success)
+        throw new Error(`Invalid manifest for ${source}: ${parsed.error.message}`);
+      return parsed.data;
     } catch (err) {
       if (err instanceof NoSuchKey) return {};
       log('error', 'manifest_load_failed', {

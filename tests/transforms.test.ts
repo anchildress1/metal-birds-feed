@@ -15,10 +15,14 @@ describe('applyScalar', () => {
 
   describe('lowercase', () => {
     it('lowercases and trims', () => expect(applyScalar('lowercase', ' A4E294 ')).toBe('a4e294'));
+    it('returns empty string for blank', () => expect(applyScalar('lowercase', '   ')).toBe(''));
+    it('returns empty string for empty', () => expect(applyScalar('lowercase', '')).toBe(''));
   });
 
   describe('uppercase', () => {
     it('uppercases and trims', () => expect(applyScalar('uppercase', ' hello ')).toBe('HELLO'));
+    it('returns empty string for blank', () => expect(applyScalar('uppercase', '   ')).toBe(''));
+    it('returns empty string for empty', () => expect(applyScalar('uppercase', '')).toBe(''));
   });
 
   describe('int_or_null', () => {

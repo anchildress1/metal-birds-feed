@@ -204,6 +204,34 @@ describe('R2DiffWriter — dry run', () => {
     expect(stats.put).toBe(1);
   });
 
+  it('marks changed record as put when registration also changes', async () => {
+    const r1 = makeAircraft('id001', 'N99999', 'a4e294');
+    const records = new Map([['id001', r1]]);
+
+    mockSend.mockResolvedValueOnce(
+      manifestResponse({
+        id001: { hash: 'old-hash', icao_hex: 'a4e294', registration: 'N12345' },
+      })
+    );
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const stats = await writer.write(records, 'faa');
+
+    expect(stats.put).toBe(1);
+  });
+
+  it('rethrows invalid manifest content as an error', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: {
+        transformToString: vi.fn().mockResolvedValue('{"id001":"not-a-manifest-entry"}'),
+      },
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([['id001', makeAircraft('id001', 'N12345')]]);
+    await expect(writer.write(records, 'faa')).rejects.toThrow(/invalid manifest/i);
+  });
+
   it('handles records with null icao_hex without error', async () => {
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const records = new Map([['id001', makeAircraft('id001', 'N12345', null)]]);
@@ -298,5 +326,71 @@ describe('R2DiffWriter — live mode', () => {
 
     expect(JSON.parse(hexPut?.a.Body ?? '{}')).toEqual({ refs: ['tc:foreign-id', 'faa:id001'] });
     expect(JSON.parse(regPut?.a.Body ?? '{}')).toEqual({ refs: ['caa:foreign-reg', 'faa:id001'] });
+  });
+
+  it('rethrows non-NoSuchKey errors from loadRefs', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    const records = new Map([['id001', r1]]);
+
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get') {
+        if (cmd.a.Key === 'aircraft/_manifest/faa.json')
+          return Promise.resolve(
+            manifestResponse({
+              id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
+            })
+          );
+        return Promise.reject(new Error('S3ServiceException'));
+      }
+      return Promise.resolve({});
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await expect(writer.write(records, 'faa')).rejects.toThrow('S3ServiceException');
+  });
+
+  it('treats NoSuchKey from loadRefs as empty refs', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    const records = new Map([['id001', r1]]);
+
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get') {
+        if (cmd.a.Key === 'aircraft/_manifest/faa.json')
+          return Promise.resolve(
+            manifestResponse({
+              id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
+            })
+          );
+        return Promise.reject(new NoSuchKey());
+      }
+      return Promise.resolve({});
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const stats = await writer.write(records, 'faa');
+    expect(stats.put).toBe(1);
+  });
+
+  it('throws on invalid ref index content', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    const records = new Map([['id001', r1]]);
+
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get') {
+        if (cmd.a.Key === 'aircraft/_manifest/faa.json')
+          return Promise.resolve(
+            manifestResponse({
+              id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
+            })
+          );
+        return Promise.resolve({
+          Body: { transformToString: vi.fn().mockResolvedValue('{"refs":123}') },
+        });
+      }
+      return Promise.resolve({});
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await expect(writer.write(records, 'faa')).rejects.toThrow(/invalid ref index/i);
   });
 });

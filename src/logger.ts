@@ -16,7 +16,11 @@ function escape(v: unknown): string {
   } else if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint') {
     s = String(v);
   } else {
-    s = JSON.stringify(v) ?? '';
+    try {
+      s = JSON.stringify(v) ?? '';
+    } catch {
+      s = '[Unserializable]';
+    }
   }
   return s.includes(' ') || s.includes('"') ? `"${s.replace(/"/g, '\\"')}"` : s;
 }

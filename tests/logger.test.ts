@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+
+const mockAppendFileSync = vi.hoisted(() => vi.fn());
+const mockMkdirSync = vi.hoisted(() => vi.fn());
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual, appendFileSync: mockAppendFileSync, mkdirSync: mockMkdirSync };
+});
+
 import { log } from '../src/logger.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
+  mockAppendFileSync.mockReset();
 });
 
 describe('log', () => {
@@ -58,5 +68,21 @@ describe('log', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
     log('info', 'test_event', { missing: undefined });
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('serializes circular-reference objects without throwing', () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const circular: Record<string, unknown> = {};
+    circular['self'] = circular;
+    expect(() => log('info', 'test_event', { obj: circular })).not.toThrow();
+    expect(spy.mock.calls[0]?.[0]).toContain('obj=[Unserializable]');
+  });
+
+  it('does not throw when appendFileSync fails', () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    mockAppendFileSync.mockImplementationOnce(() => {
+      throw new Error('EACCES');
+    });
+    expect(() => log('info', 'test_event')).not.toThrow();
   });
 });

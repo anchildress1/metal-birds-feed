@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'node:path';
+import { writeFileSync, unlinkSync } from 'node:fs';
 import { loadSourceConfig } from '../../src/config/loader.js';
 
 const FAA_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'faa.yaml');
@@ -29,8 +30,7 @@ describe('loadSourceConfig', () => {
     expect(() => loadSourceConfig('sources/nonexistent.yaml')).toThrow();
   });
 
-  it('throws on invalid config schema', async () => {
-    const { writeFileSync, unlinkSync } = await import('node:fs');
+  it('throws on invalid config schema', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_invalid.yaml');
     writeFileSync(tmp, 'id: test\nlabel: test\n');
     try {
