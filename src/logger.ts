@@ -1,11 +1,20 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 export type LogLevel = 'info' | 'warn' | 'error';
 
 const LOG_PATH = join(process.cwd(), 'logs', 'pipeline.log');
+let logDirReady = false;
 
-mkdirSync(join(process.cwd(), 'logs'), { recursive: true });
+const ensureLogDir = (): void => {
+  if (logDirReady) return;
+  try {
+    mkdirSync(dirname(LOG_PATH), { recursive: true });
+    logDirReady = true;
+  } catch {
+    // dir creation is best-effort; appendFileSync failures are also tolerated below
+  }
+};
 
 function escape(v: unknown): string {
   let s: string;
@@ -22,7 +31,7 @@ function escape(v: unknown): string {
       s = '[Unserializable]';
     }
   }
-  return s.includes(' ') || s.includes('"') ? `"${s.replace(/"/g, '\\"')}"` : s;
+  return s.includes(' ') || s.includes('"') ? `"${s.replaceAll('"', String.raw`\"`)}"` : s;
 }
 
 export function log(level: LogLevel, event: string, fields: Record<string, unknown> = {}): void {
@@ -32,6 +41,7 @@ export function log(level: LogLevel, event: string, fields: Record<string, unkno
   }
   const line = parts.join(' ');
   console.log(line);
+  ensureLogDir();
   try {
     appendFileSync(LOG_PATH, line + '\n');
   } catch {
