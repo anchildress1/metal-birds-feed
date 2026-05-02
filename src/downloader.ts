@@ -6,7 +6,7 @@ export async function download(config: DownloadConfig): Promise<Map<string, Buff
   const start = Date.now();
   log('info', 'download_start', { url: config.url });
 
-  const res = await fetch(config.url);
+  const res = await fetch(config.url, { headers: config.headers });
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
 
   const buf = Buffer.from(await res.arrayBuffer());

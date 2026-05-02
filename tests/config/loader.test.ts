@@ -16,6 +16,7 @@ describe('loadSourceConfig', () => {
     expect(config.joins).toHaveLength(2);
     expect(config.joins[0]?.name).toBe('acft');
     expect(config.joins[1]?.name).toBe('eng');
+    expect(config.download.headers?.['User-Agent']).toBeDefined();
   });
 
   it('rejects path traversal', () => {

@@ -40,6 +40,7 @@ const SourceConfigSchema = z.object({
     url: z.string().url(),
     format: z.literal('zip'),
     entries: z.record(z.string(), z.string()),
+    headers: z.record(z.string(), z.string()).optional(),
   }),
   primary: z.string().min(1),
   delimiter: z.string().min(1),

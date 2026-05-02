@@ -31,6 +31,7 @@ export interface DownloadConfig {
   url: string;
   format: 'zip';
   entries: Record<string, string>;
+  headers?: Record<string, string>;
 }
 
 export interface SourceConfig {

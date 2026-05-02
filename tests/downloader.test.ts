@@ -74,6 +74,16 @@ describe('download', () => {
     await expect(download(FAA_DOWNLOAD_CONFIG)).rejects.toThrow(/404/);
   });
 
+  it('forwards headers from config to fetch', async () => {
+    const zip = readFileSync(FIXTURE_ZIP);
+    mockFetch(zip);
+
+    await download({ ...FAA_DOWNLOAD_CONFIG, headers: { 'User-Agent': 'test-bot/1.0' } });
+
+    const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    expect(call[1]).toMatchObject({ headers: { 'User-Agent': 'test-bot/1.0' } });
+  });
+
   it('throws when a required alias is missing from the ZIP', async () => {
     const zip = readFileSync(FIXTURE_ZIP);
     mockFetch(zip);
