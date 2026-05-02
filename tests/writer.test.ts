@@ -8,6 +8,7 @@ vi.mock('@aws-sdk/client-s3', () => ({
   S3Client: class {
     send: any = mockSend;
   },
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   GetObjectCommand: class {
     _type = 'get';
     constructor(public a: unknown) {}
@@ -20,16 +21,22 @@ vi.mock('@aws-sdk/client-s3', () => ({
     _type = 'del';
     constructor(public a: unknown) {}
   },
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  NoSuchKey: class NoSuchKey extends Error {
+    constructor() {
+      super('The specified key does not exist.');
+      this.name = 'NoSuchKey';
+    }
+  },
 }));
 
 import { R2DiffWriter } from '../src/writer.js';
 import { contentHash } from '../src/engine.js';
+import { NoSuchKey } from '@aws-sdk/client-s3';
 
 const R2_CONFIG = {
   accountId: 'test-account',
   accessKeyId: 'access-key',
-  secretAccessKey: 'secret-key',
+  secretAccessKey: 'dummy',
   bucketName: 'test-bucket',
 };
 
@@ -158,8 +165,8 @@ describe('R2DiffWriter — dry run', () => {
     expect(stats.skipped).toBe(1);
   });
 
-  it('treats failed manifest fetch as empty (first-write scenario)', async () => {
-    mockSend.mockRejectedValueOnce(new Error('NoSuchKey'));
+  it('treats NoSuchKey manifest error as empty (first-write scenario)', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const records = new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]);
@@ -167,6 +174,14 @@ describe('R2DiffWriter — dry run', () => {
 
     expect(stats.put).toBe(1);
     expect(stats.skipped).toBe(0);
+  });
+
+  it('rethrows non-NoSuchKey manifest errors', async () => {
+    mockSend.mockRejectedValueOnce(new Error('AccessDenied'));
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([['id001', makeAircraft('id001', 'N12345')]]);
+    await expect(writer.write(records, 'faa')).rejects.toThrow('AccessDenied');
   });
 
   it('marks changed record as put when ICAO hex changes', async () => {

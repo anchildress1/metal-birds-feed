@@ -152,7 +152,7 @@ describe('FAA fixture translation', () => {
     it('maps glider airframe', () => expect(r.airframe_type).toBe('glider'));
     it('maps no engine', () => expect(r.engine.type).toBe('none'));
     it('maps zero engine count', () => expect(r.engine.count).toBe(0));
-    it('returns null cruise speed for 54mph glider', () => {
+    it('converts 54mph cruise speed to knots (46.9 ktas)', () => {
       expect(r.cruise_speed_ktas).toBe(46.9);
     });
   });

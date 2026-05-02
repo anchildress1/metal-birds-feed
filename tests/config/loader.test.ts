@@ -21,6 +21,10 @@ describe('loadSourceConfig', () => {
     expect(() => loadSourceConfig('../../../etc/passwd')).toThrow(/traversal/i);
   });
 
+  it('rejects absolute path outside sandbox', () => {
+    expect(() => loadSourceConfig('/etc/passwd')).toThrow(/sandbox/i);
+  });
+
   it('throws on non-existent file', () => {
     expect(() => loadSourceConfig('sources/nonexistent.yaml')).toThrow();
   });
