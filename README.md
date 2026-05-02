@@ -62,6 +62,17 @@ make install
 | `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
 | `SONAR_TOKEN`              | SonarCloud analysis token   |
 
+## Sources
+
+| Source           | Country        | Status                    |
+| ---------------- | -------------- | ------------------------- |
+| FAA              | United States  | ✅ Live                   |
+| Transport Canada | Canada         | Planned                   |
+| UK CAA           | United Kingdom | Planned                   |
+| GCAA             | Georgia        | Planned (data access TBD) |
+
+---
+
 ## Adding a New Registry Source
 
 1. Create `sources/<source-id>.yaml` following the mapping-config schema.
