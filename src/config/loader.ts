@@ -38,7 +38,7 @@ const SourceConfigSchema = z.object({
   country: z.string().min(1),
   encoding: z.enum(['utf8', 'latin1']),
   download: z.object({
-    url: z.string().url(),
+    url: z.url(),
     format: z.literal('zip'),
     entries: z.record(z.string(), z.string()),
     headers: z.record(z.string(), z.string()).optional(),
