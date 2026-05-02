@@ -3,6 +3,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  NoSuchKey,
 } from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
 import { contentHash } from './engine.js';
@@ -84,8 +85,23 @@ export class R2DiffWriter {
       }
     }
 
+    // Precompute inverse maps so dirty-key resolution is O(n) not O(n * |dirty|)
+    const hexToIds = new Map<string, string[]>();
+    const regToIds = new Map<string, string[]>();
+    for (const [id, entry] of Object.entries(newManifest)) {
+      if (entry.icao_hex) {
+        const ids = hexToIds.get(entry.icao_hex) ?? [];
+        ids.push(id);
+        hexToIds.set(entry.icao_hex, ids);
+      }
+      const ids = regToIds.get(entry.registration) ?? [];
+      ids.push(id);
+      regToIds.set(entry.registration, ids);
+    }
+
     for (const id of toWrite) {
-      await this.put(`aircraft/by-id/${source}/${id}.json`, records.get(id)!);
+      const rec = records.get(id);
+      if (rec) await this.put(`aircraft/by-id/${source}/${id}.json`, rec);
     }
 
     for (const id of toDelete) {
@@ -93,9 +109,7 @@ export class R2DiffWriter {
     }
 
     for (const hex of dirtyHex) {
-      const refs = Object.entries(newManifest)
-        .filter(([, e]) => e.icao_hex === hex)
-        .map(([id]) => `${source}:${id}`);
+      const refs = (hexToIds.get(hex) ?? []).map((id) => `${source}:${id}`);
       if (refs.length > 0) {
         await this.put(`aircraft/by-icao-hex/${hex}.json`, { refs });
       } else {
@@ -104,9 +118,7 @@ export class R2DiffWriter {
     }
 
     for (const reg of dirtyReg) {
-      const refs = Object.entries(newManifest)
-        .filter(([, e]) => e.registration === reg)
-        .map(([id]) => `${source}:${id}`);
+      const refs = (regToIds.get(reg) ?? []).map((id) => `${source}:${id}`);
       if (refs.length > 0) {
         await this.put(`aircraft/by-registration/${reg}.json`, { refs });
       } else {
@@ -132,8 +144,13 @@ export class R2DiffWriter {
       );
       const body = await res.Body?.transformToString();
       return body ? (JSON.parse(body) as Manifest) : {};
-    } catch {
-      return {};
+    } catch (err) {
+      if (err instanceof NoSuchKey) return {};
+      log('error', 'manifest_load_failed', {
+        source,
+        msg: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
     }
   }
 
