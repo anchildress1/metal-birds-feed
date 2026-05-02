@@ -103,32 +103,33 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
   return merged;
 }
 
+function resolveLookup(
+  value: string,
+  lookup: Record<string, string>,
+  defaultValue: string | null | undefined,
+  field: string
+): string | null {
+  const mapped = lookup[value];
+  if (mapped !== undefined) return mapped;
+  if (defaultValue !== undefined) return defaultValue;
+  if (value === '') return null;
+  throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
+}
+
 function resolveScalar(row: Row, mapping: FieldMapping, trimAll: boolean): string | null {
   if (mapping.constant !== undefined) return mapping.constant;
 
   const field = mapping.field;
   if (!field) return mapping.default ?? null;
-  let value = row[field] ?? '';
-  if (trimAll) value = value.trim();
 
-  if (mapping.transform) {
-    const result = applyScalar(mapping.transform, value);
-    if (result === null) return mapping.default ?? null;
-    value = result;
-  }
+  const raw = row[field] ?? '';
+  const trimmed = trimAll ? raw.trim() : raw;
+  const transformed = mapping.transform ? applyScalar(mapping.transform, trimmed) : trimmed;
+  if (transformed === null) return mapping.default ?? null;
 
-  if (mapping.lookup) {
-    const mapped = mapping.lookup[value];
-    if (mapped === undefined) {
-      if (mapping.default !== undefined) return mapping.default;
-      if (value === '') return null;
-      throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
-    }
-    return mapped;
-  }
+  if (mapping.lookup) return resolveLookup(transformed, mapping.lookup, mapping.default, field);
 
-  if (value === '') return mapping.default ?? null;
-  return value;
+  return transformed === '' ? (mapping.default ?? null) : transformed;
 }
 
 function resolveArray(row: Row, mapping: FieldMapping, trimAll: boolean): string[] {
