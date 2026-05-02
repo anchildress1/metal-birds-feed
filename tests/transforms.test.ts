@@ -67,6 +67,16 @@ describe('applyScalar', () => {
       expect(applyScalar('mph_to_ktas_or_null', '82')).toBe('71.3'));
   });
 
+  describe('faa_n_number', () => {
+    it('adds the N-prefix when FAA stores only the registration body', () =>
+      expect(applyScalar('faa_n_number', '12345')).toBe('N12345'));
+    it('does not duplicate an existing N-prefix', () =>
+      expect(applyScalar('faa_n_number', ' N99ABC ')).toBe('N99ABC'));
+    it('uppercases the registration body', () =>
+      expect(applyScalar('faa_n_number', '99abc')).toBe('N99ABC'));
+    it('returns null for blank', () => expect(applyScalar('faa_n_number', '   ')).toBeNull());
+  });
+
   describe('faa_cert_class', () => {
     it('returns first char', () => expect(applyScalar('faa_cert_class', '14')).toBe('1'));
     it('returns first char for single-char cert', () =>

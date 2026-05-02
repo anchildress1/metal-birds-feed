@@ -7,6 +7,7 @@ export type ScalarTransformName =
   | 'float_or_null'
   | 'date_yyyymmdd_or_null'
   | 'mph_to_ktas_or_null'
+  | 'faa_n_number'
   | 'faa_cert_class';
 
 export type ArrayTransformName = 'faa_cert_ops';

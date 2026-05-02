@@ -10,9 +10,9 @@ const FAA_DOWNLOAD_CONFIG: DownloadConfig = {
   url: 'https://registry.faa.gov/database/ReleasableAircraft.zip',
   format: 'zip',
   entries: {
-    master: 'ReleasableAircraft/MASTER.txt',
-    acftref: 'ReleasableAircraft/ACFTREF.txt',
-    engine: 'ReleasableAircraft/ENGINE.txt',
+    master: 'MASTER.txt',
+    acftref: 'ACFTREF.txt',
+    engine: 'ENGINE.txt',
   },
 };
 
@@ -65,7 +65,7 @@ describe('download', () => {
     const master = files.get('master')!.toString('latin1');
 
     expect(master).toContain('N-NUMBER');
-    expect(master).toContain('N12345');
+    expect(master).toContain('12345,17282099');
   });
 
   it('throws when fetch response is not ok', async () => {
@@ -90,7 +90,7 @@ describe('download', () => {
 
     const badConfig: DownloadConfig = {
       ...FAA_DOWNLOAD_CONFIG,
-      entries: { ...FAA_DOWNLOAD_CONFIG.entries, missing: 'ReleasableAircraft/NOTEXIST.txt' },
+      entries: { ...FAA_DOWNLOAD_CONFIG.entries, missing: 'NOTEXIST.txt' },
     };
 
     await expect(download(badConfig)).rejects.toThrow(/not found/i);

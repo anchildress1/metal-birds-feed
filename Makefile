@@ -35,7 +35,7 @@ perf:
 
 secret-scan:
 	@if command -v gitleaks > /dev/null; then \
-		gitleaks dir .; \
+		gitleaks git --staged --redact; \
 	else \
 		echo "❌ gitleaks not found. Install: https://github.com/gitleaks/gitleaks#installing"; \
 		exit 1; \

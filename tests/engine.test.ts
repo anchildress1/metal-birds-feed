@@ -214,8 +214,8 @@ describe('engine — negative and edge cases', () => {
     const config = loadSourceConfig(CONFIG_PATH);
     const masterWithBadAirframe = Buffer.from(
       readFileSync(resolve(FIXTURES, 'input', 'MASTER.txt'), 'latin1').replace(
-        /^N12345,.*$/m,
-        'N12345,17282099,05608,17286,1979,1,JOHN DOE,,,WICHITA,KS,67201,7,173,US,20231015,19790620,14,Z,1,V,52341224,,19790620,,,,,,20261031,00001001,,,A4E294,'
+        /^12345,.*$/m,
+        '12345,17282099,05608,17286,1979,1,JOHN DOE,,,WICHITA,KS,67201,7,173,US,20231015,19790620,14,Z,1,V,52341224,,19790620,,,,,,20261031,00001001,,,A4E294,'
       ),
       'latin1'
     );
@@ -232,8 +232,8 @@ describe('engine — negative and edge cases', () => {
     const config = loadSourceConfig(CONFIG_PATH);
     const masterWithUnknownStatus = Buffer.from(
       readFileSync(resolve(FIXTURES, 'input', 'MASTER.txt'), 'latin1').replace(
-        /^N12345,.*$/m,
-        'N12345,17282099,05608,17286,1979,1,JOHN DOE,,,WICHITA,KS,67201,7,173,US,20231015,19790620,14,4,1,ZZZZ,52341224,,19790620,,,,,,20261031,00001001,,,A4E294,'
+        /^12345,.*$/m,
+        '12345,17282099,05608,17286,1979,1,JOHN DOE,,,WICHITA,KS,67201,7,173,US,20231015,19790620,14,4,1,ZZZZ,52341224,,19790620,,,,,,20261031,00001001,,,A4E294,'
       ),
       'latin1'
     );
@@ -250,8 +250,8 @@ describe('engine — negative and edge cases', () => {
     const config = loadSourceConfig(CONFIG_PATH);
     const masterWithBlankId = Buffer.from(
       readFileSync(resolve(FIXTURES, 'input', 'MASTER.txt'), 'latin1').replace(
-        /^N12345,.*$/m,
-        'N12345,17282099,05608,17286,1979,1,JOHN DOE,,,WICHITA,KS,67201,7,173,US,20231015,19790620,14,4,1,V,52341224,,19790620,,,,,, 20261031,,,,A4E294,'
+        /^12345,.*$/m,
+        '12345,17282099,05608,17286,1979,1,JOHN DOE,,,WICHITA,KS,67201,7,173,US,20231015,19790620,14,4,1,V,52341224,,19790620,,,,,, 20261031,,,,A4E294,'
       ),
       'latin1'
     );

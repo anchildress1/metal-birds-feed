@@ -50,6 +50,11 @@ export function applyScalar(name: ScalarTransformName, value: string): string | 
       if (Number.isNaN(n) || n <= 0) return null;
       return String(Math.round(n * KNOTS_PER_MPH * 10) / 10);
     }
+    case 'faa_n_number': {
+      const v = value.trim().toUpperCase();
+      if (v.length === 0) return null;
+      return v.startsWith('N') ? v : `N${v}`;
+    }
     case 'faa_cert_class': {
       const v = value.trim();
       return v.length > 0 ? v[0] : null;
