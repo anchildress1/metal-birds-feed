@@ -16,6 +16,7 @@ export async function parseCSV(
         columns: true,
         skip_empty_lines: true,
         relax_column_count: true,
+        relax_quotes: true,
         trim: false,
       },
       (err, records: Row[]) => {
