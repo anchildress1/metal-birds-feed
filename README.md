@@ -1,16 +1,15 @@
+<div align="center">
+<img src="https://repository-images.githubusercontent.com/1226992141/2accc14a-5128-4d70-87df-03b2a8692b62" alt="Social banner image" />
+
 # metal-birds-feed
 
-<!-- Banner image: add one at docs/banner.png and uncomment below -->
-<!-- ![Banner](./docs/banner.png) -->
+[![CI](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml) [![License: Polyform Shield](https://img.shields.io/badge/license-Polyform%20Shield-blue)](LICENSE) [![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=alert_status)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=coverage)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed)
 
-[![CI](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml)
-[![License: Polyform Shield](https://img.shields.io/badge/license-Polyform%20Shield-blue)](LICENSE)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=alert_status)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=coverage)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed)
+</div>
 
 Translates national aviation registries (FAA, Transport Canada, UK CAA, GCAA) into a
 single normalized JSON schema stored in Cloudflare R2 for O(1) tail-number and ICAO hex
-lookups. Consumed by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.pilotronica.com).
+lookups. Inspired by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.pilotronica.com) ([github.com/georgekobaidze/metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)).
 
 ## How It Works
 
@@ -62,16 +61,25 @@ make install
 | `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
 | `SONAR_TOKEN`              | SonarCloud analysis token   |
 
+## Sources
+
+| Source           | Country        | Status                    |
+| ---------------- | -------------- | ------------------------- |
+| FAA              | United States  | ✅ Live                   |
+| Transport Canada | Canada         | Planned                   |
+| UK CAA           | United Kingdom | Planned                   |
+| GCAA             | Georgia        | Planned (data access TBD) |
+
+---
+
 ## Adding a New Registry Source
 
 1. Create `sources/<source-id>.yaml` following the mapping-config schema.
-2. Add a downloader in `src/sources/<source-id>/downloader.ts`.
-3. Add acceptance fixtures in `fixtures/<source-id>/`.
-4. Update `DATA_LICENSES.md` with the new source's data license.
-5. The translation engine requires no changes.
+2. Add acceptance fixtures in `fixtures/<source-id>/`.
+3. Update `DATA_LICENSES.md` with the new source's data license.
+
+The translation engine and downloader require no changes.
 
 ## License
 
-Polyform Shield License 1.0.0 — see [LICENSE](LICENSE).
-
-Based on original work by Ashley Childress – see https://github.com/anchildress1/metal-birds-feed.
+[Polyform Shield 1.0.0](LICENSE)

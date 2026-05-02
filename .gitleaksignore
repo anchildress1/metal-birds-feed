@@ -1,0 +1,1 @@
+# .secrets.baseline is excluded via .gitleaks.toml allowlist (hashed_secret values are SHA-1, not secrets)

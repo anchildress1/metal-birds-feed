@@ -1,0 +1,8 @@
+title = "metal-birds-feed"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "detect-secrets baseline — hashed_secret values are SHA-1 hashes, not secrets"
+paths = ['''\.secrets\.baseline$''']

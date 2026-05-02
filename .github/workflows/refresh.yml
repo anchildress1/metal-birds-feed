@@ -27,14 +27,6 @@ jobs:
     permissions:
       contents: read
 
-    env:
-      MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
-      MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
-      MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
-      MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
-      REFRESH_SOURCE: ${{ inputs.source || '' }}
-      DRY_RUN: ${{ inputs.dry_run || 'false' }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -45,10 +37,20 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build
+        run: make build
 
       - name: Run refresh pipeline
-        run: bun run src/pipeline.ts
+        env:
+          MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+          MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+          MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+          MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
+          REFRESH_SOURCE: ${{ inputs.source || '' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: bun run dist/pipeline.js
 
       - name: Upload refresh logs
         uses: actions/upload-artifact@v7

@@ -1,0 +1,251 @@
+id: faa
+label: FAA U.S. Civil Aircraft Registry
+country: US
+encoding: latin1
+trim_all: true
+
+download:
+  url: https://registry.faa.gov/database/ReleasableAircraft.zip
+  format: zip
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    master: MASTER.txt
+    acftref: ACFTREF.txt
+    engine: ENGINE.txt
+
+primary: master
+delimiter: ','
+
+joins:
+  - name: acft
+    file: acftref
+    on: 'MFR MDL CODE'
+    key: CODE
+  - name: eng
+    file: engine
+    on: 'ENG MFR MDL'
+    key: CODE
+
+source_id: 'UNIQUE ID'
+registration: 'N-NUMBER'
+
+mapping:
+  registration:
+    field: 'N-NUMBER'
+    transform: faa_n_number
+    default: ''
+
+  icao_hex:
+    field: 'MODE S CODE HEX'
+    transform: lowercase
+
+  icao_type_code:
+    constant: ~
+
+  status:
+    field: 'STATUS CODE'
+    transform: trim_or_null
+    lookup:
+      'V': valid
+      'T': valid
+      'M': valid
+      'A': restricted
+      'S': restricted
+      '1': restricted
+      '8': restricted
+      '14': restricted
+      '15': restricted
+      '24': restricted
+      '25': restricted
+      '26': restricted
+      '28': restricted
+      '29': restricted
+      'D': expired
+      'E': expired
+      '13': cancelled
+      '16': expired
+      '17': other
+      '18': cancelled
+      '19': other
+      '20': cancelled
+      '21': cancelled
+      '22': cancelled
+      '23': expired
+      '27': expired
+      '2': other
+      '3': other
+      '4': other
+      '5': other
+      '6': cancelled
+      '7': other
+      '9': cancelled
+      '10': other
+      '11': other
+      '12': other
+      'N': other
+      'R': other
+      'W': cancelled
+      'X': other
+      'Y': cancelled
+      'Z': other
+    default: other
+
+  country:
+    constant: US
+
+  manufacturer:
+    field: 'acft.MFR'
+    transform: trim_or_null
+
+  model:
+    field: 'acft.MODEL'
+    transform: trim_or_null
+
+  serial_number:
+    field: 'SERIAL NUMBER'
+    transform: trim_or_null
+
+  year_manufactured:
+    field: 'YEAR MFR'
+    transform: int_or_null
+
+  airframe_type:
+    field: 'TYPE AIRCRAFT'
+    transform: trim_or_null
+    lookup:
+      '1': glider
+      '2': balloon
+      '3': blimp
+      '4': fixed-wing-single-engine
+      '5': fixed-wing-multi-engine
+      '6': rotorcraft
+      '7': weight-shift
+      '8': powered-parachute
+      '9': gyroplane
+      'H': hybrid-lift
+      'O': other
+
+  category:
+    field: 'CERTIFICATION'
+    transform: faa_cert_class
+    lookup:
+      '1': standard
+      '2': limited
+      '3': other
+      '4': experimental
+      '5': provisional
+      '6': other
+      '7': other
+      '8': other
+      '9': other
+    default: ~
+
+  build_certification:
+    field: 'acft.BUILD-CERT-IND'
+    transform: trim_or_null
+    lookup:
+      '0': type-certificated
+      '1': not-type-certificated
+    default: ~
+
+  airworthiness_class:
+    field: 'CERTIFICATION'
+    transform: faa_cert_class
+
+  operating_environment:
+    field: 'acft.AC-CAT'
+    transform: trim_or_null
+    lookup:
+      '1': land
+      '2': sea
+      '3': amphibian
+    default: ~
+
+  operational_classes:
+    field: 'CERTIFICATION'
+    array_transform: faa_cert_ops
+
+  engine.manufacturer:
+    field: 'eng.MFR'
+    transform: trim_or_null
+
+  engine.model:
+    field: 'eng.MODEL'
+    transform: trim_or_null
+
+  engine.type:
+    field: 'TYPE ENGINE'
+    transform: trim_or_null
+    lookup:
+      '0': none
+      '1': reciprocating
+      '2': turbo-prop
+      '3': turbo-shaft
+      '4': turbo-jet
+      '5': turbo-fan
+      '6': ramjet
+      '7': 2-cycle
+      '8': 4-cycle
+      '9': unknown
+      '10': electric
+      '11': rotary
+    default: ~
+
+  engine.count:
+    field: 'acft.NO-ENG'
+    transform: int_or_null
+
+  engine.horsepower:
+    field: 'eng.HORSEPOWER'
+    transform: float_or_null
+
+  engine.thrust_lbs:
+    field: 'eng.THRUST'
+    transform: float_or_null
+
+  owner.name:
+    field: 'NAME'
+    transform: trim_or_null
+
+  owner.kind:
+    field: 'TYPE REGISTRANT'
+    transform: trim_or_null
+    lookup:
+      '1': individual
+      '2': partnership
+      '3': corporation
+      '4': co-owner
+      '5': government
+      '7': llc
+      '8': non-citizen-corporation
+      '9': non-citizen-co-owner
+    default: other
+
+  owner.state:
+    field: 'STATE'
+    transform: trim_or_null
+
+  owner.country:
+    field: 'COUNTRY'
+    transform: trim_or_null
+
+  certification_date:
+    field: 'CERT ISSUE DATE'
+    transform: date_yyyymmdd_or_null
+
+  airworthiness_date:
+    field: 'AIR WORTH DATE'
+    transform: date_yyyymmdd_or_null
+
+  expiration_date:
+    field: 'EXPIRATION DATE'
+    transform: date_yyyymmdd_or_null
+
+  last_action_date:
+    field: 'LAST ACTION DATE'
+    transform: date_yyyymmdd_or_null
+
+  cruise_speed_ktas:
+    field: 'acft.SPEED'
+    transform: mph_to_ktas_or_null

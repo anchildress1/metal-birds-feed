@@ -6,10 +6,8 @@ pre-commit:
       stage_fixed: true
     lint:
       run: make lint
-      stage_fixed: true
     scan-secrets:
       run: make secret-scan
-      stage_fixed: true
     actionlint:
       glob: '.github/workflows/*.yml'
       run: actionlint {staged_files}
