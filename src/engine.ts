@@ -5,11 +5,6 @@ import { parseCSV, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
-export interface TranslateResult {
-  record: Aircraft;
-  sourceId: string;
-}
-
 export interface EngineStats {
   total: number;
   ok: number;
