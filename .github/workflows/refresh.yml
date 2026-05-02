@@ -16,16 +16,47 @@ on:
         type: choice
         options: ['false', 'true']
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: false # never cancel a running refresh mid-write
-
 jobs:
+  discover:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      sources: ${{ steps.list.outputs.sources }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Enumerate sources
+        id: list
+        env:
+          INPUT_SOURCE: ${{ inputs.source }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_SOURCE" ]; then
+            sources=$(jq -c -n --arg s "$INPUT_SOURCE" '[$s]')
+          else
+            sources=$(find sources -maxdepth 1 -name '*.yaml' -type f -print0 \
+              | xargs -0 -n1 basename \
+              | sed 's/\.yaml$//' \
+              | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          fi
+          echo "sources=$sources" >> "$GITHUB_OUTPUT"
+          echo "Resolved sources: $sources"
+
   refresh:
+    needs: discover
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        source: ${{ fromJson(needs.discover.outputs.sources) }}
+    concurrency:
+      group: refresh-${{ matrix.source }}
+      cancel-in-progress: false # never cancel a running refresh mid-write
 
     steps:
       - name: Checkout code
@@ -48,7 +79,7 @@ jobs:
           MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
           MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
           MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
-          REFRESH_SOURCE: ${{ inputs.source || '' }}
+          REFRESH_SOURCE: ${{ matrix.source }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
         run: bun run dist/pipeline.js
 
@@ -56,6 +87,6 @@ jobs:
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: refresh-logs-${{ github.run_id }}
+          name: refresh-logs-${{ matrix.source }}-${{ github.run_id }}
           path: logs/
           retention-days: 90
