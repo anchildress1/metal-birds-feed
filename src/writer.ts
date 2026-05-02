@@ -5,6 +5,7 @@ import {
   DeleteObjectCommand,
   NoSuchKey,
 } from '@aws-sdk/client-s3';
+import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import { contentHash } from './engine.js';
 import { log } from './logger.js';
@@ -16,6 +17,8 @@ interface ManifestEntry {
 }
 
 type Manifest = Record<string, ManifestEntry>;
+
+const RefIndexSchema = z.object({ refs: z.array(z.string()).optional() });
 
 export interface WriteStats {
   put: number;
@@ -109,7 +112,11 @@ export class R2DiffWriter {
     }
 
     for (const hex of dirtyHex) {
-      const refs = (hexToIds.get(hex) ?? []).map((id) => `${source}:${id}`);
+      const refs = await this.mergeIndexRefs(
+        `aircraft/by-icao-hex/${hex}.json`,
+        (hexToIds.get(hex) ?? []).map((id) => `${source}:${id}`),
+        source
+      );
       if (refs.length > 0) {
         await this.put(`aircraft/by-icao-hex/${hex}.json`, { refs });
       } else {
@@ -118,7 +125,11 @@ export class R2DiffWriter {
     }
 
     for (const reg of dirtyReg) {
-      const refs = (regToIds.get(reg) ?? []).map((id) => `${source}:${id}`);
+      const refs = await this.mergeIndexRefs(
+        `aircraft/by-registration/${reg}.json`,
+        (regToIds.get(reg) ?? []).map((id) => `${source}:${id}`),
+        source
+      );
       if (refs.length > 0) {
         await this.put(`aircraft/by-registration/${reg}.json`, { refs });
       } else {
@@ -148,6 +159,36 @@ export class R2DiffWriter {
       if (err instanceof NoSuchKey) return {};
       log('error', 'manifest_load_failed', {
         source,
+        msg: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  }
+
+  private async mergeIndexRefs(
+    key: string,
+    sourceRefs: string[],
+    source: string
+  ): Promise<string[]> {
+    const existingRefs = await this.loadRefs(key);
+    const sourcePrefix = `${source}:`;
+    return Array.from(
+      new Set([...existingRefs.filter((ref) => !ref.startsWith(sourcePrefix)), ...sourceRefs])
+    );
+  }
+
+  private async loadRefs(key: string): Promise<string[]> {
+    try {
+      const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const body = await res.Body?.transformToString();
+      if (!body) return [];
+      const parsed = RefIndexSchema.safeParse(JSON.parse(body));
+      if (!parsed.success) throw new Error(`Invalid ref index ${key}: ${parsed.error.message}`);
+      return parsed.data.refs ?? [];
+    } catch (err) {
+      if (err instanceof NoSuchKey) return [];
+      log('error', 'index_load_failed', {
+        key,
         msg: err instanceof Error ? err.message : String(err),
       });
       throw err;

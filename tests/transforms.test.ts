@@ -45,6 +45,8 @@ describe('applyScalar', () => {
       expect(applyScalar('date_yyyymmdd_or_null', '1979062')).toBeNull());
     it('returns null for non-digit', () =>
       expect(applyScalar('date_yyyymmdd_or_null', '1979062X')).toBeNull());
+    it('returns null for rollover dates', () =>
+      expect(applyScalar('date_yyyymmdd_or_null', '20230231')).toBeNull());
     it('handles whitespace', () =>
       expect(applyScalar('date_yyyymmdd_or_null', ' 20231015 ')).toBe('2023-10-15'));
   });

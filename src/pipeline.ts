@@ -11,10 +11,15 @@ function requireEnv(name: string): string {
   return v;
 }
 
+function validateSourceId(sourceId: string): void {
+  if (sourceId.includes('..')) throw new Error(`Path traversal rejected: ${sourceId}`);
+}
+
 async function run(sourceId: string): Promise<void> {
   log('info', 'pipeline_start', { source: sourceId });
   const start = Date.now();
 
+  validateSourceId(sourceId);
   const configPath = resolve('sources', `${sourceId}.yaml`);
   const config = loadSourceConfig(configPath);
 
@@ -27,18 +32,17 @@ async function run(sourceId: string): Promise<void> {
 
   if (dryRun) {
     log('info', 'dry_run_mode', { source: sourceId, records: records.size });
-  } else {
-    const writer = new R2DiffWriter(
-      {
-        accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
-        accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
-        secretAccessKey: requireEnv('MBF_R2_SECRET_ACCESS_KEY'),
-        bucketName: requireEnv('MBF_R2_BUCKET_NAME'),
-      },
-      false
-    );
-    await writer.write(records, sourceId);
   }
+  const writer = new R2DiffWriter(
+    {
+      accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
+      accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
+      secretAccessKey: requireEnv('MBF_R2_SECRET_ACCESS_KEY'),
+      bucketName: requireEnv('MBF_R2_BUCKET_NAME'),
+    },
+    dryRun
+  );
+  await writer.write(records, sourceId);
 
   log('info', 'pipeline_complete', { source: sourceId, elapsed_ms: Date.now() - start });
 }

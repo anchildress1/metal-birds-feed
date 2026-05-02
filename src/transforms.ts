@@ -33,7 +33,15 @@ export function applyScalar(name: ScalarTransformName, value: string): string | 
       const m = v.slice(4, 6);
       const d = v.slice(6, 8);
       const date = new Date(`${y}-${m}-${d}T00:00:00Z`);
-      return Number.isNaN(date.getTime()) ? null : `${y}-${m}-${d}`;
+      if (Number.isNaN(date.getTime())) return null;
+      if (
+        date.getUTCFullYear() !== Number(y) ||
+        date.getUTCMonth() + 1 !== Number(m) ||
+        date.getUTCDate() !== Number(d)
+      ) {
+        return null;
+      }
+      return `${y}-${m}-${d}`;
     }
     case 'mph_to_ktas_or_null': {
       const v = value.trim();

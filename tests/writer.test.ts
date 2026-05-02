@@ -82,6 +82,10 @@ function manifestResponse(
   return { Body: { transformToString: vi.fn().mockResolvedValue(JSON.stringify(entries)) } };
 }
 
+function refsResponse(refs: string[]): object {
+  return { Body: { transformToString: vi.fn().mockResolvedValue(JSON.stringify({ refs })) } };
+}
+
 beforeEach(() => {
   mockSend.mockReset();
   mockSend.mockResolvedValue({ Body: { transformToString: vi.fn().mockResolvedValue('{}') } });
@@ -261,5 +265,35 @@ describe('R2DiffWriter — live mode', () => {
 
     const delCalls = mockSend.mock.calls.filter((c) => (c[0] as { _type: string })._type === 'del');
     expect(delCalls.length).toBeGreaterThan(0);
+  });
+
+  it('preserves other-source refs when updating a global index', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    const records = new Map([['id001', r1]]);
+
+    mockSend
+      .mockResolvedValueOnce(
+        manifestResponse({
+          id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
+        })
+      )
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce(refsResponse(['tc:foreign-id', 'faa:old-id']))
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce(refsResponse(['caa:foreign-reg', 'faa:old-id']))
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({});
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await writer.write(records, 'faa');
+
+    const putCalls = mockSend.mock.calls
+      .map((c) => c[0] as { _type: string; a: { Key: string; Body?: string } })
+      .filter((c) => c._type === 'put');
+    const hexPut = putCalls.find((c) => c.a.Key === 'aircraft/by-icao-hex/a4e294.json');
+    const regPut = putCalls.find((c) => c.a.Key === 'aircraft/by-registration/N12345.json');
+
+    expect(JSON.parse(hexPut?.a.Body ?? '{}')).toEqual({ refs: ['tc:foreign-id', 'faa:id001'] });
+    expect(JSON.parse(regPut?.a.Body ?? '{}')).toEqual({ refs: ['caa:foreign-reg', 'faa:id001'] });
   });
 });
