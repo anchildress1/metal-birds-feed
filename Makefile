@@ -36,14 +36,14 @@ perf:
 secret-scan:
 	@_run_scan() { \
 		SCANNER="$$1"; \
-		$$SCANNER scan --exclude-files 'node_modules|dist|coverage|.secrets.baseline.tmp' > .secrets.baseline.tmp 2>&1 || true; \
+		$$SCANNER scan --exclude-files 'node_modules|dist|coverage|.secrets.baseline.tmp|.secrets.baseline' > .secrets.baseline.tmp 2>&1 || true; \
 		if [ ! -f .secrets.baseline.tmp ]; then \
 			echo "⚠️ detect-secrets scan did not produce output. Skipping."; \
 			return 0; \
 		fi; \
 		if [ -f .secrets.baseline ]; then \
 			echo "Checking against baseline..."; \
-			NEW_SECRETS=$$($$SCANNER scan --baseline .secrets.baseline --exclude-files 'node_modules|dist|coverage' | jq '.results | length' 2>/dev/null || echo 0); \
+			NEW_SECRETS=$$($$SCANNER scan --baseline .secrets.baseline --exclude-files 'node_modules|dist|coverage|.secrets.baseline' | jq '.results | length' 2>/dev/null || echo 0); \
 			if [ "$${NEW_SECRETS:-0}" -gt 0 ]; then \
 				echo "❌ New secrets found! Run 'detect-secrets audit .secrets.baseline' to review."; \
 				$$SCANNER scan --baseline .secrets.baseline --exclude-files 'node_modules|dist|coverage' | jq '.results'; \
