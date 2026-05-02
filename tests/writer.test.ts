@@ -36,7 +36,7 @@ import { NoSuchKey } from '@aws-sdk/client-s3';
 const R2_CONFIG = {
   accountId: 'test-account',
   accessKeyId: 'access-key',
-  secretAccessKey: 'dummy',
+  secretAccessKey: 'dummy', // gitleaks:allow
   bucketName: 'test-bucket',
 };
 

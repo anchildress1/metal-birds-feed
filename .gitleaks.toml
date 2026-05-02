@@ -1,0 +1,8 @@
+title = "metal-birds-feed"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "ignore gitignored credential files"
+paths = ['''\.env(\..+)?$''']
