@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { loadSourceConfig } from './config/loader.js';
-import { translate } from './engine.js';
-import type { Aircraft } from './schema.js';
-import type { FieldMapping } from './types/config.js';
+import { loadSourceConfig } from '../src/config/loader.js';
+import { translate } from '../src/engine.js';
+import type { Aircraft } from '../src/schema.js';
+import type { FieldMapping } from '../src/types/config.js';
 
 const FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'faa');
 const CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'faa.yaml');

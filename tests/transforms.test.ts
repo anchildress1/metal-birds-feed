@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyScalar, applyArray } from './transforms.js';
+import { applyScalar, applyArray } from '../src/transforms.js';
 
 describe('applyScalar', () => {
   describe('trim', () => {

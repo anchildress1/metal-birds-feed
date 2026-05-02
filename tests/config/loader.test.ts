@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'node:path';
-import { loadSourceConfig } from './loader.js';
+import { loadSourceConfig } from '../../src/config/loader.js';
 
 const FAA_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'faa.yaml');
 

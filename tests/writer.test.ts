@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Aircraft } from './schema.js';
+import type { Aircraft } from '../src/schema.js';
 
 const mockSend = vi.hoisted(() => vi.fn());
 
@@ -23,8 +23,8 @@ vi.mock('@aws-sdk/client-s3', () => ({
   /* eslint-enable @typescript-eslint/no-explicit-any */
 }));
 
-import { R2DiffWriter } from './writer.js';
-import { contentHash } from './engine.js';
+import { R2DiffWriter } from '../src/writer.js';
+import { contentHash } from '../src/engine.js';
 
 const R2_CONFIG = {
   accountId: 'test-account',

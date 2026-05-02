@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { download } from './downloader.js';
-import type { DownloadConfig } from './types/config.js';
+import { download } from '../src/downloader.js';
+import type { DownloadConfig } from '../src/types/config.js';
 
 const FIXTURE_ZIP = resolve(import.meta.dirname, '..', 'fixtures', 'faa', 'ReleasableAircraft.zip');
 

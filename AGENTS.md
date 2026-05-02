@@ -61,6 +61,7 @@ Runtime: Bun. No web framework. Runs on GitHub Actions monthly cron or `workflow
 
 ## Test Standards
 
+- Tests live in `tests/` mirroring `src/` structure (e.g., `tests/engine.test.ts` for `src/engine.ts`). Do not colocate test files next to source files.
 - Coverage thresholds: 85% lines/functions/statements, 80% branches (enforced in vitest.config.ts).
 - Every translation engine function: positive, negative, and edge-case tests.
 - `fixtures/faa/` is CI ground-truth. Do not modify expected output without a schema or config change.
