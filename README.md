@@ -65,13 +65,11 @@ make install
 ## Adding a New Registry Source
 
 1. Create `sources/<source-id>.yaml` following the mapping-config schema.
-2. Add a downloader in `src/sources/<source-id>/downloader.ts`.
-3. Add acceptance fixtures in `fixtures/<source-id>/`.
-4. Update `DATA_LICENSES.md` with the new source's data license.
-5. The translation engine requires no changes.
+2. Add acceptance fixtures in `fixtures/<source-id>/`.
+3. Update `DATA_LICENSES.md` with the new source's data license.
+
+The translation engine and downloader require no changes.
 
 ## License
 
-Polyform Shield License 1.0.0 — see [LICENSE](LICENSE).
-
-Based on original work by Ashley Childress – see https://github.com/anchildress1/metal-birds-feed.
+[Polyform Shield 1.0.0](LICENSE) — free to use, not free to compete.
