@@ -1,0 +1,28 @@
+pre-commit:
+  parallel: false
+  commands:
+    format:
+      run: make format
+      stage_fixed: true
+    lint:
+      run: make lint
+      stage_fixed: true
+    scan-secrets:
+      run: make secret-scan
+      stage_fixed: true
+    actionlint:
+      glob: ".github/workflows/*.yml"
+      run: actionlint {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}
+
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: make typecheck
+    unit-tests:
+      run: make test

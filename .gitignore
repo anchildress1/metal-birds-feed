@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.local
+.env
+.env.*
+!.env.example
+.secrets.baseline.tmp
+*.log
+logs/
