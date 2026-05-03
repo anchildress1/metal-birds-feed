@@ -2,10 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { parseCSV } from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
+const opts = (overrides: Partial<{ delimiter: string; trim: boolean }> = {}) => ({
+  encoding: 'latin1' as const,
+  delimiter: ',',
+  trim: false,
+  ...overrides,
+});
 
 describe('parseCSV', () => {
   it('parses a basic comma-delimited file with header row', async () => {
-    const rows = await parseCSV(buf('CODE,MFR,MODEL\n001,CESSNA,172\n'), 'latin1', ',');
+    const rows = await parseCSV(buf('CODE,MFR,MODEL\n001,CESSNA,172\n'), opts());
     expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA', MODEL: '172' }]);
   });
 
@@ -14,8 +20,7 @@ describe('parseCSV', () => {
     // INVALID_OPENING_QUOTE under default csv-parse settings.
     const rows = await parseCSV(
       buf('CODE,MFR,MODEL\n001,CORBEN,BABY ACE "\n002,KISSEL,GUNS"S\n'),
-      'latin1',
-      ','
+      opts()
     );
     expect(rows).toHaveLength(2);
     expect(rows[0].MODEL).toBe('BABY ACE "');
@@ -23,56 +28,60 @@ describe('parseCSV', () => {
   });
 
   it('tolerates rows with extra columns (relax_column_count)', async () => {
-    const rows = await parseCSV(buf('A,B\n1,2,3\n'), 'latin1', ',');
+    const rows = await parseCSV(buf('A,B\n1,2,3\n'), opts());
     expect(rows[0].A).toBe('1');
     expect(rows[0].B).toBe('2');
   });
 
   it('skips fully empty lines', async () => {
-    const rows = await parseCSV(buf('A,B\n1,2\n\n3,4\n'), 'latin1', ',');
+    const rows = await parseCSV(buf('A,B\n1,2\n\n3,4\n'), opts());
     expect(rows).toHaveLength(2);
   });
 
   it('decodes latin1 bytes (non-ASCII manufacturer name)', async () => {
-    // 0xE9 = é in latin1
     const rows = await parseCSV(
-      Buffer.from([
-        0x4d,
-        0x46,
-        0x52,
-        0x0a, // "MFR\n"
-        0x42,
-        0xe9,
-        0x42,
-        0x45,
-        0x52,
-        0x0a, // "BéBER\n"
-      ]),
-      'latin1',
-      ','
+      Buffer.from([0x4d, 0x46, 0x52, 0x0a, 0x42, 0xe9, 0x42, 0x45, 0x52, 0x0a]),
+      opts()
     );
     expect(rows[0].MFR).toBe('BéBER');
   });
 
   it('supports a non-comma delimiter', async () => {
-    const rows = await parseCSV(buf('A|B\n1|2\n'), 'latin1', '|');
+    const rows = await parseCSV(buf('A|B\n1|2\n'), opts({ delimiter: '|' }));
     expect(rows).toEqual([{ A: '1', B: '2' }]);
   });
 
   it('returns an empty array for header-only input', async () => {
-    const rows = await parseCSV(buf('A,B\n'), 'latin1', ',');
+    const rows = await parseCSV(buf('A,B\n'), opts());
     expect(rows).toEqual([]);
   });
 
   it('resolves to an empty array for completely empty input', async () => {
-    await expect(parseCSV(buf(''), 'latin1', ',')).resolves.toEqual([]);
+    await expect(parseCSV(buf(''), opts())).resolves.toEqual([]);
   });
 
   it('rejects when csv-parse encounters an unrecoverable structural error', async () => {
-    // An unterminated quoted field at EOF is unrecoverable even with
-    // relax_quotes — csv-parse raises CSV_QUOTE_NOT_CLOSED.
-    await expect(parseCSV(buf('A,B\n"unterminated\n'), 'latin1', ',')).rejects.toThrow(
+    await expect(parseCSV(buf('A,B\n"unterminated\n'), opts())).rejects.toThrow(
       /Quote Not Closed/i
     );
+  });
+
+  it('trims trailing whitespace from header names (FAA registry quirk)', async () => {
+    // FAA's MASTER.txt headers are space-padded — `'N-NUMBER '` instead of `'N-NUMBER'`.
+    // Without normalization, every per-field lookup downstream silently returns undefined.
+    const rows = await parseCSV(buf('N-NUMBER ,SERIAL NUMBER \n12345,17282099\n'), opts());
+    expect(rows[0]['N-NUMBER']).toBe('12345');
+    expect(rows[0]['SERIAL NUMBER']).toBe('17282099');
+    expect(rows[0]['N-NUMBER ']).toBeUndefined();
+  });
+
+  it('trims values when trim option is true', async () => {
+    const rows = await parseCSV(buf('A,B\n  hello  ,  world  \n'), opts({ trim: true }));
+    expect(rows[0]).toEqual({ A: 'hello', B: 'world' });
+  });
+
+  it('preserves value whitespace when trim option is false', async () => {
+    const rows = await parseCSV(buf('A,B\n  hello  ,  world  \n'), opts({ trim: false }));
+    expect(rows[0]).toEqual({ A: '  hello  ', B: '  world  ' });
   });
 });
