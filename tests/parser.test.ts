@@ -84,4 +84,15 @@ describe('parseCSV', () => {
     const rows = await parseCSV(buf('A,B\n  hello  ,  world  \n'), opts({ trim: false }));
     expect(rows[0]).toEqual({ A: '  hello  ', B: '  world  ' });
   });
+
+  it('parses quoted-then-unquoted in same field with trim enabled (FAA ACFTREF quirk)', async () => {
+    // ACFTREF.txt line 38386: `"B"-BALLOON`. csv-parse's native trim: true rejects this
+    // even with relax_quotes. Trimming in a cast callback sidesteps the regression.
+    const rows = await parseCSV(
+      buf('CODE,MFR,MODEL\n05630EP,HOLLROCK,"B"-BALLOON\n'),
+      opts({ trim: true })
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].MODEL).toBe('"B"-BALLOON');
+  });
 });
