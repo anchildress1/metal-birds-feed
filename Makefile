@@ -1,4 +1,4 @@
-.PHONY: install dev format format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean
+.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
@@ -11,6 +11,12 @@ dev:
 
 format:
 	$(BUNX) prettier --write .
+
+# Format only the files passed via FILES= (used by lefthook pre-commit).
+# --ignore-unknown skips files prettier can't parse (e.g., Makefile slipping past a glob);
+# empty FILES list is a no-op so the hook doesn't error on commits with no matching files.
+format-files:
+	@if [ -n "$(FILES)" ]; then $(BUNX) prettier --write --ignore-unknown $(FILES); fi
 
 format-check:
 	$(BUNX) prettier --check .
