@@ -2,22 +2,32 @@ import { parse } from 'csv-parse';
 
 export type Row = Record<string, string>;
 
-export async function parseCSV(
-  buf: Buffer,
-  encoding: 'utf8' | 'latin1',
-  delimiter: string
-): Promise<Row[]> {
-  const text = new TextDecoder(encoding).decode(buf);
+export interface ParseOptions {
+  encoding: 'utf8' | 'latin1';
+  delimiter: string;
+  trim: boolean;
+}
+
+// Headers are always normalized (trimmed) — registry CSVs (FAA, in particular) ship column
+// names with trailing whitespace, which silently breaks every per-field lookup downstream.
+//
+// Value trim runs in a `cast` callback rather than csv-parse's native `trim: true`, because
+// `trim: true` interacts with quote parsing in a way that rejects FAA's `"B"-BALLOON` style
+// (quoted-then-unquoted in the same field) even with relax_quotes. Trimming after the
+// quote-handling pass sidesteps that regression.
+export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[]> {
+  const text = new TextDecoder(options.encoding).decode(buf);
+  const cast = options.trim ? (value: string): string => value.trim() : undefined;
   return new Promise((resolve, reject) => {
     parse(
       text,
       {
-        delimiter,
-        columns: true,
+        delimiter: options.delimiter,
+        columns: (header: string[]) => header.map((h) => h.trim()),
         skip_empty_lines: true,
         relax_column_count: true,
         relax_quotes: true,
-        trim: false,
+        cast,
       },
       (err, records: Row[]) => {
         if (err) reject(err);

@@ -1,4 +1,4 @@
-.PHONY: install dev format format-check lint typecheck test build e2e perf secret-scan commitlint clean
+.PHONY: install dev format format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
@@ -26,6 +26,28 @@ test:
 
 build:
 	$(BUNX) tsc
+
+ENV_FILE ?= .env
+
+# One-shot initial load. Run locally (no GHA timeout cap) before the first monthly cron.
+# Reads R2 credentials from $(ENV_FILE) (default .env). To override the source or dry-run
+# flag for a single invocation, edit $(ENV_FILE) — values there always win.
+bootstrap: build
+	@if [ ! -f $(ENV_FILE) ]; then \
+		echo "$(ENV_FILE) not found. Create it with MBF_R2_* and optional REFRESH_SOURCE/DRY_RUN."; \
+		exit 1; \
+	fi
+	@case "$(ENV_FILE)" in /*) src="$(ENV_FILE)" ;; *) src="./$(ENV_FILE)" ;; esac; \
+		set -a; . "$$src"; set +a; \
+		: $${MBF_R2_ACCOUNT_ID:?MBF_R2_ACCOUNT_ID missing from $(ENV_FILE)}; \
+		: $${MBF_R2_ACCESS_KEY_ID:?MBF_R2_ACCESS_KEY_ID missing from $(ENV_FILE)}; \
+		: $${MBF_R2_SECRET_ACCESS_KEY:?MBF_R2_SECRET_ACCESS_KEY missing from $(ENV_FILE)}; \
+		: $${MBF_R2_BUCKET_NAME:?MBF_R2_BUCKET_NAME missing from $(ENV_FILE)}; \
+		REFRESH_SOURCE=$${REFRESH_SOURCE:-faa}; \
+		DRY_RUN=$${DRY_RUN:-false}; \
+		echo "Bootstrap initial load — source=$$REFRESH_SOURCE dry_run=$$DRY_RUN"; \
+		export REFRESH_SOURCE DRY_RUN; \
+		$(BUN) run dist/pipeline.js
 
 e2e:
 	@echo "No E2E tests — this is a data pipeline, not a web app."
