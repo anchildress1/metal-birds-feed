@@ -98,8 +98,10 @@ const trackDirtyOnUpdate = (
   dirtyHex: Set<string>,
   dirtyReg: Set<string>
 ): void => {
+  // Empty registration / null icao_hex = record stays findable by-id but isn't indexed.
+  // Skipping here keeps every unindexed record from collapsing to one stub index file.
   if (entry.icao_hex) dirtyHex.add(entry.icao_hex);
-  dirtyReg.add(entry.registration);
+  if (entry.registration) dirtyReg.add(entry.registration);
   if (old?.icao_hex && old.icao_hex !== entry.icao_hex) dirtyHex.add(old.icao_hex);
   if (old?.registration && old.registration !== entry.registration) dirtyReg.add(old.registration);
 };
@@ -124,7 +126,7 @@ const computeDiffs = (oldManifest: Manifest, newManifest: Manifest): DiffSets =>
     if (!newManifest[id]) {
       diffs.toDelete.add(id);
       if (entry.icao_hex) diffs.dirtyHex.add(entry.icao_hex);
-      diffs.dirtyReg.add(entry.registration);
+      if (entry.registration) diffs.dirtyReg.add(entry.registration);
     }
   }
 
@@ -141,9 +143,11 @@ const buildInverseMaps = (newManifest: Manifest): InverseMaps => {
       ids.push(id);
       hexToIds.set(entry.icao_hex, ids);
     }
-    const ids = regToIds.get(entry.registration) ?? [];
-    ids.push(id);
-    regToIds.set(entry.registration, ids);
+    if (entry.registration) {
+      const ids = regToIds.get(entry.registration) ?? [];
+      ids.push(id);
+      regToIds.set(entry.registration, ids);
+    }
   }
   return { hexToIds, regToIds };
 };

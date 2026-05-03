@@ -241,6 +241,43 @@ describe('R2DiffWriter — dry run', () => {
     expect(stats.put).toBe(1);
   });
 
+  it('skips empty-string registration from the index (parallel to null icao_hex)', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockResolvedValue({});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([
+      ['id001', makeAircraft('id001', '', 'a4e294')],
+      ['id002', makeAircraft('id002', '', 'b5f3a1')],
+    ]);
+    await writer.write(records, 'faa');
+
+    const planLog = consoleSpy.mock.calls.find((c) => String(c[0]).includes('event=write_plan'));
+    // Empty registration must NOT contribute to dirty_reg — otherwise every unindexed
+    // record collapses to the same stub key.
+    expect(String(planLog?.[0])).toContain('dirty_reg=0');
+    expect(String(planLog?.[0])).toContain('dirty_hex=2');
+    consoleSpy.mockRestore();
+  });
+
+  it('still indexes records that DO have a registration', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockResolvedValue({});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([
+      ['id001', makeAircraft('id001', 'N12345', 'a4e294')],
+      ['id002', makeAircraft('id002', '', 'b5f3a1')],
+    ]);
+    await writer.write(records, 'faa');
+
+    const planLog = consoleSpy.mock.calls.find((c) => String(c[0]).includes('event=write_plan'));
+    expect(String(planLog?.[0])).toContain('dirty_reg=1');
+    consoleSpy.mockRestore();
+  });
+
   it('total of put + skipped equals record count', async () => {
     const r1 = makeAircraft('id001', 'N12345', 'a4e294');
     const r2 = makeAircraft('id002', 'N67890', null);
