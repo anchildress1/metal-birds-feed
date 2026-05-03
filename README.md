@@ -13,13 +13,49 @@ lookups. Inspired by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.p
 
 ## How It Works
 
-1. A GitHub Actions scheduled workflow runs on the 1st of every month.
-2. It downloads the latest bulk registry export from each configured source.
-3. The translation engine reads a YAML source config and normalizes raw rows into the
-   canonical `Aircraft` schema.
-4. A diff-write strategy compares the new batch against a per-source manifest in R2.
-   Only changed or new objects are PUT; stale records are DELETE'd.
-5. Lookups are keyed as static JSON objects — no query layer, no API, just R2.
+A GitHub Actions matrix runs on the 1st of every month — one runner per source under
+`sources/*.yaml`. Each runner:
+
+1. Downloads the source's full bulk export (registries don't publish deltas)
+2. Translates every row into the canonical `Aircraft` schema via the source's YAML mapping
+3. Computes a content-hash diff against the per-source manifest in R2
+4. Writes only what actually changed; lookups stay as static JSON objects in R2
+
+### What's full vs delta
+
+| Step        | Pass type | Notes                                                                        |
+| ----------- | --------- | ---------------------------------------------------------------------------- |
+| Download    | Full      | FAA / TC / CAA / GCAA all ship full snapshots. No `If-Modified-Since`        |
+| Translate   | Full      | All rows re-parsed and transformed every run (~10s for FAA's 312k records)   |
+| Hash + diff | Full O(n) | Every record's `sha256` content hash is compared against the stored manifest |
+| R2 writes   | **Delta** | Only changed records get PUT; removed records get DELETE; unchanged skipped  |
+
+The delta lives entirely in the write step. This is by design: registries don't expose
+incremental APIs, but R2 ops are the expensive part — so we pay for the cheap full-passes
+to avoid paying for the expensive redundant writes.
+
+### What a typical monthly run looks like
+
+| Phase     | Bootstrap (first run) | Steady state (monthly cron) |
+| --------- | --------------------- | --------------------------- |
+| Records   | ~312k all new         | ~3–6k changed (~1–2%)       |
+| R2 ops    | ~600k+                | ~10k                        |
+| Wall time | ~99 min               | ~2 min                      |
+
+Bootstrap doesn't fit GHA's 30-minute job cap, so it's run once locally — see below.
+
+## Initial Load (Bootstrap)
+
+The first load against an empty R2 bucket writes every record + every index, which exceeds
+GHA's per-job timeout. Run it once locally; the monthly cron handles diffs forever after.
+
+```bash
+cp .env.example .env  # fill in MBF_R2_* values
+make bootstrap        # auto-loads .env, runs the full pipeline with no time cap
+```
+
+Tail `logs/pipeline.log` for `event=write_progress` ticks (every 5s during writes).
+Override the source via `.env`'s `REFRESH_SOURCE` value.
 
 ## R2 Key Structure
 
@@ -48,6 +84,7 @@ make install
 | `make typecheck`    | TypeScript type check                          |
 | `make test`         | Run unit tests with coverage                   |
 | `make build`        | Compile TypeScript to `dist/`                  |
+| `make bootstrap`    | One-shot local initial load (reads `.env`)     |
 | `make secret-scan`  | Scan for accidentally committed secrets        |
 | `make clean`        | Remove build artifacts                         |
 

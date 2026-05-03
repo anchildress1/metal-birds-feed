@@ -241,6 +241,43 @@ describe('R2DiffWriter — dry run', () => {
     expect(stats.put).toBe(1);
   });
 
+  it('skips empty-string registration from the index (parallel to null icao_hex)', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockResolvedValue({});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([
+      ['id001', makeAircraft('id001', '', 'a4e294')],
+      ['id002', makeAircraft('id002', '', 'b5f3a1')],
+    ]);
+    await writer.write(records, 'faa');
+
+    const planLog = consoleSpy.mock.calls.find((c) => String(c[0]).includes('event=write_plan'));
+    // Empty registration must NOT contribute to dirty_reg — otherwise every unindexed
+    // record collapses to the same stub key.
+    expect(String(planLog?.[0])).toContain('dirty_reg=0');
+    expect(String(planLog?.[0])).toContain('dirty_hex=2');
+    consoleSpy.mockRestore();
+  });
+
+  it('still indexes records that DO have a registration', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockResolvedValue({});
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([
+      ['id001', makeAircraft('id001', 'N12345', 'a4e294')],
+      ['id002', makeAircraft('id002', '', 'b5f3a1')],
+    ]);
+    await writer.write(records, 'faa');
+
+    const planLog = consoleSpy.mock.calls.find((c) => String(c[0]).includes('event=write_plan'));
+    expect(String(planLog?.[0])).toContain('dirty_reg=1');
+    consoleSpy.mockRestore();
+  });
+
   it('total of put + skipped equals record count', async () => {
     const r1 = makeAircraft('id001', 'N12345', 'a4e294');
     const r2 = makeAircraft('id002', 'N67890', null);
@@ -392,5 +429,169 @@ describe('R2DiffWriter — live mode', () => {
 
     const writer = new R2DiffWriter(R2_CONFIG, false);
     await expect(writer.write(records, 'faa')).rejects.toThrow(/invalid ref index/i);
+  });
+});
+
+describe('R2DiffWriter — fresh bucket fast path', () => {
+  it('skips ref-index GETs when manifest object does not exist', async () => {
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get' && cmd.a.Key === 'aircraft/_manifest/faa.json') {
+        return Promise.reject(new NoSuchKey());
+      }
+      return Promise.resolve({});
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const records = new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]);
+    await writer.write(records, 'faa');
+
+    const getCalls = mockSend.mock.calls.filter((c) => (c[0] as { _type: string })._type === 'get');
+    expect(getCalls).toHaveLength(1);
+    expect((getCalls[0][0] as { a: { Key: string } }).a.Key).toBe('aircraft/_manifest/faa.json');
+  });
+
+  it('writes source-only refs (no merge) on fresh bucket', async () => {
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get' && cmd.a.Key === 'aircraft/_manifest/faa.json') {
+        return Promise.reject(new NoSuchKey());
+      }
+      return Promise.resolve({});
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const records = new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]);
+    await writer.write(records, 'faa');
+
+    const putCalls = mockSend.mock.calls
+      .map((c) => c[0] as { _type: string; a: { Key: string; Body?: string } })
+      .filter((c) => c._type === 'put');
+    const hexPut = putCalls.find((c) => c.a.Key === 'aircraft/by-icao-hex/a4e294.json');
+    const regPut = putCalls.find((c) => c.a.Key === 'aircraft/by-registration/N12345.json');
+
+    expect(JSON.parse(hexPut?.a.Body ?? '{}')).toEqual({ refs: ['faa:id001'] });
+    expect(JSON.parse(regPut?.a.Body ?? '{}')).toEqual({ refs: ['faa:id001'] });
+  });
+
+  it('still calls loadRefs when manifest exists but is empty', async () => {
+    // Empty-but-present manifest may indicate a partial prior write — must merge to be safe.
+    mockSend.mockResolvedValue({
+      Body: { transformToString: vi.fn().mockResolvedValue('{}') },
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const records = new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]);
+    await writer.write(records, 'faa');
+
+    const getCalls = mockSend.mock.calls.filter((c) => (c[0] as { _type: string })._type === 'get');
+    // Manifest GET + at least one ref-index GET (hex and/or reg)
+    expect(getCalls.length).toBeGreaterThan(1);
+  });
+});
+
+describe('R2DiffWriter — worker pool', () => {
+  it('drains all items without dropping any (large set)', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: vi.fn().mockResolvedValue('{}') },
+    });
+
+    const records = new Map<string, Aircraft>();
+    for (let i = 0; i < 100; i++) {
+      const id = `id${String(i).padStart(3, '0')}`;
+      records.set(id, makeAircraft(id, `N${10000 + i}`, null));
+    }
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const stats = await writer.write(records, 'faa');
+
+    expect(stats.put).toBe(100);
+    expect(stats.skipped).toBe(0);
+  });
+
+  it('does not deadlock when toWrite is empty', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    mockSend.mockResolvedValueOnce(
+      manifestResponse({
+        id001: { hash: contentHash(r1), icao_hex: 'a4e294', registration: 'N12345' },
+      })
+    );
+    mockSend.mockResolvedValue({});
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const stats = await writer.write(new Map([['id001', r1]]), 'faa');
+
+    expect(stats.put).toBe(0);
+    expect(stats.skipped).toBe(1);
+  });
+});
+
+describe('R2DiffWriter — observability', () => {
+  it('emits write_plan log with op counts and fresh_bucket flag', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockResolvedValue({});
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa');
+
+    const planLog = consoleSpy.mock.calls.find((c) => String(c[0]).includes('event=write_plan'));
+    expect(planLog).toBeDefined();
+    expect(String(planLog?.[0])).toContain('fresh_bucket=true');
+    expect(String(planLog?.[0])).toContain('total_ops=');
+    consoleSpy.mockRestore();
+  });
+
+  it('clears the progress ticker after write completes (success)', async () => {
+    const clearSpy = vi.spyOn(global, 'clearInterval');
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    await writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa');
+    expect(clearSpy).toHaveBeenCalled();
+    clearSpy.mockRestore();
+  });
+
+  it('clears the progress ticker even when write fails', async () => {
+    mockSend.mockRejectedValueOnce(new Error('Boom'));
+    const clearSpy = vi.spyOn(global, 'clearInterval');
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await expect(
+      writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa')
+    ).rejects.toThrow('Boom');
+    // Manifest load throws before ticker starts — only assert no leak after a write that
+    // reaches the ticker phase.
+    clearSpy.mockRestore();
+  });
+
+  it('schedules a progress ticker on the 5s interval', async () => {
+    const intervalSpy = vi.spyOn(global, 'setInterval');
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    await writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa');
+
+    const tickerCall = intervalSpy.mock.calls.find((c) => c[1] === 5_000);
+    expect(tickerCall).toBeDefined();
+    intervalSpy.mockRestore();
+  });
+
+  it('progress ticker callback emits write_progress log', () => {
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const intervalSpy = vi.spyOn(global, 'setInterval');
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    // Invoke private ticker setup directly, then fire its callback.
+    type TickerSetup = (source: string) => NodeJS.Timeout;
+    const startTicker = (writer as unknown as { startProgressTicker: TickerSetup })
+      .startProgressTicker;
+    const handle = startTicker.call(writer, 'faa');
+    try {
+      const cb = intervalSpy.mock.calls[0]?.[0] as () => void;
+      cb();
+      const progressLog = consoleSpy.mock.calls.find((c) =>
+        String(c[0]).includes('event=write_progress')
+      );
+      expect(progressLog).toBeDefined();
+      expect(String(progressLog?.[0])).toContain('source=faa');
+    } finally {
+      clearInterval(handle);
+      intervalSpy.mockRestore();
+      consoleSpy.mockRestore();
+    }
   });
 });

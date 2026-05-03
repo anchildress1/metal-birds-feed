@@ -29,8 +29,12 @@ export async function translate(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
-  const primaryColumns = config.columns?.[config.primary];
-  const rows = await parseCSV(primaryBuf, config.encoding, config.delimiter, primaryColumns);
+  const rows = await parseCSV(primaryBuf, {
+    encoding: config.encoding,
+    delimiter: config.delimiter,
+    trim: config.trim_all,
+    columns: config.columns?.[config.primary],
+  });
 
   const records = new Map<string, Aircraft>();
   let failed = 0;
@@ -40,11 +44,10 @@ export async function translate(
     const row = rows[i];
     const merged = mergeJoins(row, config, joinMaps);
 
-    const rawId = resolveScalar(
-      merged,
-      { field: config.source_id, transform: 'trim_or_null' },
-      config.trim_all
-    );
+    const rawId = resolveScalar(merged, {
+      field: config.source_id,
+      transform: 'trim_or_null',
+    });
     if (!rawId) {
       if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
         log('warn', 'translate_skip', {
@@ -102,11 +105,15 @@ async function buildJoinMaps(
     config.joins.map(async (join) => {
       const buf = files.get(join.file);
       if (!buf) throw new Error(`Join file "${join.file}" not found`);
-      const cols = config.columns?.[join.file];
-      const rows = await parseCSV(buf, config.encoding, config.delimiter, cols);
+      const rows = await parseCSV(buf, {
+        encoding: config.encoding,
+        delimiter: config.delimiter,
+        trim: config.trim_all,
+        columns: config.columns?.[join.file],
+      });
       const index = new Map<string, Row>();
       for (const row of rows) {
-        const key = row[join.key]?.trim() ?? '';
+        const key = row[join.key] ?? '';
         if (key) index.set(key, row);
       }
       return [join.name, index] as const;
@@ -118,10 +125,13 @@ async function buildJoinMaps(
 function buildMissingSourceIdPolicy(config: SourceConfig): MissingSourceIdPolicy | null {
   const policy = config.allowed_missing_source_id_rows;
   if (!policy) return null;
+  // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const pattern = new RegExp(policy.pattern);
   return {
     max: policy.max,
     field: policy.field,
-    pattern: new RegExp(policy.pattern),
+    pattern,
   };
 }
 
@@ -131,14 +141,14 @@ function isAllowedMissingSourceIdRow(
   skipped: number
 ): boolean {
   if (!policy || skipped >= policy.max) return false;
-  const value = row[policy.field]?.trim() ?? '';
+  const value = row[policy.field] ?? '';
   return policy.pattern.test(value);
 }
 
 function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<string, Row>>): Row {
   const merged: Row = { ...row };
   for (const join of config.joins) {
-    const joinKey = row[join.on]?.trim() ?? '';
+    const joinKey = row[join.on] ?? '';
     const joinRow = joinMaps.get(join.name)?.get(joinKey) ?? {};
     for (const [k, v] of Object.entries(joinRow)) {
       merged[`${join.name}.${k}`] = v;
@@ -160,14 +170,11 @@ function resolveLookup(
   throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
 }
 
-function resolveCompound(row: Row, mapping: FieldMapping, trimAll: boolean): string | null {
+function resolveCompound(row: Row, mapping: FieldMapping): string | null {
   const fields = mapping.fields ?? [];
   const transform = mapping.compound_transform;
   if (!transform) return mapping.default ?? null;
-  const values = fields.map((f) => {
-    const raw = row[f] ?? '';
-    return trimAll ? raw.trim() : raw;
-  });
+  const values = fields.map((f) => row[f] ?? '');
   const transformed = applyCompound(transform, values);
   if (transformed === null) return mapping.default ?? null;
   if (mapping.lookup) {
@@ -176,17 +183,16 @@ function resolveCompound(row: Row, mapping: FieldMapping, trimAll: boolean): str
   return transformed;
 }
 
-function resolveScalar(row: Row, mapping: FieldMapping, trimAll: boolean): string | null {
+function resolveScalar(row: Row, mapping: FieldMapping): string | null {
   if (mapping.constant !== undefined) return mapping.constant;
 
-  if (mapping.compound_transform) return resolveCompound(row, mapping, trimAll);
+  if (mapping.compound_transform) return resolveCompound(row, mapping);
 
   const field = mapping.field;
   if (!field) return mapping.default ?? null;
 
   const raw = row[field] ?? '';
-  const trimmed = trimAll ? raw.trim() : raw;
-  const transformed = mapping.transform ? applyScalar(mapping.transform, trimmed) : trimmed;
+  const transformed = mapping.transform ? applyScalar(mapping.transform, raw) : raw;
   if (transformed === null) return mapping.default ?? null;
 
   if (mapping.lookup) return resolveLookup(transformed, mapping.lookup, mapping.default, field);
@@ -194,11 +200,10 @@ function resolveScalar(row: Row, mapping: FieldMapping, trimAll: boolean): strin
   return transformed === '' ? (mapping.default ?? null) : transformed;
 }
 
-function resolveArray(row: Row, mapping: FieldMapping, trimAll: boolean): string[] {
+function resolveArray(row: Row, mapping: FieldMapping): string[] {
   const field = mapping.field;
   if (!field) return [];
-  let value = row[field] ?? '';
-  if (trimAll) value = value.trim();
+  const value = row[field] ?? '';
   if (!mapping.array_transform) return [];
   return applyArray(mapping.array_transform, value);
 }
@@ -209,13 +214,13 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
   function scalar(key: string): string | null {
     const fm = m[key];
     if (!fm) return null;
-    return resolveScalar(row, fm, config.trim_all);
+    return resolveScalar(row, fm);
   }
 
   function arr(key: string): string[] {
     const fm = m[key];
     if (!fm) return [];
-    if (fm.array_transform) return resolveArray(row, fm, config.trim_all);
+    if (fm.array_transform) return resolveArray(row, fm);
     const v = scalar(key);
     return v ? [v] : [];
   }
