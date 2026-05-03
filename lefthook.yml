@@ -2,7 +2,10 @@ pre-commit:
   parallel: false
   commands:
     format:
-      run: make format
+      # Only format files actually staged for this commit — running prettier across the
+      # whole repo would auto-stage unrelated working-tree drift via stage_fixed.
+      glob: '*.{ts,tsx,js,jsx,md,json,yaml,yml}'
+      run: make format-files FILES="{staged_files}"
       stage_fixed: true
     lint:
       run: make lint
