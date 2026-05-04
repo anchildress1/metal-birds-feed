@@ -49,9 +49,8 @@ bootstrap: build
 		: $${MBF_R2_ACCESS_KEY_ID:?MBF_R2_ACCESS_KEY_ID missing from $(ENV_FILE)}; \
 		: $${MBF_R2_SECRET_ACCESS_KEY:?MBF_R2_SECRET_ACCESS_KEY missing from $(ENV_FILE)}; \
 		: $${MBF_R2_BUCKET_NAME:?MBF_R2_BUCKET_NAME missing from $(ENV_FILE)}; \
-		REFRESH_SOURCE=$${REFRESH_SOURCE:-faa}; \
 		DRY_RUN=$${DRY_RUN:-false}; \
-		echo "Bootstrap initial load — source=$$REFRESH_SOURCE dry_run=$$DRY_RUN"; \
+		echo "Bootstrap initial load — source=$${REFRESH_SOURCE:-<all>} dry_run=$$DRY_RUN"; \
 		export REFRESH_SOURCE DRY_RUN; \
 		$(BUN) run dist/pipeline.js
 
