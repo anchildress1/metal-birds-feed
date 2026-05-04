@@ -575,6 +575,37 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     expect(r?.country).toBe('NL');
   });
 
+  it('skips the ILT-style banner row via source_id_transform + allowed_missing_source_id_rows', async () => {
+    const buf = Buffer.from(
+      await writeOds({
+        sheets: [
+          {
+            name: 'Sheet1',
+            rows: [
+              ['ID', 'REG', 'MFR', 'MODEL', 'OWNER'],
+              ['1', 'Information', 'Banner row', 'Banner row', 'Banner row'],
+              ['200', 'PH-OK', 'CESSNA', '152', 'Real Owner'],
+            ],
+          },
+        ],
+      })
+    );
+    const config: SourceConfig = {
+      ...buildOdsConfig(),
+      source_id: 'REG',
+      source_id_transform: 'nl_ilt_registration_or_null',
+      allowed_missing_source_id_rows: { max: 1, field: 'REG', pattern: '^Information$' },
+    };
+    const files = new Map([['register', buf]]);
+
+    const { records, stats } = await translate(config, files);
+
+    expect(stats.skipped).toBe(1);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('PH-OK')?.registration).toBe('PH-OK');
+  });
+
   it('selects a non-default sheet when sheet selector is set', async () => {
     const buf = Buffer.from(
       await writeOds({

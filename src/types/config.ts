@@ -7,11 +7,13 @@ export type ScalarTransformName =
   | 'float_or_null'
   | 'date_yyyymmdd_or_null'
   | 'date_yyyy_slash_or_null'
+  | 'iso_date_only_or_null'
   | 'mph_to_ktas_or_null'
   | 'binary_to_hex_or_null'
   | 'faa_n_number'
   | 'faa_cert_class'
-  | 'tc_full_registration';
+  | 'tc_full_registration'
+  | 'nl_ilt_registration_or_null';
 
 export type ArrayTransformName = 'faa_cert_ops';
 
@@ -69,6 +71,7 @@ export interface SourceConfig {
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
   source_id: string;
+  source_id_transform?: ScalarTransformName;
   registration: string;
   mapping: Record<string, FieldMapping>;
 }

@@ -62,7 +62,7 @@ export async function translate(
 
     const rawId = resolveScalar(merged, {
       field: config.source_id,
-      transform: 'trim_or_null',
+      transform: config.source_id_transform ?? 'trim_or_null',
     });
     if (!rawId) {
       if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {

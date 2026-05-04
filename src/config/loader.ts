@@ -13,11 +13,13 @@ const SCALAR_TRANSFORMS = [
   'float_or_null',
   'date_yyyymmdd_or_null',
   'date_yyyy_slash_or_null',
+  'iso_date_only_or_null',
   'mph_to_ktas_or_null',
   'binary_to_hex_or_null',
   'faa_n_number',
   'faa_cert_class',
   'tc_full_registration',
+  'nl_ilt_registration_or_null',
 ] as const;
 
 const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
@@ -107,6 +109,7 @@ const SourceConfigSchema = z.object({
     )
     .default([]),
   source_id: z.string().min(1),
+  source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
   registration: z.string().min(1),
   mapping: z.record(z.string(), FieldMappingSchema),
 });
