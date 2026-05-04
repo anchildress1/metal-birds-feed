@@ -98,6 +98,68 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('defaults format to csv when omitted', () => {
+    const config = loadSourceConfig(FAA_CONFIG);
+    expect(config.format).toBe('csv');
+    expect(config.sheet).toBeUndefined();
+  });
+
+  it('accepts format: ods with optional sheet selector (numeric)', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_format_ods_idx.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nsheet: 0\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.format).toBe('ods');
+      expect(config.sheet).toBe(0);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts format: xlsx with named sheet selector', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_format_xlsx_named.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: IE\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.xlsx }\nprimary: register\ndelimiter: ','\nformat: xlsx\nsheet: Register\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.format).toBe('xlsx');
+      expect(config.sheet).toBe('Register');
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects an unknown format value', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_bad_format.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: pdf\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a negative sheet index', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_neg_sheet.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.ods }\nprimary: f\ndelimiter: ','\nformat: ods\nsheet: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects invalid allowed missing source_id row regex', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_bad_regex.yaml');
     writeFileSync(

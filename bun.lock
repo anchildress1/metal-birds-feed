@@ -7,6 +7,7 @@
       "dependencies": {
         "@aws-sdk/client-s3": "^3.1041.0",
         "csv-parse": "^6.2.1",
+        "hucre": "^0.4.0",
         "js-yaml": "^4.1.1",
         "unzipper": "^0.12.3",
         "zod": "^4.4.2",
@@ -535,6 +536,8 @@
     "has-flag": ["has-flag@4.0.0", "", {}, "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ=="],
 
     "html-escaper": ["html-escaper@2.0.2", "", {}, "sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg=="],
+
+    "hucre": ["hucre@0.4.0", "", { "bin": { "hucre": "dist/cli.mjs" } }, "sha512-O5J0VR5COwAlRMLRitQH6SW7oy5S3UsEKnT9htLisGBwcKkKrLffhsknFz9Zrgndv8qWHLn7Kj7hxbtM45ECFA=="],
 
     "ignore": ["ignore@5.3.2", "", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
 

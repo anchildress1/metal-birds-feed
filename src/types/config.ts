@@ -48,6 +48,8 @@ export interface AllowedMissingSourceIdRowsConfig {
   pattern: string;
 }
 
+export type SourceFormat = 'csv' | 'ods' | 'xlsx';
+
 export interface SourceConfig {
   id: string;
   label: string;
@@ -57,6 +59,8 @@ export interface SourceConfig {
   primary: string;
   delimiter: string;
   trim_all: boolean;
+  format: SourceFormat;
+  sheet?: string | number;
   columns?: Record<string, string[]>;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];

@@ -1,4 +1,7 @@
 import { parse } from 'csv-parse';
+import { readOds } from 'hucre/ods';
+import { readXlsx } from 'hucre/xlsx';
+import type { CellValue, Sheet } from 'hucre';
 
 export type Row = Record<string, string>;
 
@@ -7,6 +10,15 @@ export interface ParseOptions {
   delimiter: string;
   trim: boolean;
   columns?: string[];
+}
+
+export type SpreadsheetFormat = 'ods' | 'xlsx';
+
+export interface ParseSpreadsheetOptions {
+  format: SpreadsheetFormat;
+  trim: boolean;
+  columns?: string[];
+  sheet?: string | number;
 }
 
 // Headers are normalized (trimmed) when inferred from the first row, because registry CSVs
@@ -40,3 +52,73 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
     );
   });
 }
+
+// Parses .ods (OpenDocument Spreadsheet) and .xlsx via hucre. Returns the same Row[] shape
+// as parseCSV so the engine can dispatch by source format and treat the rows uniformly.
+//
+// Header normalization mirrors parseCSV: when `columns` is provided, the explicit array is used
+// directly and every spreadsheet row becomes a data row. Otherwise the first non-empty row is
+// the header and trailing whitespace is trimmed from each header cell (Dutch ILT and other
+// real-world spreadsheets ship space-padded headers, exactly like FAA's CSVs).
+//
+// Cell-value trim runs on each cell when `options.trim` is true; spreadsheet cells often carry
+// whitespace from manual editing and the engine's downstream lookups assume clean strings.
+export async function parseSpreadsheet(
+  buf: Buffer,
+  options: ParseSpreadsheetOptions
+): Promise<Row[]> {
+  const wb = options.format === 'ods' ? await readOds(buf) : await readXlsx(buf);
+  const sheet = pickSheet(wb.sheets, options.sheet);
+  if (!sheet) return [];
+
+  const rawRows = sheet.rows.map((cells) => cells.map((c) => stringifyCell(c)));
+  const trimmed = options.trim ? rawRows.map((cells) => cells.map((c) => c.trim())) : rawRows;
+
+  const { headers, dataRows } = resolveHeadersAndData(trimmed, options.columns);
+  return dataRows.map((cells) => headersToRow(headers, cells));
+}
+
+const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet | undefined => {
+  if (sheets.length === 0) return undefined;
+  if (selector === undefined) return sheets[0];
+  if (typeof selector === 'number') return sheets[selector];
+  return sheets.find((s) => s.name === selector);
+};
+
+const stringifyCell = (cell: CellValue): string => {
+  if (cell === null) return '';
+  if (typeof cell === 'string') return cell;
+  if (cell instanceof Date) return cell.toISOString();
+  // CellValue is `string | number | boolean | Date | null` — only number/boolean remain.
+  return String(cell);
+};
+
+const isNonEmptyRow = (cells: string[]): boolean => cells.some((c) => c.length > 0);
+
+interface HeadersAndData {
+  headers: string[];
+  dataRows: string[][];
+}
+
+const resolveHeadersAndData = (
+  rows: string[][],
+  explicitColumns: string[] | undefined
+): HeadersAndData => {
+  if (explicitColumns) {
+    return { headers: explicitColumns, dataRows: rows.filter(isNonEmptyRow) };
+  }
+  const headerIndex = rows.findIndex(isNonEmptyRow);
+  if (headerIndex === -1) return { headers: [], dataRows: [] };
+  const headers = rows[headerIndex].map((h) => h.trim());
+  const dataRows = rows.slice(headerIndex + 1).filter(isNonEmptyRow);
+  return { headers, dataRows };
+};
+
+const headersToRow = (headers: string[], cells: string[]): Row => {
+  const row: Row = {};
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i];
+    if (header.length > 0) row[header] = cells[i] ?? '';
+  }
+  return row;
+};

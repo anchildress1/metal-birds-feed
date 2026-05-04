@@ -26,6 +26,9 @@ const COMPOUND_TRANSFORMS = ['tc_airframe'] as const;
 
 const isValidRegex = (pattern: string): boolean => {
   try {
+    // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
+    // The constructed RegExp is discarded immediately; this is a syntax-validity probe only.
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
     new RegExp(pattern);
     return true;
   } catch {
@@ -65,6 +68,8 @@ const SourceConfigSchema = z.object({
   primary: z.string().min(1),
   delimiter: z.string().min(1),
   trim_all: z.boolean().default(false),
+  format: z.enum(['csv', 'ods', 'xlsx']).default('csv'),
+  sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
   columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
   allowed_missing_source_id_rows: z
     .object({

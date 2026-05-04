@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { parseCSV } from '../src/parser.js';
+import { writeOds } from 'hucre/ods';
+import { writeXlsx } from 'hucre/xlsx';
+import { parseCSV, parseSpreadsheet, type SpreadsheetFormat } from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
 const opts = (
@@ -117,5 +119,285 @@ describe('parseCSV', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].MARK).toBe('AAC');
     expect(rows[1].COMMON_NAME).toBe('Dehavilland');
+  });
+});
+
+interface SheetSpec {
+  name: string;
+  rows: string[][];
+}
+
+const sheetBuf = async (format: SpreadsheetFormat, sheets: SheetSpec[]): Promise<Buffer> => {
+  const wb = { sheets };
+  const bytes = format === 'ods' ? await writeOds(wb) : await writeXlsx(wb);
+  return Buffer.from(bytes);
+};
+
+const ssOpts = (
+  overrides: Partial<{
+    format: SpreadsheetFormat;
+    trim: boolean;
+    columns: string[];
+    sheet: string | number;
+  }> = {}
+) => ({
+  format: 'ods' as SpreadsheetFormat,
+  trim: false,
+  ...overrides,
+});
+
+describe('parseSpreadsheet — ods', () => {
+  it('parses a basic .ods with header row', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['CODE', 'MFR', 'MODEL'],
+          ['001', 'CESSNA', '172'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA', MODEL: '172' }]);
+  });
+
+  it('uses explicit columns when provided (no header row consumed)', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['001', 'CESSNA', '172'],
+          ['002', 'PIPER', 'PA28'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ columns: ['CODE', 'MFR', 'MODEL'] }));
+    expect(rows).toEqual([
+      { CODE: '001', MFR: 'CESSNA', MODEL: '172' },
+      { CODE: '002', MFR: 'PIPER', MODEL: 'PA28' },
+    ]);
+  });
+
+  it('trims cell values when trim option is true', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['A', 'B'],
+          ['  hello  ', '  world  '],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ trim: true }));
+    expect(rows[0]).toEqual({ A: 'hello', B: 'world' });
+  });
+
+  it('preserves cell whitespace when trim option is false', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['A', 'B'],
+          ['  hello  ', '  world  '],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ trim: false }));
+    expect(rows[0]).toEqual({ A: '  hello  ', B: '  world  ' });
+  });
+
+  it('trims trailing whitespace from header names (real-world spreadsheet quirk)', async () => {
+    // Mirrors the FAA CSV case: registry exports often ship space-padded headers, which
+    // silently breaks every per-field lookup downstream unless normalized.
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['CODE ', 'MFR '],
+          ['001', 'CESSNA'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows[0].CODE).toBe('001');
+    expect(rows[0].MFR).toBe('CESSNA');
+    expect(rows[0]['CODE ']).toBeUndefined();
+  });
+
+  it('skips fully empty rows', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['A', 'B'],
+          ['1', '2'],
+          ['', ''],
+          ['3', '4'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.A)).toEqual(['1', '3']);
+  });
+
+  it('returns an empty array for header-only input', async () => {
+    const buf = await sheetBuf('ods', [{ name: 'Sheet1', rows: [['A', 'B']] }]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toEqual([]);
+  });
+
+  it('returns an empty array for a sheet with no rows', async () => {
+    const buf = await sheetBuf('ods', [{ name: 'Sheet1', rows: [] }]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toEqual([]);
+  });
+
+  it('selects a sheet by name', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Ignore',
+        rows: [
+          ['X', 'Y'],
+          ['9', '9'],
+        ],
+      },
+      {
+        name: 'Register',
+        rows: [
+          ['A', 'B'],
+          ['1', '2'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ sheet: 'Register' }));
+    expect(rows).toEqual([{ A: '1', B: '2' }]);
+  });
+
+  it('selects a sheet by numeric index', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'First',
+        rows: [
+          ['A', 'B'],
+          ['1', '2'],
+        ],
+      },
+      {
+        name: 'Second',
+        rows: [
+          ['C', 'D'],
+          ['3', '4'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ sheet: 1 }));
+    expect(rows).toEqual([{ C: '3', D: '4' }]);
+  });
+
+  it('defaults to the first sheet when sheet is not specified', async () => {
+    const buf = await sheetBuf('ods', [
+      { name: 'First', rows: [['A'], ['1']] },
+      { name: 'Second', rows: [['B'], ['2']] },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toEqual([{ A: '1' }]);
+  });
+
+  it('returns an empty array when the named sheet does not exist', async () => {
+    const buf = await sheetBuf('ods', [{ name: 'Real', rows: [['A'], ['1']] }]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ sheet: 'Nope' }));
+    expect(rows).toEqual([]);
+  });
+
+  it('returns an empty array when the index is out of range', async () => {
+    const buf = await sheetBuf('ods', [{ name: 'Only', rows: [['A'], ['1']] }]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ sheet: 5 }));
+    expect(rows).toEqual([]);
+  });
+
+  it('skips empty header columns rather than emitting empty-key fields', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['A', '', 'C'],
+          ['1', '2', '3'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows[0]).toEqual({ A: '1', C: '3' });
+    expect(rows[0]['']).toBeUndefined();
+  });
+
+  it('rejects when the buffer is not a valid .ods archive', async () => {
+    await expect(parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts())).rejects.toThrow();
+  });
+
+  it('stringifies numeric, boolean, and Date cell values (CellValue round-trip)', async () => {
+    // hucre preserves cell types through write/read; the parser must coerce non-string
+    // CellValues into the Row[] shape the engine consumes.
+    const { writeOds: writeOds2 } = await import('hucre/ods');
+    const buf = Buffer.from(
+      await writeOds2({
+        sheets: [
+          {
+            name: 'Sheet1',
+            rows: [
+              ['LABEL', 'COUNT', 'ACTIVE', 'WHEN'],
+              ['alpha', 42, true, new Date('2026-01-15T00:00:00Z')],
+            ],
+          },
+        ],
+      })
+    );
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toHaveLength(1);
+    expect(rows[0].LABEL).toBe('alpha');
+    expect(rows[0].COUNT).toBe('42');
+    expect(rows[0].ACTIVE).toBe('true');
+    expect(rows[0].WHEN).toMatch(/^2026-01-15T/);
+  });
+});
+
+describe('parseSpreadsheet — xlsx', () => {
+  it('parses a basic .xlsx with header row', async () => {
+    const buf = await sheetBuf('xlsx', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['CODE', 'MFR'],
+          ['001', 'CESSNA'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ format: 'xlsx' }));
+    expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA' }]);
+  });
+
+  it('returns the same Row[] shape as the ods path for the same data', async () => {
+    const sheets: SheetSpec[] = [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['A', 'B'],
+          ['1', '2'],
+          ['3', '4'],
+        ],
+      },
+    ];
+    const odsRows = await parseSpreadsheet(await sheetBuf('ods', sheets), ssOpts());
+    const xlsxRows = await parseSpreadsheet(
+      await sheetBuf('xlsx', sheets),
+      ssOpts({ format: 'xlsx' })
+    );
+    expect(odsRows).toEqual(xlsxRows);
+  });
+
+  it('rejects when the buffer is not a valid .xlsx archive', async () => {
+    await expect(
+      parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts({ format: 'xlsx' }))
+    ).rejects.toThrow();
   });
 });

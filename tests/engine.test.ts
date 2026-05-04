@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
 import { translate } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
-import type { FieldMapping } from '../src/types/config.js';
+import type { SourceConfig } from '../src/types/config.js';
 
 const FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'faa');
 const CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'faa.yaml');
@@ -444,7 +445,7 @@ describe('engine — negative and edge cases', () => {
       ...config,
       mapping: {
         ...config.mapping,
-        year_manufactured: { constant: '3.14' } as FieldMapping,
+        year_manufactured: { constant: '3.14' },
       },
     };
     const files = new Map([
@@ -479,7 +480,7 @@ describe('engine — negative and edge cases', () => {
       ...config,
       mapping: {
         ...config.mapping,
-        operational_classes: { field: 'STATUS CODE' } as FieldMapping,
+        operational_classes: { field: 'STATUS CODE' },
       },
     };
     const files = new Map([
@@ -489,5 +490,119 @@ describe('engine — negative and edge cases', () => {
     ]);
     const { records: r } = await translate(modConfig, files);
     expect(r.get('00001001')?.operational_classes).toEqual(['V']);
+  });
+});
+
+describe('engine — spreadsheet dispatch (parsePrimary)', () => {
+  const buildOdsConfig = (): SourceConfig => ({
+    id: 'synthetic-ods',
+    label: 'Synthetic ODS source for dispatch test',
+    country: 'NL',
+    encoding: 'utf8',
+    download: {
+      url: 'https://example.com/x.ods',
+      format: 'zip',
+      entries: { register: 'register.ods' },
+    },
+    primary: 'register',
+    delimiter: ',',
+    trim_all: true,
+    format: 'ods',
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: {
+      registration: { field: 'REG' },
+      icao_hex: { constant: null },
+      icao_type_code: { constant: null },
+      status: { constant: 'valid' },
+      country: { constant: 'NL' },
+      manufacturer: { field: 'MFR' },
+      model: { field: 'MODEL' },
+      serial_number: { constant: null },
+      year_manufactured: { constant: null },
+      airframe_type: { constant: null },
+      category: { constant: null },
+      build_certification: { constant: null },
+      airworthiness_class: { constant: null },
+      operating_environment: { constant: null },
+      'engine.manufacturer': { constant: null },
+      'engine.model': { constant: null },
+      'engine.type': { constant: null },
+      'engine.count': { constant: null },
+      'engine.horsepower': { constant: null },
+      'engine.thrust_lbs': { constant: null },
+      'owner.name': { field: 'OWNER' },
+      'owner.kind': { constant: null },
+      'owner.state': { constant: null },
+      'owner.country': { constant: null },
+      certification_date: { constant: null },
+      airworthiness_date: { constant: null },
+      expiration_date: { constant: null },
+      last_action_date: { constant: null },
+      cruise_speed_ktas: { constant: null },
+    },
+  });
+
+  it('routes format: ods through parseSpreadsheet and produces canonical records', async () => {
+    const buf = Buffer.from(
+      await writeOds({
+        sheets: [
+          {
+            name: 'Sheet1',
+            rows: [
+              ['ID', 'REG', 'MFR', 'MODEL', 'OWNER'],
+              ['101', 'PH-ABC', 'CESSNA', '172', 'KLM Vliegclub'],
+              ['102', 'PH-XYZ', 'PIPER', 'PA28', 'KLM Vliegclub'],
+            ],
+          },
+        ],
+      })
+    );
+    const config = buildOdsConfig();
+    const files = new Map([['register', buf]]);
+
+    const { records, stats } = await translate(config, files);
+
+    expect(stats.total).toBe(2);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(2);
+    const r = records.get('101');
+    expect(r?.source).toBe('synthetic-ods');
+    expect(r?.registration).toBe('PH-ABC');
+    expect(r?.manufacturer).toBe('CESSNA');
+    expect(r?.owner.name).toBe('KLM Vliegclub');
+    expect(r?.country).toBe('NL');
+  });
+
+  it('selects a non-default sheet when sheet selector is set', async () => {
+    const buf = Buffer.from(
+      await writeOds({
+        sheets: [
+          {
+            name: 'Ignore',
+            rows: [
+              ['ID', 'REG', 'MFR', 'MODEL', 'OWNER'],
+              ['999', 'PH-ZZZ', 'NOPE', 'NOPE', 'NOPE'],
+            ],
+          },
+          {
+            name: 'Register',
+            rows: [
+              ['ID', 'REG', 'MFR', 'MODEL', 'OWNER'],
+              ['200', 'PH-OK', 'CESSNA', '152', 'Real Owner'],
+            ],
+          },
+        ],
+      })
+    );
+    const config: SourceConfig = { ...buildOdsConfig(), sheet: 'Register' };
+    const files = new Map([['register', buf]]);
+
+    const { records } = await translate(config, files);
+
+    expect(records.size).toBe(1);
+    expect(records.get('200')?.registration).toBe('PH-OK');
+    expect(records.has('999')).toBe(false);
   });
 });
