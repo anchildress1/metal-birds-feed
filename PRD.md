@@ -2,8 +2,8 @@
 
 **Status:** Draft
 **Owner:** Ashley (anchildress1)
-**Last updated:** 2026-05-01
-**Consumes by:** [metalbirdswatch.pilotronica.com](https://metalbirdswatch.pilotronica.com) (forked `metal-birds-watch` repo)
+**Last updated:** 2026-05-03
+**Consumes by:** Personal forked deployment of [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)
 
 ---
 
@@ -193,7 +193,7 @@ R2 storage cost. The whole point is that this fits in the free tier. If FAA + TC
 
 ## Timeline Considerations
 
-No hard external deadlines. This is a personal project gating a personal site (`metalbirdswatch.pilotronica.com`). Sanity-preservation is an explicit constraint.
+No hard external deadlines. This is a personal project gating a personal site. Sanity-preservation is an explicit constraint.
 
 Suggested phasing:
 

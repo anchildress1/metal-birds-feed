@@ -9,7 +9,7 @@
 
 Translates national aviation registries (FAA, Transport Canada, UK CAA, GCAA) into a
 single normalized JSON schema stored in Cloudflare R2 for O(1) tail-number and ICAO hex
-lookups. Inspired by [metalbirdswatch.pilotronica.com](https://metalbirdswatch.pilotronica.com) ([github.com/georgekobaidze/metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)).
+lookups. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 ## How It Works
 
@@ -121,4 +121,4 @@ The translation engine and downloader require no changes.
 
 ## License
 
-[Polyform Shield 1.0.0](LICENSE)
+[Polyform Shield 1.0.0 + Supplemental Terms](LICENSE)
