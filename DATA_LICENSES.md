@@ -42,6 +42,23 @@ Permission protocol (per PRD CC.2): Personal-use and Unknown sources require an 
 
 ---
 
+## ILT — Netherlands Human Environment and Transport Inspectorate
+
+- **Status:** Planned (v3) — no permission email needed
+- **Classification:** Open
+- **Source URL:** https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data
+- **Open-data listing:** https://data.overheid.nl/dataset/luchtvaartuigregister
+- **Bulk download URL:** Date-stamped filename on `ilent.nl` (e.g. `https://www.ilent.nl/site/binaries/site-content/collections/documents/lijsten/luchtvaart/databestanden/luchtvaartregister-data/luchtvaartuigregister-ilt-datas2-2026-04-28.ods`). The filename rolls each refresh; the downloader resolves it via `download.discover_url:` per PRD R2.7.
+- **Format:** OpenDocument Spreadsheet (`.ods`), ~1.23 MB. Engine reads via the spreadsheet parser path (PRD R2.6).
+- **License:** **CC-0 1.0 Universal (public domain)** per data.overheid.nl. The page disclaimer "Aan deze gegevens kunnen geen rechten worden ontleend" ("no rights can be derived from this data") is a quality-of-data disclaimer, not a license restriction — CC-0 stands.
+- **Attribution required:** Not legally required under CC-0. Credited here as a courtesy.
+- **Update cadence:** Per file date stamp; effectively continuous-to-monthly. ILT does not publish a fixed schedule.
+- **Permission email:** N/A (Open). The CC-0 license predates any project-specific request.
+- **Reply (verbatim):** N/A
+- **Note on transition:** Aviation certification services moved from Kiwa Register to CAA NL on 2025-06-01. Register publication remains with ILT. If publication moves to caanl.nl in the future, this entry's URLs need re-verification but the CC-0 classification should carry over.
+
+---
+
 ## CAA NZ — Civil Aviation Authority of New Zealand
 
 - **Status:** Planned (v3) — pending CC.2 permission email

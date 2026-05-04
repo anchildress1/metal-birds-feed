@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Owner:** Ashley (anchildress1)
-**Last updated:** 2026-05-04
+**Last updated:** 2026-05-04 (Netherlands ILT slotted into v3, spreadsheet parser path codified)
 **Consumes by:** Personal forked deployment of [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)
 
 ---
@@ -19,14 +19,19 @@
 
 1. **FAA registry, fully translated, in R2.** Every field FAA exposes in MASTER + ACFTREF + ENGINE, normalized into the canonical schema. ~300k US-registered aircraft queryable by registration ID or ICAO hex. _(v1)_
 2. **Transport Canada registry, same shape.** ~37k Canadian aircraft, same canonical schema, no consumer-side code changes. Proves the engine generalizes — the second source is a config file, not a code change. _(v2)_
-3. **NZ CAA registry.** ZK-prefix, ~5k aircraft. CAA NZ publishes the full register as a CSV at a stable URL. Tests the engine against a third independent schema dialect. License is "personal use" (see CC.1) — operator-private R2 only, no public read API. _(v3)_
+3. **Third-registry milestone — two parallel sources.** _(v3)_
+   - **Netherlands ILT** (PH-prefix, ~7k aircraft). CC-0 (public domain) per data.overheid.nl. **No CC.2 permission email needed** — ships independently of any agency reply. Published as OpenDocument Spreadsheet (.ods), filename includes a date stamp that requires a small discovery step. Adds the spreadsheet parser path to the engine (R2.6), which also unblocks IAA Ireland later.
+   - **CAA NZ** (ZK-prefix, ~5k aircraft). CSV at a stable URL. License is "personal use" (CC.1 Personal-use) — operator-private R2 only, CC.3 applies. CC.2 permission email gates slotting; ships when reply lands or 30-day timeout passes.
+
+   v3 is "complete" when both ship. NL is the no-gate path that drives the parser-extension work; NZ is the email-gated path that runs in parallel. This milestone tests the engine against two independent schema dialects, two file formats, and the cross-cutting permission protocol in one phase.
+
 4. **Georgia (country) registry, GCAA.** 4L prefix, small fleet (~hundreds of aircraft). Sentimental priority — operator's site lives there. First source where we may not have a clean bulk download; doubles as the proving ground for the long tail of registries that publish data inconveniently. _(v4)_
 
 UK CAA is **excluded** for the foreseeable future (see Future Considerations → Blocked). G-INFO is paid + single-PC + non-redistributable, structurally incompatible with this project's deployment model.
 
-Australia (CASA), Ireland (IAA), and EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 license classification and CC.2 permission protocol before slotting. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
+Australia (CASA), Ireland (IAA), and other EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 license classification and CC.2 permission protocol before slotting. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
 
-Stretch goal across all phases: the translation engine itself stays generic. Adding a new country = writing a config file and a small parser, never modifying the engine.
+Stretch goal across all phases: the translation engine itself stays generic. Adding a new country = writing a config file (and, when the source format requires it, registering a parser path) — never modifying the engine's translation logic.
 
 ---
 
@@ -142,7 +147,11 @@ This is the deliberate trade: operator's costs stay $0 regardless of external in
 
 **Acceptance for v2:** A consumer querying `aircraft/by-id/tc-ca/<id>.json` gets a record with the same TypeScript shape as FAA, with appropriate nulls.
 
-### Could-Have (P2) — NZ CAA, v3
+### Could-Have (P2) — Third-registry milestone, v3
+
+v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drives the spreadsheet parser path) and **CAA NZ** (email-gated, ships when reply lands or 30-day timeout passes). Both must be in R2 before v3 is "complete."
+
+#### CAA NZ track (email-gated)
 
 **R2.1 NZ CAA source config.** New file `sources/nz-caa.yaml`. Single national registry, ZK-prefix, ~5k aircraft. CAA NZ publishes the full register as a CSV at a stable URL (https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv). No engine changes. Same canonical schema.
 
@@ -150,7 +159,19 @@ This is the deliberate trade: operator's costs stay $0 regardless of external in
 
 **R2.3 NZ permission protocol.** Per CC.2, send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz before slotting. Reply preserved verbatim in `DATA_LICENSES.md`. If no reply within 30 calendar days, source proceeds on the public-record argument. CAA NZ classifies as **Personal-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
 
-**Acceptance for v3:** A consumer querying `aircraft/by-id/nz-caa/<id>.json` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
+**Acceptance (NZ CAA track):** A consumer querying `aircraft/by-id/nz-caa/<id>.json` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
+
+#### Netherlands ILT track (no-email path)
+
+**R2.4 NL ILT source config.** New file `sources/nl-ilt.yaml`. Single national registry, PH-prefix, ~7k aircraft. ILT publishes the full register as an OpenDocument Spreadsheet (.ods) at a date-stamped URL on `ilent.nl`. Same canonical schema. License: **CC-0 (public domain)** per data.overheid.nl, classified Open under CC.1 — no CC.2 permission email needed.
+
+**R2.5 NL field-coverage parity.** Document fields ILT does not provide. Null-rather-than-invent rule unchanged.
+
+**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`. Implementation uses a single library that handles both ODS and XLSX (SheetJS / `xlsx` package is the current candidate; final selection happens at code time per the standing "verify latest LTS recommendation before adding a dependency" rule). The engine's row-translation logic stays format-agnostic — only the parser dispatch is new.
+
+**R2.7 Filename discovery (NL-specific).** ILT's bulk download URL embeds the file's publication date (e.g. `luchtvaartuigregister-ilt-datas2-2026-04-28.ods`), which changes every refresh. Downloader gains a small "discovery" step for sources that declare `download.discover_url:` — fetch the index page, regex out the latest data-file URL, then download. NL is the first source to use this; future sources with the same pattern reuse it.
+
+**Acceptance (NL ILT track):** A consumer querying `aircraft/by-id/nl-ilt/<id>.json` gets a record with the same TypeScript shape as FAA, TC, and CAA NZ. The spreadsheet parser path round-trips an ILT fixture without changes to `src/engine.ts`'s translation logic.
 
 ### Could-Have (P3) — Georgia (GCAA), v4
 
@@ -160,7 +181,7 @@ This is the deliberate trade: operator's costs stay $0 regardless of external in
 
 **R3.3 Cyrillic / Georgian script handling.** GCAA records may include owner names in Mkhedruli (Georgian script) or Cyrillic. Schema is already Unicode-clean (TypeScript `string`), but verify R2 stores and serves UTF-8 cleanly end-to-end with non-Latin owner names. Add a fixture record covering this.
 
-**Acceptance for v4:** A consumer querying `aircraft/by-id/ge-gcaa/<id>.json` gets a valid record. Owner names in Georgian script render correctly through the read API.
+**Acceptance for v4:** A consumer querying `aircraft/by-id/ge-gcaa/<id>.json` gets a valid record. Owner names in Georgian script round-trip through R2 storage and the operator R2-binding read path without mojibake.
 
 ### Future Considerations (post-v4)
 
@@ -170,7 +191,7 @@ Each new registry is gated on CC.1 license classification + CC.2 permission prot
 
 **R4.1 Australia (CASA).** New file `sources/au-casa.yaml`. ~15k aircraft, VH-prefix, monthly CSV at `https://services.casa.gov.au/CSV/acrftreg.csv`. License: CC BY-NC 4.0 (Personal-use under CC.1). Requires CC.2 permission email; if 30-day timeout passes, proceed on public-record argument.
 
-**R4.2 Ireland (IAA).** New file `sources/ie-iaa.yaml`. ~1.4k aircraft, EI-prefix, monthly XLSX. Adds an XLSX parser path to the engine. License classification pending (CC.1).
+**R4.2 Ireland (IAA).** New file `sources/ie-iaa.yaml`. ~1.4k aircraft, EI-prefix, monthly XLSX. The XLSX parser path is shared with NL ILT (added in R2.6 during v3), so IAA's engine work is just config + fixtures. License classification pending (CC.1) and CC.2 permission email if needed.
 
 **R4.3 EU member-state registries.** One config per country (`sources/de-lba.yaml`, `sources/fr-dgac.yaml`, `sources/ch-bazl.yaml`, Nordics, etc.). Prioritize by license clarity, not fleet size — Open sources first.
 
@@ -230,7 +251,7 @@ Suggested phasing:
 
 - **v1 — FAA only:** target completion when FAA is end-to-end working and `metal-birds-watch` can read from R2 via R2 binding. No deadline.
 - **v2 — Transport Canada:** delta from v1 is small (one config file, one downloader, fixtures). Start when v1 has run cleanly through at least one monthly refresh.
-- **v3 — NZ CAA:** start when v2 is stable. CSV bulk download, English schema, similar shape to FAA/Canada. Begins with the CC.2 permission email (30-day clock starts on send). Engine work proceeds in parallel; slot only after CC.1 status resolves.
+- **v3 — Third-registry milestone (NL ILT + CAA NZ):** start when v2 is stable. Two parallel tracks: NL ILT (no email, ships first; the spreadsheet parser path is the new engine work) and CAA NZ (CC.2 email gates slot, 30-day clock starts on send). NL ships independently of any agency reply; NZ ships when its email resolves or times out. v3 closes when both are in R2.
 - **v4 — Georgia (GCAA):** start when v3 is stable. Begins with R3.1 research milestone before any code. Schedule slips if data isn't accessible — that's the deal you accept by sentimental-prioritizing this over EU member states with known data sources.
 - **Future** — Australia (CASA), Ireland (IAA), EU member states, photo-URL hook, schema migration tooling, NTSB sibling project. No commitment, added when motivated. Each new registry begins with CC.1 + CC.2.
 
