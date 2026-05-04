@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { parseCSV } from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
-const opts = (overrides: Partial<{ delimiter: string; trim: boolean }> = {}) => ({
+const opts = (
+  overrides: Partial<{ delimiter: string; trim: boolean; columns: string[] }> = {}
+) => ({
   encoding: 'latin1' as const,
   delimiter: ',',
   trim: false,
@@ -94,5 +96,26 @@ describe('parseCSV', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].MODEL).toBe('"B"-BALLOON');
+  });
+
+  it('uses explicit columns when provided (no header row consumed)', async () => {
+    const rows = await parseCSV(
+      buf('001,CESSNA,172\n002,PIPER,PA28\n'),
+      opts({ columns: ['CODE', 'MFR', 'MODEL'] })
+    );
+    expect(rows).toEqual([
+      { CODE: '001', MFR: 'CESSNA', MODEL: '172' },
+      { CODE: '002', MFR: 'PIPER', MODEL: 'PA28' },
+    ]);
+  });
+
+  it('explicit columns parse all rows including the first one', async () => {
+    const rows = await parseCSV(
+      buf('"AAC","Piper"\n"AAJ","Dehavilland"\n'),
+      opts({ columns: ['MARK', 'COMMON_NAME'] })
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0].MARK).toBe('AAC');
+    expect(rows[1].COMMON_NAME).toBe('Dehavilland');
   });
 });

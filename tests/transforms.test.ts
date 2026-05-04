@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyScalar, applyArray } from '../src/transforms.js';
+import { applyScalar, applyArray, applyCompound } from '../src/transforms.js';
 
 describe('applyScalar', () => {
   describe('trim', () => {
@@ -67,6 +67,39 @@ describe('applyScalar', () => {
       expect(applyScalar('mph_to_ktas_or_null', '82')).toBe('71.3'));
   });
 
+  describe('date_yyyy_slash_or_null', () => {
+    it('formats valid date', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', '1979/06/20')).toBe('1979-06-20'));
+    it('returns null for empty', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', '')).toBeNull());
+    it('returns null for wrong length', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', '1979/6/20')).toBeNull());
+    it('returns null for non-digit', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', '1979/06/2X')).toBeNull());
+    it('returns null for wrong separator', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', '1979-06-20')).toBeNull());
+    it('returns null for rollover dates', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', '2023/02/31')).toBeNull());
+    it('handles whitespace', () =>
+      expect(applyScalar('date_yyyy_slash_or_null', ' 2023/10/15 ')).toBe('2023-10-15'));
+  });
+
+  describe('binary_to_hex_or_null', () => {
+    it('converts 24-bit binary to lowercase hex', () =>
+      expect(applyScalar('binary_to_hex_or_null', '110000000000000000000011')).toBe('c00003'));
+    it('handles all-zero binary', () =>
+      expect(applyScalar('binary_to_hex_or_null', '000000000000000000000000')).toBe('000000'));
+    it('handles all-one binary', () =>
+      expect(applyScalar('binary_to_hex_or_null', '111111111111111111111111')).toBe('ffffff'));
+    it('returns null for empty', () => expect(applyScalar('binary_to_hex_or_null', '')).toBeNull());
+    it('returns null for wrong length', () =>
+      expect(applyScalar('binary_to_hex_or_null', '11000000')).toBeNull());
+    it('returns null for non-binary', () =>
+      expect(applyScalar('binary_to_hex_or_null', '11000000000000000000002A')).toBeNull());
+    it('handles whitespace', () =>
+      expect(applyScalar('binary_to_hex_or_null', ' 110000000000000000001010 ')).toBe('c0000a'));
+  });
+
   describe('faa_n_number', () => {
     it('adds the N-prefix when FAA stores only the registration body', () =>
       expect(applyScalar('faa_n_number', '12345')).toBe('N12345'));
@@ -84,6 +117,22 @@ describe('applyScalar', () => {
     it('returns null for empty', () => expect(applyScalar('faa_cert_class', '')).toBeNull());
     it('trims before extracting', () => expect(applyScalar('faa_cert_class', ' 11')).toBe('1'));
   });
+
+  describe('tc_full_registration', () => {
+    it('prefixes 4-char modern marks with C-', () =>
+      expect(applyScalar('tc_full_registration', 'FABC')).toBe('C-FABC'));
+    it('prefixes 3-char vintage marks with CF-', () =>
+      expect(applyScalar('tc_full_registration', 'AAC')).toBe('CF-AAC'));
+    it('uppercases the mark', () =>
+      expect(applyScalar('tc_full_registration', 'fabc')).toBe('C-FABC'));
+    it('trims before evaluating length', () =>
+      expect(applyScalar('tc_full_registration', '  GABC  ')).toBe('C-GABC'));
+    it('returns null for blank', () =>
+      expect(applyScalar('tc_full_registration', '   ')).toBeNull());
+    it('returns null for empty', () => expect(applyScalar('tc_full_registration', '')).toBeNull());
+    it('still prefixes with C- for unexpected lengths (defensive)', () =>
+      expect(applyScalar('tc_full_registration', 'AB')).toBe('C-AB'));
+  });
 });
 
 describe('applyArray', () => {
@@ -95,5 +144,38 @@ describe('applyArray', () => {
     it('returns empty for single-char cert', () =>
       expect(applyArray('faa_cert_ops', '1')).toEqual([]));
     it('returns empty for empty cert', () => expect(applyArray('faa_cert_ops', '')).toEqual([]));
+  });
+});
+
+describe('applyCompound', () => {
+  describe('tc_airframe', () => {
+    it('maps Aeroplane + 1 engine to fixed-wing-single-engine', () =>
+      expect(applyCompound('tc_airframe', ['Aeroplane', '1'])).toBe('fixed-wing-single-engine'));
+    it('maps Aeroplane + 2 engines to fixed-wing-multi-engine', () =>
+      expect(applyCompound('tc_airframe', ['Aeroplane', '2'])).toBe('fixed-wing-multi-engine'));
+    it('maps Aeroplane + 4 engines to fixed-wing-multi-engine', () =>
+      expect(applyCompound('tc_airframe', ['Aeroplane', '4'])).toBe('fixed-wing-multi-engine'));
+    it('maps Helicopter to rotorcraft regardless of engine count', () =>
+      expect(applyCompound('tc_airframe', ['Helicopter', '2'])).toBe('rotorcraft'));
+    it('maps Glider to glider', () =>
+      expect(applyCompound('tc_airframe', ['Glider', ''])).toBe('glider'));
+    it('maps Balloon to balloon', () =>
+      expect(applyCompound('tc_airframe', ['Balloon', ''])).toBe('balloon'));
+    it('maps Gyroplane to gyroplane', () =>
+      expect(applyCompound('tc_airframe', ['Gyroplane', '1'])).toBe('gyroplane'));
+    it('returns null for Aeroplane with no engine count', () =>
+      expect(applyCompound('tc_airframe', ['Aeroplane', ''])).toBeNull());
+    it('returns null for Aeroplane with non-numeric engines', () =>
+      expect(applyCompound('tc_airframe', ['Aeroplane', 'abc'])).toBeNull());
+    it('returns null for Aeroplane with zero engines', () =>
+      expect(applyCompound('tc_airframe', ['Aeroplane', '0'])).toBeNull());
+    it('returns null for unknown category', () =>
+      expect(applyCompound('tc_airframe', ['Spaceship', '1'])).toBeNull());
+    it('trims category and engine count whitespace', () =>
+      expect(applyCompound('tc_airframe', ['  Aeroplane  ', ' 1 '])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('handles missing values array entries gracefully', () =>
+      expect(applyCompound('tc_airframe', [])).toBeNull());
   });
 });

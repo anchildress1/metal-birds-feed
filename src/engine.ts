@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { SourceConfig, FieldMapping } from './types/config.js';
-import { applyScalar, applyArray } from './transforms.js';
+import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import { parseCSV, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
@@ -9,6 +9,13 @@ export interface EngineStats {
   total: number;
   ok: number;
   failed: number;
+  skipped: number;
+}
+
+interface MissingSourceIdPolicy {
+  max: number;
+  field: string;
+  pattern: RegExp;
 }
 
 export async function translate(
@@ -16,6 +23,7 @@ export async function translate(
   files: Map<string, Buffer>
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   const joinMaps = await buildJoinMaps(config, files);
+  const missingSourceIdPolicy = buildMissingSourceIdPolicy(config);
 
   const primaryBuf = files.get(config.primary);
   if (!primaryBuf)
@@ -25,10 +33,12 @@ export async function translate(
     encoding: config.encoding,
     delimiter: config.delimiter,
     trim: config.trim_all,
+    columns: config.columns?.[config.primary],
   });
 
   const records = new Map<string, Aircraft>();
   let failed = 0;
+  let skipped = 0;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
@@ -39,8 +49,21 @@ export async function translate(
       transform: 'trim_or_null',
     });
     if (!rawId) {
-      log('warn', 'translate_skip', { source: config.id, row: i + 2, reason: 'missing source_id' });
-      failed++;
+      if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
+        log('warn', 'translate_skip', {
+          source: config.id,
+          row: i + 2,
+          reason: 'allowed missing source_id',
+        });
+        skipped++;
+      } else {
+        log('error', 'translate_invalid', {
+          source: config.id,
+          row: i + 2,
+          reason: 'missing source_id',
+        });
+        failed++;
+      }
       continue;
     }
 
@@ -69,7 +92,7 @@ export async function translate(
     }
   }
 
-  const stats: EngineStats = { total: rows.length, ok: records.size, failed };
+  const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }
@@ -86,6 +109,7 @@ async function buildJoinMaps(
         encoding: config.encoding,
         delimiter: config.delimiter,
         trim: config.trim_all,
+        columns: config.columns?.[join.file],
       });
       const index = new Map<string, Row>();
       for (const row of rows) {
@@ -96,6 +120,29 @@ async function buildJoinMaps(
     })
   );
   return new Map(entries);
+}
+
+function buildMissingSourceIdPolicy(config: SourceConfig): MissingSourceIdPolicy | null {
+  const policy = config.allowed_missing_source_id_rows;
+  if (!policy) return null;
+  // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const pattern = new RegExp(policy.pattern);
+  return {
+    max: policy.max,
+    field: policy.field,
+    pattern,
+  };
+}
+
+function isAllowedMissingSourceIdRow(
+  row: Row,
+  policy: MissingSourceIdPolicy | null,
+  skipped: number
+): boolean {
+  if (!policy || skipped >= policy.max) return false;
+  const value = row[policy.field] ?? '';
+  return policy.pattern.test(value);
 }
 
 function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<string, Row>>): Row {
@@ -123,8 +170,23 @@ function resolveLookup(
   throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
 }
 
+function resolveCompound(row: Row, mapping: FieldMapping): string | null {
+  const fields = mapping.fields ?? [];
+  const transform = mapping.compound_transform;
+  if (!transform) return mapping.default ?? null;
+  const values = fields.map((f) => row[f] ?? '');
+  const transformed = applyCompound(transform, values);
+  if (transformed === null) return mapping.default ?? null;
+  if (mapping.lookup) {
+    return resolveLookup(transformed, mapping.lookup, mapping.default, fields.join(','));
+  }
+  return transformed;
+}
+
 function resolveScalar(row: Row, mapping: FieldMapping): string | null {
   if (mapping.constant !== undefined) return mapping.constant;
+
+  if (mapping.compound_transform) return resolveCompound(row, mapping);
 
   const field = mapping.field;
   if (!field) return mapping.default ?? null;

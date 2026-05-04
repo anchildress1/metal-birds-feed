@@ -12,24 +12,43 @@ const SCALAR_TRANSFORMS = [
   'int_or_null',
   'float_or_null',
   'date_yyyymmdd_or_null',
+  'date_yyyy_slash_or_null',
   'mph_to_ktas_or_null',
+  'binary_to_hex_or_null',
   'faa_n_number',
   'faa_cert_class',
+  'tc_full_registration',
 ] as const;
 
 const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
+const COMPOUND_TRANSFORMS = ['tc_airframe'] as const;
+
+const isValidRegex = (pattern: string): boolean => {
+  try {
+    new RegExp(pattern);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const FieldMappingSchema = z
   .object({
     field: z.string().optional(),
+    fields: z.array(z.string().min(1)).min(1).optional(),
     constant: z.string().nullable().optional(),
     transform: z.enum(SCALAR_TRANSFORMS).optional(),
     array_transform: z.enum(ARRAY_TRANSFORMS).optional(),
+    compound_transform: z.enum(COMPOUND_TRANSFORMS).optional(),
     lookup: z.record(z.string(), z.string()).optional(),
     default: z.string().nullable().optional(),
   })
-  .refine((v) => v.field !== undefined || v.constant !== undefined, {
-    message: 'FieldMapping must have either field or constant',
+  .refine((v) => v.field !== undefined || v.fields !== undefined || v.constant !== undefined, {
+    message: 'FieldMapping must have field, fields, or constant',
+  })
+  .refine((v) => (v.compound_transform === undefined) === (v.fields === undefined), {
+    message: 'compound_transform requires fields, and fields requires compound_transform',
   });
 
 const SourceConfigSchema = z.object({
@@ -46,6 +65,16 @@ const SourceConfigSchema = z.object({
   primary: z.string().min(1),
   delimiter: z.string().min(1),
   trim_all: z.boolean().default(false),
+  columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
+  allowed_missing_source_id_rows: z
+    .object({
+      max: z.number().int().nonnegative(),
+      field: z.string().min(1),
+      pattern: z.string().min(1).refine(isValidRegex, {
+        message: 'pattern must be a valid regular expression',
+      }),
+    })
+    .optional(),
   joins: z
     .array(
       z.object({

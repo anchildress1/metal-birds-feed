@@ -1,0 +1,12 @@
+" AAC","William S Simmons","","","","","Ontario","","","CANADA","","Individual","","A","","","","","Y","AAC"
+" FABC","Jane Doe","","","","","British Columbia","","","CANADA","","Individual","","A","","","","","Y","FABC"
+" GMUL","Northern Air Charters Ltd.","","","","","Alberta","","","CANADA","","Entity","","A","","","","","Y","GMUL"
+" GHEL","John Smith","","","","","Quebec","","","CANADA","","Individual","","A","","","","","Y","GHEL"
+" GLID","Mary Bennett","","","","","Saskatchewan","","","CANADA","","Individual","","A","","","","","Y","GLID"
+" FBAL","Robert Lee","","","","","Manitoba","","","CANADA","","Individual","","A","","","","","Y","FBAL"
+" FGYR","Carlos Mendez","","","","","Ontario","","","CANADA","","Individual","","A","","","","","Y","FGYR"
+" FCAN","David Thompson","","","","","Nova Scotia","","","CANADA","","Individual","","I","","","","","N","FCAN"
+" FEXP","Lakehead Aviation Inc.","","","","","Ontario","","","CANADA","","Entity","","A","","","","","Y","FEXP"
+" FUTF","Hervé Côté","","","","","Quebec","","","CANADA","","Individual","","A","","","","","Y","FUTF"
+
+10 rows selected.

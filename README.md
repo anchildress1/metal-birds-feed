@@ -100,12 +100,14 @@ make install
 
 ## Sources
 
-| Source           | Country        | Status                    |
-| ---------------- | -------------- | ------------------------- |
-| FAA              | United States  | ✅ Live                   |
-| Transport Canada | Canada         | Planned                   |
-| UK CAA           | United Kingdom | Planned                   |
-| GCAA             | Georgia        | Planned (data access TBD) |
+| Source           | Country        | Status                    | Bulk download                                                                                                | License                                                                                  |
+| ---------------- | -------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| FAA              | United States  | ✅ Live                   | [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/Search/NNumberInquiry)                           | US public domain (17 U.S.C. § 105)                                                       |
+| Transport Canada | Canada         | ✅ Live                   | [wwwapps.tc.gc.ca/…/ccarcsdb.zip](https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip) | [OGL-Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution req) |
+| UK CAA           | United Kingdom | Planned                   | [caa.co.uk/g-info](https://www.caa.co.uk/data-and-research/aircraft/g-info/)                                 | OGL-UK v3.0 (attribution req)                                                            |
+| GCAA             | Georgia        | Planned (data access TBD) | [gcaa.ge](https://www.gcaa.ge)                                                                               | TBD                                                                                      |
+
+Full attribution requirements and PII drop rules: [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
 

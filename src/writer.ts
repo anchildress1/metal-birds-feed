@@ -184,9 +184,19 @@ export class R2DiffWriter {
     // that case.
     const freshBucket = !manifestExists;
 
+    // When toWrite + toDelete are both empty, oldManifest and newManifest are content-equivalent
+    // (manifest entries are derived solely from records that are otherwise unchanged), so the
+    // manifest PUT would only re-upload identical bytes. Skip it. Fresh-bucket runs with zero
+    // records still need the manifest PUT to seed the empty state.
+    const noopRewrite = manifestExists && diffs.toWrite.size === 0 && diffs.toDelete.size === 0;
+
     this.completed = 0;
     this.totalOps =
-      diffs.toWrite.size + diffs.toDelete.size + diffs.dirtyHex.size + diffs.dirtyReg.size + 1;
+      diffs.toWrite.size +
+      diffs.toDelete.size +
+      diffs.dirtyHex.size +
+      diffs.dirtyReg.size +
+      (noopRewrite ? 0 : 1);
 
     log('info', 'write_plan', {
       source,
@@ -197,6 +207,7 @@ export class R2DiffWriter {
       dirty_hex: diffs.dirtyHex.size,
       dirty_reg: diffs.dirtyReg.size,
       total_ops: this.totalOps,
+      noop_rewrite: noopRewrite,
     });
 
     const ticker = this.startProgressTicker(source);
@@ -207,7 +218,7 @@ export class R2DiffWriter {
         this.updateIndex(diffs.dirtyHex, 'by-icao-hex', inverse.hexToIds, source, freshBucket),
         this.updateIndex(diffs.dirtyReg, 'by-registration', inverse.regToIds, source, freshBucket),
       ]);
-      await this.put(`aircraft/_manifest/${source}.json`, newManifest);
+      if (!noopRewrite) await this.put(`aircraft/_manifest/${source}.json`, newManifest);
     } finally {
       clearInterval(ticker);
     }

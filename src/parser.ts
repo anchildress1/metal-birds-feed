@@ -6,10 +6,13 @@ export interface ParseOptions {
   encoding: 'utf8' | 'latin1';
   delimiter: string;
   trim: boolean;
+  columns?: string[];
 }
 
-// Headers are always normalized (trimmed) — registry CSVs (FAA, in particular) ship column
-// names with trailing whitespace, which silently breaks every per-field lookup downstream.
+// Headers are normalized (trimmed) when inferred from the first row, because registry CSVs
+// (FAA, in particular) ship column names with trailing whitespace, which silently breaks every
+// per-field lookup downstream. When `columns` is provided (headerless CSVs like Transport
+// Canada's), the explicit array is used directly and no header row is consumed.
 //
 // Value trim runs in a `cast` callback rather than csv-parse's native `trim: true`, because
 // `trim: true` interacts with quote parsing in a way that rejects FAA's `"B"-BALLOON` style
@@ -18,12 +21,13 @@ export interface ParseOptions {
 export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[]> {
   const text = new TextDecoder(options.encoding).decode(buf);
   const cast = options.trim ? (value: string): string => value.trim() : undefined;
+  const columns = options.columns ?? ((header: string[]) => header.map((h) => h.trim()));
   return new Promise((resolve, reject) => {
     parse(
       text,
       {
         delimiter: options.delimiter,
-        columns: (header: string[]) => header.map((h) => h.trim()),
+        columns,
         skip_empty_lines: true,
         relax_column_count: true,
         relax_quotes: true,
