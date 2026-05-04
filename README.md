@@ -7,9 +7,14 @@
 
 </div>
 
-Translates national aviation registries (FAA, Transport Canada, UK CAA, GCAA) into a
-single normalized JSON schema stored in Cloudflare R2 for O(1) tail-number and ICAO hex
-lookups. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
+Translates national aviation registries (FAA, Transport Canada, CAA NZ, GCAA, and
+additional sources) into a single normalized JSON schema stored in Cloudflare R2 for
+O(1) tail-number and ICAO hex lookups. Inspired by
+[metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
+
+**Distribution model:** source-available code (Polyform Shield) + operator-private R2.
+No hosted public read API. Forks self-host against their own R2 bucket and their own
+per-source license assessment. See [PRD.md](PRD.md) §Cross-Cutting for the full model.
 
 ## How It Works
 
@@ -100,22 +105,27 @@ make install
 
 ## Sources
 
-| Source           | Country        | Status                    | Bulk download                                                                                                | License                                                                                  |
-| ---------------- | -------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| FAA              | United States  | ✅ Live                   | [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/Search/NNumberInquiry)                           | US public domain (17 U.S.C. § 105)                                                       |
-| Transport Canada | Canada         | ✅ Live                   | [wwwapps.tc.gc.ca/…/ccarcsdb.zip](https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip) | [OGL-Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution req) |
-| UK CAA           | United Kingdom | Planned                   | [caa.co.uk/g-info](https://www.caa.co.uk/data-and-research/aircraft/g-info/)                                 | OGL-UK v3.0 (attribution req)                                                            |
-| GCAA             | Georgia        | Planned (data access TBD) | [gcaa.ge](https://www.gcaa.ge)                                                                               | TBD                                                                                      |
+| Source           | Country        | Status                                  | Bulk download                                                                                                                                                                                      | License (CC.1)                                                                                  |
+| ---------------- | -------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| FAA              | United States  | ✅ Live                                 | [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/Search/NNumberInquiry)                                                                                                                 | Open — US public domain (17 U.S.C. § 105)                                                       |
+| Transport Canada | Canada         | ✅ Live                                 | [wwwapps.tc.gc.ca/…/ccarcsdb.zip](https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip)                                                                                       | Open — [OGL-Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution req) |
+| CAA NZ           | New Zealand    | Planned (v3) — permission email pending | [aviation.govt.nz/…/Aircraft-Register-for-website-.csv](https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv)                                         | Personal-use — all rights reserved + personal-use exception (attribution req)                   |
+| GCAA             | Georgia        | Planned (v4) — data access TBD          | [gcaa.ge](https://www.gcaa.ge)                                                                                                                                                                     | Unknown — pending R3.1 research                                                                 |
+| CASA             | Australia      | Future — permission email pending       | [services.casa.gov.au/CSV/acrftreg.csv](https://services.casa.gov.au/CSV/acrftreg.csv)                                                                                                             | Personal-use — CC BY-NC 4.0 (attribution req)                                                   |
+| IAA              | Ireland        | Future — license verification pending   | [iaa.ie register page](https://www.iaa.ie/general-aviation/aircraft-registration-leasing/current-aircraft-register-and-monthly-changes/current-aircraft-register-and-monthly-changes-details-page) | Unknown                                                                                         |
+| UK CAA           | United Kingdom | ❌ Excluded — Restrictive license       | [caa.co.uk/g-info](https://www.caa.co.uk/aircraft-register/g-info/)                                                                                                                                | Restrictive — paid + single-PC + no-redistribute                                                |
 
-Full attribution requirements and PII drop rules: [DATA_LICENSES.md](DATA_LICENSES.md).
+Full attribution requirements, permission-email status, and PII drop rules: [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
 
 ## Adding a New Registry Source
 
-1. Create `sources/<source-id>.yaml` following the mapping-config schema.
-2. Add acceptance fixtures in `fixtures/<source-id>/`.
-3. Update `DATA_LICENSES.md` with the new source's data license.
+1. Classify the license under PRD CC.1 (Open / Personal-use / Restrictive / Unknown). Restrictive sources are excluded.
+2. For Personal-use or Unknown sources, send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)). Wait for reply or 30-day timeout. Record outcome in `DATA_LICENSES.md`.
+3. Create `sources/<source-id>.yaml` following the mapping-config schema.
+4. Add acceptance fixtures in `fixtures/<source-id>/`.
+5. Update `DATA_LICENSES.md` with classification, permitted uses, and reply (verbatim if any).
 
 The translation engine and downloader require no changes.
 
