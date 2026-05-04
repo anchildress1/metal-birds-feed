@@ -129,6 +129,30 @@ describe('R2DiffWriter — dry run', () => {
     expect(stats.skipped).toBe(2);
   });
 
+  it('skips the manifest PUT when nothing changed (no-op short-circuit)', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    const records = new Map([['id001', r1]]);
+
+    mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
+      if (cmd._type === 'get' && cmd.a.Key === 'aircraft/_manifest/faa.json')
+        return Promise.resolve(
+          manifestResponse({
+            id001: { hash: contentHash(r1), icao_hex: 'a4e294', registration: 'N12345' },
+          })
+        );
+      return Promise.resolve({});
+    });
+
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await writer.write(records, 'faa');
+
+    const putKeys = mockSend.mock.calls
+      .filter((c) => (c[0] as { _type: string })._type === 'put')
+      .map((c) => (c[0] as { a: { Key: string } }).a.Key);
+    expect(putKeys).not.toContain('aircraft/_manifest/faa.json');
+    expect(putKeys).toEqual([]);
+  });
+
   it('puts only the changed record when one hash differs', async () => {
     const r1 = makeAircraft('id001', 'N12345', 'a4e294');
     const r2 = makeAircraft('id002', 'N67890', 'abc123');
