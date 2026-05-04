@@ -59,12 +59,28 @@ const SourceConfigSchema = z.object({
   label: z.string().min(1),
   country: z.string().min(1),
   encoding: z.enum(['utf8', 'latin1']),
-  download: z.object({
-    url: z.url(),
-    format: z.literal('zip'),
-    entries: z.record(z.string(), z.string()),
-    headers: z.record(z.string(), z.string()).optional(),
-  }),
+  download: z
+    .object({
+      url: z.url(),
+      format: z.enum(['zip', 'file']).default('zip'),
+      entries: z.record(z.string(), z.string()),
+      headers: z.record(z.string(), z.string()).optional(),
+      discover_url: z.url().optional(),
+      discover_pattern: z
+        .string()
+        .min(1)
+        .refine(isValidRegex, { message: 'discover_pattern must be a valid regular expression' })
+        .optional(),
+    })
+    .refine((d) => Object.keys(d.entries).length >= 1, {
+      message: 'download.entries must have at least one alias',
+    })
+    .refine((d) => d.format !== 'file' || Object.keys(d.entries).length === 1, {
+      message: 'download.entries must contain exactly one alias when format is "file"',
+    })
+    .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
+      message: 'download.discover_url and download.discover_pattern must be set together',
+    }),
   primary: z.string().min(1),
   delimiter: z.string().min(1),
   trim_all: z.boolean().default(false),

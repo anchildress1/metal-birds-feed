@@ -35,11 +35,15 @@ export interface JoinConfig {
   on: string;
 }
 
+export type DownloadFormat = 'zip' | 'file';
+
 export interface DownloadConfig {
   url: string;
-  format: 'zip';
+  format: DownloadFormat;
   entries: Record<string, string>;
   headers?: Record<string, string>;
+  discover_url?: string;
+  discover_pattern?: string;
 }
 
 export interface AllowedMissingSourceIdRowsConfig {
