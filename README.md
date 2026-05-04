@@ -121,4 +121,4 @@ The translation engine and downloader require no changes.
 
 ## License
 
-[Polyform Shield 1.0.0](LICENSE)
+[Polyform Shield 1.0.0 + Supplemental Terms](LICENSE)
