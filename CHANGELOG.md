@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.3](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.2...v0.0.3) (2026-05-04)
+
+
+### Features
+
+* add Transport Canada (tc-ca) registry — R1.1, R1.2 ([#7](https://github.com/anchildress1/metal-birds-feed/issues/7)) ([68e2e97](https://github.com/anchildress1/metal-birds-feed/commit/68e2e973819ecb31c731610e0faed1779f3c816f))
+
 ## [0.0.2](https://github.com/anchildress1/metal-birds-feed/compare/metal-birds-feed-v0.0.1...metal-birds-feed-v0.0.2) (2026-05-03)
 
 
