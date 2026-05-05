@@ -606,6 +606,123 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     expect(records.get('PH-OK')?.registration).toBe('PH-OK');
   });
 
+  describe('NL ILT fixture translation', () => {
+    const NL_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'nl-ilt.yaml');
+    const NL_FIXTURE = resolve(
+      import.meta.dirname,
+      '..',
+      'fixtures',
+      'nl-ilt',
+      'input',
+      'luchtvaartuigregister.ods'
+    );
+
+    let nlRecords: Map<string, Aircraft>;
+    let nlStats: { total: number; ok: number; failed: number; skipped: number };
+
+    beforeAll(async () => {
+      const config = loadSourceConfig(NL_CONFIG_PATH);
+      const buf = readFileSync(NL_FIXTURE);
+      const result = await translate(config, new Map([['register', buf]]));
+      nlRecords = result.records;
+      nlStats = result.stats;
+    });
+
+    it('skips the "Information" banner row and translates 8 aircraft', () => {
+      expect(nlStats).toEqual({ total: 9, ok: 8, failed: 0, skipped: 1 });
+      expect(nlRecords.size).toBe(8);
+    });
+
+    it('PH-ABA — Reims FR182, single-engine piston, valid', () => {
+      const r = nlRecords.get('PH-ABA')!;
+      expect(r.source_id).toBe('PH-ABA');
+      expect(r.registration).toBe('PH-ABA');
+      expect(r.icao_hex).toBe('4863df');
+      expect(r.icao_type_code).toBe('C82R');
+      expect(r.status).toBe('valid');
+      expect(r.country).toBe('NL');
+      expect(r.manufacturer).toBe('Reims Aviation S.A.');
+      expect(r.model).toBe('FR182');
+      expect(r.serial_number).toBe('FR18200052');
+      expect(r.year_manufactured).toBe(1980);
+      expect(r.airframe_type).toBe('fixed-wing-single-engine');
+      expect(r.engine.manufacturer).toBe('AVCO Corporation, Lycoming Division');
+      expect(r.engine.model).toBe('O-540-J3C5D');
+      expect(r.engine.type).toBe('reciprocating');
+      expect(r.engine.count).toBe(1);
+      expect(r.airworthiness_class).toBe('ARC 15C');
+      expect(r.certification_date).toBe('2021-05-27');
+      expect(r.airworthiness_date).toBe('2025-05-23');
+      expect(r.expiration_date).toBe('2026-05-26');
+      expect(r.last_action_date).toBe('2022-04-22');
+    });
+
+    it('PH-AKA — Airbus A330, two turbofans, large aeroplane', () => {
+      const r = nlRecords.get('PH-AKA')!;
+      expect(r.icao_hex).toBe('484f71');
+      expect(r.icao_type_code).toBe('A333');
+      expect(r.airframe_type).toBe('fixed-wing-multi-engine');
+      expect(r.engine.type).toBe('turbo-fan');
+      expect(r.engine.count).toBe(2);
+      expect(r.year_manufactured).toBe(2012);
+    });
+
+    it('PH-80 — Sailplane mapped to glider with no engine', () => {
+      const r = nlRecords.get('PH-80')!;
+      expect(r.airframe_type).toBe('glider');
+      expect(r.engine.type).toBeNull();
+      expect(r.engine.count).toBeNull();
+      expect(r.engine.manufacturer).toBeNull();
+      expect(r.icao_type_code).toBe('GLID');
+      // Latin-1 quotes and accents survive UTF-8 round-trip from .ods.
+      expect(r.model).toBe('Go 3 "Minimoa"');
+    });
+
+    it('PH-AAA — Cameron balloon, no engine', () => {
+      const r = nlRecords.get('PH-AAA')!;
+      expect(r.airframe_type).toBe('balloon');
+      expect(r.icao_type_code).toBe('BALL');
+      expect(r.engine.count).toBeNull();
+    });
+
+    it('PH-1DA — DJI Mavic 3 drone, airframe_type null (no UAV in canonical schema)', () => {
+      const r = nlRecords.get('PH-1DA')!;
+      expect(r.airframe_type).toBeNull();
+      expect(r.engine.type).toBe('electric');
+      expect(r.engine.count).toBe(4);
+      expect(r.icao_type_code).toBe('VFHC');
+    });
+
+    it('PH-AAI — Airbus AS 350 helicopter, turbo-shaft', () => {
+      const r = nlRecords.get('PH-AAI')!;
+      expect(r.airframe_type).toBe('rotorcraft');
+      expect(r.engine.type).toBe('turbo-shaft');
+      expect(r.engine.count).toBe(1);
+      expect(r.icao_type_code).toBe('AS50');
+    });
+
+    it('PH-2OP — deregistered drone, status cancelled with all dates null', () => {
+      const r = nlRecords.get('PH-2OP')!;
+      expect(r.status).toBe('cancelled');
+      expect(r.icao_hex).toBeNull();
+      expect(r.icao_type_code).toBeNull();
+      expect(r.year_manufactured).toBeNull();
+      expect(r.certification_date).toBeNull();
+      expect(r.airworthiness_date).toBeNull();
+      expect(r.expiration_date).toBeNull();
+    });
+
+    it('every NL ILT record carries country=NL and owner.country=NL with no PII', () => {
+      for (const r of nlRecords.values()) {
+        expect(r.country).toBe('NL');
+        expect(r.owner.country).toBe('NL');
+        expect(r.owner.name).toBeNull();
+        expect(r.owner.kind).toBeNull();
+        expect(r.owner.state).toBeNull();
+      }
+    });
+  });
+
   it('selects a non-default sheet when sheet selector is set', async () => {
     const buf = Buffer.from(
       await writeOds({
