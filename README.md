@@ -7,9 +7,9 @@
 
 </div>
 
-Translates national aviation registries (FAA, Transport Canada, CAA NZ, GCAA, and
-additional sources) into a single normalized JSON schema stored in Cloudflare R2 for
-O(1) tail-number and ICAO hex lookups. Inspired by
+Translates national aviation registries (FAA, Transport Canada, NL ILT, and additional
+sources) into a single normalized JSON schema stored in Cloudflare R2 for O(1)
+tail-number and ICAO hex lookups. Inspired by
 [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + operator-private R2.
@@ -30,7 +30,7 @@ A GitHub Actions matrix runs on the 1st of every month — one runner per source
 
 | Step        | Pass type | Notes                                                                        |
 | ----------- | --------- | ---------------------------------------------------------------------------- |
-| Download    | Full      | FAA / TC / CAA / GCAA all ship full snapshots. No `If-Modified-Since`        |
+| Download    | Full      | All sources ship full snapshots; no `If-Modified-Since` semantics            |
 | Translate   | Full      | All rows re-parsed and transformed every run (~10s for FAA's 312k records)   |
 | Hash + diff | Full O(n) | Every record's `sha256` content hash is compared against the stored manifest |
 | R2 writes   | **Delta** | Only changed records get PUT; removed records get DELETE; unchanged skipped  |
@@ -47,12 +47,15 @@ to avoid paying for the expensive redundant writes.
 | R2 ops    | ~600k+                | ~10k                        |
 | Wall time | ~99 min               | ~2 min                      |
 
-Bootstrap doesn't fit GHA's 30-minute job cap, so it's run once locally — see below.
+FAA's first load doesn't fit GHA's 30-minute job cap, so it's run once locally — see
+below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and don't
+need a local bootstrap.
 
 ## Initial Load (Bootstrap)
 
-The first load against an empty R2 bucket writes every record + every index, which exceeds
-GHA's per-job timeout. Run it once locally; the monthly cron handles diffs forever after.
+The first FAA load against an empty R2 bucket writes ~312k records × 3 index paths,
+which exceeds GHA's per-job timeout. Run it once locally; the monthly cron handles
+diffs forever after.
 
 ```bash
 cp .env.example .env  # fill in MBF_R2_* values
@@ -60,7 +63,16 @@ make bootstrap        # auto-loads .env, runs the full pipeline with no time cap
 ```
 
 Tail `logs/pipeline.log` for `event=write_progress` ticks (every 5s during writes).
-Override the source via `.env`'s `REFRESH_SOURCE` value.
+Override the source via `.env`'s `REFRESH_SOURCE` value (e.g., `REFRESH_SOURCE=nl-ilt`
+to populate only the Dutch register).
+
+For sources whose initial load fits the GHA budget, skip the local bootstrap and
+trigger the workflow directly:
+
+```bash
+gh workflow run refresh.yml -f source=nl-ilt   # one-off, single-source
+gh workflow run refresh.yml                    # all sources (next monthly cron equivalent)
+```
 
 ## R2 Key Structure
 
