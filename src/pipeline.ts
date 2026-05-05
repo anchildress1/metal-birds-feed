@@ -56,7 +56,7 @@ export async function run(sourceId: string): Promise<void> {
 
 export async function main(): Promise<void> {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
-  const sources = sourceEnv ? [sourceEnv] : ['faa', 'tc-ca'];
+  const sources = sourceEnv ? [sourceEnv] : ['faa', 'tc-ca', 'nl-ilt'];
 
   const results = await Promise.allSettled(sources.map((source) => run(source)));
 

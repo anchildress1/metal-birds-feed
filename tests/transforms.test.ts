@@ -195,9 +195,7 @@ describe('applyCompound', () => {
         'fixed-wing-multi-engine'
       ));
     it('maps MLA, MLH single-engine to fixed-wing-single-engine', () =>
-      expect(applyCompound('nl_ilt_airframe', ['MLA, MLH', '1'])).toBe(
-        'fixed-wing-single-engine'
-      ));
+      expect(applyCompound('nl_ilt_airframe', ['MLA, MLH', '1'])).toBe('fixed-wing-single-engine'));
     it('returns null for Drones (no canonical UAV enum)', () =>
       expect(applyCompound('nl_ilt_airframe', ['Drones', '4'])).toBeNull());
     it('returns null for an unknown group', () =>
@@ -218,15 +216,11 @@ describe('applyCompound', () => {
 
   describe('iso_date_only_or_null', () => {
     it('extracts the date from a full ISO datetime', () =>
-      expect(applyScalar('iso_date_only_or_null', '2016-02-09T05:00:00.000Z')).toBe(
-        '2016-02-09'
-      ));
+      expect(applyScalar('iso_date_only_or_null', '2016-02-09T05:00:00.000Z')).toBe('2016-02-09'));
     it('accepts a bare ISO date', () =>
       expect(applyScalar('iso_date_only_or_null', '2026-04-28')).toBe('2026-04-28'));
     it('trims surrounding whitespace before parsing', () =>
-      expect(applyScalar('iso_date_only_or_null', '  2020-12-31T00:00:00Z  ')).toBe(
-        '2020-12-31'
-      ));
+      expect(applyScalar('iso_date_only_or_null', '  2020-12-31T00:00:00Z  ')).toBe('2020-12-31'));
     it('returns null for empty input', () =>
       expect(applyScalar('iso_date_only_or_null', '')).toBeNull());
     it('returns null for non-ISO text', () =>

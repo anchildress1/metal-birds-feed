@@ -45,9 +45,7 @@ const mockFetchSequence = (responses: MockResponse[]): ReturnType<typeof vi.fn> 
       statusText: r.statusText,
       arrayBuffer: () => {
         const buf = typeof r.body === 'string' ? Buffer.from(r.body, 'utf8') : r.body;
-        return Promise.resolve(
-          buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
-        );
+        return Promise.resolve(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
       },
       text: () => Promise.resolve(typeof r.body === 'string' ? r.body : r.body.toString('utf8')),
     });
@@ -193,9 +191,7 @@ describe('download — discover_url + discover_pattern', () => {
       { ok: true, status: 200, statusText: 'OK', body: '<html><body>nothing here</body></html>' },
     ]);
 
-    await expect(download(DISCOVER_CONFIG)).rejects.toThrow(
-      /discovery pattern matched no url/i
-    );
+    await expect(download(DISCOVER_CONFIG)).rejects.toThrow(/discovery pattern matched no url/i);
   });
 
   it('resolves a relative URL against the discover_url base', async () => {

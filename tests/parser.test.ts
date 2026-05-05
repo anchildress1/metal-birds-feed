@@ -139,6 +139,7 @@ const ssOpts = (
     trim: boolean;
     columns: string[];
     sheet: string | number;
+    skip_rows: number;
   }> = {}
 ) => ({
   format: 'ods' as SpreadsheetFormat,

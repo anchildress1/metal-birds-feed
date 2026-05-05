@@ -37,6 +37,7 @@ const CONFIG: SourceConfig = {
   primary: 'master',
   delimiter: ',',
   trim_all: true,
+  format: 'csv',
   joins: [],
   source_id: 'UNIQUE ID',
   registration: 'N-NUMBER',

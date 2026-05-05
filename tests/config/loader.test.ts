@@ -204,7 +204,13 @@ describe('loadSourceConfig', () => {
   });
 
   it('rejects discover_url without discover_pattern', () => {
-    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dl_discover_lonely.yaml');
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_dl_discover_lonely.yaml'
+    );
     writeFileSync(
       tmp,
       `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`

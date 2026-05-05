@@ -76,9 +76,7 @@ export async function parseSpreadsheet(
   if (!sheet) return [];
 
   const skipRows = options.skip_rows ?? 0;
-  const rawRows = sheet.rows
-    .slice(skipRows)
-    .map((cells) => cells.map((c) => stringifyCell(c)));
+  const rawRows = sheet.rows.slice(skipRows).map((cells) => cells.map((c) => stringifyCell(c)));
   const trimmed = options.trim ? rawRows.map((cells) => cells.map((c) => c.trim())) : rawRows;
 
   const { headers, dataRows } = resolveHeadersAndData(trimmed, options.columns);
