@@ -165,8 +165,38 @@ const tcAirframe = (values: string[]): string | null => {
   return engineCount === 1 ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
 };
 
+// Maps NL ILT's `Group` + `Engines` columns to a canonical `airframe_type`.
+//
+// - Sailplane / Balloon / Rotorcraft / Drones map directly (Drones → null because the
+//   canonical schema lacks a UAV enum; the engine produces a record without an airframe
+//   classification rather than inventing one).
+// - Small / Large aeroplane and MLA, MLH disambiguate single- vs multi-engine via the
+//   Engines column. Engines holds an integer for powered records and "-" (or empty) for
+//   sailplanes / balloons / drones, so the transform returns null when the count is not
+//   a positive integer.
+// - Anything else returns null. The translation engine surfaces null airframe_type in
+//   the canonical record without failing the row.
+const nlIltAirframe = (values: string[]): string | null => {
+  const group = values[0]?.trim() ?? '';
+  const enginesRaw = values[1]?.trim() ?? '';
+
+  if (group === 'Sailplane') return 'glider';
+  if (group === 'Balloon') return 'balloon';
+  if (group === 'Rotorcraft') return 'rotorcraft';
+  if (group === 'Drones') return null;
+
+  if (group === 'Small aeroplane' || group === 'Large aeroplane' || group === 'MLA, MLH') {
+    const n = Number.parseInt(enginesRaw, 10);
+    if (Number.isNaN(n) || n < 1) return null;
+    return n === 1 ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
+  }
+
+  return null;
+};
+
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
   tc_airframe: tcAirframe,
+  nl_ilt_airframe: nlIltAirframe,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

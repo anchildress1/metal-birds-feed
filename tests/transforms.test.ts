@@ -179,6 +179,43 @@ describe('applyCompound', () => {
       expect(applyCompound('tc_airframe', [])).toBeNull());
   });
 
+  describe('nl_ilt_airframe (compound)', () => {
+    it('maps Sailplane to glider', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Sailplane', '-'])).toBe('glider'));
+    it('maps Balloon to balloon', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Balloon', '-'])).toBe('balloon'));
+    it('maps Rotorcraft to rotorcraft', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Rotorcraft', '1'])).toBe('rotorcraft'));
+    it('maps Small aeroplane with one engine to fixed-wing-single-engine', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', '1'])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('maps Large aeroplane with two engines to fixed-wing-multi-engine', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Large aeroplane', '2'])).toBe(
+        'fixed-wing-multi-engine'
+      ));
+    it('maps MLA, MLH single-engine to fixed-wing-single-engine', () =>
+      expect(applyCompound('nl_ilt_airframe', ['MLA, MLH', '1'])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('returns null for Drones (no canonical UAV enum)', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Drones', '4'])).toBeNull());
+    it('returns null for an unknown group', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Spaceship', '1'])).toBeNull());
+    it('returns null for an aeroplane with no engine count', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', ''])).toBeNull());
+    it('returns null for an aeroplane with non-numeric engine count', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', '-'])).toBeNull());
+    it('returns null for an aeroplane with zero engines', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', '0'])).toBeNull());
+    it('trims whitespace in group and engine count', () =>
+      expect(applyCompound('nl_ilt_airframe', ['  Small aeroplane  ', ' 1 '])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('returns null for an empty values array', () =>
+      expect(applyCompound('nl_ilt_airframe', [])).toBeNull());
+  });
+
   describe('iso_date_only_or_null', () => {
     it('extracts the date from a full ISO datetime', () =>
       expect(applyScalar('iso_date_only_or_null', '2016-02-09T05:00:00.000Z')).toBe(

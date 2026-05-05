@@ -19,6 +19,10 @@ export interface ParseSpreadsheetOptions {
   trim: boolean;
   columns?: string[];
   sheet?: string | number;
+  // Number of leading rows to discard before parsing. When `columns` overrides the
+  // header row, the file's own header row still appears at index 0 and would otherwise
+  // be parsed as data; set `skip_rows: 1` to drop it. Defaults to 0.
+  skip_rows?: number;
 }
 
 // Headers are normalized (trimmed) when inferred from the first row, because registry CSVs
@@ -71,7 +75,10 @@ export async function parseSpreadsheet(
   const sheet = pickSheet(wb.sheets, options.sheet);
   if (!sheet) return [];
 
-  const rawRows = sheet.rows.map((cells) => cells.map((c) => stringifyCell(c)));
+  const skipRows = options.skip_rows ?? 0;
+  const rawRows = sheet.rows
+    .slice(skipRows)
+    .map((cells) => cells.map((c) => stringifyCell(c)));
   const trimmed = options.trim ? rawRows.map((cells) => cells.map((c) => c.trim())) : rawRows;
 
   const { headers, dataRows } = resolveHeadersAndData(trimmed, options.columns);

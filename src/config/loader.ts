@@ -24,7 +24,7 @@ const SCALAR_TRANSFORMS = [
 
 const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
-const COMPOUND_TRANSFORMS = ['tc_airframe'] as const;
+const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe'] as const;
 
 const isValidRegex = (pattern: string): boolean => {
   try {
@@ -88,6 +88,7 @@ const SourceConfigSchema = z.object({
   trim_all: z.boolean().default(false),
   format: z.enum(['csv', 'ods', 'xlsx']).default('csv'),
   sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
+  skip_rows: z.number().int().nonnegative().optional(),
   columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
   allowed_missing_source_id_rows: z
     .object({

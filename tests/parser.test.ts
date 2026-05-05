@@ -335,6 +335,56 @@ describe('parseSpreadsheet — ods', () => {
     await expect(parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts())).rejects.toThrow();
   });
 
+  it('discards the configured number of leading rows (skip_rows)', async () => {
+    // Mirrors the NL ILT case where `columns:` overrides the messy bracket-annotated
+    // header but the file's own header row still occupies index 0 and would otherwise
+    // be treated as data.
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['file-header-A', 'file-header-B'],
+          ['1', '2'],
+          ['3', '4'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ columns: ['A', 'B'], skip_rows: 1 }));
+    expect(rows).toEqual([
+      { A: '1', B: '2' },
+      { A: '3', B: '4' },
+    ]);
+  });
+
+  it('skip_rows works without explicit columns (header re-detected after skip)', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['# metadata banner row', '', ''],
+          ['CODE', 'MFR', 'MODEL'],
+          ['001', 'CESSNA', '172'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts({ skip_rows: 1 }));
+    expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA', MODEL: '172' }]);
+  });
+
+  it('skip_rows defaulting to 0 leaves the input unchanged', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['A', 'B'],
+          ['1', '2'],
+        ],
+      },
+    ]);
+    const rows = await parseSpreadsheet(buf, ssOpts());
+    expect(rows).toEqual([{ A: '1', B: '2' }]);
+  });
+
   it('stringifies numeric, boolean, and Date cell values (CellValue round-trip)', async () => {
     // hucre preserves cell types through write/read; the parser must coerce non-string
     // CellValues into the Row[] shape the engine consumes.

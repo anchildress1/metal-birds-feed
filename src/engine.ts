@@ -23,6 +23,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
     trim: config.trim_all,
     columns: config.columns?.[config.primary],
     sheet: config.sheet,
+    skip_rows: config.skip_rows,
   });
 };
 

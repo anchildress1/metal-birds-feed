@@ -17,7 +17,7 @@ export type ScalarTransformName =
 
 export type ArrayTransformName = 'faa_cert_ops';
 
-export type CompoundTransformName = 'tc_airframe';
+export type CompoundTransformName = 'tc_airframe' | 'nl_ilt_airframe';
 
 export interface FieldMapping {
   field?: string;
@@ -67,6 +67,7 @@ export interface SourceConfig {
   trim_all: boolean;
   format: SourceFormat;
   sheet?: string | number;
+  skip_rows?: number;
   columns?: Record<string, string[]>;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
