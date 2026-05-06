@@ -27,31 +27,42 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### 🟡 In flight — waiting on reply
 
-| Source                    | Sent       | Follow-up  | Sent to                         | Fallback applies?                                         |
-| ------------------------- | ---------- | ---------- | ------------------------------- | --------------------------------------------------------- |
-| CAA NZ                    | 2026-05-05 | 2026-06-04 | info@caa.govt.nz                | **No** (Personal-use; silence ≠ permission)               |
-| IAA Ireland               | 2026-05-05 | 2026-06-04 | registration@iaa.ie             | **Yes** (Unknown; public-record fallback after follow-up) |
-| AESA Spain                | 2026-05-05 | 2026-06-04 | rmac.aesa@seguridadaerea.es     | **Yes** (Unknown; public-record fallback after follow-up) |
-| ANAC Argentina            | 2026-05-05 | 2026-06-04 | registro@anac.gob.ar            | **Yes** (Unknown; public-record fallback after follow-up) |
-| ANAC Brasil               | 2026-05-05 | 2026-06-04 | rab@anac.gov.br                 | **Yes** (Unknown; public-record fallback after follow-up) |
-| DGAC France               | 2026-05-05 | 2026-06-04 | immat@aviation-civile.gouv.fr   | **Yes** (Unknown; public-record fallback after follow-up) |
-| ENAC Italy                | 2026-05-05 | 2026-06-04 | registro.aeromobili@enac.gov.it | **Yes** (Unknown; public-record fallback after follow-up) |
-| FOCA Switzerland          | 2026-05-05 | 2026-06-04 | aircraftregistry@bazl.admin.ch  | **Yes** (Unknown; public-record fallback after follow-up) |
-| Luftfartstilsynet Norway  | 2026-05-05 | 2026-06-04 | postmottak@caa.no               | **Yes** (Unknown; public-record fallback after follow-up) |
-| Transportstyrelsen Sweden | 2026-05-05 | 2026-06-04 | luftfart@transportstyrelsen.se  | **Yes** (Unknown; public-record fallback after follow-up) |
+| Source                    | Sent       | Follow-up  | Sent to                                                         | Fallback applies?                                         |
+| ------------------------- | ---------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| CAA NZ                    | 2026-05-05 | 2026-06-04 | info@caa.govt.nz                                                | **No** (Personal-use; silence ≠ permission)               |
+| IAA Ireland               | 2026-05-05 | 2026-06-04 | registration@iaa.ie                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| AESA Spain                | 2026-05-05 | 2026-06-04 | rmac.aesa@seguridadaerea.es                                     | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Argentina            | 2026-05-05 | 2026-06-04 | registro@anac.gob.ar                                            | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Brasil               | 2026-05-05 | 2026-06-04 | rab@anac.gov.br                                                 | **Yes** (Unknown; public-record fallback after follow-up) |
+| DGAC France               | 2026-05-05 | 2026-06-04 | immat@aviation-civile.gouv.fr                                   | **Yes** (Unknown; public-record fallback after follow-up) |
+| ENAC Italy                | 2026-05-05 | 2026-06-04 | registro.aeromobili@enac.gov.it                                 | **Yes** (Unknown; public-record fallback after follow-up) |
+| FOCA Switzerland          | 2026-05-05 | 2026-06-04 | aircraftregistry@bazl.admin.ch                                  | **Yes** (Unknown; public-record fallback after follow-up) |
+| Luftfartstilsynet Norway  | 2026-05-05 | 2026-06-04 | postmottak@caa.no                                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| Transportstyrelsen Sweden | 2026-05-05 | 2026-06-04 | luftfart@transportstyrelsen.se                                  | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAAS Singapore            | 2026-05-05 | 2026-05-26 | webform (3–15 business-day SLA)                                 | **No** (Personal-use; silence ≠ permission)               |
+| AFAC Mexico               | 2026-05-05 | 2026-06-04 | tramites@afac.gob.mx                                            | **Yes** (Unknown; public-record fallback after follow-up) |
+| Austro Control Austria    | 2026-05-05 | 2026-06-04 | register@austrocontrol.at                                       | **Yes** (Unknown; public-record fallback after follow-up) |
+| BCAA / DGTA Belgium       | 2026-05-05 | 2026-06-04 | bcaa.registration@mobilit.fgov.be                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAA Taiwan                | 2026-05-05 | 2026-06-04 | gencaa@mail.caa.gov.tw                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| DKPPU Indonesia           | 2026-05-05 | 2026-06-04 | produkaeronautika_dkuppu@dephub.go.id (cc info151@dephub.go.id) | **Yes** (Unknown; public-record fallback after follow-up) |
+| JCAA Jamaica              | 2026-05-05 | 2026-06-04 | info@jcaa.gov.jm                                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| KOCA Korea                | 2026-05-05 | 2026-06-04 | lia0404@korea.kr                                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| Traficom Finland          | 2026-05-05 | 2026-06-04 | kirjaamo@traficom.fi (cc tietojenluovutus@traficom.fi)          | **Yes** (Unknown; public-record fallback after follow-up) |
+| Trafikstyrelsen Denmark   | 2026-05-05 | 2026-06-04 | info@trafikstyrelsen.dk                                         | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
 
-| Source                              | Reason                                                                                                                                                                                                         |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UK CAA (G-INFO)                     | Paid + single-PC + no-redistribute. Verified verbatim. Revisit only if terms change.                                                                                                                           |
-| Russia (Rosaviatsia)                | US sanctions exposure for a US-person operator. Engaging Russian state agencies — even for permission — carries OFAC compliance risk. Revisit only if sanctions situation eases.                               |
-| China (CAAC)                        | Register page is IE-only (Microsoft Internet Explorer, deprecated June 2022) — cannot verify or scrape with any modern browser. Plus geopolitical exposure as a US-based project. Revisit when either changes. |
-| Cayman Islands (CAA Cayman)         | Commercial offshore registry — paid SaaS-style registration product for foreign aircraft owners. Bulk data redistribution not part of their business model.                                                    |
-| Isle of Man (IOM Aircraft Registry) | Commercial offshore registry — M-prefix on every Gulfstream that ever lived. Paid registration product.                                                                                                        |
-| Guernsey (2-REG)                    | Commercial offshore registry, explicitly branded "2-REG." Subscription product.                                                                                                                                |
-| Jersey (Jersey Aircraft Registry)   | Crown dependency offshore registry — same commercial template as Guernsey at lower volume.                                                                                                                     |
-| Turks & Caicos (TCI CAA)            | Caribbean offshore registry, same commercial pattern.                                                                                                                                                          |
+| Source                              | Reason                                                                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UK CAA (G-INFO)                     | Paid + single-PC + no-redistribute. Verified verbatim. Revisit only if terms change.                                                                                                                                                                                                                                                                             |
+| Russia (Rosaviatsia)                | US sanctions exposure for a US-person operator. Engaging Russian state agencies — even for permission — carries OFAC compliance risk. Revisit only if sanctions situation eases.                                                                                                                                                                                 |
+| China (CAAC)                        | Register page is IE-only (Microsoft Internet Explorer, deprecated June 2022) — cannot verify or scrape with any modern browser. Plus geopolitical exposure as a US-based project. Revisit when either changes.                                                                                                                                                   |
+| Cayman Islands (CAA Cayman)         | Commercial offshore registry — paid SaaS-style registration product for foreign aircraft owners. Bulk data redistribution not part of their business model.                                                                                                                                                                                                      |
+| Isle of Man (IOM Aircraft Registry) | Commercial offshore registry — M-prefix on every Gulfstream that ever lived. Paid registration product.                                                                                                                                                                                                                                                          |
+| Guernsey (2-REG)                    | Commercial offshore registry, explicitly branded "2-REG." Subscription product.                                                                                                                                                                                                                                                                                  |
+| Jersey (Jersey Aircraft Registry)   | Crown dependency offshore registry — same commercial template as Guernsey at lower volume.                                                                                                                                                                                                                                                                       |
+| Turks & Caicos (TCI CAA)            | Caribbean offshore registry, same commercial pattern.                                                                                                                                                                                                                                                                                                            |
+| Germany (LBA)                       | Luftfahrzeugrolle is **statutorily non-public** under German data protection law. LBA states the register "is neither published nor freely accessible." Data only released per-record on proof of legal claim. No permission email is meaningful — they cannot grant what the law forbids them from publishing. Revisit only if German privacy law reclassifies. |
 
 Also fits this pattern but not currently tracked (not on avcodes list, would need separate research): **Bermuda (VP-B, BCAA)**, **Aruba (P4-, DCA Aruba)**, **San Marino (T7-, CAA San Marino)**. Don't pursue.
 
@@ -67,8 +78,6 @@ These countries have English as an official or working administrative language a
 
 For each: open the agency homepage in the browser, find the footer "Copyright" or "Terms" link, classify, and decide.
 
-- [ ] **Singapore** — CAAS — register at [caas.gov.sg](https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration). Singapore government data is often under [Singapore Open Data License](https://data.gov.sg/open-data-licence). Look for explicit license declaration on the page or in the site footer. **Likely Open.**
-- [ ] **Jamaica** — JCAA — register at [jcaa.gov.jm](https://www.jcaa.gov.jm/index.php/regulatory-affairs/safety-and-security-oversight/aircraft-registry/). Verify footer terms. **Likely needs email.**
 - [ ] **Trinidad & Tobago** — TTCAA — register at [caa.gov.tt](https://caa.gov.tt/aircraft-on-ttcaa-register/). Verify footer. **Likely needs email.**
 - [ ] **Bahamas** — BCAA — register at [caabahamas.com/registers](https://caabahamas.com/registers/). PDF format only — verify terms. **Likely needs email.**
 - [ ] **Belize** — BDCA — register at [civilaviation.gov.bz](https://www.civilaviation.gov.bz/index.php/bdca-civil-aircraft-register). Verify. **Likely needs email.**
@@ -124,15 +133,11 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 
-> Note: Switzerland, Sweden, and Norway were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Remaining entries below are next up — send English first per the Phase 2 strategy.
+> Note: Switzerland, Sweden, Norway, Austria, Belgium, Denmark, and Finland were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Only Suriname remains deferred in this group.
 
-| Country  | Agency         | Register URL                                                                                                 | Language                             |
-| -------- | -------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| Austria  | Austro Control | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online) | German (English UI exists)           |
-| Belgium  | DGTA           | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                       | Dutch / French / German (English UI) |
-| Suriname | CASAS          | [casas.sr](https://www.casas.sr/registry/)                                                                   | Dutch                                |
-| Denmark  | TS Denmark     | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx)  | Danish (English in practice)         |
-| Finland  | Traficom       | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot)               | Finnish / Swedish (English UI)       |
+| Country  | Agency | Register URL                               | Language |
+| -------- | ------ | ------------------------------------------ | -------- |
+| Suriname | CASAS  | [casas.sr](https://www.casas.sr/registry/) | Dutch    |
 
 ### Slavic / Eastern European
 
@@ -156,16 +161,13 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 ### CJK / East Asian
 
-> Note: China (CAAC) was moved to the **Excluded** section above (IE-only register page + geopolitical exposure).
+> Note: China (CAAC) was moved to the **Excluded** section above (IE-only register page + geopolitical exposure). Taiwan, Korea, and Indonesia were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Japan was deferred (no clean register-specific email surfaced; MLIT website cert issues prevented direct browsing).
 
-| Country   | Agency       | Register URL                                                            | Language               |
-| --------- | ------------ | ----------------------------------------------------------------------- | ---------------------- |
-| Taiwan    | CAA Taiwan   | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1)          | Mandarin (Traditional) |
-| Korea     | KOCA / MOLIT | [koca.go.kr](https://atis.koca.go.kr/ATIS/aircraft/forwardPage.do)      | Korean                 |
-| Macau     | AACM         | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84)  | Chinese / Portuguese   |
-| Mongolia  | MCAA         | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758)                          | Mongolian              |
-| Thailand  | CAAT         | [caat.or.th](https://www.caat.or.th/en/archives/52215)                  | Thai (English UI)      |
-| Indonesia | DKPPU        | [imsis-djpu.dephub.go.id](https://imsis-djpu.dephub.go.id/PortalDKPPU/) | Indonesian             |
+| Country  | Agency | Register URL                                                           | Language             |
+| -------- | ------ | ---------------------------------------------------------------------- | -------------------- |
+| Macau    | AACM   | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84) | Chinese / Portuguese |
+| Mongolia | MCAA   | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758)                         | Mongolian            |
+| Thailand | CAAT   | [caat.or.th](https://www.caat.or.th/en/archives/52215)                 | Thai (English UI)    |
 
 ### Caucasus / Central Asia
 
@@ -185,7 +187,7 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 ## Recommended order of attack
 
-1. **Phase 1 quick wins:** Iceland, Singapore, Israel, Jamaica, Trinidad & Tobago, Cyprus — most likely Open or simple-email cases. Knock these out one afternoon.
+1. **Phase 1 quick wins:** Iceland, Israel, Jamaica, Trinidad & Tobago, Cyprus — most likely Open or simple-email cases. Knock these out one afternoon. (Singapore was previously listed here but moved to "known-difficult" once CAAS terms were verified as Personal-use; ask required.)
 2. **Phase 1 known-difficult:** India, Pakistan, Sri Lanka, Maldives, Ethiopia, Malaysia — verify, send emails, expect mixed responses.
 3. **Phase 2 (non-English registries):** send English to all of them per the agreed strategy. Tier by fleet size or bandwidth — eight largest were sent 2026-05-05 (Brazil, France, Italy, Spain, Argentina, Switzerland, Sweden, Norway). Next likely batch: Germany (LBA), Japan (JCAB), Mexico (AFAC), Indonesia (DKPPU), Korea (KOCA), Taiwan (CAA Taiwan), Belgium (DGTA), Austria (Austro Control), Denmark (TS), Finland (Traficom).
 4. **Translator follow-up only** when an agency replies in their local language with substantive license terms, or when no English reply arrives and a follow-up in the local language is warranted.

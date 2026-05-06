@@ -267,6 +267,123 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## AFAC — Mexican Federal Civil Aviation Agency (Agencia Federal de Aviación Civil)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.gob.mx/afac
+- **Bulk download URL:** TBD (no canonical public register URL surfaced; question included in permission request)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `tramites@afac.gob.mx`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Austro Control — Austria
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online
+- **Bulk download URL:** TBD (search interface + PDF Gesamt extracts)
+- **License:** Pending verification.
+- **Update cadence:** TBD (avcodes notes monthly updates)
+- **Permission email:** Sent 2026-05-05 to `register@austrocontrol.at`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## BCAA / DGTA — Belgian Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en
+- **Bulk download URL:** TBD (search interface; bulk pattern unverified)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `bcaa.registration@mobilit.fgov.be`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAA Taiwan — Civil Aviation Administration, MOTC R.O.C.
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caa.gov.tw/article.aspx?a=238&lang=1
+- **Bulk download URL:** TBD (avcodes notes Excel/PDF File available; access pattern unverified)
+- **License:** Pending verification.
+- **Update cadence:** Monthly (per avcodes notes)
+- **Permission email:** Sent 2026-05-05 to `gencaa@mail.caa.gov.tw`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DKPPU — Directorate of Airworthiness and Aircraft Operation, Indonesia
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://imsis-djpu.kemenhub.go.id/PortalDKPPU/
+- **Bulk download URL:** Civil Aircraft Register published as PDF at the DKPPU portal (e.g. CAR2025E.pdf)
+- **License:** Pending verification.
+- **Update cadence:** Annual CAR publication observed
+- **Permission email:** Sent 2026-05-05 to `produkaeronautika_dkuppu@dephub.go.id` (cc: `info151@dephub.go.id`). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## JCAA — Jamaica Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.jcaa.gov.jm/aircraft-registry-page/
+- **Bulk download URL:** TBD (no licensing information published; question included in permission request)
+- **License:** Pending verification — JCAA aircraft registry page does not publish a license statement.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `info@jcaa.gov.jm` (general inbox; no register-specific desk surfaced). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## KOCA / MOLIT — Korea Office of Civil Aviation, Republic of Korea
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://atis.koca.go.kr/ATIS/aircraft/forwardPage.do
+- **Bulk download URL:** TBD (avcodes notes Excel File available; access pattern unverified)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `lia0404@korea.kr` (general inquiries; no register-specific desk surfaced). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Traficom — Finnish Transport and Communications Agency
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot
+- **Bulk download URL:** TBD (search interface)
+- **License:** Pending verification (Finnish public-sector data generally falls under EU PSI Directive principles).
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi` — Traficom's separate data-disclosure unit). Email asks whether request should be routed via the data-disclosure unit instead. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Trafikstyrelsen — Danish Civil Aviation and Railway Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx
+- **Bulk download URL:** TBD (Excel File noted on avcodes; current and historical extracts available)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `info@trafikstyrelsen.dk` (general inbox). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## GCAA — Georgian Civil Aviation Agency
 
 - **Status:** Planned (phase 4) — blocked on R3.1 data-source acquisition research
@@ -330,3 +447,36 @@ These are commercial registration services for foreign aircraft owners. They mak
 **Revisit condition:** A specific registry restructures into an open-data publisher (unlikely given their business model), or a free community mirror appears with verifiable license. Re-evaluate any individual entry at most annually.
 
 **Also fits this pattern but not currently tracked** (would require separate research; not on avcodes list): **Bermuda (VP-B, BCAA)**, **Aruba (P4-, DCA Aruba)**, **San Marino (T7-, CAA San Marino)**. Same exclusion reasoning applies.
+
+---
+
+## Germany — Luftfahrt-Bundesamt (LBA) — Excluded
+
+- **Status:** ❌ Excluded
+- **Classification:** Excluded (statutorily non-public register)
+- **Source URL:** https://www.lba.de/EN/Airworthiness/AircraftRegistration/AircraftRegistration_node.html
+- **License:** Not applicable — the German Luftfahrzeugrolle (aircraft register) is statutorily non-public under German data protection law. Per the LBA's own site: _"The Luftfahrzeugrolle of the Federal Republic of Germany is a non-public register that is neither published nor freely accessible for data protection reasons. The entries in the Aircraft Register are generally not open to the public to be searched; however, data recorded in the Aircraft Register may be requested if that person provides prima facie evidence that it needs such information for the enforcement of a private claim."_
+- **Why excluded:** This is not a "permission could unlock the data" scenario. The LBA is statutorily prohibited from publishing the register at all, and only releases data on a per-record basis to parties who can demonstrate a legal claim. There is no "yes" they could meaningfully grant for bulk redistribution. Sending a permission email would only confirm what their site already states.
+- **Contact (for reference, not for permission ask):** RefT4@lba.de (Department T4)
+- **Revisit condition:** German aviation register reclassified as public under future amendments to the Luftverkehrsgesetz or German data-protection law.
+
+---
+
+## CAAS — Civil Aviation Authority of Singapore
+
+- **Status:** Future — permission request submitted, awaiting reply
+- **Classification:** Personal-use (with explicit "with written permission" carveout — same shape as CAA NZ)
+- **Source URL:** https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration
+- **License (verbatim from CAAS Terms of Use, "Restrictions on Access and Use" section):**
+
+  > You shall not modify, reformat, copy, reproduce, display, distribute, publish, transmit, post, upload, licence, create derivative works from, hyperlink, store in any information retrieval system, transfer in any manner, or sell any of the material on this website without CAAS' written permission. This means, among other things, that you must not insert a hyperlink to this CAAS Website on any other website or "mirror" on your own Website, the home page or other pages of or materials in this or any CAAS Website or their respective links.
+  >
+  > You may not use any "deep-link", "page scrape", "robot", "spider" or other automatic device, program, algorithm or other methods or processes, to access, acquire, copy or monitor any portion of this CAAS Website, or in any way alter, reproduce or circumvent or attempt to alter, reproduce or circumvent the navigational structure or presentation of this CAAS Website or its Contents, or to obtain or attempt to obtain any materials, document or information not intentionally made available by CAAS through this CAAS Website.
+  >
+  > You may download one copy of the material on this CAAS Website, but only on a single computer, and only for your own personal and non-commercial use, and provided that it bears the relevant copyright, trademark and/or other proprietary notices located on this CAAS Website.
+
+- **Why Personal-use rather than Excluded:** The "without CAAS' written permission" phrasing throughout the redistribution clause is an explicit carveout — CAAS can grant permission. The data itself is published freely on caas.gov.sg (unlike UK G-INFO, which is a paid product with no public version). This matches the **Personal-use** pattern from PRD CC.1: "personal use only without permission; written permission required for anything else." Same shape as CAA NZ. Permission ask is the path forward.
+- **Permission request:** Submitted 2026-05-05 via the CAAS webform at https://www.caas.gov.sg/who-we-are/contact-us. Form selections: **Category** = Safety Regulations & Approvals, **Sub-Category** = Aircraft Airworthiness and Registration. CAAS publishes a 3–15 business-day response SLA; expected reply by 2026-05-26. Reply will arrive at `anchildress1@gmail.com`. **The 30-day fallback does not apply** — Personal-use sources require an affirmative reply (silence ≠ permission).
+- **Reply (verbatim):** _pending_
+- **Action if denied:** drop Singapore from the project. The terms are too restrictive to proceed without explicit permission.
+- **Note on the no-automated-access clause:** the form submission explicitly requested both (a) redistribution permission, and (b) a sanctioned mechanism for periodic programmatic access (since the no-scraping clause is separate from the no-redistribute clause).
