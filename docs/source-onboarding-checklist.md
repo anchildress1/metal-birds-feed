@@ -18,24 +18,24 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### ✅ Done — no further action
 
-| Source | License | How handled |
-|---|---|---|
-| FAA | US public domain | Live (phase 1) |
-| Transport Canada | GC Open Data Licence Agreement (verbatim notices) | Live (phase 2) |
-| ILT (Netherlands) | CC-0 | Live (phase 3) |
-| CASA (Australia) | CC BY 4.0 | Verified, no email needed |
+| Source            | License                                           | How handled               |
+| ----------------- | ------------------------------------------------- | ------------------------- |
+| FAA               | US public domain                                  | Live (phase 1)            |
+| Transport Canada  | GC Open Data Licence Agreement (verbatim notices) | Live (phase 2)            |
+| ILT (Netherlands) | CC-0                                              | Live (phase 3)            |
+| CASA (Australia)  | CC BY 4.0                                         | Verified, no email needed |
 
 ### 🟡 In flight — waiting on reply
 
-| Source | Sent | Follow-up | Fallback applies? |
-|---|---|---|---|
-| CAA NZ | 2026-05-05 | 2026-06-04 | **No** (Personal-use; silence ≠ permission) |
+| Source      | Sent       | Follow-up  | Fallback applies?                                         |
+| ----------- | ---------- | ---------- | --------------------------------------------------------- |
+| CAA NZ      | 2026-05-05 | 2026-06-04 | **No** (Personal-use; silence ≠ permission)               |
 | IAA Ireland | 2026-05-05 | 2026-06-04 | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
 
-| Source | Reason |
-|---|---|
+| Source          | Reason                                                                               |
+| --------------- | ------------------------------------------------------------------------------------ |
 | UK CAA (G-INFO) | Paid + single-PC + no-redistribute. Verified verbatim. Revisit only if terms change. |
 
 ### 🤷 Non-English (deferred until translator available for the relevant language)
@@ -100,82 +100,82 @@ Group by language. Don't send any of these until a translator is confirmed for t
 
 ### Romance (French / Spanish / Portuguese / Italian / Romanian)
 
-| Country | Agency | Register URL | Language |
-|---|---|---|---|
-| Argentina | ANAC | [geo.anac.gob.ar](https://geo.anac.gob.ar/afectacion) | Spanish |
-| Brazil | ANAC Brasil | [sistemas.anac.gov.br](https://sistemas.anac.gov.br/aeronaves/cons_rab.asp) | Portuguese |
-| Chile | DGAC | [servicios.dgac.gob.cl](https://servicios.dgac.gob.cl/rna-web/publico.html) | Spanish |
-| Colombia | UAEAC | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/) | Spanish |
-| Dominican Republic | IDAC | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/) | Spanish |
-| Guatemala | DGAC | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves) | Spanish |
-| Uruguay | DINACIA | [dinacia.gub.uy](https://www.dinacia.gub.uy) | Spanish |
-| Spain | AESA | [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas) | Spanish |
-| Italy | ENAC | [enac.gov.it](https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/omologazione-organizzazioni-di-progettazioni/prodotti/rilascio-certificato-di-navigabilita) | Italian |
-| France | DGAC | [immat.aviation-civile.gouv.fr](https://immat.aviation-civile.gouv.fr/immat/servlet/aeronef_liste.html) | French |
-| Luxembourg | DAC | [dac.gouvernement.lu](https://dac.gouvernement.lu/fr/administration/departements/navigabilite/immatriculation-aeronefs/releve-immatriculations.html) | French / German |
-| Haiti | OFNAC | [registreimm.net](https://registreimm.net/aircraftSearchingView) | French / Haitian Creole |
-| Togo | ANAC Togo | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/) | French |
-| Cabo Verde | AAC | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63) | Portuguese |
-| Mozambique | IACM | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/) | Portuguese |
-| Romania | CAA | [caa.ro](https://formulare.caa.ro/inmatriculari) | Romanian |
-| Moldova | CAA | [caa.md](https://www.caa.md/registru-aerian-3-84) | Romanian |
+| Country            | Agency      | Register URL                                                                                                                                                                | Language                |
+| ------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Argentina          | ANAC        | [geo.anac.gob.ar](https://geo.anac.gob.ar/afectacion)                                                                                                                       | Spanish                 |
+| Brazil             | ANAC Brasil | [sistemas.anac.gov.br](https://sistemas.anac.gov.br/aeronaves/cons_rab.asp)                                                                                                 | Portuguese              |
+| Chile              | DGAC        | [servicios.dgac.gob.cl](https://servicios.dgac.gob.cl/rna-web/publico.html)                                                                                                 | Spanish                 |
+| Colombia           | UAEAC       | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/)                                                                                | Spanish                 |
+| Dominican Republic | IDAC        | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                                                 | Spanish                 |
+| Guatemala          | DGAC        | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                                                  | Spanish                 |
+| Uruguay            | DINACIA     | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                                                | Spanish                 |
+| Spain              | AESA        | [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas)                          | Spanish                 |
+| Italy              | ENAC        | [enac.gov.it](https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/omologazione-organizzazioni-di-progettazioni/prodotti/rilascio-certificato-di-navigabilita) | Italian                 |
+| France             | DGAC        | [immat.aviation-civile.gouv.fr](https://immat.aviation-civile.gouv.fr/immat/servlet/aeronef_liste.html)                                                                     | French                  |
+| Luxembourg         | DAC         | [dac.gouvernement.lu](https://dac.gouvernement.lu/fr/administration/departements/navigabilite/immatriculation-aeronefs/releve-immatriculations.html)                        | French / German         |
+| Haiti              | OFNAC       | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                                            | French / Haitian Creole |
+| Togo               | ANAC Togo   | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                                           | French                  |
+| Cabo Verde         | AAC         | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                                          | Portuguese              |
+| Mozambique         | IACM        | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                                        | Portuguese              |
+| Romania            | CAA         | [caa.ro](https://formulare.caa.ro/inmatriculari)                                                                                                                            | Romanian                |
+| Moldova            | CAA         | [caa.md](https://www.caa.md/registru-aerian-3-84)                                                                                                                           | Romanian                |
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 
-| Country | Agency | Register URL | Language |
-|---|---|---|---|
-| Austria | Austro Control | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online) | German (English UI exists) |
-| Switzerland | BAZL/FOCA | [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/) | German / French / Italian (English UI) |
-| Belgium | DGTA | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en) | Dutch / French / German (English UI) |
-| Suriname | CASAS | [casas.sr](https://www.casas.sr/registry/) | Dutch |
-| Denmark | TS Denmark | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx) | Danish (English in practice) |
-| Sweden | Transportstyrelsen | [transportstyrelsen.se](https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg) | Swedish (English UI) |
-| Norway | Luftfartstilsynet | [luftfartstilsynet.no](https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/) | Norwegian (English in practice) |
-| Finland | Traficom | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot) | Finnish / Swedish (English UI) |
+| Country     | Agency             | Register URL                                                                                                   | Language                               |
+| ----------- | ------------------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Austria     | Austro Control     | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online)   | German (English UI exists)             |
+| Switzerland | BAZL/FOCA          | [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/)                                                      | German / French / Italian (English UI) |
+| Belgium     | DGTA               | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                         | Dutch / French / German (English UI)   |
+| Suriname    | CASAS              | [casas.sr](https://www.casas.sr/registry/)                                                                     | Dutch                                  |
+| Denmark     | TS Denmark         | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx)    | Danish (English in practice)           |
+| Sweden      | Transportstyrelsen | [transportstyrelsen.se](https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg)                  | Swedish (English UI)                   |
+| Norway      | Luftfartstilsynet  | [luftfartstilsynet.no](https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/) | Norwegian (English in practice)        |
+| Finland     | Traficom           | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot)                 | Finnish / Swedish (English UI)         |
 
 ### Slavic / Eastern European
 
-| Country | Agency | Register URL | Language |
-|---|---|---|---|
-| Russia | Rosaviatsia | [favt.gov.ru](https://favt.gov.ru/opendata/7714549744-gosreestrgvs/) | Russian |
-| Ukraine | SAAU | [avia.gov.ua](https://avia.gov.ua/State-Civil-Aircraft-Register-of-Ukraine/) | Ukrainian |
-| Bulgaria | CAA | [caa.bg](http://www.caa.bg/bg/category/300/17238) | Bulgarian |
-| Czech Republic | CAA CR | [caa.cz](https://lr.caa.cz/letecky-rejstrik?lang=en) | Czech (English UI) |
-| Slovakia | NSA Slovakia | [nsat.sk](https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/) | Slovak |
-| Hungary | KKM | [kozlekedesihatosag.kormany.hu](https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604) | Hungarian |
-| Croatia | CCAA | [ccaa.hr](https://www.ccaa.hr/en/list-of-registered-aircraft-94674) | Croatian (English UI) |
-| Serbia | CAD Serbia | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry) | Serbian (English UI) |
-| Bosnia & Herzegovina | BHDCA | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness) | Bosnian (English UI) |
-| Macedonia | CAA | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/) | Macedonian (English UI) |
-| Montenegro | ACG | [caa.me](https://www.caa.me/en/registri) | Montenegrin (English UI) |
-| Latvia | CAA | [caa.gov.lv](https://www.caa.gov.lv/lv/gaisa-kugu-registrs) | Latvian |
-| Lithuania | TKA | [tka.lt](https://tka.lt/oro-transportas/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/?lang=en) | Lithuanian (English UI) |
-| Estonia | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) | Estonian |
+| Country              | Agency         | Register URL                                                                                                        | Language                 |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| Russia               | Rosaviatsia    | [favt.gov.ru](https://favt.gov.ru/opendata/7714549744-gosreestrgvs/)                                                | Russian                  |
+| Ukraine              | SAAU           | [avia.gov.ua](https://avia.gov.ua/State-Civil-Aircraft-Register-of-Ukraine/)                                        | Ukrainian                |
+| Bulgaria             | CAA            | [caa.bg](http://www.caa.bg/bg/category/300/17238)                                                                   | Bulgarian                |
+| Czech Republic       | CAA CR         | [caa.cz](https://lr.caa.cz/letecky-rejstrik?lang=en)                                                                | Czech (English UI)       |
+| Slovakia             | NSA Slovakia   | [nsat.sk](https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/)     | Slovak                   |
+| Hungary              | KKM            | [kozlekedesihatosag.kormany.hu](https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604)                     | Hungarian                |
+| Croatia              | CCAA           | [ccaa.hr](https://www.ccaa.hr/en/list-of-registered-aircraft-94674)                                                 | Croatian (English UI)    |
+| Serbia               | CAD Serbia     | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry)                                                     | Serbian (English UI)     |
+| Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
+| Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |
+| Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |
+| Latvia               | CAA            | [caa.gov.lv](https://www.caa.gov.lv/lv/gaisa-kugu-registrs)                                                         | Latvian                  |
+| Lithuania            | TKA            | [tka.lt](https://tka.lt/oro-transportas/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/?lang=en) | Lithuanian (English UI)  |
+| Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register)                                                | Estonian                 |
 
 ### CJK / East Asian
 
-| Country | Agency | Register URL | Language |
-|---|---|---|---|
-| China | CAAC | [219.143.231.89](http://219.143.231.89/shs/ccarretrieval.do?flag=1) | Chinese (Mandarin); IE-only |
-| Taiwan | CAA Taiwan | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1) | Mandarin (Traditional) |
-| Korea | KOCA / MOLIT | [koca.go.kr](https://atis.koca.go.kr/ATIS/aircraft/forwardPage.do) | Korean |
-| Macau | AACM | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84) | Chinese / Portuguese |
-| Mongolia | MCAA | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758) | Mongolian |
-| Thailand | CAAT | [caat.or.th](https://www.caat.or.th/en/archives/52215) | Thai (English UI) |
-| Indonesia | DKPPU | [imsis-djpu.dephub.go.id](https://imsis-djpu.dephub.go.id/PortalDKPPU/) | Indonesian |
+| Country   | Agency       | Register URL                                                            | Language                    |
+| --------- | ------------ | ----------------------------------------------------------------------- | --------------------------- |
+| China     | CAAC         | [219.143.231.89](http://219.143.231.89/shs/ccarretrieval.do?flag=1)     | Chinese (Mandarin); IE-only |
+| Taiwan    | CAA Taiwan   | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1)          | Mandarin (Traditional)      |
+| Korea     | KOCA / MOLIT | [koca.go.kr](https://atis.koca.go.kr/ATIS/aircraft/forwardPage.do)      | Korean                      |
+| Macau     | AACM         | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84)  | Chinese / Portuguese        |
+| Mongolia  | MCAA         | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758)                          | Mongolian                   |
+| Thailand  | CAAT         | [caat.or.th](https://www.caat.or.th/en/archives/52215)                  | Thai (English UI)           |
+| Indonesia | DKPPU        | [imsis-djpu.dephub.go.id](https://imsis-djpu.dephub.go.id/PortalDKPPU/) | Indonesian                  |
 
 ### Caucasus / Central Asia
 
-| Country | Agency | Register URL | Language |
-|---|---|---|---|
-| Georgia | GCAA | [gcaa.ge](https://gcaa.ge/civil-aircraft-register/) | Georgian (already in v4 spec) |
-| Armenia | GDCA | [aviation.am](http://www.aviation.am/registered_aircrafts) | Armenian |
-| Kyrgyzstan | CAA | [caa.kg](https://caa.kg/reestr-vs/) | Kyrgyz / Russian |
+| Country    | Agency | Register URL                                               | Language                      |
+| ---------- | ------ | ---------------------------------------------------------- | ----------------------------- |
+| Georgia    | GCAA   | [gcaa.ge](https://gcaa.ge/civil-aircraft-register/)        | Georgian (already in v4 spec) |
+| Armenia    | GDCA   | [aviation.am](http://www.aviation.am/registered_aircrafts) | Armenian                      |
+| Kyrgyzstan | CAA    | [caa.kg](https://caa.kg/reestr-vs/)                        | Kyrgyz / Russian              |
 
 ### Middle East
 
-| Country | Agency | Register URL | Language |
-|---|---|---|---|
+| Country | Agency       | Register URL                                   | Language        |
+| ------- | ------------ | ---------------------------------------------- | --------------- |
 | Lebanon | DGCA Lebanon | [lebcaa.com](https://www.lebcaa.com/a_r.shtml) | Arabic / French |
 
 ---
