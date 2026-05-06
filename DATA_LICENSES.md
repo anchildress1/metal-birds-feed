@@ -53,7 +53,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## FAA — US Federal Aviation Administration
 
-- **Status:** ✅ Live (v1)
+- **Status:** ✅ Live (phase 1)
 - **Classification:** Open
 - **Source URL:** https://registry.faa.gov/aircraftinquiry/
 - **Bulk download URL:** https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download/ (Releasable Aircraft Database page; links to the monthly ZIP)
@@ -71,7 +71,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Transport Canada (TC-CA)
 
-- **Status:** ✅ Live (v2)
+- **Status:** ✅ Live (phase 2)
 - **Classification:** Open (with conditions — see below)
 - **Bulk download URL:** https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip
 - **Search interface:** https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/RchSimp.aspx
@@ -100,7 +100,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## ILT — Netherlands Human Environment and Transport Inspectorate
 
-- **Status:** Planned (v3) — no permission email needed
+- **Status:** ✅ Live (phase 3, NL track) — no permission email needed
 - **Classification:** Open
 - **Source URL:** https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data
 - **Open-data listing:** https://data.overheid.nl/dataset/luchtvaartuigregister
@@ -120,7 +120,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAA NZ — Civil Aviation Authority of New Zealand
 
-- **Status:** Planned (v3) — permission request sent, awaiting reply
+- **Status:** Planned (phase 3, NZ track) — permission request sent, awaiting reply
 - **Classification:** Personal-use
 - **Source URL:** https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/
 - **Bulk download URL:** https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv
@@ -165,7 +165,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## GCAA — Georgian Civil Aviation Agency
 
-- **Status:** Planned (v4) — blocked on R3.1 data-source acquisition research
+- **Status:** Planned (phase 4) — blocked on R3.1 data-source acquisition research
 - **Classification:** Unknown
 - **Source URL:** https://www.gcaa.ge (data accessibility TBD)
 - **License:** Unknown — to be determined during R3.1 research milestone.
