@@ -384,6 +384,72 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAAM — Civil Aviation Authority of Malaysia
+
+- **Status:** Future — permission request submitted via webform 2026-05-05, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caam.gov.my/
+- **Bulk download URL:** TBD (pending CAAM reply confirming canonical URL)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission request:** Submitted 2026-05-05 via the CAAM general enquiry webform at https://www.caam.gov.my/contact-us/. Trimmed body (~1,700 chars) to fit form character limit. Reply will arrive at `anchildress1@gmail.com`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template basis: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAASL — Civil Aviation Authority of Sri Lanka
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caa.lk/en/downloads/sl-aircraft-register
+- **Bulk download URL:** TBD (PDF download link present on register page; format unverified)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `daw@caa.lk` (Mr. Mahilal Dushyantha Ratnayake, Director — Aircraft Registration and Airworthiness; cc: `scaiaras@caa.lk`, Senior Civil Aviation Inspector — Aircraft Registration and Airworthiness Standards). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CASA PNG — Civil Aviation Safety Authority of Papua New Guinea
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://casapng.gov.pg/safety-regulatory/airworthiness/Aircraft-Registers/
+- **Bulk download URL:** TBD (PDF format per avcodes; access pattern unverified)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `info@casapng.gov.pg` (general inbox; no register-specific desk surfaced publicly). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+- **Note on naming:** The agency is referred to as "CASA PNG" throughout this project and in correspondence, to distinguish it from the Civil Aviation Safety Authority of **Australia** (also "CASA"), which is a separate Live source.
+
+---
+
+## DCA Cyprus — Department of Civil Aviation, Ministry of Communications and Works
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.mcw.gov.cy/mcw/dca/dca.nsf/DMLregister_en/DMLregister_en?OpenDocument
+- **Bulk download URL:** TBD (Lotus Notes / Domino backend; access pattern requires `?OpenDocument` query)
+- **License:** Pending verification (EU PSI Directive principles likely apply in principle).
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `director@dca.mcw.gov.cy` (DCA Director's institutional inbox). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGCA — Directorate General of Civil Aviation, India
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.dgca.gov.in/
+- **Bulk download URL:** TBD (avcodes notes PDF download; canonical URL pending DGCA reply — question included in permission request)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `rkanand.dgca@nic.in` and `mdevula.dgca@nic.in` (Mr. R. K. Anand and Mr. M. Devula, both DDGs of the Airworthiness Directorate; equal-rank, addressed jointly to allow internal routing). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## GCAA — Georgian Civil Aviation Agency
 
 - **Status:** Planned (phase 4) — blocked on R3.1 data-source acquisition research
@@ -459,6 +525,22 @@ These are commercial registration services for foreign aircraft owners. They mak
 - **Why excluded:** This is not a "permission could unlock the data" scenario. The LBA is statutorily prohibited from publishing the register at all, and only releases data on a per-record basis to parties who can demonstrate a legal claim. There is no "yes" they could meaningfully grant for bulk redistribution. Sending a permission email would only confirm what their site already states.
 - **Contact (for reference, not for permission ask):** RefT4@lba.de (Department T4)
 - **Revisit condition:** German aviation register reclassified as public under future amendments to the Luftverkehrsgesetz or German data-protection law.
+
+---
+
+## Israel — CAAI (Civil Aviation Authority of Israel) — Excluded
+
+- **Status:** ❌ Excluded
+- **Classification:** Excluded (fee-gated per-aircraft access; no bulk-redistribution channel)
+- **Source URL:** https://www.gov.il/en/service/browse-aircraft-register (current canonical browser; the older `data.gov.il/dataset/aircraft_data_il/resource/bc00ed41-75d0-4d0f-9eca-3cd0a2c332cc` was last updated 2022-07-16 and is now deprecated)
+- **License:** No bulk redistribution channel. The CAAI register browser at gov.il states verbatim:
+  > "Each request is for one aircraft and requires a separate fee."
+  >
+  > "For requests that are not for a specific aircraft, you must contact the Freedom of Information Commissioner at the Ministry of Transportation to act in accordance with the Freedom of Information Law, 5758-1998."
+  >
+  > "[E]veryone is permitted, with the consent of the registrar, to review the aircraft registration register in Israel."
+- **Why excluded:** Three concurrent blockers — (1) per-aircraft fee + registrar consent for individual lookups, (2) bulk access only via FOI request, which grants one-off copies under conditions and does not confer redistribution rights, (3) no public bulk publication on data.gov.il in any current form. Same structural pattern as Germany LBA: the agency cannot grant what its statutory framework doesn't permit it to publish openly. An FOI request for redistribution rights would be a heavy ask with significant pushback and is not justified for a hobby project's ~600 4X-prefixed aircraft.
+- **Revisit condition:** Israel publishes the register on data.gov.il (or successor portal) under an explicit open license (CC BY, CC0, or equivalent). Re-evaluate annually.
 
 ---
 
