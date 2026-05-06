@@ -120,7 +120,7 @@ make install
 | Source           | Country        | Status                                                                                                                                  | Bulk download                                                                                                                                                                                      | License (CC.1)                                                                                             |
 | ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | FAA              | United States  | ✅ Live                                                                                                                                 | [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/Search/NNumberInquiry)                                                                                                                 | Open — US public domain (17 U.S.C. § 105)                                                                  |
-| Transport Canada | Canada         | ✅ Live                                                                                                                                 | [wwwapps.tc.gc.ca/…/ccarcsdb.zip](https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip)                                                                                       | Open — [OGL-Canada](https://open.canada.ca/en/open-government-licence-canada) (attribution req)            |
+| Transport Canada | Canada         | ✅ Live                                                                                                                                 | [wwwapps.tc.gc.ca/…/ccarcsdb.zip](https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip)                                                                                       | Open (with conditions) — Government of Canada Open Data Licence Agreement for Unrestricted Use of Canada's Data (click-wrap; verbatim notices + indemnity req) |
 | ILT              | Netherlands    | ✅ Live (v3 NL track)                                                                                                                   | [ilent.nl register data files](https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data) (.ods, date-stamped filename, resolved via `discover_url`)                | Open — CC-0 (public domain) per [data.overheid.nl](https://data.overheid.nl/dataset/luchtvaartuigregister) |
 | CAA NZ           | New Zealand    | Planned (v3) — permission request sent 2026-05-05 (awaiting reply; follow-up 2026-06-04, no fallback applies)                           | [aviation.govt.nz/…/Aircraft-Register-for-website-.csv](https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv)                                         | Personal-use — all rights reserved + personal-use exception (attribution req)                              |
 | GCAA             | Georgia        | Planned (v4) — data access TBD                                                                                                          | [gcaa.ge](https://www.gcaa.ge)                                                                                                                                                                     | Unknown — pending R3.1 research                                                                            |
@@ -129,6 +129,34 @@ make install
 | UK CAA           | United Kingdom | ❌ Excluded — Restrictive license                                                                                                       | [caa.co.uk/g-info](https://www.caa.co.uk/aircraft-register/g-info/)                                                                                                                                | Restrictive — paid + single-PC + no-redistribute                                                           |
 
 Full attribution requirements, permission-email status, and PII drop rules: [DATA_LICENSES.md](DATA_LICENSES.md).
+
+---
+
+## Attribution
+
+metal-birds-feed normalizes data published by national civil aviation authorities. The notices below are the verbatim attributions required by each upstream license and constitute the project's compliance with those requirements. This README is the prominent location at which the project displays them.
+
+### Transport Canada
+
+> Reproduced and distributed with the permission of the Government of Canada.
+
+> This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.
+
+(Required by sections §4.1 and §4.2 of the [Government of Canada Open Data Licence Agreement for Unrestricted Use of Canada's Data](https://wwwapps.tc.gc.ca/Saf-Sec-Sur/2/CCARCS-RIACC/DDZip.aspx).)
+
+### Civil Aviation Safety Authority (CASA, Australia)
+
+Source: Civil Aviation Safety Authority — https://www.casa.gov.au/aircraft/aircraft-registration/data-files-registered-aircraft
+
+Licensed under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/). The material has been changed: CASA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CASA.
+
+### Inspectie Leefomgeving en Transport (ILT, Netherlands)
+
+Aircraft register data published by ILT under [CC-0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) per [data.overheid.nl](https://data.overheid.nl/dataset/luchtvaartuigregister). Acknowledgment provided as a courtesy; not legally required under CC-0.
+
+### Federal Aviation Administration (FAA, United States)
+
+Aircraft Registry data published by the FAA at [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/). US Government work in the public domain (17 U.S.C. § 105). Acknowledgment provided as a courtesy; not legally required.
 
 ---
 

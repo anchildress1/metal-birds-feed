@@ -22,13 +22,13 @@ Generic template for contacting any national civil aviation agency to request pe
 
 Dear {AGENCY_NAME},
 
-I am writing on behalf of _metal-birds-feed_, a source-available, non-commercial data project. The project translates publicly available aircraft registers from various countries into a single common format, making the normalized data available to other applications that may use it for purposes such as identifying registered aircraft.
+I am writing on behalf of _metal-birds-feed_ ({REPO_URL}), a source-available, non-commercial data project. The project translates publicly available national aircraft registers from various countries into a single common format. The normalized data is held in operator-private storage; metal-birds-feed itself has no public API and no user-facing display. The data is intended for consumption by other non-commercial applications operated by the project owner — no such consumer applications exist at the time of writing.
 
 We would like to include the {COUNTRY} civil aircraft register — which {AGENCY_SHORT} publishes at {REGISTER_URL} — as one of our data sources. The information we would normalize and redistribute is identical in content to what is already publicly displayed on your register page.
 
 If we proceed, we commit to the following:
 
-1. Attribution to {AGENCY_SHORT}, with a link to {REGISTER_URL}, will be clearly cited inside the project itself — specifically in the repository README and a `DATA_LICENSES` document covering all sources. metal-birds-feed has no user-facing display of its own; it provides normalized data to other applications.
+1. Attribution to {AGENCY_SHORT}, with a link to {REGISTER_URL}, will be clearly cited inside the project itself — specifically in the repository README and a `DATA_LICENSES` document covering all sources. The project's data store remains operator-private with no public read API or user-facing display.
 2. The data will be refreshed regularly from your published register so that corrections, additions, or removals are reflected over time.
 3. We will honor any request from {AGENCY_SHORT} to remove or modify our use of the data, promptly and without dispute.
 
