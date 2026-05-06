@@ -27,28 +27,37 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### 🟡 In flight — waiting on reply
 
-| Source                      | Sent       | Follow-up  | Sent to                          | Fallback applies?                                         |
-| --------------------------- | ---------- | ---------- | -------------------------------- | --------------------------------------------------------- |
-| CAA NZ                      | 2026-05-05 | 2026-06-04 | info@caa.govt.nz                 | **No** (Personal-use; silence ≠ permission)               |
-| IAA Ireland                 | 2026-05-05 | 2026-06-04 | registration@iaa.ie              | **Yes** (Unknown; public-record fallback after follow-up) |
-| AESA Spain                  | 2026-05-05 | 2026-06-04 | rmac.aesa@seguridadaerea.es      | **Yes** (Unknown; public-record fallback after follow-up) |
-| ANAC Argentina              | 2026-05-05 | 2026-06-04 | registro@anac.gob.ar             | **Yes** (Unknown; public-record fallback after follow-up) |
-| ANAC Brasil                 | 2026-05-05 | 2026-06-04 | rab@anac.gov.br                  | **Yes** (Unknown; public-record fallback after follow-up) |
-| DGAC France                 | 2026-05-05 | 2026-06-04 | immat@aviation-civile.gouv.fr    | **Yes** (Unknown; public-record fallback after follow-up) |
-| ENAC Italy                  | 2026-05-05 | 2026-06-04 | registro.aeromobili@enac.gov.it  | **Yes** (Unknown; public-record fallback after follow-up) |
-| FOCA Switzerland            | 2026-05-05 | 2026-06-04 | aircraftregistry@bazl.admin.ch   | **Yes** (Unknown; public-record fallback after follow-up) |
-| Luftfartstilsynet Norway    | 2026-05-05 | 2026-06-04 | postmottak@caa.no                | **Yes** (Unknown; public-record fallback after follow-up) |
-| Transportstyrelsen Sweden   | 2026-05-05 | 2026-06-04 | luftfart@transportstyrelsen.se   | **Yes** (Unknown; public-record fallback after follow-up) |
+| Source                    | Sent       | Follow-up  | Sent to                         | Fallback applies?                                         |
+| ------------------------- | ---------- | ---------- | ------------------------------- | --------------------------------------------------------- |
+| CAA NZ                    | 2026-05-05 | 2026-06-04 | info@caa.govt.nz                | **No** (Personal-use; silence ≠ permission)               |
+| IAA Ireland               | 2026-05-05 | 2026-06-04 | registration@iaa.ie             | **Yes** (Unknown; public-record fallback after follow-up) |
+| AESA Spain                | 2026-05-05 | 2026-06-04 | rmac.aesa@seguridadaerea.es     | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Argentina            | 2026-05-05 | 2026-06-04 | registro@anac.gob.ar            | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Brasil               | 2026-05-05 | 2026-06-04 | rab@anac.gov.br                 | **Yes** (Unknown; public-record fallback after follow-up) |
+| DGAC France               | 2026-05-05 | 2026-06-04 | immat@aviation-civile.gouv.fr   | **Yes** (Unknown; public-record fallback after follow-up) |
+| ENAC Italy                | 2026-05-05 | 2026-06-04 | registro.aeromobili@enac.gov.it | **Yes** (Unknown; public-record fallback after follow-up) |
+| FOCA Switzerland          | 2026-05-05 | 2026-06-04 | aircraftregistry@bazl.admin.ch  | **Yes** (Unknown; public-record fallback after follow-up) |
+| Luftfartstilsynet Norway  | 2026-05-05 | 2026-06-04 | postmottak@caa.no               | **Yes** (Unknown; public-record fallback after follow-up) |
+| Transportstyrelsen Sweden | 2026-05-05 | 2026-06-04 | luftfart@transportstyrelsen.se  | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
 
-| Source          | Reason                                                                               |
-| --------------- | ------------------------------------------------------------------------------------ |
-| UK CAA (G-INFO) | Paid + single-PC + no-redistribute. Verified verbatim. Revisit only if terms change. |
+| Source                              | Reason                                                                                                                                                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UK CAA (G-INFO)                     | Paid + single-PC + no-redistribute. Verified verbatim. Revisit only if terms change.                                                                                                                           |
+| Russia (Rosaviatsia)                | US sanctions exposure for a US-person operator. Engaging Russian state agencies — even for permission — carries OFAC compliance risk. Revisit only if sanctions situation eases.                               |
+| China (CAAC)                        | Register page is IE-only (Microsoft Internet Explorer, deprecated June 2022) — cannot verify or scrape with any modern browser. Plus geopolitical exposure as a US-based project. Revisit when either changes. |
+| Cayman Islands (CAA Cayman)         | Commercial offshore registry — paid SaaS-style registration product for foreign aircraft owners. Bulk data redistribution not part of their business model.                                                    |
+| Isle of Man (IOM Aircraft Registry) | Commercial offshore registry — M-prefix on every Gulfstream that ever lived. Paid registration product.                                                                                                        |
+| Guernsey (2-REG)                    | Commercial offshore registry, explicitly branded "2-REG." Subscription product.                                                                                                                                |
+| Jersey (Jersey Aircraft Registry)   | Crown dependency offshore registry — same commercial template as Guernsey at lower volume.                                                                                                                     |
+| Turks & Caicos (TCI CAA)            | Caribbean offshore registry, same commercial pattern.                                                                                                                                                          |
 
-### 🤷 Non-English (deferred until translator available for the relevant language)
+Also fits this pattern but not currently tracked (not on avcodes list, would need separate research): **Bermuda (VP-B, BCAA)**, **Aruba (P4-, DCA Aruba)**, **San Marino (T7-, CAA San Marino)**. Don't pursue.
 
-Triage these one language at a time, only when there's a confirmed translator. Email body translates from the same template. See "Deferred — non-English" section at the bottom of this file for the full list grouped by language family.
+### 🌐 Non-English registries (English-first strategy)
+
+Per the strategy decided 2026-05-05: send the permission template in **English** to all of these regardless of primary working language. Most national CAAs are ICAO members with English-fluent correspondence staff. Translator pipeline only needed for replies in the local language or follow-up rounds if English is ignored. See "Phase 2 — non-English registries" section below for the full list grouped by language family.
 
 ---
 
@@ -88,60 +97,49 @@ For each: open the agency homepage in the browser, find the footer "Copyright" o
 
 ---
 
-## Phase 2 — skip list (commercial offshore registries)
+## Phase 2 — non-English registries (English-first strategy)
 
-These are commercial registration services for foreign aircraft owners. Don't waste an email — expected response is "no" or "yes for [significant fee]."
+> Strategy decided 2026-05-05: send the permission template in **English** to every agency on this list, regardless of the country's primary working language. Most national CAAs are ICAO members and have English-fluent staff in correspondence roles. Translator pipeline is only needed for (a) replies that come back in the local language, or (b) follow-up rounds if English correspondence is ignored. Don't pre-block these on translator availability — send English first, see who responds.
 
-- ❌ **Cayman Islands** — CAA Cayman — [caacayman.com](https://www.caacayman.com)
-- ❌ **Isle of Man** — IOM Aircraft Registry — [iomaircraftregistry.com](https://ardis.iomaircraftregistry.com/register/search)
-- ❌ **Guernsey** — 2-REG — [2-reg.com](https://www.2-reg.com/legislation/register)
-- ❌ **Turks & Caicos** — TCI CAA — [tcicaa.tc](https://tcicaa.tc)
-- ❌ **Jersey** — Jersey Aircraft Registry — [gov.je](https://www.gov.je/travel/maritimeaviation/civilaviation/pages/jerseyaircraftregistry.aspx)
-
-Also fits this pattern but not on the avcodes list: **Bermuda (VP-B), Aruba (P4-), San Marino (T7-).** Same reasoning.
-
----
-
-## Deferred — non-English (need translator)
-
-Group by language. Don't send any of these until a translator is confirmed for that language family. Verification of license pages also requires translation.
+The lists below are grouped by language family for organizational clarity (so a translator pipeline can pick a batch when one is needed for replies / follow-ups). Each agency gets the same English template as Phase 1.
 
 ### Romance (French / Spanish / Portuguese / Italian / Romanian)
 
-> Note: Argentina, Brazil, Spain, Italy, and France were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Other Romance entries remain deferred until a translator is available.
+> Note: Argentina, Brazil, Spain, Italy, and France were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Remaining entries below are next up — send English first per the Phase 2 strategy.
 
-| Country            | Agency    | Register URL                                                                                                                                        | Language                |
-| ------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Chile              | DGAC      | [servicios.dgac.gob.cl](https://servicios.dgac.gob.cl/rna-web/publico.html)                                                                         | Spanish                 |
-| Colombia           | UAEAC     | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/)                                                        | Spanish                 |
-| Dominican Republic | IDAC      | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                         | Spanish                 |
-| Guatemala          | DGAC      | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                          | Spanish                 |
-| Uruguay            | DINACIA   | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                        | Spanish                 |
+| Country            | Agency    | Register URL                                                                                                                                         | Language                |
+| ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Chile              | DGAC      | [servicios.dgac.gob.cl](https://servicios.dgac.gob.cl/rna-web/publico.html)                                                                          | Spanish                 |
+| Colombia           | UAEAC     | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/)                                                         | Spanish                 |
+| Dominican Republic | IDAC      | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                          | Spanish                 |
+| Guatemala          | DGAC      | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                           | Spanish                 |
+| Uruguay            | DINACIA   | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                         | Spanish                 |
 | Luxembourg         | DAC       | [dac.gouvernement.lu](https://dac.gouvernement.lu/fr/administration/departements/navigabilite/immatriculation-aeronefs/releve-immatriculations.html) | French / German         |
-| Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                    | French / Haitian Creole |
-| Togo               | ANAC Togo | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                   | French                  |
-| Cabo Verde         | AAC       | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                  | Portuguese              |
-| Mozambique         | IACM      | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                | Portuguese              |
-| Romania            | CAA       | [caa.ro](https://formulare.caa.ro/inmatriculari)                                                                                                    | Romanian                |
-| Moldova            | CAA       | [caa.md](https://www.caa.md/registru-aerian-3-84)                                                                                                   | Romanian                |
+| Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                     | French / Haitian Creole |
+| Togo               | ANAC Togo | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                    | French                  |
+| Cabo Verde         | AAC       | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                   | Portuguese              |
+| Mozambique         | IACM      | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                 | Portuguese              |
+| Romania            | CAA       | [caa.ro](https://formulare.caa.ro/inmatriculari)                                                                                                     | Romanian                |
+| Moldova            | CAA       | [caa.md](https://www.caa.md/registru-aerian-3-84)                                                                                                    | Romanian                |
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 
-> Note: Switzerland, Sweden, and Norway were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Other Germanic / Nordic entries remain deferred.
+> Note: Switzerland, Sweden, and Norway were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Remaining entries below are next up — send English first per the Phase 2 strategy.
 
-| Country  | Agency         | Register URL                                                                                                | Language                             |
-| -------- | -------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Country  | Agency         | Register URL                                                                                                 | Language                             |
+| -------- | -------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
 | Austria  | Austro Control | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online) | German (English UI exists)           |
-| Belgium  | DGTA           | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                      | Dutch / French / German (English UI) |
-| Suriname | CASAS          | [casas.sr](https://www.casas.sr/registry/)                                                                  | Dutch                                |
-| Denmark  | TS Denmark     | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx) | Danish (English in practice)         |
-| Finland  | Traficom       | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot)              | Finnish / Swedish (English UI)       |
+| Belgium  | DGTA           | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                       | Dutch / French / German (English UI) |
+| Suriname | CASAS          | [casas.sr](https://www.casas.sr/registry/)                                                                   | Dutch                                |
+| Denmark  | TS Denmark     | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx)  | Danish (English in practice)         |
+| Finland  | Traficom       | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot)               | Finnish / Swedish (English UI)       |
 
 ### Slavic / Eastern European
 
+> Note: Russia (Rosaviatsia) was moved to the **Excluded** section above (sanctions exposure).
+
 | Country              | Agency         | Register URL                                                                                                        | Language                 |
 | -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Russia               | Rosaviatsia    | [favt.gov.ru](https://favt.gov.ru/opendata/7714549744-gosreestrgvs/)                                                | Russian                  |
 | Ukraine              | SAAU           | [avia.gov.ua](https://avia.gov.ua/State-Civil-Aircraft-Register-of-Ukraine/)                                        | Ukrainian                |
 | Bulgaria             | CAA            | [caa.bg](http://www.caa.bg/bg/category/300/17238)                                                                   | Bulgarian                |
 | Czech Republic       | CAA CR         | [caa.cz](https://lr.caa.cz/letecky-rejstrik?lang=en)                                                                | Czech (English UI)       |
@@ -158,15 +156,16 @@ Group by language. Don't send any of these until a translator is confirmed for t
 
 ### CJK / East Asian
 
-| Country   | Agency       | Register URL                                                            | Language                    |
-| --------- | ------------ | ----------------------------------------------------------------------- | --------------------------- |
-| China     | CAAC         | [219.143.231.89](http://219.143.231.89/shs/ccarretrieval.do?flag=1)     | Chinese (Mandarin); IE-only |
-| Taiwan    | CAA Taiwan   | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1)          | Mandarin (Traditional)      |
-| Korea     | KOCA / MOLIT | [koca.go.kr](https://atis.koca.go.kr/ATIS/aircraft/forwardPage.do)      | Korean                      |
-| Macau     | AACM         | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84)  | Chinese / Portuguese        |
-| Mongolia  | MCAA         | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758)                          | Mongolian                   |
-| Thailand  | CAAT         | [caat.or.th](https://www.caat.or.th/en/archives/52215)                  | Thai (English UI)           |
-| Indonesia | DKPPU        | [imsis-djpu.dephub.go.id](https://imsis-djpu.dephub.go.id/PortalDKPPU/) | Indonesian                  |
+> Note: China (CAAC) was moved to the **Excluded** section above (IE-only register page + geopolitical exposure).
+
+| Country   | Agency       | Register URL                                                            | Language               |
+| --------- | ------------ | ----------------------------------------------------------------------- | ---------------------- |
+| Taiwan    | CAA Taiwan   | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1)          | Mandarin (Traditional) |
+| Korea     | KOCA / MOLIT | [koca.go.kr](https://atis.koca.go.kr/ATIS/aircraft/forwardPage.do)      | Korean                 |
+| Macau     | AACM         | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84)  | Chinese / Portuguese   |
+| Mongolia  | MCAA         | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758)                          | Mongolian              |
+| Thailand  | CAAT         | [caat.or.th](https://www.caat.or.th/en/archives/52215)                  | Thai (English UI)      |
+| Indonesia | DKPPU        | [imsis-djpu.dephub.go.id](https://imsis-djpu.dephub.go.id/PortalDKPPU/) | Indonesian             |
 
 ### Caucasus / Central Asia
 
@@ -188,8 +187,8 @@ Group by language. Don't send any of these until a translator is confirmed for t
 
 1. **Phase 1 quick wins:** Iceland, Singapore, Israel, Jamaica, Trinidad & Tobago, Cyprus — most likely Open or simple-email cases. Knock these out one afternoon.
 2. **Phase 1 known-difficult:** India, Pakistan, Sri Lanka, Maldives, Ethiopia, Malaysia — verify, send emails, expect mixed responses.
-3. **Skip Phase 2 entirely** unless something specific drives interest.
-4. **Defer non-English** until a translator pipeline exists. Realistic batches: Spanish-speaking Latin America (one translator); Germanic/Nordic (English UIs often suffice — verify license pages first); EU member states by accession date.
+3. **Phase 2 (non-English registries):** send English to all of them per the agreed strategy. Tier by fleet size or bandwidth — eight largest were sent 2026-05-05 (Brazil, France, Italy, Spain, Argentina, Switzerland, Sweden, Norway). Next likely batch: Germany (LBA), Japan (JCAB), Mexico (AFAC), Indonesia (DKPPU), Korea (KOCA), Taiwan (CAA Taiwan), Belgium (DGTA), Austria (Austro Control), Denmark (TS), Finland (Traficom).
+4. **Translator follow-up only** when an agency replies in their local language with substantive license terms, or when no English reply arrives and a follow-up in the local language is warranted.
 
 ## Notes for whoever runs this
 

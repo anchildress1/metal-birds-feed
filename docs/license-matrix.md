@@ -14,16 +14,23 @@ Rows ordered alphabetically by country to match the README sources table.
 | Australia      | CASA               | [casa.gov.au data files](https://www.casa.gov.au/aircraft/aircraft-registration/data-files-registered-aircraft)                                    | CSV / ZIP — bulk and lookup both inherit site-wide license                                                      | Open                       | CC BY 4.0 (explicit on the casa.gov.au copyright page)                                              | **No**                    | n/a                                                                           |
 | Brazil         | ANAC Brasil        | [sistemas.anac.gov.br](https://sistemas.anac.gov.br/aeronaves/cons_rab.asp)                                                                        | TBD (search-only interface; bulk pattern unverified)                                                            | Unknown                    | Pending verification (Lei de Acesso à Informação framework)                                         | **Yes** (sent 2026-05-05) | rab@anac.gov.br                                                               |
 | Canada         | Transport Canada   | [tc.canada.ca](https://www.tc.gc.ca/en/services/aviation/aircraft-services/canadian-civil-aircraft-register.html)                                  | ZIP — `carscurr.txt` + `carsownr.txt` + layout                                                                  | Open (with conditions)     | Government of Canada Open Data Licence Agreement for Unrestricted Use of Canada's Data (click-wrap) | **No**                    | n/a                                                                           |
+| Cayman Islands | CAA Cayman         | [caacayman.com](https://www.caacayman.com)                                                                                                         | PDF (paid product)                                                                                              | **Excluded**               | Commercial offshore registry — paid registration product, bulk redistribution not in business model | **N/A — excluded**        | n/a                                                                           |
+| China          | CAAC               | [219.143.231.89](http://219.143.231.89/shs/ccarretrieval.do?flag=1)                                                                                | IE-only — not viewable in any modern browser                                                                    | **Excluded**               | Register page requires deprecated Microsoft Internet Explorer; license unverifiable                 | **N/A — excluded**        | n/a                                                                           |
 | France         | DGAC               | [immat.aviation-civile.gouv.fr](https://immat.aviation-civile.gouv.fr/immat/servlet/aeronef_liste.html)                                            | TBD (search-only; redevances.aviation-civile.gouv.fr offers paid extracts)                                      | Unknown                    | Pending verification (Licence Ouverte / Open License v2.0 may apply)                                | **Yes** (sent 2026-05-05) | immat@aviation-civile.gouv.fr                                                 |
 | Georgia        | GCAA               | [gcaa.ge register](https://gcaa.ge/civil-aircraft-register/)                                                                                       | HTML table only (~63 aircraft)                                                                                  | Unknown                    | None stated; OGP member, proactive disclosure under General Administrative Code ch. 3               | **Yes**                   | office@gcaa.ge (Georgian translation required)                                |
+| Guernsey       | 2-REG              | [2-reg.com](https://www.2-reg.com/legislation/register)                                                                                            | PDF (subscription product)                                                                                      | **Excluded**               | Commercial offshore registry, explicitly branded "2-REG"                                            | **N/A — excluded**        | n/a                                                                           |
 | Ireland        | IAA                | [iaa.mysrs.ie](https://iaa.mysrs.ie/) (since Oct 2025; web-hosted register retired)                                                                | Bulk download via MySRS portal — sign-up required, T&Cs behind login                                            | Unknown                    | No public license statement; portal T&Cs unreviewable without account                               | **Yes** (sent 2026-05-05) | registration@iaa.ie                                                           |
+| Isle of Man    | IOM Registry       | [iomaircraftregistry.com](https://ardis.iomaircraftregistry.com/register/search)                                                                   | Searchable + paid PDF                                                                                           | **Excluded**               | Commercial offshore registry — M-prefix product for foreign aircraft owners                         | **N/A — excluded**        | n/a                                                                           |
 | Italy          | ENAC               | [enac.gov.it](https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/registro-aeromobili/)                                              | TBD (PDF format primarily; bulk pattern unverified)                                                             | Unknown                    | Pending verification (Italian Open Data License IODL 2.0 may apply)                                 | **Yes** (sent 2026-05-05) | registro.aeromobili@enac.gov.it                                               |
+| Jersey         | Jersey Registry    | [gov.je](https://www.gov.je/travel/maritimeaviation/civilaviation/pages/jerseyaircraftregistry.aspx)                                               | PDF                                                                                                             | **Excluded**               | Crown dependency offshore registry — same commercial template as Guernsey                           | **N/A — excluded**        | n/a                                                                           |
 | Netherlands    | ILT                | [ilent.nl register data](https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data)                                 | OpenDocument Spreadsheet (`.ods`), date-stamped filename                                                        | Open                       | CC-0 1.0 Universal (public domain) per data.overheid.nl                                             | **No**                    | n/a                                                                           |
 | New Zealand    | CAA NZ             | [aviation.govt.nz register search](https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/)                          | [Direct CSV](https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv) | Personal-use               | "Personal use without permission" only — any other use requires explicit permission                 | **Yes** (sent 2026-05-05) | info@caa.govt.nz (general), aircraftregistrar@caa.govt.nz (register-specific) |
 | Norway         | Luftfartstilsynet  | [luftfartstilsynet.no](https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/)                                     | TBD (PDF report linked from the page; bulk pattern unverified)                                                  | Unknown                    | Pending verification (NLOD may apply)                                                               | **Yes** (sent 2026-05-05) | postmottak@caa.no                                                             |
+| Russia         | Rosaviatsia        | [favt.gov.ru](https://favt.gov.ru/opendata/7714549744-gosreestrgvs/)                                                                               | TBD (not verified due to exclusion)                                                                             | **Excluded**               | US-person OFAC sanctions exposure; cost-benefit not justified for hobby project                     | **N/A — excluded**        | n/a                                                                           |
 | Spain          | AESA               | [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas) | TBD (PDF report linked from page; bulk pattern unverified)                                                      | Unknown                    | Pending verification (Aporta open-data terms may apply)                                             | **Yes** (sent 2026-05-05) | rmac.aesa@seguridadaerea.es                                                   |
 | Sweden         | Transportstyrelsen | [transportstyrelsen.se](https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg)                                                      | TBD (search-only interface; bulk pattern unverified)                                                            | Unknown                    | Pending verification (EU PSI Directive may apply)                                                   | **Yes** (sent 2026-05-05) | luftfart@transportstyrelsen.se                                                |
 | Switzerland    | FOCA / BAZL        | [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/)                                                                                          | TBD (search + PDF/CSV file noted on avcodes; access pattern unverified)                                         | Unknown                    | Pending verification (opendata.swiss CC BY 4.0 may apply)                                           | **Yes** (sent 2026-05-05) | aircraftregistry@bazl.admin.ch                                                |
+| Turks & Caicos | TCI CAA            | [tcicaa.tc](https://tcicaa.tc)                                                                                                                     | PDF                                                                                                             | **Excluded**               | Caribbean offshore registry, commercial pattern                                                     | **N/A — excluded**        | n/a                                                                           |
 | United Kingdom | UK CAA (G-INFO)    | [caa.co.uk/g-info](https://www.caa.co.uk/aircraft-register/g-info/)                                                                                | Excel — paid product (£450 single, £745/yr quarterly, £1,745/yr monthly)                                        | **Restrictive — excluded** | Single-PC license, no copying, no distribution, no sale, no hire without written CAA consent        | **N/A — excluded**        | n/a                                                                           |
 | United States  | FAA                | [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/)                                                                                      | ZIP of fixed-width text files (MASTER, ACFTREF, ENGINE, DEREG)                                                  | Open                       | US federal government work, public domain by 17 USC §105                                            | **No**                    | n/a                                                                           |
 
@@ -66,6 +73,12 @@ The substantive grant is broad — royalty-free, worldwide, modification and sub
 Full verbatim conditions and the project's compliance posture live in `DATA_LICENSES.md`. The PII drop at ingest (street, city, postal-code, care-of fields not stored) directly satisfies §3.1.d's no-identity-merge clause.
 
 Action: include both verbatim notices and the full condition list in `DATA_LICENSES.md`. No email.
+
+### China — CAAC — EXCLUDED
+
+The CAAC's aircraft register page is built for Microsoft Internet Explorer, which Microsoft formally retired in June 2022. Modern browsers (Chrome, Firefox, Safari, Edge) cannot render the page or its underlying ActiveX-style components. Verification is blocked at step zero — we cannot confirm the schema, license, or bulk-download mechanism without an IE-compatible runtime. Layered on top of the technical blocker: China's regulatory and political posture toward US-based open-data projects creates additional exposure.
+
+Action: **excluded.** Revisit when CAAC moves the register to a non-IE platform, or a clearly-licensed community mirror appears, or US-China data policy materially changes.
 
 ### Georgia — GCAA
 
@@ -117,6 +130,12 @@ The register is downloadable as CSV: https://www.aviation.govt.nz/assets/aircraf
 
 Action: send the agency-permission template to info@caa.govt.nz, copying aircraftregistrar@caa.govt.nz. English; no translation needed.
 
+### Russia — Rosaviatsia — EXCLUDED
+
+As a US-person operator, engaging with Russian state agencies — even for non-commercial permission requests — carries OFAC compliance risk under post-2014 and post-2022 sanctions. Sectoral and general-license restrictions can implicate Russian state entities even when not directly listed by name. OFAC violations are civil-strict-liability — "I didn't know" is not a defense. The cost-benefit for a hobby project (~7,000 RA-prefixed aircraft) does not justify the legal-review effort required to confirm safe engagement.
+
+Action: **excluded.** Revisit only when US/Russia sanctions ease materially.
+
 ### United Kingdom — UK CAA (G-INFO) — EXCLUDED
 
 Verified 2026-05-05 directly from caa.co.uk/aircraft-register/g-info/g-info-forms-and-fees/. Both surfaces are restrictive in different ways. Neither helps the project.
@@ -154,6 +173,14 @@ US federal government works are public domain by statute (17 USC §105). The FAA
 
 Action: comply with attribution norm in `DATA_LICENSES.md`. No email.
 
+### Commercial offshore registries — EXCLUDED (group)
+
+Cayman Islands (CAA Cayman), Isle of Man (IOM Aircraft Registry), Guernsey (2-REG), Jersey (Jersey Aircraft Registry), and Turks & Caicos (TCI CAA) are commercial registration services for foreign aircraft owners. They charge significant fees ($1,000s–$10,000s per aircraft) for privacy, tax, or operational structures. Bulk redistribution of register data is not part of their business model. Their registers are typically PDF or paid-search products, with terms forbidding redistribution. Permission requests would be answered with "no" or "yes for [significant fee]" — not worth the effort for a non-commercial project.
+
+Also fits the pattern but not currently tracked (would require separate research): Bermuda (BCAA), Aruba (DCA Aruba), San Marino (CAA San Marino). Same exclusion reasoning applies.
+
+Action: **excluded as a class.** Revisit any individual registry only if it restructures into an open-data publisher (unlikely given the business model) or a free community mirror appears with verifiable license.
+
 ## Permission protocol — when silence means yes vs. no
 
 Per `DATA_LICENSES.md` (PRD CC.2), the 30-day silence fallback is **classification-dependent**:
@@ -165,13 +192,20 @@ Per `DATA_LICENSES.md` (PRD CC.2), the 30-day silence fallback is **classificati
 
 ## Pattern
 
-**No email needed (Open):** US public domain (FAA), Canada OGL (TC), Netherlands CC-0 (ILT), Australia CC BY 4.0 (CASA). Four clean wins.
+**No email needed (Open):** US public domain (FAA), Canada GC Open Data Licence (TC), Netherlands CC-0 (ILT), Australia CC BY 4.0 (CASA). Four clean wins.
 
 **Email needed (Personal-use):** New Zealand CAA — explicit "must ask" rule, silence ≠ permission.
 
-**Email needed (Unknown):** Ireland IAA, Georgia GCAA — no public license, silence falls to public-record argument after 30 days.
+**Email needed (Unknown), sent 2026-05-05:** Ireland IAA, Spain AESA, Argentina ANAC, Brazil ANAC, France DGAC, Italy ENAC, Switzerland FOCA, Norway Luftfartstilsynet, Sweden Transportstyrelsen — no public license, silence falls to public-record argument after follow-up.
 
-**Excluded (Restrictive):** UK CAA G-INFO — paid + single-PC + no-redistribute.
+**Email needed (Unknown):** Georgia GCAA — Georgian language required.
+
+**Excluded:**
+
+- **UK CAA G-INFO** — Restrictive license (paid + single-PC + no-redistribute).
+- **Russia Rosaviatsia** — US-person OFAC sanctions exposure.
+- **China CAAC** — register page IE-only (can't render in any modern browser); compounded by geopolitical exposure.
+- **Commercial offshore registries** — Cayman Islands (CAA Cayman), Isle of Man (IOM Registry), Guernsey (2-REG), Jersey (Jersey Registry), Turks & Caicos (TCI CAA). Paid SaaS-style registration products for foreign aircraft owners; bulk redistribution not in their business model. Bermuda, Aruba, San Marino fit the same pattern but aren't currently tracked.
 
 ## Likely future research targets
 
