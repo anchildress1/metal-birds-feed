@@ -163,6 +163,110 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## AESA — Spanish State Aviation Safety Agency (Agencia Estatal de Seguridad Aérea)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas
+- **Bulk download URL:** TBD (PDF report linked from the page; bulk pattern unverified pending reply)
+- **License:** Pending verification. Spanish public-sector data is often reusable under [Aporta open-data terms](https://datos.gob.es/en/aviso-legal-y-condiciones-de-reutilizacion); AESA-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `rmac.aesa@seguridadaerea.es`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ANAC Argentina — Argentine National Civil Aviation Administration (Administración Nacional de Aviación Civil)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://geo.anac.gob.ar/afectacion
+- **Bulk download URL:** TBD (search-only interface; bulk pattern unverified pending reply)
+- **License:** Pending verification. Argentina has a national open-data policy via datos.gob.ar; ANAC-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `registro@anac.gob.ar`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ANAC Brasil — Brazilian National Civil Aviation Agency (Agência Nacional de Aviação Civil)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://sistemas.anac.gov.br/aeronaves/cons_rab.asp
+- **Bulk download URL:** TBD (search-only interface; bulk pattern unverified pending reply)
+- **License:** Pending verification. Brazilian public-sector data is generally reusable under the Lei de Acesso à Informação framework; ANAC-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `rab@anac.gov.br`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGAC France — French Directorate General of Civil Aviation (Direction Générale de l'Aviation Civile)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://immat.aviation-civile.gouv.fr/immat/servlet/aeronef_liste.html
+- **Bulk download URL:** TBD (search-only interface; redevances.aviation-civile.gouv.fr handles register extracts on a paid basis — free bulk pattern unverified pending reply)
+- **License:** Pending verification. French public-sector data is often under [Licence Ouverte / Open License v2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/); DGAC-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `immat@aviation-civile.gouv.fr`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ENAC — Italian Civil Aviation Authority (Ente Nazionale per l'Aviazione Civile)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/registro-aeromobili/
+- **Bulk download URL:** TBD (PDF format primarily; bulk pattern unverified pending reply)
+- **License:** Pending verification. Italian public-sector data is sometimes under [Italian Open Data License (IODL) 2.0](https://www.dati.gov.it/iodl/2.0/), broadly equivalent to CC BY 4.0; ENAC-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `registro.aeromobili@enac.gov.it`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## FOCA / BAZL — Swiss Federal Office of Civil Aviation (Bundesamt für Zivilluftfahrt)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/
+- **Bulk download URL:** TBD (search interface + PDF/CSV file noted on avcodes; access pattern unverified pending reply)
+- **License:** Pending verification. Swiss federal data is often listed on [opendata.swiss](https://opendata.swiss) under CC BY 4.0 or similar; BAZL is a publisher there. Aircraft register-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Luftfartstilsynet — Civil Aviation Authority of Norway
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/
+- **Bulk download URL:** TBD (PDF report linked from the page; bulk pattern unverified pending reply)
+- **License:** Pending verification. Norwegian public-sector data is generally under [NLOD (Norwegian License for Open Government Data)](https://data.norge.no/nlod/en/2.0), broadly equivalent to CC BY 4.0; Luftfartstilsynet-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `postmottak@caa.no` (general inbox; no register-specific desk surfaced publicly). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Transportstyrelsen — Swedish Transport Agency
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg
+- **Bulk download URL:** TBD (search-only interface; bulk pattern unverified pending reply)
+- **License:** Pending verification. Swedish public-sector data generally falls under EU PSI Directive principles, with reuse permitted under attribution; Transportstyrelsen-specific terms unverified.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## GCAA — Georgian Civil Aviation Agency
 
 - **Status:** Planned (phase 4) — blocked on R3.1 data-source acquisition research

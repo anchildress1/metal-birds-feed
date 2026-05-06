@@ -27,10 +27,18 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### 🟡 In flight — waiting on reply
 
-| Source      | Sent       | Follow-up  | Fallback applies?                                         |
-| ----------- | ---------- | ---------- | --------------------------------------------------------- |
-| CAA NZ      | 2026-05-05 | 2026-06-04 | **No** (Personal-use; silence ≠ permission)               |
-| IAA Ireland | 2026-05-05 | 2026-06-04 | **Yes** (Unknown; public-record fallback after follow-up) |
+| Source                      | Sent       | Follow-up  | Sent to                          | Fallback applies?                                         |
+| --------------------------- | ---------- | ---------- | -------------------------------- | --------------------------------------------------------- |
+| CAA NZ                      | 2026-05-05 | 2026-06-04 | info@caa.govt.nz                 | **No** (Personal-use; silence ≠ permission)               |
+| IAA Ireland                 | 2026-05-05 | 2026-06-04 | registration@iaa.ie              | **Yes** (Unknown; public-record fallback after follow-up) |
+| AESA Spain                  | 2026-05-05 | 2026-06-04 | rmac.aesa@seguridadaerea.es      | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Argentina              | 2026-05-05 | 2026-06-04 | registro@anac.gob.ar             | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Brasil                 | 2026-05-05 | 2026-06-04 | rab@anac.gov.br                  | **Yes** (Unknown; public-record fallback after follow-up) |
+| DGAC France                 | 2026-05-05 | 2026-06-04 | immat@aviation-civile.gouv.fr    | **Yes** (Unknown; public-record fallback after follow-up) |
+| ENAC Italy                  | 2026-05-05 | 2026-06-04 | registro.aeromobili@enac.gov.it  | **Yes** (Unknown; public-record fallback after follow-up) |
+| FOCA Switzerland            | 2026-05-05 | 2026-06-04 | aircraftregistry@bazl.admin.ch   | **Yes** (Unknown; public-record fallback after follow-up) |
+| Luftfartstilsynet Norway    | 2026-05-05 | 2026-06-04 | postmottak@caa.no                | **Yes** (Unknown; public-record fallback after follow-up) |
+| Transportstyrelsen Sweden   | 2026-05-05 | 2026-06-04 | luftfart@transportstyrelsen.se   | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
 
@@ -100,38 +108,34 @@ Group by language. Don't send any of these until a translator is confirmed for t
 
 ### Romance (French / Spanish / Portuguese / Italian / Romanian)
 
-| Country            | Agency      | Register URL                                                                                                                                                                | Language                |
-| ------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Argentina          | ANAC        | [geo.anac.gob.ar](https://geo.anac.gob.ar/afectacion)                                                                                                                       | Spanish                 |
-| Brazil             | ANAC Brasil | [sistemas.anac.gov.br](https://sistemas.anac.gov.br/aeronaves/cons_rab.asp)                                                                                                 | Portuguese              |
-| Chile              | DGAC        | [servicios.dgac.gob.cl](https://servicios.dgac.gob.cl/rna-web/publico.html)                                                                                                 | Spanish                 |
-| Colombia           | UAEAC       | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/)                                                                                | Spanish                 |
-| Dominican Republic | IDAC        | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                                                 | Spanish                 |
-| Guatemala          | DGAC        | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                                                  | Spanish                 |
-| Uruguay            | DINACIA     | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                                                | Spanish                 |
-| Spain              | AESA        | [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas)                          | Spanish                 |
-| Italy              | ENAC        | [enac.gov.it](https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/omologazione-organizzazioni-di-progettazioni/prodotti/rilascio-certificato-di-navigabilita) | Italian                 |
-| France             | DGAC        | [immat.aviation-civile.gouv.fr](https://immat.aviation-civile.gouv.fr/immat/servlet/aeronef_liste.html)                                                                     | French                  |
-| Luxembourg         | DAC         | [dac.gouvernement.lu](https://dac.gouvernement.lu/fr/administration/departements/navigabilite/immatriculation-aeronefs/releve-immatriculations.html)                        | French / German         |
-| Haiti              | OFNAC       | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                                            | French / Haitian Creole |
-| Togo               | ANAC Togo   | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                                           | French                  |
-| Cabo Verde         | AAC         | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                                          | Portuguese              |
-| Mozambique         | IACM        | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                                        | Portuguese              |
-| Romania            | CAA         | [caa.ro](https://formulare.caa.ro/inmatriculari)                                                                                                                            | Romanian                |
-| Moldova            | CAA         | [caa.md](https://www.caa.md/registru-aerian-3-84)                                                                                                                           | Romanian                |
+> Note: Argentina, Brazil, Spain, Italy, and France were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Other Romance entries remain deferred until a translator is available.
+
+| Country            | Agency    | Register URL                                                                                                                                        | Language                |
+| ------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Chile              | DGAC      | [servicios.dgac.gob.cl](https://servicios.dgac.gob.cl/rna-web/publico.html)                                                                         | Spanish                 |
+| Colombia           | UAEAC     | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/)                                                        | Spanish                 |
+| Dominican Republic | IDAC      | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                         | Spanish                 |
+| Guatemala          | DGAC      | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                          | Spanish                 |
+| Uruguay            | DINACIA   | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                        | Spanish                 |
+| Luxembourg         | DAC       | [dac.gouvernement.lu](https://dac.gouvernement.lu/fr/administration/departements/navigabilite/immatriculation-aeronefs/releve-immatriculations.html) | French / German         |
+| Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                    | French / Haitian Creole |
+| Togo               | ANAC Togo | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                   | French                  |
+| Cabo Verde         | AAC       | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                  | Portuguese              |
+| Mozambique         | IACM      | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                | Portuguese              |
+| Romania            | CAA       | [caa.ro](https://formulare.caa.ro/inmatriculari)                                                                                                    | Romanian                |
+| Moldova            | CAA       | [caa.md](https://www.caa.md/registru-aerian-3-84)                                                                                                   | Romanian                |
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 
-| Country     | Agency             | Register URL                                                                                                   | Language                               |
-| ----------- | ------------------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Austria     | Austro Control     | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online)   | German (English UI exists)             |
-| Switzerland | BAZL/FOCA          | [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/)                                                      | German / French / Italian (English UI) |
-| Belgium     | DGTA               | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                         | Dutch / French / German (English UI)   |
-| Suriname    | CASAS              | [casas.sr](https://www.casas.sr/registry/)                                                                     | Dutch                                  |
-| Denmark     | TS Denmark         | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx)    | Danish (English in practice)           |
-| Sweden      | Transportstyrelsen | [transportstyrelsen.se](https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg)                  | Swedish (English UI)                   |
-| Norway      | Luftfartstilsynet  | [luftfartstilsynet.no](https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/) | Norwegian (English in practice)        |
-| Finland     | Traficom           | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot)                 | Finnish / Swedish (English UI)         |
+> Note: Switzerland, Sweden, and Norway were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Other Germanic / Nordic entries remain deferred.
+
+| Country  | Agency         | Register URL                                                                                                | Language                             |
+| -------- | -------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Austria  | Austro Control | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online) | German (English UI exists)           |
+| Belgium  | DGTA           | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                      | Dutch / French / German (English UI) |
+| Suriname | CASAS          | [casas.sr](https://www.casas.sr/registry/)                                                                  | Dutch                                |
+| Denmark  | TS Denmark     | [trafikstyrelsen.dk](https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx) | Danish (English in practice)         |
+| Finland  | Traficom       | [trafi.fi](https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot)              | Finnish / Swedish (English UI)       |
 
 ### Slavic / Eastern European
 
