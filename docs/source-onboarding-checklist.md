@@ -42,6 +42,7 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | CAAF Fiji                 | 2026-05-05                           | 2026-06-04 | info@caaf.org.fj                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | Traficom Finland          | 2026-05-05                           | 2026-06-04 | kirjaamo@traficom.fi (cc tietojenluovutus@traficom.fi)                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGAC France               | 2026-05-05                           | 2026-06-04 | immat@aviation-civile.gouv.fr                                                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| GCAA Georgia              | 2026-05-05                           | 2026-06-04 | office@gcaa.ge (English per English-first strategy)                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | ICETRA Iceland            | 2026-05-05                           | 2026-06-04 | samgongustofa@samgongustofa.is                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGCA India                | 2026-05-05                           | 2026-06-04 | rkanand.dgca@nic.in, mdevula.dgca@nic.in (DDGs Airworthiness)                                | **Yes** (Unknown; public-record fallback after follow-up) |
 | DKPPU Indonesia           | 2026-05-05                           | 2026-06-04 | produkaeronautika_dkuppu@dephub.go.id (cc info151@dephub.go.id)                              | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -171,11 +172,12 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 ### Caucasus / Central Asia
 
-| Country    | Agency | Register URL                                               | Language                      |
-| ---------- | ------ | ---------------------------------------------------------- | ----------------------------- |
-| Georgia    | GCAA   | [gcaa.ge](https://gcaa.ge/civil-aircraft-register/)        | Georgian (already in v4 spec) |
-| Armenia    | GDCA   | [aviation.am](http://www.aviation.am/registered_aircrafts) | Armenian                      |
-| Kyrgyzstan | CAA    | [caa.kg](https://caa.kg/reestr-vs/)                        | Kyrgyz / Russian              |
+> Note: Georgia (GCAA) was emailed in English on 2026-05-05 per the English-first strategy (R3.1 research already done — register is an HTML scrape at gcaa.ge/civil-aircraft-register/, ~63 aircraft). Now sits in **In flight** above. Armenia and Kyrgyzstan remain deferred.
+
+| Country    | Agency | Register URL                                               | Language         |
+| ---------- | ------ | ---------------------------------------------------------- | ---------------- |
+| Armenia    | GDCA   | [aviation.am](http://www.aviation.am/registered_aircrafts) | Armenian         |
+| Kyrgyzstan | CAA    | [caa.kg](https://caa.kg/reestr-vs/)                        | Kyrgyz / Russian |
 
 ### Middle East
 

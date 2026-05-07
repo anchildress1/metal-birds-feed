@@ -635,13 +635,15 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## GCAA — Georgian Civil Aviation Agency
 
-- **Status:** Planned (phase 4) — blocked on R3.1 data-source acquisition research
+- **Status:** Future (phase 4) — permission request sent, awaiting reply
 - **Classification:** Unknown
-- **Source URL:** https://www.gcaa.ge (data accessibility TBD)
-- **License:** Unknown — to be determined during R3.1 research milestone.
-- **Update cadence:** Unknown.
-- **Permission email:** Not yet sent. Recipient (when ready): office@gcaa.ge. Send the Georgian translation of `docs/agency-permission-request.md`.
+- **Source URL:** https://gcaa.ge/civil-aircraft-register/
+- **Bulk download URL:** None — register published as HTML table only (~63 aircraft, 6 columns: Owner / Make-Model / Registration / Reg date / Serial / Year built). Owner names include parenthetical English transliterations alongside Mkhedruli script. Trivially scrapeable.
+- **License:** Pending verification. No license statement on the register page; OGP member, proactive disclosure under Georgia's General Administrative Code ch. 3 supports the public-record argument.
+- **Update cadence:** Unknown (no clear publication schedule on the page).
+- **Permission email:** Sent 2026-05-05 to `office@gcaa.ge` in English (per the project-wide English-first strategy decided 2026-05-05). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
+- **Implementation notes (when v4 begins):** Mode S hex codes are not in the GCAA register; require backfill from a community source (Mictronics database recommended). Schema additions for sparse / non-Latin sources already documented in PRD R3.5 (`owner.name_native`, `icao_hex_source`).
 
 ---
 
