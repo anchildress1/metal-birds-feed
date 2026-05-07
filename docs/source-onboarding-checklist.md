@@ -27,33 +27,47 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### 🟡 In flight — waiting on reply
 
-| Source                    | Sent       | Follow-up  | Sent to                                                                        | Fallback applies?                                         |
-| ------------------------- | ---------- | ---------- | ------------------------------------------------------------------------------ | --------------------------------------------------------- |
-| CAA NZ                    | 2026-05-05 | 2026-06-04 | info@caa.govt.nz                                                               | **No** (Personal-use; silence ≠ permission)               |
-| IAA Ireland               | 2026-05-05 | 2026-06-04 | registration@iaa.ie                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
-| AESA Spain                | 2026-05-05 | 2026-06-04 | rmac.aesa@seguridadaerea.es                                                    | **Yes** (Unknown; public-record fallback after follow-up) |
-| ANAC Argentina            | 2026-05-05 | 2026-06-04 | registro@anac.gob.ar                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
-| ANAC Brasil               | 2026-05-05 | 2026-06-04 | rab@anac.gov.br                                                                | **Yes** (Unknown; public-record fallback after follow-up) |
-| DGAC France               | 2026-05-05 | 2026-06-04 | immat@aviation-civile.gouv.fr                                                  | **Yes** (Unknown; public-record fallback after follow-up) |
-| ENAC Italy                | 2026-05-05 | 2026-06-04 | registro.aeromobili@enac.gov.it                                                | **Yes** (Unknown; public-record fallback after follow-up) |
-| FOCA Switzerland          | 2026-05-05 | 2026-06-04 | aircraftregistry@bazl.admin.ch                                                 | **Yes** (Unknown; public-record fallback after follow-up) |
-| Luftfartstilsynet Norway  | 2026-05-05 | 2026-06-04 | postmottak@caa.no                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
-| Transportstyrelsen Sweden | 2026-05-05 | 2026-06-04 | luftfart@transportstyrelsen.se                                                 | **Yes** (Unknown; public-record fallback after follow-up) |
-| CAAS Singapore            | 2026-05-05 | 2026-05-26 | webform (3–15 business-day SLA)                                                | **No** (Personal-use; silence ≠ permission)               |
-| AFAC Mexico               | 2026-05-05 | 2026-06-04 | tramites@afac.gob.mx                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
-| Austro Control Austria    | 2026-05-05 | 2026-06-04 | register@austrocontrol.at                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
-| BCAA / DGTA Belgium       | 2026-05-05 | 2026-06-04 | bcaa.registration@mobilit.fgov.be                                              | **Yes** (Unknown; public-record fallback after follow-up) |
-| CAA Taiwan                | 2026-05-05 | 2026-06-04 | gencaa@mail.caa.gov.tw                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
-| DKPPU Indonesia           | 2026-05-05 | 2026-06-04 | produkaeronautika_dkuppu@dephub.go.id (cc info151@dephub.go.id)                | **Yes** (Unknown; public-record fallback after follow-up) |
-| JCAA Jamaica              | 2026-05-05 | 2026-06-04 | info@jcaa.gov.jm                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
-| KOCA Korea                | 2026-05-05 | 2026-06-04 | lia0404@korea.kr                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
-| Traficom Finland          | 2026-05-05 | 2026-06-04 | kirjaamo@traficom.fi (cc tietojenluovutus@traficom.fi)                         | **Yes** (Unknown; public-record fallback after follow-up) |
-| Trafikstyrelsen Denmark   | 2026-05-05 | 2026-06-04 | info@trafikstyrelsen.dk                                                        | **Yes** (Unknown; public-record fallback after follow-up) |
-| CAAM Malaysia             | 2026-05-05 | 2026-06-04 | webform at caam.gov.my/contact-us                                              | **Yes** (Unknown; public-record fallback after follow-up) |
-| DCA Cyprus                | 2026-05-05 | 2026-06-04 | director@dca.mcw.gov.cy                                                        | **Yes** (Unknown; public-record fallback after follow-up) |
-| CAASL Sri Lanka           | 2026-05-05 | 2026-06-04 | daw@caa.lk (cc scaiaras@caa.lk; Mr. Ratnayake, Director Aircraft Registration) | **Yes** (Unknown; public-record fallback after follow-up) |
-| CASA PNG                  | 2026-05-05 | 2026-06-04 | info@casapng.gov.pg                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
-| DGCA India                | 2026-05-05 | 2026-06-04 | rkanand.dgca@nic.in, mdevula.dgca@nic.in (DDGs Airworthiness)                  | **Yes** (Unknown; public-record fallback after follow-up) |
+| Source                    | Sent                                 | Follow-up  | Sent to                                                                                      | Fallback applies?                                         |
+| ------------------------- | ------------------------------------ | ---------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| CAA NZ                    | 2026-05-05                           | 2026-06-04 | info@caa.govt.nz                                                                             | **No** (Personal-use; silence ≠ permission)               |
+| IAA Ireland               | 2026-05-05                           | 2026-06-04 | registration@iaa.ie                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| AESA Spain                | 2026-05-05                           | 2026-06-04 | rmac.aesa@seguridadaerea.es                                                                  | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Argentina            | 2026-05-05                           | 2026-06-04 | registro@anac.gob.ar                                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
+| ANAC Brasil               | 2026-05-05                           | 2026-06-04 | rab@anac.gov.br                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
+| DGAC France               | 2026-05-05                           | 2026-06-04 | immat@aviation-civile.gouv.fr                                                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| ENAC Italy                | 2026-05-05                           | 2026-06-04 | registro.aeromobili@enac.gov.it                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
+| FOCA Switzerland          | 2026-05-05                           | 2026-06-04 | aircraftregistry@bazl.admin.ch                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| Luftfartstilsynet Norway  | 2026-05-05                           | 2026-06-04 | postmottak@caa.no                                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
+| Transportstyrelsen Sweden | 2026-05-05                           | 2026-06-04 | luftfart@transportstyrelsen.se                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAAS Singapore            | 2026-05-05                           | 2026-05-26 | webform (3–15 business-day SLA)                                                              | **No** (Personal-use; silence ≠ permission)               |
+| AFAC Mexico               | 2026-05-05                           | 2026-06-04 | tramites@afac.gob.mx                                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
+| Austro Control Austria    | 2026-05-05                           | 2026-06-04 | register@austrocontrol.at                                                                    | **Yes** (Unknown; public-record fallback after follow-up) |
+| BCAA / DGTA Belgium       | 2026-05-05                           | 2026-06-04 | bcaa.registration@mobilit.fgov.be                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAA Taiwan                | 2026-05-05                           | 2026-06-04 | gencaa@mail.caa.gov.tw                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
+| DKPPU Indonesia           | 2026-05-05                           | 2026-06-04 | produkaeronautika_dkuppu@dephub.go.id (cc info151@dephub.go.id)                              | **Yes** (Unknown; public-record fallback after follow-up) |
+| JCAA Jamaica              | 2026-05-05                           | 2026-06-04 | info@jcaa.gov.jm                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| KOCA Korea                | 2026-05-05                           | 2026-06-04 | lia0404@korea.kr                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| Traficom Finland          | 2026-05-05                           | 2026-06-04 | kirjaamo@traficom.fi (cc tietojenluovutus@traficom.fi)                                       | **Yes** (Unknown; public-record fallback after follow-up) |
+| Trafikstyrelsen Denmark   | 2026-05-05                           | 2026-06-04 | info@trafikstyrelsen.dk                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAAM Malaysia             | 2026-05-05                           | 2026-06-04 | webform at caam.gov.my/contact-us                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
+| DCA Cyprus                | 2026-05-05                           | 2026-06-04 | director@dca.mcw.gov.cy                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAASL Sri Lanka           | 2026-05-05                           | 2026-06-04 | daw@caa.lk (cc scaiaras@caa.lk; Mr. Ratnayake, Director Aircraft Registration)               | **Yes** (Unknown; public-record fallback after follow-up) |
+| CASA PNG                  | 2026-05-05                           | 2026-06-04 | info@casapng.gov.pg                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| DGCA India                | 2026-05-05                           | 2026-06-04 | rkanand.dgca@nic.in, mdevula.dgca@nic.in (DDGs Airworthiness)                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| TTCAA Trinidad & Tobago   | 2026-05-05                           | 2026-06-04 | ttcaa@caa.gov.tt                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| BCAA Bahamas              | 2026-05-05                           | 2026-06-04 | atl@caabahamas.com                                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
+| BDCA Belize               | 2026-05-05                           | 2026-06-04 | director@civilaviation.gov.bz                                                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAAF Fiji                 | 2026-05-05                           | 2026-06-04 | info@caaf.org.fj                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAAB Botswana             | 2026-05-05                           | 2026-06-04 | caab@caab.co.bw                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
+| TCAA Tanzania             | 2026-05-05 (v2 to `tcaa@tcaa.go.tz`) | 2026-06-04 | tcaa@tcaa.go.tz (v1 to ~~airworthinessinspectors@tcaa.go.tz~~ / ~~info@tcaa.go.tz~~ bounced) | **Yes** (Unknown; public-record fallback after follow-up) |
+| SCAA Seychelles           | 2026-05-05                           | 2026-06-04 | secretariat@scaa.sc                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAD Malta                 | 2026-05-05                           | 2026-06-04 | civil.aviation@transport.gov.mt                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
+| CARC Jordan               | 2026-05-05                           | 2026-06-04 | info@carc.gov.jo (cc Bilal.Nazzal@CARC.GOV.JO)                                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAA Maldives              | 2026-05-05                           | 2026-06-04 | airworthiness@caa.gov.mv                                                                     | **Yes** (Unknown; public-record fallback after follow-up) |
+| PCAA Pakistan             | 2026-05-05                           | 2026-06-04 | umair.sufyan@caapakistan.com.pk (named individual)                                           | **Yes** (Unknown; public-record fallback after follow-up) |
+| ECAA Ethiopia             | 2026-05-05                           | 2026-06-04 | caa.airnav@ethionet.et                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
+| ICETRA Iceland            | 2026-05-05                           | 2026-06-04 | samgongustofa@samgongustofa.is                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| CASAS Suriname            | 2026-05-05                           | 2026-06-04 | casasinfo@casas.sr (Cloudflare-decoded; verify if bounces)                                   | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
 
@@ -84,25 +98,15 @@ These countries have English as an official or working administrative language a
 
 For each: open the agency homepage in the browser, find the footer "Copyright" or "Terms" link, classify, and decide.
 
-- [ ] **Trinidad & Tobago** — TTCAA — register at [caa.gov.tt](https://caa.gov.tt/aircraft-on-ttcaa-register/). Verify footer. **Likely needs email.**
-- [ ] **Bahamas** — BCAA — register at [caabahamas.com/registers](https://caabahamas.com/registers/). PDF format only — verify terms. **Likely needs email.**
-- [ ] **Belize** — BDCA — register at [civilaviation.gov.bz](https://www.civilaviation.gov.bz/index.php/bdca-civil-aircraft-register). Verify. **Likely needs email.**
-- [ ] **Fiji** — CAAF — register at [caaf.org.fj](https://www.caaf.org.fj/aircraft-register-search/). Verify. **Likely needs email.**
-- [ ] **Botswana** — CAAB — register at [caab.co.bw](https://www.caab.co.bw/caab-content.php?cid=299). Verify. **Likely needs email.**
-- [ ] **Tanzania** — TCAA — register at [tcaa.go.tz](https://www.tcaa.go.tz/page?p=Aircraft+Registration). Verify. **Likely needs email.**
-- [ ] **Seychelles** — SCAA — register at [scaa.sc](https://www.scaa.sc/index.php/regulatory/e-registers/aircraft-civil-register). Verify. **Likely needs email.**
-- [ ] **Malta** — CAD Malta — register at [transport.gov.mt](https://www.transport.gov.mt/aviation/aircraft-flight-standards/registration-of-aircraft-2663). EU member, Maltese / English co-official. Check Malta's open-data policy. **Could be either.**
-- [ ] **Iceland** — ICETRA — register at [island.is/en/aircraft-registry](https://island.is/en/aircraft-registry). Icelandic primary; English website fine. Check Iceland's open data policy (most Nordic data is open). **Likely Open.**
+_All Phase 1 quick-win candidates emailed 2026-05-05; see In flight section above._
 
 ### Phase 1 — known-difficult English-language
 
-- [ ] **Pakistan** — PCAA — register at [apps.caapakistan.com.pk:412](https://apps.caapakistan.com.pk:412/Aircraft/rptArcftRegisterOut.aspx). Verify; expect email.
-- [ ] **Maldives** — CAAM — register at [caa.gov.mv](https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages). Verify; expect email.
-- [ ] **Ethiopia** — ECAA — register at [ecaa.gov.et](https://www.ecaa.gov.et/home/aircraft-registered-by-the-authority-and-operational-today/). Verify; expect email.
+_Pakistan, Maldives, and Ethiopia all emailed 2026-05-05; see In flight section above._
 
 ### Phase 1 — borderline (English commonly used, but local language is primary)
 
-- [ ] **Jordan** — CARC — register at [carc.jo](https://www.carc.jo/en/content/344-jordanian-registered-aircraft). Verify in English; CARC has English-language pages.
+_Jordan (CARC) emailed 2026-05-05; see In flight section above._
 
 ---
 
@@ -133,11 +137,7 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 
-> Note: Switzerland, Sweden, Norway, Austria, Belgium, Denmark, and Finland were emailed in English on 2026-05-05 and now sit in the **In flight** section above. Only Suriname remains deferred in this group.
-
-| Country  | Agency | Register URL                               | Language |
-| -------- | ------ | ------------------------------------------ | -------- |
-| Suriname | CASAS  | [casas.sr](https://www.casas.sr/registry/) | Dutch    |
+> Note: Switzerland, Sweden, Norway, Austria, Belgium, Denmark, Finland, and Suriname were all emailed in English on 2026-05-05 and now sit in the **In flight** section above. No agencies remain deferred in this group.
 
 ### Slavic / Eastern European
 

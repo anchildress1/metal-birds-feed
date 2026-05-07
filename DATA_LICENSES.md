@@ -450,6 +450,189 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## BCAA — Bahamas Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://caabahamas.com/registers/
+- **Bulk download URL:** TBD (PDF format per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `atl@caabahamas.com`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## BDCA — Belize Department of Civil Aviation
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.civilaviation.gov.bz/index.php/bdca-civil-aircraft-register
+- **Bulk download URL:** TBD (PDF / web page list per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `director@civilaviation.gov.bz` (Director's institutional inbox). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAA Maldives — Maldives Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
+- **Bulk download URL:** TBD (PDF download per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `airworthiness@caa.gov.mv` (Airworthiness desk). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+- **Note on naming:** Referred to as "CAA Maldives" in this project to distinguish from the Civil Aviation Authority of Malaysia (also "CAAM") — same acronym, different agencies.
+
+---
+
+## CAAB — Civil Aviation Authority of Botswana
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caab.co.bw/caab-content.php?cid=299
+- **Bulk download URL:** TBD (PDF download per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `caab@caab.co.bw`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAAF — Civil Aviation Authority of Fiji
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caaf.org.fj/aircraft-register-search/
+- **Bulk download URL:** TBD (search-only interface per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `info@caaf.org.fj`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAD Malta — Civil Aviation Directorate, Transport Malta
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.transport.gov.mt/aviation/aircraft-flight-standards/registration-of-aircraft-2663
+- **Bulk download URL:** TBD (PDF download per avcodes)
+- **License:** Pending verification (EU PSI Directive principles likely apply).
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `civil.aviation@transport.gov.mt`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CARC — Civil Aviation Regulatory Commission, Jordan
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.carc.jo/en/content/344-jordanian-registered-aircraft
+- **Bulk download URL:** TBD (web page list per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `info@carc.gov.jo` (cc: `Bilal.Nazzal@CARC.GOV.JO` — register-related contact). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CASAS — Civil Aviation Safety Authority Suriname
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.casas.sr/registry/
+- **Bulk download URL:** TBD (searchable database per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `casasinfo@casas.sr` — decoded from Cloudflare email obfuscation in the casas.sr footer (`__cf_email__` span, XOR key 0x77). Unusual prefix; if it bounces, the decode is suspect and we should re-verify. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ECAA — Ethiopian Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.ecaa.gov.et/home/aircraft-registered-by-the-authority-and-operational-today/
+- **Bulk download URL:** TBD (PDF download per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `caa.airnav@ethionet.et` (Aircraft Registration & Airworthiness Certification Directorate). ECAA contact emails use the legacy `@ethionet.et` domain rather than `@ecaa.gov.et`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ICETRA — Icelandic Transport Authority (Samgöngustofa)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://island.is/en/aircraft-registry
+- **Bulk download URL:** TBD (searchable database + PDF per avcodes)
+- **License:** Pending verification (Nordic open-data norms generally permissive; specific terms not surfaced).
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `samgongustofa@samgongustofa.is`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## PCAA — Pakistan Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://apps.caapakistan.com.pk:412/Aircraft/rptArcftRegisterOut.aspx
+- **Bulk download URL:** TBD (PDF/Excel download per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `umair.sufyan@caapakistan.com.pk` (named individual; no register-specific desk surfaced in research). If person has moved roles or is out of office, email may sit unanswered — worth a follow-up if no response. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## SCAA — Seychelles Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.scaa.sc/index.php/regulatory/e-registers/aircraft-civil-register
+- **Bulk download URL:** TBD (PDF download per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `secretariat@scaa.sc`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## TCAA — Tanzania Civil Aviation Authority
+
+- **Status:** Future — permission request sent (v2 after v1 bounce), awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.tcaa.go.tz/page?p=Aircraft+Registration
+- **Bulk download URL:** TBD (web page list per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** **v1 sent 2026-05-05 to `airworthinessinspectors@tcaa.go.tz` (cc: `info@tcaa.go.tz`) — both BOUNCED.** Third-party directory (rocketreach.co) listing was stale. **v2 sent 2026-05-05 to `tcaa@tcaa.go.tz`** (canonical TCAA general inbox). v2 body includes an explicit note that the previous send bounced, so the agency understands it is a re-send rather than a duplicate, and explicitly invites internal routing to whichever desk handles register-redistribution requests. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`. If v2 also bounces, the next move is the contact form at https://www.tcaa.go.tz/feedback/contacts.
+- **Reply (verbatim):** _pending_
+
+---
+
+## TTCAA — Trinidad and Tobago Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://caa.gov.tt/aircraft-on-ttcaa-register/
+- **Bulk download URL:** TBD (searchable database per avcodes)
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-05 to `ttcaa@caa.gov.tt`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## GCAA — Georgian Civil Aviation Agency
 
 - **Status:** Planned (phase 4) — blocked on R3.1 data-source acquisition research
