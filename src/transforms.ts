@@ -57,6 +57,19 @@ const dateYyyySlashOrNull = (value: string): string | null => {
   return validateAndFormatYMD(v.slice(0, 4), v.slice(5, 7), v.slice(8, 10));
 };
 
+// Accepts an ISO 8601 date or datetime string and returns just the YYYY-MM-DD date
+// portion. Anything malformed returns null. NL ILT publishes dates as full ISO datetimes
+// in TZ-shifted form (e.g., "2016-02-09T05:00:00.000Z" for a 2016-02-09 record); this
+// transform extracts the calendar date and discards the time/zone so canonical records
+// store dates as plain ISO date strings, matching FAA and TC.
+const isoDateOnlyOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length === 0) return null;
+  const head = v.length >= 10 ? v.slice(0, 10) : v;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return null;
+  return validateAndFormatYMD(head.slice(0, 4), head.slice(5, 7), head.slice(8, 10));
+};
+
 const mphToKtasOrNull = (value: string): string | null => {
   const v = value.trim();
   if (v.length === 0) return null;
@@ -94,6 +107,19 @@ const tcFullRegistration = (value: string): string | null => {
   return v.length === 3 ? `CF-${v}` : `C-${v}`;
 };
 
+// Returns the ILT registration only when it looks like a real Dutch civil registration
+// (PH-prefixed, case-insensitive). Returns null for anything else, including the
+// "Information" banner ILT places in the first data row of the .ods export, partial /
+// malformed marks, and empty cells. The engine treats null source_id as a row-skip
+// candidate, so combining this with `allowed_missing_source_id_rows` cleanly bounds
+// the banner row without dropping legitimate records.
+const nlIltRegistrationOrNull = (value: string): string | null => {
+  const v = value.trim().toUpperCase();
+  if (v.length === 0) return null;
+  if (!/^PH-[A-Z0-9]+$/.test(v)) return null;
+  return v;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -103,11 +129,13 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   float_or_null: floatOrNull,
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
+  iso_date_only_or_null: isoDateOnlyOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,
   faa_n_number: faaNNumber,
   faa_cert_class: faaCertClass,
   tc_full_registration: tcFullRegistration,
+  nl_ilt_registration_or_null: nlIltRegistrationOrNull,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
@@ -137,8 +165,38 @@ const tcAirframe = (values: string[]): string | null => {
   return engineCount === 1 ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
 };
 
+// Maps NL ILT's `Group` + `Engines` columns to a canonical `airframe_type`.
+//
+// - Sailplane / Balloon / Rotorcraft / Drones map directly (Drones → null because the
+//   canonical schema lacks a UAV enum; the engine produces a record without an airframe
+//   classification rather than inventing one).
+// - Small / Large aeroplane and MLA, MLH disambiguate single- vs multi-engine via the
+//   Engines column. Engines holds an integer for powered records and "-" (or empty) for
+//   sailplanes / balloons / drones, so the transform returns null when the count is not
+//   a positive integer.
+// - Anything else returns null. The translation engine surfaces null airframe_type in
+//   the canonical record without failing the row.
+const nlIltAirframe = (values: string[]): string | null => {
+  const group = values[0]?.trim() ?? '';
+  const enginesRaw = values[1]?.trim() ?? '';
+
+  if (group === 'Sailplane') return 'glider';
+  if (group === 'Balloon') return 'balloon';
+  if (group === 'Rotorcraft') return 'rotorcraft';
+  if (group === 'Drones') return null;
+
+  if (group === 'Small aeroplane' || group === 'Large aeroplane' || group === 'MLA, MLH') {
+    const n = Number.parseInt(enginesRaw, 10);
+    if (Number.isNaN(n) || n < 1) return null;
+    return n === 1 ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
+  }
+
+  return null;
+};
+
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
   tc_airframe: tcAirframe,
+  nl_ilt_airframe: nlIltAirframe,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

@@ -1,0 +1,242 @@
+id: nl-ilt
+label: Netherlands ILT Civil Aircraft Register
+country: NL
+encoding: utf8
+trim_all: true
+format: ods
+sheet: 0
+# ILT's first sheet ships with annotated headers like
+# "Flag [details=n][kolom=j][filter=j][kolom_breedte=s]"; the bracket suffixes are
+# editor metadata. The clean column names are supplied via `columns:` below; this
+# `skip_rows: 1` discards the file's own (annotated) header row so the first row
+# the engine sees is genuine data (the "Information" banner, then aircraft).
+skip_rows: 1
+
+download:
+  url: https://www.ilent.nl/site/binaries/site-content/collections/documents/lijsten/luchtvaart/databestanden/luchtvaartregister-data/luchtvaartuigregister.ods
+  format: file
+  entries:
+    register: '.'
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  discover_url: https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data
+  discover_pattern: 'href="(https://www\.ilent\.nl/site/binaries/[^"]+luchtvaartuigregister[^"]+\.ods)"'
+
+primary: register
+delimiter: ','
+
+# ILT's first sheet ships with annotated headers like
+# "Flag [details=n][kolom=j][filter=j][kolom_breedte=s]"; the bracket suffixes are
+# editor metadata. Supply the clean column names directly so the engine's lookups are
+# stable across refreshes (ILT periodically tweaks the bracket annotations) and the
+# rest of this config can reference fields without the metadata noise.
+columns:
+  register:
+    - Flag
+    - Registration
+    - Registered
+    - LatestOwnerChange
+    - PrevCountry
+    - PrevMark
+    - Manufacturer
+    - ManufacturedIn
+    - Model
+    - Serial
+    - X-Ponder
+    - Built
+    - Group
+    - Configuration
+    - MTOM
+    - MLM
+    - ICAO-code
+    - AOC
+    - 83Bis
+    - Representative
+    - Mortgage
+    - Volume
+    - LegalBase
+    - Engines
+    - EngKind
+    - EngManufacturer
+    - EngModel
+    - Props
+    - PropKind
+    - PropManufacturer
+    - PropModel
+    - NoiseRequirements
+    - NoiseCat
+    - NoiseRcrd
+    - LevelApp
+    - LevelFo
+    - LevelOf
+    - LevelSl
+    - LevelTo
+    - RegistrIssued
+    - RegistrExpiry
+    - CofA
+    - AirwIssued
+    - AirwExpiry
+    - AirwKind
+    - AirwVal
+    - NoiseIssued
+    - NoiseExpiry
+    - RegBlock
+    - Site2Title
+    - Site2Descr1
+    - Site2Descr2
+    - Site2Tech1
+    - Site2Tech2
+    - Site2Tech3
+    - Site2Tech4
+    - Site2Tech5
+    - Site2Noise1
+    - Site2Noise2
+    - Site2Doc1
+    - Site2Doc2
+    - Site2Doc3
+
+# ILT sticks an "1 Info" banner in the first data row of the export. The
+# nl_ilt_registration_or_null transform makes source_id null for the banner row, and
+# the bound below permits exactly one such skip — anything more (multiple banners,
+# corrupted export) fails loudly.
+source_id: Registration
+source_id_transform: nl_ilt_registration_or_null
+allowed_missing_source_id_rows:
+  max: 1
+  field: Registration
+  pattern: '^Information$'
+
+joins: []
+
+registration: Registration
+
+mapping:
+  registration:
+    field: Registration
+    transform: nl_ilt_registration_or_null
+    default: ''
+
+  icao_hex:
+    field: X-Ponder
+    transform: lowercase
+
+  icao_type_code:
+    field: ICAO-code
+    transform: trim_or_null
+
+  status:
+    field: Flag
+    transform: trim_or_null
+    lookup:
+      '5 -': valid
+      '3 New': valid
+      '4 Changed': valid
+      '2 Deregistered': cancelled
+    default: other
+
+  country:
+    constant: NL
+
+  manufacturer:
+    field: Manufacturer
+    transform: trim_or_null
+
+  model:
+    field: Model
+    transform: trim_or_null
+
+  serial_number:
+    field: Serial
+    transform: trim_or_null
+
+  year_manufactured:
+    field: Built
+    transform: int_or_null
+
+  airframe_type:
+    fields:
+      - Group
+      - Engines
+    compound_transform: nl_ilt_airframe
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    field: AirwKind
+    transform: trim_or_null
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    field: EngManufacturer
+    transform: trim_or_null
+
+  engine.model:
+    field: EngModel
+    transform: trim_or_null
+
+  engine.type:
+    field: EngKind
+    transform: trim_or_null
+    lookup:
+      'Reciprocating piston-driven engine': reciprocating
+      'Turbofan engine': turbo-fan
+      'Turbojet engine': turbo-jet
+      'Turbine-driven shaft (rotorcraft) engine': turbo-shaft
+      'Turbo-prop engine': turbo-prop
+      'Electrical engine': electric
+      'Wankel engine': rotary
+      'No engine': none
+    default: ~
+
+  engine.count:
+    field: Engines
+    transform: int_or_null
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # ILT does not publish owner identity in the bulk register (privacy policy). Owner
+  # name, kind, and state stay null; country is constant NL since this is the Dutch
+  # register.
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: NL
+
+  certification_date:
+    field: CofA
+    transform: iso_date_only_or_null
+
+  airworthiness_date:
+    field: AirwIssued
+    transform: iso_date_only_or_null
+
+  expiration_date:
+    field: AirwExpiry
+    transform: iso_date_only_or_null
+
+  last_action_date:
+    field: LatestOwnerChange
+    transform: iso_date_only_or_null
+
+  cruise_speed_ktas:
+    constant: ~

@@ -13,19 +13,24 @@ const SCALAR_TRANSFORMS = [
   'float_or_null',
   'date_yyyymmdd_or_null',
   'date_yyyy_slash_or_null',
+  'iso_date_only_or_null',
   'mph_to_ktas_or_null',
   'binary_to_hex_or_null',
   'faa_n_number',
   'faa_cert_class',
   'tc_full_registration',
+  'nl_ilt_registration_or_null',
 ] as const;
 
 const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
-const COMPOUND_TRANSFORMS = ['tc_airframe'] as const;
+const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe'] as const;
 
 const isValidRegex = (pattern: string): boolean => {
   try {
+    // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
+    // The constructed RegExp is discarded immediately; this is a syntax-validity probe only.
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
     new RegExp(pattern);
     return true;
   } catch {
@@ -56,15 +61,34 @@ const SourceConfigSchema = z.object({
   label: z.string().min(1),
   country: z.string().min(1),
   encoding: z.enum(['utf8', 'latin1']),
-  download: z.object({
-    url: z.url(),
-    format: z.literal('zip'),
-    entries: z.record(z.string(), z.string()),
-    headers: z.record(z.string(), z.string()).optional(),
-  }),
+  download: z
+    .object({
+      url: z.url(),
+      format: z.enum(['zip', 'file']).default('zip'),
+      entries: z.record(z.string(), z.string()),
+      headers: z.record(z.string(), z.string()).optional(),
+      discover_url: z.url().optional(),
+      discover_pattern: z
+        .string()
+        .min(1)
+        .refine(isValidRegex, { message: 'discover_pattern must be a valid regular expression' })
+        .optional(),
+    })
+    .refine((d) => Object.keys(d.entries).length >= 1, {
+      message: 'download.entries must have at least one alias',
+    })
+    .refine((d) => d.format !== 'file' || Object.keys(d.entries).length === 1, {
+      message: 'download.entries must contain exactly one alias when format is "file"',
+    })
+    .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
+      message: 'download.discover_url and download.discover_pattern must be set together',
+    }),
   primary: z.string().min(1),
   delimiter: z.string().min(1),
   trim_all: z.boolean().default(false),
+  format: z.enum(['csv', 'ods', 'xlsx']).default('csv'),
+  sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
+  skip_rows: z.number().int().nonnegative().optional(),
   columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
   allowed_missing_source_id_rows: z
     .object({
@@ -86,6 +110,7 @@ const SourceConfigSchema = z.object({
     )
     .default([]),
   source_id: z.string().min(1),
+  source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
   registration: z.string().min(1),
   mapping: z.record(z.string(), FieldMappingSchema),
 });

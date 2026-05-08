@@ -7,15 +7,17 @@ export type ScalarTransformName =
   | 'float_or_null'
   | 'date_yyyymmdd_or_null'
   | 'date_yyyy_slash_or_null'
+  | 'iso_date_only_or_null'
   | 'mph_to_ktas_or_null'
   | 'binary_to_hex_or_null'
   | 'faa_n_number'
   | 'faa_cert_class'
-  | 'tc_full_registration';
+  | 'tc_full_registration'
+  | 'nl_ilt_registration_or_null';
 
 export type ArrayTransformName = 'faa_cert_ops';
 
-export type CompoundTransformName = 'tc_airframe';
+export type CompoundTransformName = 'tc_airframe' | 'nl_ilt_airframe';
 
 export interface FieldMapping {
   field?: string;
@@ -35,11 +37,15 @@ export interface JoinConfig {
   on: string;
 }
 
+export type DownloadFormat = 'zip' | 'file';
+
 export interface DownloadConfig {
   url: string;
-  format: 'zip';
+  format: DownloadFormat;
   entries: Record<string, string>;
   headers?: Record<string, string>;
+  discover_url?: string;
+  discover_pattern?: string;
 }
 
 export interface AllowedMissingSourceIdRowsConfig {
@@ -47,6 +53,8 @@ export interface AllowedMissingSourceIdRowsConfig {
   field: string;
   pattern: string;
 }
+
+export type SourceFormat = 'csv' | 'ods' | 'xlsx';
 
 export interface SourceConfig {
   id: string;
@@ -57,10 +65,14 @@ export interface SourceConfig {
   primary: string;
   delimiter: string;
   trim_all: boolean;
+  format: SourceFormat;
+  sheet?: string | number;
+  skip_rows?: number;
   columns?: Record<string, string[]>;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
   source_id: string;
+  source_id_transform?: ScalarTransformName;
   registration: string;
   mapping: Record<string, FieldMapping>;
 }

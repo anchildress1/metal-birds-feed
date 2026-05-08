@@ -178,4 +178,75 @@ describe('applyCompound', () => {
     it('handles missing values array entries gracefully', () =>
       expect(applyCompound('tc_airframe', [])).toBeNull());
   });
+
+  describe('nl_ilt_airframe (compound)', () => {
+    it('maps Sailplane to glider', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Sailplane', '-'])).toBe('glider'));
+    it('maps Balloon to balloon', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Balloon', '-'])).toBe('balloon'));
+    it('maps Rotorcraft to rotorcraft', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Rotorcraft', '1'])).toBe('rotorcraft'));
+    it('maps Small aeroplane with one engine to fixed-wing-single-engine', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', '1'])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('maps Large aeroplane with two engines to fixed-wing-multi-engine', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Large aeroplane', '2'])).toBe(
+        'fixed-wing-multi-engine'
+      ));
+    it('maps MLA, MLH single-engine to fixed-wing-single-engine', () =>
+      expect(applyCompound('nl_ilt_airframe', ['MLA, MLH', '1'])).toBe('fixed-wing-single-engine'));
+    it('returns null for Drones (no canonical UAV enum)', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Drones', '4'])).toBeNull());
+    it('returns null for an unknown group', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Spaceship', '1'])).toBeNull());
+    it('returns null for an aeroplane with no engine count', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', ''])).toBeNull());
+    it('returns null for an aeroplane with non-numeric engine count', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', '-'])).toBeNull());
+    it('returns null for an aeroplane with zero engines', () =>
+      expect(applyCompound('nl_ilt_airframe', ['Small aeroplane', '0'])).toBeNull());
+    it('trims whitespace in group and engine count', () =>
+      expect(applyCompound('nl_ilt_airframe', ['  Small aeroplane  ', ' 1 '])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('returns null for an empty values array', () =>
+      expect(applyCompound('nl_ilt_airframe', [])).toBeNull());
+  });
+
+  describe('iso_date_only_or_null', () => {
+    it('extracts the date from a full ISO datetime', () =>
+      expect(applyScalar('iso_date_only_or_null', '2016-02-09T05:00:00.000Z')).toBe('2016-02-09'));
+    it('accepts a bare ISO date', () =>
+      expect(applyScalar('iso_date_only_or_null', '2026-04-28')).toBe('2026-04-28'));
+    it('trims surrounding whitespace before parsing', () =>
+      expect(applyScalar('iso_date_only_or_null', '  2020-12-31T00:00:00Z  ')).toBe('2020-12-31'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('iso_date_only_or_null', '')).toBeNull());
+    it('returns null for non-ISO text', () =>
+      expect(applyScalar('iso_date_only_or_null', 'never')).toBeNull());
+    it('returns null for an impossible calendar date', () =>
+      expect(applyScalar('iso_date_only_or_null', '2026-02-30T00:00:00Z')).toBeNull());
+    it('returns null for a date-shaped value with garbage tail', () =>
+      expect(applyScalar('iso_date_only_or_null', '2020-13-40T00:00:00Z')).toBeNull());
+  });
+
+  describe('nl_ilt_registration_or_null', () => {
+    it('returns the uppercased registration for a valid PH-prefixed mark', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'PH-2R4')).toBe('PH-2R4'));
+    it('uppercases lowercase input', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'ph-abc')).toBe('PH-ABC'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', '  PH-XYZ  ')).toBe('PH-XYZ'));
+    it('returns null for the ILT "Information" banner row', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'Information')).toBeNull());
+    it('returns null for empty input', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', '')).toBeNull());
+    it('returns null for a non-PH-prefixed mark (foreign reg)', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'N12345')).toBeNull());
+    it('returns null for PH- alone (no body)', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'PH-')).toBeNull());
+    it('returns null for PH- with non-alphanumeric body', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'PH-AB!')).toBeNull());
+  });
 });

@@ -1,9 +1,31 @@
 import { createHash } from 'node:crypto';
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
-import { parseCSV, type Row } from './parser.js';
+import { parseCSV, parseSpreadsheet, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
+
+// Dispatches the primary-file parse based on `config.format`. CSV is the existing path;
+// `ods`/`xlsx` route to the spreadsheet parser. Joins always read CSV — sources that need
+// spreadsheet joins do not exist yet, and the parser is gated behind one call site so the
+// extension is localized when needed.
+const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
+  if (config.format === 'csv') {
+    return parseCSV(buf, {
+      encoding: config.encoding,
+      delimiter: config.delimiter,
+      trim: config.trim_all,
+      columns: config.columns?.[config.primary],
+    });
+  }
+  return parseSpreadsheet(buf, {
+    format: config.format,
+    trim: config.trim_all,
+    columns: config.columns?.[config.primary],
+    sheet: config.sheet,
+    skip_rows: config.skip_rows,
+  });
+};
 
 export interface EngineStats {
   total: number;
@@ -29,12 +51,7 @@ export async function translate(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
-  const rows = await parseCSV(primaryBuf, {
-    encoding: config.encoding,
-    delimiter: config.delimiter,
-    trim: config.trim_all,
-    columns: config.columns?.[config.primary],
-  });
+  const rows = await parsePrimary(primaryBuf, config);
 
   const records = new Map<string, Aircraft>();
   let failed = 0;
@@ -46,7 +63,7 @@ export async function translate(
 
     const rawId = resolveScalar(merged, {
       field: config.source_id,
-      transform: 'trim_or_null',
+      transform: config.source_id_transform ?? 'trim_or_null',
     });
     if (!rawId) {
       if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
