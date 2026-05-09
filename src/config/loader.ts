@@ -22,6 +22,7 @@ const SCALAR_TRANSFORMS = [
   'tc_full_registration',
   'nl_ilt_registration_or_null',
   'casa_full_registration',
+  'casa_engine_detail_or_null',
 ] as const;
 
 const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;

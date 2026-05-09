@@ -147,6 +147,21 @@ describe('applyScalar', () => {
       expect(applyScalar('casa_full_registration', '   ')).toBeNull());
   });
 
+  describe('casa_engine_detail_or_null', () => {
+    it('returns the real engine detail when present', () =>
+      expect(applyScalar('casa_engine_detail_or_null', 'LYCOMING')).toBe('LYCOMING'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('casa_engine_detail_or_null', '  IO-550-N  ')).toBe('IO-550-N'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('casa_engine_detail_or_null', '')).toBeNull());
+    it('returns null for AIRCRAFT NOT FITTED WITH ENGINE', () =>
+      expect(
+        applyScalar('casa_engine_detail_or_null', 'AIRCRAFT NOT FITTED WITH ENGINE')
+      ).toBeNull());
+    it('returns null for NOT APPLICABLE', () =>
+      expect(applyScalar('casa_engine_detail_or_null', 'NOT APPLICABLE')).toBeNull());
+  });
+
   describe('date_dd_slash_or_null', () => {
     it('parses DD/MM/YYYY into ISO date', () =>
       expect(applyScalar('date_dd_slash_or_null', '15/04/2026')).toBe('2026-04-15'));

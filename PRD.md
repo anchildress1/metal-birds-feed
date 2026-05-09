@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Owner:** Ashley (anchildress1)
-**Last updated:** 2026-05-04 (Netherlands ILT slotted into v3, spreadsheet parser path codified)
+**Last updated:** 2026-05-09 (CASA Australia live in phase 4; spec/license posture aligned)
 **Consumes by:** Personal forked deployment of [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)
 
 ---
@@ -29,7 +29,7 @@
 
 UK CAA is **excluded** for the foreseeable future (see Future Considerations → Blocked). G-INFO is paid + single-PC + non-redistributable, structurally incompatible with this project's deployment model.
 
-Australia (CASA), Ireland (IAA), and other EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 license classification and CC.2 permission protocol before slotting. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
+Ireland (IAA) and other EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 license classification and CC.2 permission protocol before slotting when applicable. Australia (CASA) is already live in phase 4 under an Open classification after license re-research confirmed the register surfaces are CC BY 4.0, not CC BY-NC. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
 
 Stretch goal across all phases: the translation engine itself stays generic. Adding a new country = writing a config file (and, when the source format requires it, registering a parser path) — never modifying the engine's translation logic.
 
@@ -189,7 +189,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 Each new registry is gated on CC.1 license classification + CC.2 permission protocol if needed. None of these are committed; they slot in incrementally if/when there is reason to.
 
-**R4.1 Australia (CASA).** New file `sources/au-casa.yaml`. ~15k aircraft, VH-prefix, monthly CSV at `https://services.casa.gov.au/CSV/acrftreg.csv`. License: CC BY-NC 4.0 (Personal-use under CC.1). Requires CC.2 permission email; if 30-day timeout passes, proceed on public-record argument.
+**R4.1 Australia (CASA).** Shipped 2026-05-08. `sources/au-casa.yaml` ingests the ~15k-aircraft VH-prefix monthly CSV at `https://services.casa.gov.au/CSV/acrftreg.csv`. License classification is **Open** under CC.1: the bulk and lookup register surfaces inherit CASA's site-wide CC BY 4.0. No CC.2 permission email is required. Translation also extended the canonical schema with `operator` and `idera_authorised_party` so CASA's distinct operator/owner and Cape Town Convention fields are preserved rather than dropped.
 
 **R4.2 Ireland (IAA).** New file `sources/ie-iaa.yaml`. ~1.4k aircraft, EI-prefix, monthly XLSX. The XLSX parser path is shared with NL ILT (added in R2.6 during v3), so IAA's engine work is just config + fixtures. License classification pending (CC.1) and CC.2 permission email if needed.
 
@@ -239,7 +239,7 @@ R2 storage cost. The whole point is that this fits in the free tier. If FAA + TC
 
 **Georgia GCAA data accessibility (data, blocking R3.2 only — does not block v1, v2, or v3).** Does GCAA publish a bulk-downloadable aircraft register? If not, what's actually available — scrapeable web search, PDFs, FOIA-equivalent request, nothing? R3.1 is the time-boxed research to answer this. Outcome shapes whether v4 is "another easy config" or "build a scraper."
 
-**Per-source license terms (legal, settled framework).** Code license: Polyform Shield 1.0.0 (source-available, no commercial use by competitors). Source data licenses are per-source under CC.1: FAA = Open (US public domain); TC-CA = Open (OGL-Canada, attribution); CAA NZ = Personal-use (CC.2 email pending); CASA AU = Personal-use (CC.2 email pending); UK CAA = Restrictive, excluded. Per-source attribution and permission status tracked in `DATA_LICENSES.md`.
+**Per-source license terms (legal, settled framework).** Code license: Polyform Shield 1.0.0 (source-available, no commercial use by competitors). Source data licenses are per-source under CC.1: FAA = Open (US public domain); TC-CA = Open (OGL-Canada, attribution); CAA NZ = Personal-use (CC.2 email pending); CASA AU = Open (CC BY 4.0, no permission email required); UK CAA = Restrictive, excluded. Per-source attribution and permission status tracked in `DATA_LICENSES.md`.
 
 ---
 
@@ -253,7 +253,8 @@ Suggested phasing:
 - **v2 — Transport Canada:** delta from v1 is small (one config file, one downloader, fixtures). Start when v1 has run cleanly through at least one monthly refresh.
 - **v3 — Third-registry milestone (NL ILT + CAA NZ):** start when v2 is stable. Two parallel tracks: NL ILT (no email, ships first; the spreadsheet parser path is the new engine work) and CAA NZ (CC.2 email gates slot, 30-day clock starts on send). NL ships independently of any agency reply; NZ ships when its email resolves or times out. v3 closes when both are in R2.
 - **v4 — Georgia (GCAA):** start when v3 is stable. Begins with R3.1 research milestone before any code. Schedule slips if data isn't accessible — that's the deal you accept by sentimental-prioritizing this over EU member states with known data sources.
-- **Future** — Australia (CASA), Ireland (IAA), EU member states, photo-URL hook, schema migration tooling, NTSB sibling project. No commitment, added when motivated. Each new registry begins with CC.1 + CC.2.
+- **Current live set** — FAA, Transport Canada, Netherlands ILT, and Australia CASA.
+- **Future** — Ireland (IAA), EU member states, photo-URL hook, schema migration tooling, NTSB sibling project. No commitment, added when motivated. Each new registry begins with CC.1 + CC.2 when applicable.
 
 Dependencies:
 

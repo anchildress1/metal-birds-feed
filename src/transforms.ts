@@ -137,6 +137,17 @@ const casaFullRegistration = (value: string): string | null => {
   return `VH-${v}`;
 };
 
+// CASA uses literal sentinel strings for uninstalled engines instead of leaving the
+// cells blank. Collapse those to null so gliders/balloons don't surface fake engine
+// manufacturer/model text in the canonical record.
+const casaEngineDetailOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length === 0 || v === 'AIRCRAFT NOT FITTED WITH ENGINE' || v === 'NOT APPLICABLE') {
+    return null;
+  }
+  return v;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -155,6 +166,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   tc_full_registration: tcFullRegistration,
   nl_ilt_registration_or_null: nlIltRegistrationOrNull,
   casa_full_registration: casaFullRegistration,
+  casa_engine_detail_or_null: casaEngineDetailOrNull,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

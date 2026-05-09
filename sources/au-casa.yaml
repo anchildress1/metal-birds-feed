@@ -81,16 +81,17 @@ mapping:
 
   engine.manufacturer:
     field: Engmanu
-    transform: trim_or_null
+    transform: casa_engine_detail_or_null
 
   engine.model:
     field: Engmodel
-    transform: trim_or_null
+    transform: casa_engine_detail_or_null
 
   engine.type:
     field: Engtype
     transform: trim_or_null
     lookup:
+      'Not Applicable': none
       Piston: reciprocating
       'Diesel Engine': reciprocating
       Turboshaft: turbo-shaft

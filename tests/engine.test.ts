@@ -466,7 +466,11 @@ describe('CASA fixture translation', () => {
       r = casaRecords.get('8BB')!;
     });
     it('maps Glider airframe to glider', () => expect(r.airframe_type).toBe('glider'));
-    it('maps Not Applicable engine to null type', () => expect(r.engine.type).toBeNull());
+    it('maps Not Applicable engine to none', () => expect(r.engine.type).toBe('none'));
+    it('nulls fake no-engine detail sentinels', () => {
+      expect(r.engine.manufacturer).toBeNull();
+      expect(r.engine.model).toBeNull();
+    });
     it('reports zero engines', () => expect(r.engine.count).toBe(0));
   });
 
@@ -485,6 +489,11 @@ describe('CASA fixture translation', () => {
       r = casaRecords.get('83R')!;
     });
     it('maps Manned Free Balloon to balloon', () => expect(r.airframe_type).toBe('balloon'));
+    it('maps no-engine balloon rows to none + null details', () => {
+      expect(r.engine.type).toBe('none');
+      expect(r.engine.manufacturer).toBeNull();
+      expect(r.engine.model).toBeNull();
+    });
     it('records owner.country=AU when regholdCountry=Australia', () =>
       expect(r.owner.country).toBe('Australia'));
   });

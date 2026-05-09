@@ -15,7 +15,8 @@ export type ScalarTransformName =
   | 'faa_cert_class'
   | 'tc_full_registration'
   | 'nl_ilt_registration_or_null'
-  | 'casa_full_registration';
+  | 'casa_full_registration'
+  | 'casa_engine_detail_or_null';
 
 export type ArrayTransformName = 'faa_cert_ops';
 
