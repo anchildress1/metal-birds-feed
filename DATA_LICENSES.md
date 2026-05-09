@@ -207,13 +207,14 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## DGAC France — French Directorate General of Civil Aviation (Direction Générale de l'Aviation Civile)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Classification:** **Personal-use** (verified 2026-05-05 from explicit register-page disclaimer; reclassified from Unknown)
 - **Source URL:** https://immat.aviation-civile.gouv.fr/immat/servlet/aeronef_liste.html
-- **Bulk download URL:** TBD (search-only interface; redevances.aviation-civile.gouv.fr handles register extracts on a paid basis — free bulk pattern unverified pending reply)
-- **License:** Pending verification. French public-sector data is often under [Licence Ouverte / Open License v2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/); DGAC-specific terms unverified.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `immat@aviation-civile.gouv.fr`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Bulk download URL:** https://immat.aviation-civile.gouv.fr/immat/servlet/static/upload/export.csv (direct CSV, no auth required, updated monthly on the 1st)
+- **License:** **Personal-use only.** Per the register page (verified 2026-05-05, verbatim French): _"Les données du registre ne sont communiquées sur internet qu'à titre de simple information. Pour toute utilisation officielle, il convient de demander au fonctionnaire chargé de la tenue du registre un extrait du registre dûment signé."_ Translation: "The register data is communicated on the internet only for informational purposes. For any official use, you must request a duly signed extract of the register from the official in charge of the register." Paid extract product at https://redevances.aviation-civile.gouv.fr (€6/extract) is the channel for any non-informational use. Same structural shape as CAA NZ — informational/personal use is permitted, anything else requires explicit permission OR going through the paid extract.
+- **Update cadence:** Monthly (CSV regenerated on the 1st of each month per the register page itself).
+- **Permission email:** Sent 2026-05-05 to `immat@aviation-civile.gouv.fr`. Follow-up due 2026-06-04 if no reply by then. **The 30-day fallback does NOT apply** — DGAC France is Personal-use (explicit "for informational purposes only" rule), so silence is not permission. If no reply, the next step is a follow-up email, not slotting. Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
+- **PII pre-handling at source (good news for our pipeline):** Per the register page, DGAC already strips owner addresses, deregistered-aircraft owner info, and historical owner/operator/creditor data per GDPR. This means France records arrive partially PII-cleaned, reducing the engineering work for our PII drop layer. The remaining drop list (street/city/postal/care-of for current owners that DGAC does still publish) follows the standard PRD CC.4 policy.
 
 ---
 
