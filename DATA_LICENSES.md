@@ -228,11 +228,11 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## ENAC — Italian Civil Aviation Authority (Ente Nazionale per l'Aviazione Civile)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found despite portal hunt)
 - **Source URL:** https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/registro-aeromobili/
-- **Bulk download URL:** TBD (PDF format primarily; bulk pattern unverified pending reply)
-- **License:** Pending verification. Italian public-sector data is sometimes under [Italian Open Data License (IODL) 2.0](https://www.dati.gov.it/iodl/2.0/), broadly equivalent to CC BY 4.0; ENAC-specific terms unverified.
-- **Update cadence:** TBD
+- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed no CSV/PDF/JSON dump anywhere on `enac.gov.it` or `dati.mit.gov.it`. The register is governed by Codice della Navigazione + Codice Civile — access is per-record via formal "visure" extracts (paid procedure under Italian Civil Code rules). A yes-reply from ENAC must clear **both** license and a bulk access channel (FTP, direct dump, FOI, or similar) before ingest is feasible.
+- **License:** Pending verification. ENAC publishes other datasets on `dati.mit.gov.it` under [CC BY (Creative Commons Attribuzione)](https://dati.mit.gov.it/catalog/dataset/?organization=enac) — specifically "Imprese titolari di licenza di trasporto aereo" and "Elenco Organizzazioni Registrate per l'addestramento al volo" — but the aircraft register is **deliberately excluded**. Pattern matches Switzerland FOCA: agency publishes some open data, withholds the register specifically. [IODL 2.0](https://www.dati.gov.it/iodl/2.0/) is the Italian open-data license framework but does not apply absent an explicit ENAC declaration on the register.
+- **Update cadence:** TBD (no published artifact has a refresh schedule)
 - **Permission email:** Sent 2026-05-05 to `registro.aeromobili@enac.gov.it`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
