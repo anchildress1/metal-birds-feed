@@ -394,13 +394,16 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Trafikstyrelsen — Danish Civil Aviation and Railway Authority
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Forms/AllItems.aspx
-- **Bulk download URL:** TBD (Excel File noted on avcodes; current and historical extracts available)
-- **License:** Pending verification.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `info@trafikstyrelsen.dk` (general inbox). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Source URL:** https://www.trafikstyrelsen.dk/arbejdsomraader/luftfart/ansoegninger-individuelle/flyejer/luftfartoejsregister
+- **Bulk download URL:** **None published.** Recon 2026-05-09: the public register page describes only application procedures (registration, change of ownership, deletion, IDERA, rights register). A SharePoint document library exists at `selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Luftfartøjsregistret og luftfartsgodkendelser` but the URL returns empty (login-walled or affected by current outage — see operational note below). Pattern matches Italy/Iceland/Sweden: yes-reply must clear **both** license and a bulk access channel.
+- **License:** Pending verification. Datavejviser.dk (Denmark's data catalog) publishes its own metadata under CC0 but that does not speak to register data licensing. No register-specific declaration discoverable.
+- **Update cadence:** TBD (no published artifact has a refresh schedule)
+- **Operational note (2026-05-09):** Register is **currently offline**. Trafikstyrelsen page leads with banner: _"Teknisk fejl på nationalitetsregistret. Adgangen til nationalitetsregistret er i øjeblikket utilgængelig grundet en teknisk fejl."_ ("Technical error on the nationality register. Access is currently unavailable due to a technical error.") A 2019 news archive entry shows the register has gone down before — recurring reliability concern, signal about how seriously the agency treats the artifact.
+- **Permission email:** Sent 2026-05-05 to `info@trafikstyrelsen.dk` (general inbox; no register-specific desk surfaced publicly in this recon). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
+
+**Note for the eventual follow-up email (after 2026-06-04):** lead with the Finland Traficom comparable — neighbouring Nordic agency that publishes the equivalent register under CC BY 4.0 — and the EU PSI Directive baseline.
 
 ---
 
