@@ -370,14 +370,22 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Traficom — Finnish Transport and Communications Agency
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://asiointi.trafi.fi/en/henkiloasiakkaat/ilmailu/tarkista-ilma-aluksen-tiedot
-- **Bulk download URL:** TBD (search interface)
-- **License:** Pending verification (Finnish public-sector data generally falls under EU PSI Directive principles).
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi` — Traficom's separate data-disclosure unit). Email asks whether request should be routed via the data-disclosure unit instead. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Status:** 🛠️ Cleared — implementation pending (license cleared via Traficom open-data page; ZIP-CSV unpack wrapper needed before ingest)
+- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-09 from Traficom open-data page; reclassified from Unknown)
+- **Source URL:** https://tieto.traficom.fi/en/open-data (Traficom open-data catalog) + https://www.avoindata.fi/data/en_GB/dataset/854b277b-7472-4d0a-9a46-a8e34822a2e0 (avoindata.fi listing)
+- **Bulk download URL:** https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip (direct ZIP-CSV; ~1,331 rows; 127 kB unpacked / 123 kB packed)
+- **Variable list:** https://tieto.traficom.fi/files/media/file/MuuttujaluetteloIlmaalusrekisteri.xlsx
+- **License:** **CC BY 4.0** (Creative Commons Nimeä 4.0 International). Verbatim from the Traficom open-data page: _"The material been licensed under the Creative Commons Nimeä 4.0 International license — http://creativecommons.org/licenses/by/4.0/deed.en"_. Same posture as CASA Australia: attribution required.
+- **Update cadence:** Annual (single dated dump per year — material 12 Jan 2026, published 17 Feb 2026; no monthly refresh)
+- **Format note (engineering):** Bulk file is **ZIP-packed CSV**. Engine handles `csv` natively; needs a thin "unzip-then-parse" wrapper. Bonus: same pattern used for Finnish vehicles, vessels, and rolling-stock open data — wrapper is reusable for any future Finnish source.
+- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Reply no longer gates use** — license already cleared via the Traficom open-data page. Email stands as a courtesy / relationship gesture; not waiting on it.
 - **Reply (verbatim):** _pending_
+
+### Required attribution (verbatim, place in README Attribution section)
+
+> Source: Traficom — Finnish Transport and Communications Agency — https://tieto.traficom.fi/en/open-data
+>
+> Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/). The material has been changed: Traficom aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by Traficom.
 
 ---
 
