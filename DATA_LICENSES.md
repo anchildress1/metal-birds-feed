@@ -234,12 +234,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## FOCA / BAZL — Swiss Federal Office of Civil Aviation (Bundesamt für Zivilluftfahrt)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/
-- **Bulk download URL:** TBD (search interface + PDF/CSV file noted on avcodes; access pattern unverified pending reply)
-- **License:** Pending verification. Swiss federal data is often listed on [opendata.swiss](https://opendata.swiss) under CC BY 4.0 or similar; BAZL is a publisher there. Aircraft register-specific terms unverified.
+- **Classification:** **Personal-use** (verified 2026-05-09 from Swiss Federal Council site-wide Terms and Conditions; reclassified from Unknown)
+- **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search
+- **Bulk download URL:** Search app supports CSV export; direct bulk endpoint unverified (the register is **not** published on `opendata.swiss` despite BAZL publishing other datasets there)
+- **License:** **Personal-use only.** Per the [Swiss Federal Council Terms and Conditions](https://www.admin.ch/gov/en/start/terms-and-conditions.html) (site-wide policy covering all `*.admin.ch` domains, including `bazl.admin.ch` and `app02.bazl.admin.ch`), verbatim: _"Copyright and any other rights relating to texts, illustrations, photos or any other data available on the Federal authorities' websites are the exclusive property of the federal authorities or of any other expressly mentioned owners. Any reproduction requires the prior written consent of the copyright holder."_ The register is also governed by the [Bundesgesetz über das Luftfahrzeugbuch](https://www.fedlex.admin.ch/eli/cc/1960/1245_1301_1297/de) (Federal Act on the Aircraft Register), separate from open-data rules. BAZL deliberately publishes other datasets (noise pollution, drone zones, aerodromes) on `opendata.swiss` with explicit Open licenses while omitting the aircraft register — a choice, not an oversight.
 - **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`. Follow-up due 2026-06-04 if no reply by then. **The 30-day fallback does NOT apply** — FOCA is Personal-use; silence ≠ permission, must wait for affirmative reply. Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
