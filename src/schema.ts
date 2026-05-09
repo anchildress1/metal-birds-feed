@@ -78,13 +78,8 @@ export const OwnerSchema = z.object({
 });
 export type Owner = z.infer<typeof OwnerSchema>;
 
-export const OperatorSchema = z.object({
-  name: z.string().nullable(),
-  kind: OwnerKindSchema.nullable(),
-  state: z.string().nullable(),
-  country: z.string().nullable(),
-});
-export type Operator = z.infer<typeof OperatorSchema>;
+export const OperatorSchema = OwnerSchema;
+export type Operator = Owner;
 
 export const EngineSchema = z.object({
   manufacturer: z.string().nullable(),

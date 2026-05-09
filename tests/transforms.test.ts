@@ -133,6 +133,42 @@ describe('applyScalar', () => {
     it('still prefixes with C- for unexpected lengths (defensive)', () =>
       expect(applyScalar('tc_full_registration', 'AB')).toBe('C-AB'));
   });
+
+  describe('casa_full_registration', () => {
+    it('prefixes the suffix with VH-', () =>
+      expect(applyScalar('casa_full_registration', '22A')).toBe('VH-22A'));
+    it('uppercases lowercase input', () =>
+      expect(applyScalar('casa_full_registration', '4qp')).toBe('VH-4QP'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('casa_full_registration', '  ABC  ')).toBe('VH-ABC'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('casa_full_registration', '')).toBeNull());
+    it('returns null for whitespace-only input', () =>
+      expect(applyScalar('casa_full_registration', '   ')).toBeNull());
+  });
+
+  describe('date_dd_slash_or_null', () => {
+    it('parses DD/MM/YYYY into ISO date', () =>
+      expect(applyScalar('date_dd_slash_or_null', '15/04/2026')).toBe('2026-04-15'));
+    it('parses leap-year February 29 into ISO date', () =>
+      expect(applyScalar('date_dd_slash_or_null', '29/02/2024')).toBe('2024-02-29'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('date_dd_slash_or_null', '  01/01/2000  ')).toBe('2000-01-01'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('date_dd_slash_or_null', '')).toBeNull());
+    it('returns null for impossible day (32/01/2026)', () =>
+      expect(applyScalar('date_dd_slash_or_null', '32/01/2026')).toBeNull());
+    it('returns null for impossible month (01/13/2026)', () =>
+      expect(applyScalar('date_dd_slash_or_null', '01/13/2026')).toBeNull());
+    it('returns null for non-leap February 29', () =>
+      expect(applyScalar('date_dd_slash_or_null', '29/02/2025')).toBeNull());
+    it('returns null for ISO-style YYYY-MM-DD input', () =>
+      expect(applyScalar('date_dd_slash_or_null', '2026-04-15')).toBeNull());
+    it('returns null for YYYY/MM/DD (TC-style) input', () =>
+      expect(applyScalar('date_dd_slash_or_null', '2026/04/15')).toBeNull());
+    it('returns null for malformed gibberish', () =>
+      expect(applyScalar('date_dd_slash_or_null', 'never')).toBeNull());
+  });
 });
 
 describe('applyArray', () => {
@@ -248,42 +284,6 @@ describe('applyCompound', () => {
       expect(applyScalar('nl_ilt_registration_or_null', 'PH-')).toBeNull());
     it('returns null for PH- with non-alphanumeric body', () =>
       expect(applyScalar('nl_ilt_registration_or_null', 'PH-AB!')).toBeNull());
-  });
-
-  describe('casa_full_registration', () => {
-    it('prefixes the suffix with VH-', () =>
-      expect(applyScalar('casa_full_registration', '22A')).toBe('VH-22A'));
-    it('uppercases lowercase input', () =>
-      expect(applyScalar('casa_full_registration', '4qp')).toBe('VH-4QP'));
-    it('trims surrounding whitespace', () =>
-      expect(applyScalar('casa_full_registration', '  ABC  ')).toBe('VH-ABC'));
-    it('returns null for empty input', () =>
-      expect(applyScalar('casa_full_registration', '')).toBeNull());
-    it('returns null for whitespace-only input', () =>
-      expect(applyScalar('casa_full_registration', '   ')).toBeNull());
-  });
-
-  describe('date_dd_slash_or_null', () => {
-    it('parses DD/MM/YYYY into ISO date', () =>
-      expect(applyScalar('date_dd_slash_or_null', '15/04/2026')).toBe('2026-04-15'));
-    it('parses leap-year February 29 into ISO date', () =>
-      expect(applyScalar('date_dd_slash_or_null', '29/02/2024')).toBe('2024-02-29'));
-    it('trims surrounding whitespace', () =>
-      expect(applyScalar('date_dd_slash_or_null', '  01/01/2000  ')).toBe('2000-01-01'));
-    it('returns null for empty input', () =>
-      expect(applyScalar('date_dd_slash_or_null', '')).toBeNull());
-    it('returns null for impossible day (32/01/2026)', () =>
-      expect(applyScalar('date_dd_slash_or_null', '32/01/2026')).toBeNull());
-    it('returns null for impossible month (01/13/2026)', () =>
-      expect(applyScalar('date_dd_slash_or_null', '01/13/2026')).toBeNull());
-    it('returns null for non-leap February 29', () =>
-      expect(applyScalar('date_dd_slash_or_null', '29/02/2025')).toBeNull());
-    it('returns null for ISO-style YYYY-MM-DD input', () =>
-      expect(applyScalar('date_dd_slash_or_null', '2026-04-15')).toBeNull());
-    it('returns null for YYYY/MM/DD (TC-style) input', () =>
-      expect(applyScalar('date_dd_slash_or_null', '2026/04/15')).toBeNull());
-    it('returns null for malformed gibberish', () =>
-      expect(applyScalar('date_dd_slash_or_null', 'never')).toBeNull());
   });
 
   describe('casa_airframe (compound)', () => {

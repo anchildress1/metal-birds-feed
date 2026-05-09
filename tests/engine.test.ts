@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
 import { translate } from '../src/engine.js';
+import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceConfig } from '../src/types/config.js';
 
@@ -373,7 +374,7 @@ const casaFixtureBuffer = (filename: string): Buffer =>
   readFileSync(resolve(CASA_FIXTURES, 'input', filename));
 
 let casaRecords: Map<string, Aircraft>;
-let casaStats: { total: number; ok: number; failed: number; skipped: number };
+let casaStats: EngineStats;
 
 beforeAll(async () => {
   const config = loadSourceConfig(CASA_CONFIG_PATH);
