@@ -167,14 +167,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## AESA — Spanish State Aviation Safety Agency (Agencia Estatal de Seguridad Aérea)
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Status:** 🛠️ Cleared — implementation pending (license cleared via AESA portal Legal Notice; PDF parser path needed before ingest)
+- **Classification:** **Open** with attribution (verified 2026-05-09 from AESA portal Legal Notice; reclassified from Unknown)
 - **Source URL:** https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas
-- **Bulk download URL:** TBD (PDF report linked from the page; bulk pattern unverified pending reply)
-- **License:** Pending verification. Spanish public-sector data is often reusable under [Aporta open-data terms](https://datos.gob.es/en/aviso-legal-y-condiciones-de-reutilizacion); AESA-specific terms unverified.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `rmac.aesa@seguridadaerea.es`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Bulk download URL:** https://www.seguridadaerea.gob.es/sites/default/files/aeronaves_inscritas.pdf (direct PDF, "list of aircraft registered in Spain on 1 May 2026, updated periodically")
+- **License:** **Open with attribution.** Per the [AESA portal Legal Notice](https://www.seguridadaerea.gob.es/en/politica-de-privacidad-y-aviso-legal), verbatim: _"The total or partial reproduction of the contents published on the portal is prohibited, unless the source of origin is cited. However, the contents that are considered as open data at the Electronic Headquarters may be reproduced, in accordance with the provisions of Royal Decree 1495/2011, of October 24, on the development of Law 37/2007, on the reuse of public sector information."_ Functionally CC BY 4.0-equivalent: source citation is mandatory; the open-data subset layers Spain's PSI Directive implementation (Aporta framework) on top.
+- **Update cadence:** Periodic (last update 2026-05-01 noted on register page; cadence appears monthly but not contractually committed)
+- **Format note (engineering):** Bulk file is **PDF**, not CSV/XLSX. Engine currently handles csv/ods/xlsx; PDF parsing is a new format adapter. Ingest blocked on parser, not on license.
+- **Permission email:** Sent 2026-05-05 to `rmac.aesa@seguridadaerea.es`. **Reply no longer gates use** — license already cleared via the portal Legal Notice. Email stands as a courtesy / relationship gesture; not waiting on it.
 - **Reply (verbatim):** _pending_
+
+### Required attribution (verbatim, place in README Attribution section)
+
+> Source: AESA — Agencia Estatal de Seguridad Aérea — https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas
+>
+> Reproduced with attribution per the AESA portal Legal Notice and Royal Decree 1495/2011 of October 24 (development of Law 37/2007 on the reuse of public sector information). Material has been changed: AESA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by AESA.
 
 ---
 

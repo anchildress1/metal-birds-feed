@@ -25,6 +25,14 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | ILT (Netherlands) | CC-0                                              | Live (phase 3) |
 | CASA (Australia)  | CC BY 4.0                                         | Live (phase 4) |
 
+### 🛠️ Cleared — implementation pending
+
+License is cleared via public license declaration (no email reply needed). Ingest is blocked on engineering work — usually a new parser path or a non-standard fetch pattern.
+
+| Source     | License (cleared via)                                                                                       | Ingest blocker                                                                                                                                | Email status                                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| AESA Spain | Open with attribution — AESA portal Legal Notice + Royal Decree 1495/2011 (Spain PSI / Aporta); CC BY-equiv. | Bulk file is **PDF** ([aeronaves_inscritas.pdf](https://www.seguridadaerea.gob.es/sites/default/files/aeronaves_inscritas.pdf)); engine handles csv/ods/xlsx — new PDF parser path needed | Sent 2026-05-05 to `rmac.aesa@seguridadaerea.es` as courtesy; reply not gating use          |
+
 ### 🟡 In flight — waiting on reply
 
 | Source                    | Sent                                 | Follow-up  | Sent to                                                                                      | Fallback applies?                                         |
@@ -61,7 +69,6 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | CASA PNG                  | 2026-05-05                           | 2026-06-04 | info@casapng.gov.pg                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | SCAA Seychelles           | 2026-05-05                           | 2026-06-04 | secretariat@scaa.sc                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAS Singapore            | 2026-05-05                           | 2026-05-26 | webform (3–15 business-day SLA)                                                              | **No** (Personal-use; silence ≠ permission)               |
-| AESA Spain                | 2026-05-05                           | 2026-06-04 | rmac.aesa@seguridadaerea.es                                                                  | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAASL Sri Lanka           | 2026-05-05                           | 2026-06-04 | daw@caa.lk (cc scaiaras@caa.lk; Mr. Ratnayake, Director Aircraft Registration)               | **Yes** (Unknown; public-record fallback after follow-up) |
 | CASAS Suriname            | 2026-05-05                           | 2026-06-04 | casasinfo@casas.sr (Cloudflare-decoded; verify if bounces)                                   | **Yes** (Unknown; public-record fallback after follow-up) |
 | Transportstyrelsen Sweden | 2026-05-05                           | 2026-06-04 | luftfart@transportstyrelsen.se                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
