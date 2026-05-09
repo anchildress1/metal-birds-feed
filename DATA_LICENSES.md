@@ -294,12 +294,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Austro Control — Austria
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online
-- **Bulk download URL:** TBD (search interface + PDF Gesamt extracts)
-- **License:** Pending verification.
-- **Update cadence:** TBD (avcodes notes monthly updates)
+- **Status:** Future — permission request sent, awaiting reply (**most "shovel-ready" of the unresolved Unknowns** — XLSX bulk file exists; engine handles xlsx natively)
+- **Classification:** Unknown (verified 2026-05-09 — bulk file confirmed; license declaration not found)
+- **Source URL:** https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/overview__supplement
+- **Bulk download URL:** Annual XLSX dump ("Total December 31, 2025 file (XLSX, 162 KB)" — last update January 8, 2026) plus monthly PDF supplements (e.g., `Nachtrag_2025_05_EN.pdf`, `Nachtrag_2025_09_EN.pdf`). Engine handles `xlsx` natively → if license clears, **Austria is engineering-ready with no parser work needed**. Optional ignore the PDF deltas, just re-pull the annual XLSX.
+- **License:** Pending verification. Austro Control is on `data.gv.at` but **only for Spatial Data Infrastructure** (drone zones, airspace) — the aircraft register is **deliberately omitted**. Same pattern as Switzerland FOCA: agency publishes some open data with explicit licenses but withholds the register specifically. The XLSX is hosted directly on `austrocontrol.at` with no terms-of-use or imprint license tag discoverable. Note: Austro Control is a GmbH (corporate entity wholly owned by the Austrian state), not a federal ministry — corporate entities tend toward more restrictive copyright defaults.
+- **Update cadence:** Annual XLSX (Jan 8 publication for prior Dec 31 snapshot) + monthly PDF supplements
 - **Permission email:** Sent 2026-05-05 to `register@austrocontrol.at`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
