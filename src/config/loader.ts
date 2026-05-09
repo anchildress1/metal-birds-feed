@@ -13,6 +13,7 @@ const SCALAR_TRANSFORMS = [
   'float_or_null',
   'date_yyyymmdd_or_null',
   'date_yyyy_slash_or_null',
+  'date_dd_slash_or_null',
   'iso_date_only_or_null',
   'mph_to_ktas_or_null',
   'binary_to_hex_or_null',
@@ -20,11 +21,12 @@ const SCALAR_TRANSFORMS = [
   'faa_cert_class',
   'tc_full_registration',
   'nl_ilt_registration_or_null',
+  'casa_full_registration',
 ] as const;
 
 const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
-const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe'] as const;
+const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe', 'casa_airframe'] as const;
 
 const isValidRegex = (pattern: string): boolean => {
   try {

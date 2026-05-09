@@ -249,4 +249,79 @@ describe('applyCompound', () => {
     it('returns null for PH- with non-alphanumeric body', () =>
       expect(applyScalar('nl_ilt_registration_or_null', 'PH-AB!')).toBeNull());
   });
+
+  describe('casa_full_registration', () => {
+    it('prefixes the suffix with VH-', () =>
+      expect(applyScalar('casa_full_registration', '22A')).toBe('VH-22A'));
+    it('uppercases lowercase input', () =>
+      expect(applyScalar('casa_full_registration', '4qp')).toBe('VH-4QP'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('casa_full_registration', '  ABC  ')).toBe('VH-ABC'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('casa_full_registration', '')).toBeNull());
+    it('returns null for whitespace-only input', () =>
+      expect(applyScalar('casa_full_registration', '   ')).toBeNull());
+  });
+
+  describe('date_dd_slash_or_null', () => {
+    it('parses DD/MM/YYYY into ISO date', () =>
+      expect(applyScalar('date_dd_slash_or_null', '15/04/2026')).toBe('2026-04-15'));
+    it('parses leap-year February 29 into ISO date', () =>
+      expect(applyScalar('date_dd_slash_or_null', '29/02/2024')).toBe('2024-02-29'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('date_dd_slash_or_null', '  01/01/2000  ')).toBe('2000-01-01'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('date_dd_slash_or_null', '')).toBeNull());
+    it('returns null for impossible day (32/01/2026)', () =>
+      expect(applyScalar('date_dd_slash_or_null', '32/01/2026')).toBeNull());
+    it('returns null for impossible month (01/13/2026)', () =>
+      expect(applyScalar('date_dd_slash_or_null', '01/13/2026')).toBeNull());
+    it('returns null for non-leap February 29', () =>
+      expect(applyScalar('date_dd_slash_or_null', '29/02/2025')).toBeNull());
+    it('returns null for ISO-style YYYY-MM-DD input', () =>
+      expect(applyScalar('date_dd_slash_or_null', '2026-04-15')).toBeNull());
+    it('returns null for YYYY/MM/DD (TC-style) input', () =>
+      expect(applyScalar('date_dd_slash_or_null', '2026/04/15')).toBeNull());
+    it('returns null for malformed gibberish', () =>
+      expect(applyScalar('date_dd_slash_or_null', 'never')).toBeNull());
+  });
+
+  describe('casa_airframe (compound)', () => {
+    it('maps Glider to glider', () =>
+      expect(applyCompound('casa_airframe', ['Glider', ''])).toBe('glider'));
+    it('maps Motor-Glider to glider (auxiliary power irrelevant in canonical schema)', () =>
+      expect(applyCompound('casa_airframe', ['Motor-Glider', '1'])).toBe('glider'));
+    it('maps Manned Free Balloon to balloon', () =>
+      expect(applyCompound('casa_airframe', ['Manned Free Balloon', ''])).toBe('balloon'));
+    it('maps Airship to blimp', () =>
+      expect(applyCompound('casa_airframe', ['Airship', '1'])).toBe('blimp'));
+    it('maps Rotorcraft to rotorcraft regardless of engine count', () =>
+      expect(applyCompound('casa_airframe', ['Rotorcraft', '2'])).toBe('rotorcraft'));
+    it('maps Power Driven Aeroplane + 1 engine to fixed-wing-single-engine', () =>
+      expect(applyCompound('casa_airframe', ['Power Driven Aeroplane', '1'])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('maps Power Driven Aeroplane + 4 engines to fixed-wing-multi-engine', () =>
+      expect(applyCompound('casa_airframe', ['Power Driven Aeroplane', '4'])).toBe(
+        'fixed-wing-multi-engine'
+      ));
+    it('returns null for Power Driven Aeroplane with no engine count', () =>
+      expect(applyCompound('casa_airframe', ['Power Driven Aeroplane', ''])).toBeNull());
+    it('returns null for Power Driven Aeroplane with non-numeric engines', () =>
+      expect(applyCompound('casa_airframe', ['Power Driven Aeroplane', 'abc'])).toBeNull());
+    it('returns null for Power Driven Aeroplane with zero engines', () =>
+      expect(applyCompound('casa_airframe', ['Power Driven Aeroplane', '0'])).toBeNull());
+    it('returns null for RPA - Rotorcraft (drones not in canonical UAV enum)', () =>
+      expect(applyCompound('casa_airframe', ['RPA - Rotorcraft', '1'])).toBeNull());
+    it('returns null for RPA - Power Driven Aeroplane', () =>
+      expect(applyCompound('casa_airframe', ['RPA - Power Driven Aeroplane', '2'])).toBeNull());
+    it('returns null for unknown airframe descriptor', () =>
+      expect(applyCompound('casa_airframe', ['Spaceship', '1'])).toBeNull());
+    it('trims whitespace in airframe and engine count', () =>
+      expect(applyCompound('casa_airframe', ['  Power Driven Aeroplane  ', ' 1 '])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('returns null for an empty values array', () =>
+      expect(applyCompound('casa_airframe', [])).toBeNull());
+  });
 });

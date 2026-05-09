@@ -82,6 +82,11 @@ describe('FAA fixture translation', () => {
       expect(r).not.toHaveProperty('zip');
     });
 
+    it('defaults operator and IDERA to null when source does not publish them', () => {
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.idera_authorised_party).toBeNull();
+    });
+
     it('converts cruise speed from mph to ktas', () => {
       expect(r.cruise_speed_ktas).toBe(106);
     });
@@ -279,6 +284,10 @@ describe('TC-CA fixture translation', () => {
       expect(r.engine.thrust_lbs).toBeNull();
       expect(r.engine.model).toBeNull();
     });
+    it('defaults operator and IDERA to null (TC does not publish)', () => {
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.idera_authorised_party).toBeNull();
+    });
     it('returns empty array for operational_classes', () =>
       expect(r.operational_classes).toEqual([]));
   });
@@ -354,6 +363,176 @@ describe('TC-CA fixture translation', () => {
   describe('FUTF — French accent in owner name (latin1 round-trip)', () => {
     it('decodes latin1 owner name to unicode', () =>
       expect(tcRecords.get('FUTF')?.owner.name).toBe('Hervé Côté'));
+  });
+});
+
+const CASA_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'au-casa');
+const CASA_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'au-casa.yaml');
+
+const casaFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(CASA_FIXTURES, 'input', filename));
+
+let casaRecords: Map<string, Aircraft>;
+let casaStats: { total: number; ok: number; failed: number; skipped: number };
+
+beforeAll(async () => {
+  const config = loadSourceConfig(CASA_CONFIG_PATH);
+  const files = new Map([['acrftreg', casaFixtureBuffer('acrftreg.csv')]]);
+  const result = await translate(config, files);
+  casaRecords = result.records;
+  casaStats = result.stats;
+});
+
+describe('CASA fixture translation', () => {
+  it('translates all 11 fixture rows with no failures', () => {
+    expect(casaStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0 });
+    expect(casaRecords.size).toBe(11);
+  });
+
+  describe('22A — Cirrus SR22, single-engine piston, valid', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('22A')!;
+    });
+
+    it('prefixes Mark with VH-', () => expect(r.registration).toBe('VH-22A'));
+    it('uses source_id = Mark suffix', () => expect(r.source_id).toBe('22A'));
+    it('has source au-casa and country AU', () => {
+      expect(r.source).toBe('au-casa');
+      expect(r.country).toBe('AU');
+    });
+    it('maps Full Registration to valid', () => expect(r.status).toBe('valid'));
+    it('maps Power Driven Aeroplane + 1 engine to fixed-wing-single-engine', () =>
+      expect(r.airframe_type).toBe('fixed-wing-single-engine'));
+    it('maps Piston engine to reciprocating', () => expect(r.engine.type).toBe('reciprocating'));
+    it('preserves ICAO type designator', () => expect(r.icao_type_code).toBe('SR22'));
+    it('parses DD/MM/YYYY date to ISO format', () => {
+      expect(r.certification_date).toBe('2026-04-15');
+      expect(r.last_action_date).toBe('2026-04-15');
+    });
+    it('leaves CASA-not-published fields null', () => {
+      expect(r.icao_hex).toBeNull();
+      expect(r.airworthiness_date).toBeNull();
+      expect(r.cruise_speed_ktas).toBeNull();
+      expect(r.engine.horsepower).toBeNull();
+      expect(r.engine.thrust_lbs).toBeNull();
+      expect(r.category).toBeNull();
+      expect(r.build_certification).toBeNull();
+      expect(r.operating_environment).toBeNull();
+      expect(r.year_manufactured).toBe(2025);
+    });
+    it('captures owner name and drops PII (street/suburb/postcode)', () => {
+      expect(r.owner.name).toBe('CIRRUS DESIGN CORPORATION');
+      expect(r.owner.kind).toBeNull();
+      expect(r).not.toHaveProperty('regholdadd1');
+      expect(r).not.toHaveProperty('regholdSuburb');
+      expect(r).not.toHaveProperty('regholdPostcode');
+    });
+    it('captures operator name (same as owner here) and drops PII', () => {
+      expect(r.operator.name).toBe('CIRRUS DESIGN CORPORATION');
+      expect(r.operator.kind).toBeNull();
+      expect(r).not.toHaveProperty('regopadd1');
+      expect(r).not.toHaveProperty('regopSuburb');
+    });
+    it('has no IDERA party set', () => expect(r.idera_authorised_party).toBeNull());
+  });
+
+  describe('22B — Robinson R22 single-engine helicopter', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('22B')!;
+    });
+    it('maps Rotorcraft + 1 engine to rotorcraft', () =>
+      expect(r.airframe_type).toBe('rotorcraft'));
+    it('maps Piston engine to reciprocating', () => expect(r.engine.type).toBe('reciprocating'));
+    it('maps single engine count', () => expect(r.engine.count).toBe(1));
+  });
+
+  describe('4QP — Bell 429, twin-turboshaft helicopter', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('4QP')!;
+    });
+    it('maps Rotorcraft to rotorcraft regardless of engine count', () =>
+      expect(r.airframe_type).toBe('rotorcraft'));
+    it('maps Turboshaft to turbo-shaft', () => expect(r.engine.type).toBe('turbo-shaft'));
+    it('maps twin engine count', () => expect(r.engine.count).toBe(2));
+  });
+
+  describe('8BB — glider, no engine', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('8BB')!;
+    });
+    it('maps Glider airframe to glider', () => expect(r.airframe_type).toBe('glider'));
+    it('maps Not Applicable engine to null type', () => expect(r.engine.type).toBeNull());
+    it('reports zero engines', () => expect(r.engine.count).toBe(0));
+  });
+
+  describe('84D — Motor-Glider', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('84D')!;
+    });
+    it('maps Motor-Glider airframe to glider', () => expect(r.airframe_type).toBe('glider'));
+    it('still maps the auxiliary engine type', () => expect(r.engine.type).toBe('reciprocating'));
+  });
+
+  describe('83R — Manned Free Balloon', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('83R')!;
+    });
+    it('maps Manned Free Balloon to balloon', () => expect(r.airframe_type).toBe('balloon'));
+    it('records owner.country=AU when regholdCountry=Australia', () =>
+      expect(r.owner.country).toBe('Australia'));
+  });
+
+  describe('JRW — Airship (rare; CASA register has only one)', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('JRW')!;
+    });
+    it('maps Airship to blimp (closest canonical enum)', () =>
+      expect(r.airframe_type).toBe('blimp'));
+  });
+
+  describe('82M — RPA - Powered Lift (drone, no canonical UAV enum)', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('82M')!;
+    });
+    it('returns null airframe rather than inventing one', () => expect(r.airframe_type).toBeNull());
+    it('still records electric engine type for RPA', () => expect(r.engine.type).toBe('electric'));
+    it('keeps ICAO type code if published', () => expect(r.icao_type_code).toBe('ZZZZ'));
+  });
+
+  describe('ALR — SUSPENDED registration status', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('ALR')!;
+    });
+    it('maps regType=SUSPENDED to restricted status', () => expect(r.status).toBe('restricted'));
+  });
+
+  describe('86L — Bell 429 with IDERA party set (Westpac Banking)', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('86L')!;
+    });
+    it('captures the IDERA authorised party verbatim', () =>
+      expect(r.idera_authorised_party).toBe('WESTPAC BANKING CORPORATION'));
+  });
+
+  describe('8EA — twin turbofan, foreign-country owner (Ireland)', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = casaRecords.get('8EA')!;
+    });
+    it('maps Power Driven Aeroplane + 2 engines to fixed-wing-multi-engine', () =>
+      expect(r.airframe_type).toBe('fixed-wing-multi-engine'));
+    it('maps Turbofan to turbo-fan', () => expect(r.engine.type).toBe('turbo-fan'));
+    it('records foreign owner country (Ireland)', () => expect(r.owner.country).toBe('Ireland'));
   });
 });
 
@@ -655,6 +834,8 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
       expect(r.airworthiness_date).toBe('2025-05-23');
       expect(r.expiration_date).toBe('2026-05-26');
       expect(r.last_action_date).toBe('2022-04-22');
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.idera_authorised_party).toBeNull();
     });
 
     it('PH-AKA — Airbus A330, two turbofans, large aeroplane', () => {
