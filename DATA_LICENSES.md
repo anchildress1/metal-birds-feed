@@ -266,14 +266,16 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Transportstyrelsen — Swedish Transport Agency
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Status:** Future — permission request sent, awaiting reply (**leans Excluded** if no reply by 2026-06-04 — see below)
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
 - **Source URL:** https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg
-- **Bulk download URL:** TBD (search-only interface; bulk pattern unverified pending reply)
-- **License:** Pending verification. Swedish public-sector data generally falls under EU PSI Directive principles, with reuse permitted under attribution; Transportstyrelsen-specific terms unverified.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed the register is **search-only** (no CSV/PDF/JSON dump on `transportstyrelsen.se` and no listing on `dataportal.se` for the aircraft register). Pattern matches Italy ENAC and Iceland ICETRA: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
+- **License:** Pending verification. Swedish public-sector data is bound by the EU PSI Directive baseline (reuse permitted under attribution), but Transportstyrelsen has not published an open-data declaration for the aircraft register. Unlike its Nordic neighbour Finland (Traficom publishes the equivalent register under CC BY 4.0), Sweden has not made the same declaration.
+- **Update cadence:** TBD (no published artifact has a refresh schedule)
+- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se` (general aviation inbox). Register-specific desk `lfr@transportstyrelsen.se` surfaced 2026-05-09 — preferred address for any follow-up. Named register staff also surfaced for cold-call escalation: Magdalena Forssén, Christer Larsson, Fredrik Wallin (phone +46 771 503 503). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
+
+**Note for the eventual follow-up email (after 2026-06-04):** lead with the Finland Traficom comparable — neighbouring Nordic agency that publishes the equivalent register under CC BY 4.0 — and the EU PSI Directive baseline. Both are clean, public reference points.
 
 ---
 
