@@ -581,11 +581,11 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## ICETRA — Icelandic Transport Authority (Samgöngustofa)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found despite portal hunt)
 - **Source URL:** https://island.is/en/aircraft-registry
-- **Bulk download URL:** TBD (searchable database + PDF per avcodes)
-- **License:** Pending verification (Nordic open-data norms generally permissive; specific terms not surfaced).
-- **Update cadence:** TBD
+- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed the register page is **search-only** (by TF- number or owner name); `icetra.is/aviation/aircraft/register` redirects to the same island.is search interface. Iceland has no obvious central open-data catalog (no `data.gov.is` discoverable) and the aircraft register is not surfaced anywhere as a downloadable artifact. Pattern matches Italy ENAC: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
+- **License:** Pending verification. island.is general policy is GDPR/privacy-focused — no aircraft-register-specific license declaration found. Nordic open-data norms generally permissive (Norway uses NLOD, Denmark uses CC BY) but Iceland-specific terms not declared anywhere we could find.
+- **Update cadence:** TBD (no published artifact has a refresh schedule)
 - **Permission email:** Sent 2026-05-05 to `samgongustofa@samgongustofa.is`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
