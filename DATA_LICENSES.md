@@ -247,12 +247,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Luftfartstilsynet — Civil Aviation Authority of Norway
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Classification:** Unknown (verified 2026-05-09 — `data.norge.no` dataset listed with **"Public access"** tag but the **License field is empty**; no explicit license declaration found, so we cannot claim NLOD without confirmation)
 - **Source URL:** https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/
-- **Bulk download URL:** TBD (PDF report linked from the page; bulk pattern unverified pending reply)
-- **License:** Pending verification. Norwegian public-sector data is generally under [NLOD (Norwegian License for Open Government Data)](https://data.norge.no/nlod/en/2.0), broadly equivalent to CC BY 4.0; Luftfartstilsynet-specific terms unverified.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `postmottak@caa.no` (general inbox; no register-specific desk surfaced publicly). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Bulk download URL:** https://data.caa.no/nlr/norgesluftfartoyregister.json (direct JSON, no auth required; verified via `data.norge.no` dataset listing 2026-05-09)
+- **License:** Pending verification. `data.norge.no` tags the dataset **"Public access"** but the License field is empty. Metadata also contains a contradiction: `isAccessibleForFree: false` despite the public-access tag. Norwegian public-sector data generally falls under [NLOD (Norwegian License for Open Government Data)](https://data.norge.no/nlod/en/2.0), broadly equivalent to CC BY 4.0, but Luftfartstilsynet has not made that declaration explicit on the dataset page. Stays Unknown until reply.
+- **Update cadence:** Daily at 16:00 Oslo time (per `data.norge.no` dataset metadata)
+- **Permission email:** Sent 2026-05-05 to `postmottak@caa.no` (general inbox). Register-specific desk `nlr@caa.no` surfaced 2026-05-09 — preferred address for any follow-up. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---

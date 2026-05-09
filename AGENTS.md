@@ -43,6 +43,14 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - README sources table + license-matrix summary table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append.
 - New scalar/compound transform = 3 places simultaneously or loader rejects: enum in `src/types/config.ts` (`ScalarTransformName`/`CompoundTransformName`) + handler in `src/transforms.ts` + allowlist in `src/config/loader.ts`.
 
+### Research-first rule
+
+- **Exhaust all research options before sending the first contact email.** Hunt national open-data portals (CKAN/Aporta/data.gov.\* listings), register pages, ToS / disclaimer text, and any public license declarations. Only send the permission email once research is genuinely exhausted and classification is still Unknown or under-verified.
+- **Never send a follow-up or clarifier before the 30-day fallback window expires.** A second email asking the same question is a duplicate request — agencies treat it as noise and it does not earn a faster reply.
+- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (detail entry) + `README.md` (sources row) + `docs/license-matrix.md` (summary row + detail block if one exists) + `docs/source-onboarding-checklist.md` (in-flight row, including any register-specific contact surfaced for the eventual follow-up).
+- After recon on an already-emailed agency: update docs, move on to the next source. Wait until the original 30-day timeline expires before sending anything else to that agency.
+- Exception — surfacing a new fact materially changes the ask (not "please confirm what we already asked"). Rare. Default is no.
+
 ## Engine extension points (use, don't reinvent)
 
 - Spreadsheet sources: `format: csv|ods|xlsx` in source YAML. `csv` → `csv-parse`; `ods`/`xlsx` → `hucre`.
