@@ -279,12 +279,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## AFAC — Mexican Federal Civil Aviation Agency (Agencia Federal de Aviación Civil)
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Status:** Future — permission request sent, awaiting reply (**leaning Excluded** pending AFAC confirmation)
+- **Classification:** Unknown (verified 2026-05-09 — flagged as worst-case among the recon batch)
 - **Source URL:** https://www.gob.mx/afac
-- **Bulk download URL:** TBD (no canonical public register URL surfaced; question included in permission request)
-- **License:** Pending verification.
-- **Update cadence:** TBD
+- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed `portal-de-servicios.afac.gob.mx` is a **login-walled** user-account portal (no public read interface), and `datos.gob.mx` searches do not surface the Registro Aeronáutico Mexicano (RAM). The register is governed by the [Reglamento del Registro Aeronáutico Mexicano](http://www.ordenjuridico.gob.mx/Documentos/Federal/html/wo88684.html).
+- **License:** Pending verification. Third-party sources (e.g., l2baviation) describe **per-record access at ~$10 USD per search** under the RAM Reglamento. Could not confirm on AFAC's own documentation — could be describing certified legal extracts (visure-equivalent) rather than basic public access. If AFAC reply confirms a fee-gated model, **this flips to Excluded** (same exclusion pattern as UK CAA G-INFO + Israel CAAI). Held at Unknown until primary-source confirmation.
+- **Update cadence:** TBD (no published artifact has a refresh schedule)
 - **Permission email:** Sent 2026-05-05 to `tramites@afac.gob.mx`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
