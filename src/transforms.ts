@@ -57,6 +57,15 @@ const dateYyyySlashOrNull = (value: string): string | null => {
   return validateAndFormatYMD(v.slice(0, 4), v.slice(5, 7), v.slice(8, 10));
 };
 
+// CASA (and the broader Commonwealth-English convention) writes dates as DD/MM/YYYY.
+// Distinct transform from `date_yyyy_slash_or_null` to preserve unambiguous parsing —
+// "01/02/2026" is February 1 here, January 2 in the YYYY-leading variant if reordered.
+const dateDdSlashOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length !== 10 || !/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return null;
+  return validateAndFormatYMD(v.slice(6, 10), v.slice(3, 5), v.slice(0, 2));
+};
+
 // Accepts an ISO 8601 date or datetime string and returns just the YYYY-MM-DD date
 // portion. Anything malformed returns null. NL ILT publishes dates as full ISO datetimes
 // in TZ-shifted form (e.g., "2016-02-09T05:00:00.000Z" for a 2016-02-09 record); this
@@ -120,6 +129,25 @@ const nlIltRegistrationOrNull = (value: string): string | null => {
   return v;
 };
 
+// CASA's `Mark` column carries only the suffix (e.g., "22A"); the canonical
+// registration prepends "VH-" to form the standard Australian display registration.
+const casaFullRegistration = (value: string): string | null => {
+  const v = value.trim().toUpperCase();
+  if (v.length === 0) return null;
+  return `VH-${v}`;
+};
+
+// CASA uses literal sentinel strings for uninstalled engines instead of leaving the
+// cells blank. Collapse those to null so gliders/balloons don't surface fake engine
+// manufacturer/model text in the canonical record.
+const casaEngineDetailOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length === 0 || v === 'AIRCRAFT NOT FITTED WITH ENGINE' || v === 'NOT APPLICABLE') {
+    return null;
+  }
+  return v;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -129,6 +157,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   float_or_null: floatOrNull,
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
+  date_dd_slash_or_null: dateDdSlashOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,
@@ -136,6 +165,8 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   faa_cert_class: faaCertClass,
   tc_full_registration: tcFullRegistration,
   nl_ilt_registration_or_null: nlIltRegistrationOrNull,
+  casa_full_registration: casaFullRegistration,
+  casa_engine_detail_or_null: casaEngineDetailOrNull,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
@@ -194,9 +225,37 @@ const nlIltAirframe = (values: string[]): string | null => {
   return null;
 };
 
+// Maps CASA's `Airframe` + `engnum` columns to a canonical `airframe_type`.
+//
+// - Glider / Motor-Glider → glider (motor-glider is structurally a glider with auxiliary
+//   power; canonical schema does not differentiate).
+// - Manned Free Balloon → balloon; Airship → blimp (closest enum match).
+// - Rotorcraft → rotorcraft.
+// - Power Driven Aeroplane disambiguates single- vs multi-engine via engnum; non-numeric
+//   or zero engnum returns null rather than guessing.
+// - "RPA - *" rows describe Remotely Piloted Aircraft (drones); canonical schema lacks a
+//   UAV enum so the engine emits the record without an airframe classification rather
+//   than inventing one.
+const casaAirframe = (values: string[]): string | null => {
+  const airframe = values[0]?.trim() ?? '';
+  const engnumRaw = values[1]?.trim() ?? '';
+
+  if (airframe === 'Glider' || airframe === 'Motor-Glider') return 'glider';
+  if (airframe === 'Manned Free Balloon') return 'balloon';
+  if (airframe === 'Airship') return 'blimp';
+  if (airframe === 'Rotorcraft') return 'rotorcraft';
+  if (airframe === 'Power Driven Aeroplane') {
+    const n = Number.parseInt(engnumRaw, 10);
+    if (Number.isNaN(n) || n < 1) return null;
+    return n === 1 ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
+  }
+  return null;
+};
+
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
   tc_airframe: tcAirframe,
   nl_ilt_airframe: nlIltAirframe,
+  casa_airframe: casaAirframe,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

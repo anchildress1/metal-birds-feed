@@ -7,9 +7,9 @@
 
 </div>
 
-Translates national aviation registries (FAA, Transport Canada, NL ILT, and additional
-sources) into a single normalized JSON schema stored in Cloudflare R2 for O(1)
-tail-number and ICAO hex lookups. Inspired by
+Translates national aviation registries (FAA, Transport Canada, NL ILT, CASA Australia,
+and additional sources) into a single normalized JSON schema stored in Cloudflare R2 for
+O(1) tail-number and ICAO hex lookups. Inspired by
 [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + operator-private R2.
@@ -124,7 +124,7 @@ to populate that source alone. Rows are ordered alphabetically by country.
 | Source                                         | Country           | Status                                                                                                                                        | Bulk download                                                                                                                                                                                      | License (CC.1)                                                                                                                                                 |
 | ---------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ANAC Argentina — `ar-anac` _(future)_          | Argentina         | Future — permission request sent 2026-05-05 (awaiting reply; follow-up 2026-06-04, fallback applies)                                          | [geo.anac.gob.ar](https://geo.anac.gob.ar/afectacion)                                                                                                                                              | Unknown                                                                                                                                                        |
-| CASA — `au-casa` _(future)_                    | Australia         | Future — no email needed (Open)                                                                                                               | [services.casa.gov.au/CSV/acrftreg.csv](https://services.casa.gov.au/CSV/acrftreg.csv)                                                                                                             | Open — CC BY 4.0 (both bulk + lookup, attribution req)                                                                                                         |
+| CASA — `au-casa`                               | Australia         | ✅ Live                                                                                                                                       | [services.casa.gov.au/CSV/acrftreg.csv](https://services.casa.gov.au/CSV/acrftreg.csv)                                                                                                             | Open — CC BY 4.0 (both bulk + lookup, attribution req)                                                                                                         |
 | Austro Control — `at-austrocontrol` _(future)_ | Austria           | Future — permission request sent 2026-05-05 (awaiting reply; follow-up 2026-06-04, fallback applies)                                          | [austrocontrol.at](https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/search_online)                                                                                       | Unknown                                                                                                                                                        |
 | BCAA — `bs-bcaa` _(future)_                    | Bahamas           | Future — permission request sent 2026-05-05 (awaiting reply; follow-up 2026-06-04, fallback applies)                                          | [caabahamas.com/registers](https://caabahamas.com/registers/)                                                                                                                                      | Unknown                                                                                                                                                        |
 | BCAA / DGTA — `be-dgta` _(future)_             | Belgium           | Future — permission request sent 2026-05-05 (awaiting reply; follow-up 2026-06-04, fallback applies)                                          | [es.mobilit.fgov.be](https://es.mobilit.fgov.be/aircraft-registry/main/search?lang=en)                                                                                                             | Unknown                                                                                                                                                        |
@@ -212,13 +212,19 @@ Aircraft Registry data published by the FAA at [registry.faa.gov](https://regist
 
 ## Adding a New Registry Source
 
-1. Classify the license under PRD CC.1 (Open / Personal-use / Restrictive / Unknown). Restrictive sources are excluded.
-2. For Personal-use or Unknown sources, send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)). Wait for reply or 30-day timeout. Record outcome in `DATA_LICENSES.md`.
-3. Create `sources/<source-id>.yaml` following the mapping-config schema. Declare `format:` (`csv` | `ods` | `xlsx`) and, if the upstream URL changes per refresh, `download.discover_url:`.
-4. Add acceptance fixtures in `fixtures/<source-id>/`.
-5. Update `DATA_LICENSES.md` with classification, permitted uses, and reply (verbatim if any).
+[AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
 
-The translation engine requires no changes. The downloader and parser dispatch are extended only when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3).
+1. Classify the license under PRD CC.1 (Open / Personal-use / Restrictive / Unknown). Restrictive sources are excluded.
+2. For Personal-use or Unknown sources, send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)). The 30-day public-record fallback applies to Unknown only — Personal-use needs an affirmative reply (silence ≠ permission). Record outcome in `DATA_LICENSES.md`.
+3. New source onboarding touches **all five surfaces** or the source is incomplete:
+   - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
+   - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
+   - `DATA_LICENSES.md` — classification, permitted uses, attribution wording, reply text (verbatim).
+   - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
+   - `docs/license-matrix.md` summary row — same alphabetical order.
+4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
+
+The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms).
 
 ## License
 

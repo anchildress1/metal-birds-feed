@@ -18,12 +18,12 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### ✅ Done — no further action
 
-| Source            | License                                           | How handled               |
-| ----------------- | ------------------------------------------------- | ------------------------- |
-| FAA               | US public domain                                  | Live (phase 1)            |
-| Transport Canada  | GC Open Data Licence Agreement (verbatim notices) | Live (phase 2)            |
-| ILT (Netherlands) | CC-0                                              | Live (phase 3)            |
-| CASA (Australia)  | CC BY 4.0                                         | Verified, no email needed |
+| Source            | License                                           | How handled    |
+| ----------------- | ------------------------------------------------- | -------------- |
+| FAA               | US public domain                                  | Live (phase 1) |
+| Transport Canada  | GC Open Data Licence Agreement (verbatim notices) | Live (phase 2) |
+| ILT (Netherlands) | CC-0                                              | Live (phase 3) |
+| CASA (Australia)  | CC BY 4.0                                         | Live (phase 4) |
 
 ### 🟡 In flight — waiting on reply
 

@@ -134,7 +134,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CASA — Civil Aviation Safety Authority of Australia
 
-- **Status:** Planned (Future R4.1) — no email needed (Open)
+- **Status:** ✅ Live (phase 4) — shipped 2026-05-08
 - **Classification:** Open
 - **Source URL:** https://www.casa.gov.au/aircraft/aircraft-registration/data-files-registered-aircraft
 - **Bulk download URL:** https://services.casa.gov.au/CSV/acrftreg.csv (also `acrftreg.zip`)
@@ -147,6 +147,8 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Permission email:** N/A (Open).
 - **Reply (verbatim):** N/A
 - **Reclassification note (2026-05-05):** Previously classified Personal-use (CC BY-NC 4.0) on a cautious reading of the casa.gov.au copyright page. Re-research differentiating bulk vs. lookup surfaces confirms both are CC BY 4.0 — the BY-NC variant exists only on certain unrelated CASA PDFs (training manuals, etc.) where it is declared per-document. Reclassified to Open.
+- **Field-coverage gaps (`null`-rather-than-invent per PRD R2.5 / R4.1):** CASA's CSV does not publish: Mode-S hex (`icao_hex`), Certificate of Airworthiness date (`airworthiness_date` — only the C of A _category_ via `CoAcata`), aircraft category enum (`category`), build certification, operating environment, engine horsepower / thrust, owner kind, operator kind, cruise speed. CASA does publish ICAO type designator (`ICAOtypedesig` → `icao_type_code`), which solves part of the FAA-side Open Question.
+- **Canonical schema additions driven by CASA:** This source first surfaced an explicit `regopName` separate from `regholdname`, plus the Cape Town Convention `IDERA_Authorised_Party` field. Both were added to the canonical schema (`operator: { name, kind, state, country }`, `idera_authorised_party: string | null`) rather than dropped at the mapping config — see AGENTS.md "no silent loss of upstream information."
 
 ---
 

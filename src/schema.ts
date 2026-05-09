@@ -78,6 +78,8 @@ export const OwnerSchema = z.object({
 });
 export type Owner = z.infer<typeof OwnerSchema>;
 
+export const OperatorSchema = OwnerSchema;
+
 export const EngineSchema = z.object({
   manufacturer: z.string().nullable(),
   model: z.string().nullable(),
@@ -108,6 +110,8 @@ export const AircraftSchema = z.object({
   operational_classes: z.array(z.string()),
   engine: EngineSchema,
   owner: OwnerSchema,
+  operator: OperatorSchema,
+  idera_authorised_party: z.string().nullable(),
   certification_date: z.string().nullable(),
   airworthiness_date: z.string().nullable(),
   expiration_date: z.string().nullable(),
