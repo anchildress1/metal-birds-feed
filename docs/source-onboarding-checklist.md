@@ -77,6 +77,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CASA PNG                  | 2026-05-05                           | 2026-06-04 | info@casapng.gov.pg                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | SCAA Seychelles           | 2026-05-05                           | 2026-06-04 | secretariat@scaa.sc                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAS Singapore            | 2026-05-05                           | 2026-05-26 | webform (3–15 business-day SLA)                                                              | **No** (Personal-use; silence ≠ permission)               |
+| Dopravný úrad Slovakia    | 2026-05-09                           | 2026-06-08 | register.lietadiel@nsat.sk (register-specific desk; license confirmation only)               | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAASL Sri Lanka           | 2026-05-05                           | 2026-06-04 | daw@caa.lk (cc scaiaras@caa.lk; Mr. Ratnayake, Director Aircraft Registration)               | **Yes** (Unknown; public-record fallback after follow-up) |
 | CASAS Suriname            | 2026-05-05                           | 2026-06-04 | casasinfo@casas.sr (Cloudflare-decoded; verify if bounces)                                   | **Yes** (Unknown; public-record fallback after follow-up) |
 | Transportstyrelsen Sweden | 2026-05-05                           | 2026-06-04 | luftfart@transportstyrelsen.se (sent); `lfr@transportstyrelsen.se` register-specific — use for follow-up | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -161,7 +162,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Country              | Agency         | Register URL                                                                                                        | Language                 |
 | -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
 | Ukraine              | SAAU           | [avia.gov.ua](https://avia.gov.ua/State-Civil-Aircraft-Register-of-Ukraine/)                                        | Ukrainian                |
-| Slovakia             | NSA Slovakia   | [nsat.sk](https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/)     | Slovak                   |
 | Serbia               | CAD Serbia     | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry)                                                     | Serbian (English UI)     |
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |

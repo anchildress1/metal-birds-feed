@@ -436,6 +436,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## Dopravný úrad — Slovak Transport Authority (NSAT — Národný supervízny orgán)
+
+- **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.sk; just asking which license applies)
+- **Classification:** Unknown — strongly leaning Open (CC BY 4.0 inferred from data.gov.sk portal default, not directly verified)
+- **Source URL:** https://data.gov.sk/dataset/register-lietadiel (portal listing) + https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/ (NSAT register page) + https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/ (overview)
+- **Bulk download URL:** Listed on data.gov.sk dataset page (PDF format per third-party description). Dataset page is JS-rendered SPA — direct file URL not extractable from server response without browser execution. Will confirm with NSAT in their reply.
+- **License:** Pending verification. data.gov.sk portal default for Slovak public-sector data is CC BY 4.0 (search filter confirms). Strongly inferred Open per portal norms but the dataset page renders client-side so direct license tag was not extractable; email asks for explicit confirmation.
+- **Update cadence:** TBD (file refresh frequency not stated in surfaced metadata)
+- **Format note (engineering):** Bulk file is **PDF** per third-party description. Same blocker as Spain AESA, Luxembourg DAC, Croatia CCAA, Hungary KKM — **fifth** use case for the PDF parser path. PDF parser priority continues to climb.
+- **Permission email:** Sent 2026-05-09 to `register.lietadiel@nsat.sk` (register-specific desk; phone 0918 382 016). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. NSAT physical address: Letisko M.R. Štefánika, 823 05 Bratislava. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case).
+- **Reply (verbatim):** _pending_
+
+---
+
 ## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
 
 - **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
