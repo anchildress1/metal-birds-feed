@@ -63,6 +63,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | DGAC France               | 2026-05-05                           | 2026-06-04 | immat@aviation-civile.gouv.fr                                                                | **No** (Personal-use; silence ≠ permission)               |
 | GCAA Georgia              | 2026-05-05                           | 2026-06-04 | office@gcaa.ge (English per English-first strategy)                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGAC Guatemala            | 2026-05-09                           | 2026-06-08 | registro.aeronautico@dgac.gob.gt (register-specific desk)                                    | **Yes** (Unknown; public-record fallback after follow-up) |
+| OFNAC Haiti               | 2026-05-09                           | 2026-06-08 | division.ais@ofnac.gouv.ht (only OFNAC email surfaced; body asks for forward to register dept) | **Yes** (Unknown; public-record fallback after follow-up) |
 | KKM Hungary               | 2026-05-09                           | 2026-06-08 | lfhf@ekm.gov.hu (cc caa@ekm.gov.hu; Légügyi Felügyeleti Hatósági Főosztály)                  | **Yes** (Unknown; public-record fallback after follow-up) |
 | ICETRA Iceland            | 2026-05-05                           | 2026-06-04 | samgongustofa@samgongustofa.is                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGCA India                | 2026-05-05                           | 2026-06-04 | rkanand.dgca@nic.in, mdevula.dgca@nic.in (DDGs Airworthiness)                                | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -84,6 +85,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAA Moldova               | 2026-05-09                           | 2026-06-08 | info@caa.gov.md (note: domain differs from `caa.md` website — verify if bounces)             | **Yes** (Unknown; public-record fallback after follow-up) |
 | MCAA Mongolia             | 2026-05-09                           | 2026-06-08 | info@mcaa.gov.mn (general Authority inbox; stale PDF, refresh cadence requested)             | **Yes** (Unknown; public-record fallback after follow-up) |
 | ACG Montenegro            | 2026-05-09                           | 2026-06-08 | acv@caa.me (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
+| IACM Mozambique           | 2026-05-09                           | 2026-06-08 | info@iacm.gov.mz (cc geral@iacm.gov.mz)                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA NZ                    | 2026-05-05                           | 2026-06-04 | info@caa.govt.nz                                                                             | **No** (Personal-use; silence ≠ permission)               |
 | Luftfartstilsynet Norway  | 2026-05-05                           | 2026-06-04 | postmottak@caa.no (sent); `nlr@caa.no` register-specific — use for follow-up                 | **Yes** (Unknown; public-record fallback after follow-up) |
 | PCAA Pakistan             | 2026-05-05                           | 2026-06-04 | umair.sufyan@caapakistan.com.pk (named individual)                                           | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -158,8 +160,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country            | Agency    | Register URL                                                                                                                                         | Language                |
 | ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                     | French / Haitian Creole |
-| Mozambique         | IACM      | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                 | Portuguese              |
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 

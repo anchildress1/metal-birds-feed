@@ -634,6 +634,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## IACM Mozambique — Instituto de Aviação Civil de Moçambique
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable; no canonical public consultation URL surfaced)
+- **Source URL:** https://www.iacm.gov.mz/ (institutional landing); register-specific page not surfaced during recon
+- **Bulk download URL:** **None published.** No bulk file or consultation portal discoverable from public-facing IACM materials.
+- **License:** Pending verification. No explicit license declaration found.
+- **Update cadence:** TBD
+- **Format note (engineering):** No bulk file, no consultation portal — IACM has the weakest public discoverability of any African agency recon'd so far. Yes-reply must include both license clearance AND publication channel.
+- **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL search returned only technical regulatory documents (MOZCATS standards), not the register itself. Pass 2: contact discovery + attempted public-page surface — no consultation URL found.
+- **Permission email:** Sent 2026-05-09 to `info@iacm.gov.mz` (general inbox) cc `geral@iacm.gov.mz`. Phone +258 82 3021250; address Alameda do Aeroporto, C. Postal 227, Maputo. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + canonical public URL. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## ACG Montenegro — Agencija za civilno vazduhoplovstvo Crne Gore
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
@@ -746,6 +761,23 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Format note (engineering):** No bulk file. Likely HTML scrape if AAC reply confirms permission without offering structured data.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check (no `dados.gov.cv` aviation portal) + contact discovery.
 - **Permission email:** Sent 2026-05-09 to `info@aac.cv` (general AAC inbox; phone +238 260 34 30; address Achada Grande Frente, Praia CP371). Email cited Latvia CAA, Lithuania TKA as peer comparables and asked for license + bulk channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## OFNAC Haiti — Office National de l'Aviation Civile
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel; no general or registry-specific email surfaced publicly)
+- **Source URL:** https://ofnac.gouv.ht/ (institutional landing) + https://registreimm.net/aircraftSearchingView (consultation portal — separate domain, hosted by/for OFNAC)
+- **Bulk download URL:** **None published.** Consultation portal is search-only; no CSV/XLSX/PDF/JSON export.
+- **License:** Pending verification. No explicit license declaration on registry pages.
+- **Update cadence:** Third-party reference cites 2026-04-16 (recent at recon time) — register appears actively maintained despite domestic context.
+- **Format note (engineering):** No bulk file. Yes-reply must include both license and bulk channel.
+- **Operational context:** Haiti has been experiencing prolonged political instability and security challenges; response timelines may be impacted. Email acknowledges this and offers to suspend on request.
+- **Contact discoverability:** **Unusual** — OFNAC contact page lists only phones (+509 29102224, +509 29102226), fax (BP 1346), and physical address (11, Boulevard Toussaint Louverture). **No general inbox email published on the OFNAC site.** Only `division.ais@ofnac.gouv.ht` (Aeronautical Information Division) surfaced from third-party documents. Email asks for the correct correspondence channel.
+- **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: contact page fetch (no email visible) + targeted email search to surface `division.ais@`.
+- **Permission email:** Sent 2026-05-09 to `division.ais@ofnac.gouv.ht` (Aeronautical Information Division — only confirmed OFNAC email; body asks them to forward to register-responsible office). Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + correct correspondence channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
