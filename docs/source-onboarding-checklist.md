@@ -165,7 +165,7 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |
 | Latvia               | CAA            | [caa.gov.lv](https://www.caa.gov.lv/lv/gaisa-kugu-registrs)                                                         | Latvian                  |
 | Lithuania            | TKA            | [tka.lt](https://tka.lt/oro-transportas/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/?lang=en) | Lithuanian (English UI)  |
-| Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register)                                                | Estonian                 |
+| Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(recon done 2026-05-09 — Unknown; HTML scrape; awaiting send decision)** | Estonian                 |
 
 ### CJK / East Asian
 
