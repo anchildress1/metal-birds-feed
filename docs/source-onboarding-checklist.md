@@ -55,6 +55,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAAF Fiji                 | 2026-05-05                           | 2026-06-04 | info@caaf.org.fj                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGAC France               | 2026-05-05                           | 2026-06-04 | immat@aviation-civile.gouv.fr                                                                | **No** (Personal-use; silence ≠ permission)               |
 | GCAA Georgia              | 2026-05-05                           | 2026-06-04 | office@gcaa.ge (English per English-first strategy)                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| KKM Hungary               | 2026-05-09                           | 2026-06-08 | lfhf@ekm.gov.hu (cc caa@ekm.gov.hu; Légügyi Felügyeleti Hatósági Főosztály)                  | **Yes** (Unknown; public-record fallback after follow-up) |
 | ICETRA Iceland            | 2026-05-05                           | 2026-06-04 | samgongustofa@samgongustofa.is                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGCA India                | 2026-05-05                           | 2026-06-04 | rkanand.dgca@nic.in, mdevula.dgca@nic.in (DDGs Airworthiness)                                | **Yes** (Unknown; public-record fallback after follow-up) |
 | DKPPU Indonesia           | 2026-05-05                           | 2026-06-04 | produkaeronautika_dkuppu@dephub.go.id (cc info151@dephub.go.id)                              | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -161,7 +162,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Ukraine              | SAAU           | [avia.gov.ua](https://avia.gov.ua/State-Civil-Aircraft-Register-of-Ukraine/)                                        | Ukrainian                |
 | Bulgaria             | CAA            | [caa.bg](http://www.caa.bg/bg/category/300/17238)                                                                   | Bulgarian                |
 | Slovakia             | NSA Slovakia   | [nsat.sk](https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/)     | Slovak                   |
-| Hungary              | KKM            | [kozlekedesihatosag.kormany.hu](https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604)                     | Hungarian                |
 | Serbia               | CAD Serbia     | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry)                                                     | Serbian (English UI)     |
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |

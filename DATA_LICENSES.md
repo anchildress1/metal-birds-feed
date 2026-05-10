@@ -472,6 +472,22 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## Közlekedési Hatóság — Hungarian Transport Authority (Légügyi Felügyeleti Hatósági Főosztály — Air Supervision Authority Department)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found on the document page or surrounding materials)
+- **Source URL:** https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604 (document page; bilingual Hungarian/English)
+- **Bulk download URL:** Direct PDF on hash-stamped path, e.g. https://kozlekedesihatosag.kormany.hu/documents/66238/342548/2026.05.08.+%28Friss%C3%ADt%C3%A9s%29.pdf/765eb23b-d4c4-6713-ca89-05c92024e2f3?version=278.0&t=1778240402523&download=true (May 8, 2026 snapshot; 2.8 MB; "Frissítés" = "Update"). Filename pattern: `YYYY.MM.DD.+(Frissítés).pdf` — date-stamped per release.
+- **Update cadence:** **Near-daily** (business-day) — version history shows 278 versions since 2020-08-14 ≈ ~46 versions/year ≈ one update per business day. Most frequent of any agency recon'd to date.
+- **License:** Pending verification. No explicit license declaration on the document page or in surrounding materials; only descriptive tags ("lajstrom", "lajstromnyilvántartás", "légijármű adatbázis"). Document is a Hungarian government publication; default copyright attaches absent a permission grant.
+- **Format note (engineering):** Bulk file is **PDF** (bilingual Hungarian/English columns). Same blocker as Spain AESA, Luxembourg DAC, Croatia CCAA. PDF parser path is now justified by **four** use cases — moving up the engineering priority list.
+- **Register absent from data.gov.hu** (Hungarian open-data portal does not list it).
+- **PII status:** Per third-party review, the published list contains aircraft owner names and addresses — no GDPR pre-strip noted. Mapping config will need to drop owner/operator address fields per PRD CC.4 PII drop policy.
+- **Permission email:** Sent 2026-05-09 to `lfhf@ekm.gov.hu` (Légügyi Felügyeleti Hatósági Főosztály — Air Supervision Authority Department) cc `caa@ekm.gov.hu` (general CAA inbox). Note: `ekm.gov.hu` domain corresponds to Építési és Közlekedési Minisztérium (Ministry of Construction and Transport, parent ministry of the Transport Authority). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Phone +36 (1) 273-5525 / +36 (1) 373-1432; physical: 2220 Vecsés, Lincoln út 1; mailing: 1442 Budapest, Pf.: 89. Recent register-edit staff visible in PDF metadata: Csemniczky Kristóf (creator), Nyilas Tímea (last modified 2026-05-08). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
