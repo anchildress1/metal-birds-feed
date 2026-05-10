@@ -429,7 +429,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **License:** Pending verification. Site footer asserts _"© Copyright 2019. All Rights Reserved"_ — copyright + "All Rights Reserved" boilerplate. No explicit reuse permission declared.
 - **Update cadence:** Periodic (latest version dated 2026-04-20; cadence not stated explicitly)
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **eighth** use case for the PDF parser path.
-- **Permission email:** Sent 2026-05-10 to `caa@gov.mk` (general Agency inbox; site does not surface a register-specific desk). Phone +389 2 3 18 16 01; address Dame Gruev 1, 1000 Skopje. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** v1 sent 2026-05-10 to `caa@gov.mk` **bounced** (domain `gov.mk` does not exist — typo, should have been `caa.gov.mk` subdomain). v2 sent 2026-05-10 to `info@caa.gov.mk` (correct subdomain — general Agency inbox). Phone +389 2 3 18 16 01; address Dame Gruev 1, 1000 Skopje. Plain-text body per Option A (markdown stripped at send time). Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
@@ -544,20 +544,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
-## DGCA Lebanon — Directorate General of Civil Aviation (المديرية العامة للطيران المدني / Direction Générale de l'Aviation Civile)
+## CAA Lebanon — Civil Aviation Authority (الهيئة العامة للطيران المدني — successor to the Directorate General of Civil Aviation / DGCA)
 
-- **Status:** Future — permission request sent 2026-05-10, awaiting reply
-- **Classification:** Unknown (verified 2026-05-10 — two-pass recon; no public license declaration)
-- **Source URL:** https://www.lebcaa.com/a_r.shtml (legacy domain, register page) + https://www.dgca.gov.lb (current domain, JS-rendered institutional site)
-- **Bulk download URL:** None — register published as inline HTML list on `lebcaa.com/a_r.shtml`. No bulk channel discoverable. OD- registration prefix.
-- **License:** Pending verification. No explicit license declaration on either domain. lebcaa.com is the legacy domain (`.shtml` suffix, classic HTML); dgca.gov.lb is the current domain but contact information is JS-rendered and not surfaced via static fetch. Lebanon does not operate a national open-data portal in the EU/UK sense.
-- **Update cadence:** TBD — register page does not surface a "last updated" stamp.
-- **Format note (engineering):** **HTML scrape adapter** — fifth use case (alongside Estonia, Georgia, Montenegro, Kyrgyzstan). No bulk export, no PDF, no XLSX; only an inline HTML table on the legacy domain.
-- **Recon depth (two-pass):**
-  - **Pass 1:** Confirmed register URL on legacy `lebcaa.com`, no bulk download, only inline HTML; current domain `dgca.gov.lb` lacks a discoverable register page.
-  - **Pass 2:** DGCA contact page is JS-rendered; multiple searches across Lebanese government listings, ICAO state-letter directories, and aviation industry directories did not surface a verified email address. `info@dgca.gov.lb` selected as the standard ministry-style pattern; unverified.
-- **Operational context:** Lebanon's protracted political and economic crisis is acknowledged in the email body; the template includes a "suspend on request" clause if the agency would prefer not to engage at this time.
-- **Permission email:** Sent 2026-05-10 to `info@dgca.gov.lb` (best-guess pattern based on current ministry domain; unverified — if bounces, retry via `lebcaa.com` legacy domain or fall back to physical/diplomatic channel). Body explicitly asks for (1) license terms, (2) bulk channel if any, (3) correct correspondence channel — covering the unverified-email risk. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Status:** Future — permission request sent 2026-05-10 (v2 to new authority domain), awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — three-pass recon; no public license declaration)
+- **Source URL:** https://www.lebcaa.com/a_r.shtml (legacy DGCA domain — confirmed dead-dead per user) + https://caa.gov.lb (new authority domain, JS-rendered)
+- **Bulk download URL:** None known. Legacy DGCA register was inline HTML on `lebcaa.com/a_r.shtml`. New authority's canonical register URL not yet surfaced. OD- registration prefix.
+- **License:** Pending verification. No explicit license declaration on either domain.
+- **Update cadence:** TBD.
+- **Format note (engineering):** **HTML scrape adapter** assumed (matching legacy DGCA pattern); will revise based on reply if new authority publishes structured format.
+- **Operational restructure context:** Lebanon's civil aviation regulatory authority is being restructured. Per Lebanese MPWT announcements (May 2025) and MTV Lebanon reporting (July 2025), Captain Mohammad Aziz was appointed head of a new "General Authority of Civil Aviation" (الهيئة العامة للطيران المدني) replacing/succeeding the DGCA. The old `dgca.gov.lb` domain has no working email infrastructure (MX record is a domain-connect placeholder). The new domain `caa.gov.lb` has a real working mailserver (MX → `mail.caa.gov.lb` → 192.250.227.184; SPF properly configured via `mysecurecloudhost.com`).
+- **Recon depth (three-pass):**
+  - **Pass 1:** Confirmed register URL on legacy `lebcaa.com`, no bulk download.
+  - **Pass 2:** DGCA contact page JS-rendered; chose `info@dgca.gov.lb` as best-guess.
+  - **Pass 3 (after v1 bounce):** DNS recon revealed `dgca.gov.lb` MX is a placeholder (no mailserver); searches surfaced a successor authority on `caa.gov.lb` with live mail infrastructure. v2 sent to new domain.
+- **Permission email:** v1 sent 2026-05-10 to `info@dgca.gov.lb` **bounced** (server misconfigured — entire `dgca.gov.lb` domain has no working email). v2 sent 2026-05-10 to `info@caa.gov.lb` cc `contact@caa.gov.lb` (new authority domain; both addresses are educated guesses since the JS-rendered site does not surface contact info on static fetch, but DNS confirms the mail infrastructure is live). Plain-text body per Option A (markdown stripped at send time). Body explicitly asks for (1) confirmation that caa.gov.lb is the correct point of contact, (2) license terms, (3) canonical register URL, (4) any restrictions; includes wartime/crisis "suspend on request" clause. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
@@ -705,8 +706,8 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **License:** Pending verification. No explicit license declaration on the Registry pages.
 - **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
 - **Format note (engineering):** No bulk file exists. If IDAC reply confirms permission, would require establishing a new export channel via correspondence (potentially via datos.gob.do listing).
-- **Domain note:** Website is `idac.gob.do` (`.gob`); email is `info@idac.gov.do` (`.gov`). Email sent to both `.gov.do` and `.gob.do` variants for safety.
-- **Permission email:** Sent 2026-05-10 to `info@idac.gov.do` cc `dtac@idac.gov.do` cc `info@idac.gob.do` (general + technical + alt-domain). Phone +1 809-221-7909; address Ave. México Esq. 30 de Marzo, Santo Domingo. Email cited Latvia CAA, Lithuania TKA as peer comparables, and noted IDAC's existing presence on datos.gob.do as a potential publication channel. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Domain note:** Website is on `idac.gob.do` (`.gob` — Spanish-style government TLD); email is on `idac.gov.do` (`.gov` — English-style government TLD). The `.gob.do` mail domain does NOT accept email — confirmed by v1 bounce.
+- **Permission email:** v1 sent 2026-05-10 to `info@idac.gob.do` **bounced** (address couldn't be found — `.gob.do` does not host IDAC mailboxes). v2 sent 2026-05-10 to `info@idac.gov.do` cc `direccion@idac.gov.do`, `contacto@idac.gov.do` (all three valid IDAC inboxes per CANSO directory; note the `.gov.do` not `.gob.do` distinction). Phone +1 809-221-7909; address Ave. México Esq. 30 de Marzo, Santo Domingo. Plain-text body per Option A (markdown stripped at send time). Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
@@ -1196,6 +1197,30 @@ These are commercial registration services for foreign aircraft owners. They mak
 - **Why excluded:** This is not a "permission could unlock the data" scenario. The LBA is statutorily prohibited from publishing the register at all, and only releases data on a per-record basis to parties who can demonstrate a legal claim. There is no "yes" they could meaningfully grant for bulk redistribution. Sending a permission email would only confirm what their site already states.
 - **Contact (for reference, not for permission ask):** RefT4@lba.de (Department T4)
 - **Revisit condition:** German aviation register reclassified as public under future amendments to the Luftverkehrsgesetz or German data-protection law.
+
+---
+
+## Japan — JCAB (Japan Civil Aviation Bureau, MLIT 航空局) — Excluded
+
+- **Status:** ❌ Excluded
+- **Classification:** Excluded (fee-gated per-aircraft access; no bulk channel; explicit refusal-of-bulk clause)
+- **Source URL:** https://www.mlit.go.jp/koku/koku_tk1_000035.html (航空機登録原簿の謄本交付・閲覧請求 — Aircraft Registration Ledger Certificate Issuance / Consultation Request)
+- **Companion pages:** https://www.mlit.go.jp/koku/koku_tk1_000040.html (情報公開 — what they DO publish: aggregate counts only)
+- **License:** No bulk redistribution channel. MLIT publishes only **aggregate count statistics** (monthly/yearly XLSX of registered-aircraft counts by category/type) on the public 情報公開 page. The per-tail-number register (航空機登録原簿) is access-controlled:
+  > 航空機登録原簿謄本交付・閲覧ともに１通につき９７０円の手数料がかかります。
+  > (Both certificate issuance and consultation of the aircraft registration ledger require a ¥970 fee per record.)
+  >
+  > 大量の閲覧請求はお受けできない場合がありますので、事前にお問合せください。
+  > (Large-volume viewing requests may not be accepted; please inquire in advance.)
+  >
+  > コピーを取ることはできませんが、その場で写真撮影をすることはできます。
+  > (You cannot take copies, but you may photograph on the spot.)
+- **Recon depth (two-pass):**
+  - **Pass 1:** MLIT 統計・データ + 情報公開 pages confirmed the public surface is aggregate counts only (XLSX files like `001985680.xlsx` for 2026 February). No per-tail bulk download.
+  - **Pass 2:** Aircraft registration ledger consultation page confirmed ¥970-per-record fee, explicit refusal clause for bulk requests, no-copy restriction (photography only). Cross-checked data.go.jp and e-Gov data portal — the per-tail register is not catalogued under either. Third-party databases (JA Search, FlyTeam) maintain their own scraped versions, which speaks to the register being non-redistributable through official channels.
+- **Why excluded:** Three concurrent blockers — (1) ¥970-per-record fee (~$6 USD; ~$19,000 USD for ~3,000 JA-prefixed aircraft), (2) explicit "we may decline bulk requests" clause built into the procedure, (3) physical-only viewing with no-copy restriction (photography only on-site) — a regulatory framework that structurally cannot accommodate bulk redistribution. Same exclusion pattern as Germany LBA (statutorily non-public), Israel CAAI (fee + FOI-only), Romania AACR (€45/aircraft), UK G-INFO (paid + no-redistribute). A permission email is pointless — MLIT cannot grant what the procedure forbids them from providing in bulk form.
+- **Contact (for reference, not for permission ask):** 国土交通省航空局総務課航空機登録担当官 (MLIT Civil Aviation Bureau General Affairs Division, Aircraft Registration Officer), phone +81-3-5253-8111 (extension 48146). No email surfaced. Postal: 〒100-8918 東京都千代田区霞ヶ関2-1-3.
+- **Revisit condition:** MLIT publishes the per-tail register on data.go.jp or e-Gov data portal under an explicit open license (CC BY, CC0, JGL — Japan Government License); or Japan amends 航空法 (Civil Aeronautics Act) Article 8-2 to provide a bulk-redistribution channel. Re-evaluate annually.
 
 ---
 
