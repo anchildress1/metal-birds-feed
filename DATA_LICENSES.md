@@ -648,6 +648,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## DINACIA Uruguay — Dirección Nacional de Aviación Civil e Infraestructura Aeronáutica
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; bulk channel reported but not directly verified)
+- **Source URL:** https://www.dinacia.gub.uy/ (institutional landing); register-specific section unverified pending DINACIA reply
+- **Bulk download URL:** **Reported but not verified.** Third-party reference (l2baviation) indicates DINACIA publishes the register as XLSX downloadable from the "Aeronaves" section, but direct file URL not surfaced from accessible site content. Email asks for canonical URL confirmation.
+- **License:** Pending verification. No explicit license declaration on the site materials.
+- **Update cadence:** TBD
+- **Format note (engineering):** If reported XLSX bulk file is confirmed, format is **engine-native** (xlsx supported). No parser work needed if license + bulk URL clear together.
+- **Permission email:** Sent 2026-05-09 to `dinacia@dinacia.gub.uy` (general inbox) cc `certaero@dinacia.gub.uy` (certificate submissions — likely register-adjacent). Phone +598 2604 0408; address Av. Wilson Ferreira Aldunate 5519, Montevideo. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asks for bulk URL confirmation. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## UAEAC Colombia — Unidad Administrativa Especial de Aeronáutica Civil
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
