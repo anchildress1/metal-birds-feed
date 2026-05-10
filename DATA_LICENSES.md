@@ -409,16 +409,14 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Transpordiamet — Estonian Transport Administration
 
-- **Status:** Planned — pre-send recon done 2026-05-09; permission email **not yet sent**
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
 - **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
 - **Source URL:** https://transpordiamet.ee/ohusoidukite-register (Estonian-language page; English page at `transpordiamet.ee/en/vehicle-ship-airplane/aircraft-registration/aircraft-register` describes registration procedures only)
 - **Bulk download URL:** **HTML table inline on the register page.** Full register (~150 entries) is rendered as an HTML table with columns: Registration mark (ES-XXX) / Aircraft type / Serial number / Owner / Operator. No CSV/XLSX/PDF download. Pattern matches Georgia GCAA — HTML scrape required.
 - **License:** No declaration on the register page. **Register deliberately omitted from `andmed.eesti.ee`** (Estonia's national open-data portal). Transpordiamet publishes 5+ other datasets there (vehicles, traffic accidents, road register, public transport register, vehicle statistics) under the portal's explicit terms ("right to reuse and redistribute it for both commercial and non-commercial purposes"). The aircraft register's exclusion is a deliberate choice. Same pattern as Switzerland FOCA, Austria Austro Control, Italy ENAC.
 - **Update cadence:** TBD (HTML table refresh cadence not stated on the page)
-- **Permission email:** **Not yet sent.** No register-specific desk surfaced in pre-send recon — `info@transpordiamet.ee` is the general inbox. Will use template `docs/agency-permission-request.md`. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2).
-- **Reply (verbatim):** _N/A — email not yet sent_
-
-**Note for the email (when drafted):** lead with the Finland Traficom comparable — neighbouring small EU state that publishes the equivalent register under CC BY 4.0 on `avoindata.fi` — and the EU PSI Directive baseline. Note also that Transpordiamet itself already publishes other datasets on `andmed.eesti.ee` under the portal's open-reuse terms; we are asking only that the aircraft register receive the same treatment.
+- **Permission email:** Sent 2026-05-09 to `info@transpordiamet.ee` (general inbox; no register-specific desk surfaced publicly). Email led with the Finland Traficom comparable (CC BY 4.0 on avoindata.fi) and noted that Transpordiamet already publishes other datasets on andmed.eesti.ee under open-reuse terms. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
 
 ---
 
