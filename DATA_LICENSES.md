@@ -546,6 +546,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## ACG Montenegro — Agencija za civilno vazduhoplovstvo Crne Gore
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; copyright boilerplate footer only)
+- **Source URL:** https://www.caa.me/en/registri (English) + https://www.caa.me/me/registri (Montenegrin/Serbian)
+- **Bulk download URL:** **HTML scrape** — register published as a paginated HTML table (~7 pages, ~70 aircraft) with per-aircraft detail pages at `/en/4o-XXX`. Searchable by manufacturer / aircraft model / operator. Drupal 7 site. Pattern matches Estonia Transpordiamet and Georgia GCAA.
+- **Schema (verified by direct fetch 2026-05-09):** Registarska oznaka (Registration mark, 4O-XXX) / Redni broj u registru (Registry sequence) / Ime (Owner/Operator name — visible) / Tip (Aircraft type). Detail pages at `/en/4o-XXX` likely have additional aircraft data.
+- **License:** Pending verification. Site footer asserts _"Copyright © 2016 CAA Montenegro"_ — copyright assertion + boilerplate (note dated 2016, suggesting infrequent footer updates). No explicit reuse permission declared.
+- **Update cadence:** Continuous (Drupal 7 CMS — operators add/remove via admin interface; no batch refresh schedule)
+- **Format note (engineering):** **HTML scrape** required — pagination + per-aircraft detail-page traversal. Pattern matches Estonia (HTML scrape) and Georgia GCAA (HTML scrape). Engine handles csv/ods/xlsx; HTML scraping is a separate format adapter (would be reusable for Estonia + Georgia + Macedonia future scrapes).
+- **Permission email:** Sent 2026-05-09 to `acv@caa.me` (general Agency inbox; site does not surface a register-specific desk). Phone +382 20 625 507; address Josip Broza Tito bb, 81000 Podgorica. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply

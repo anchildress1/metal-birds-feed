@@ -73,6 +73,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAA Maldives              | 2026-05-05                           | 2026-06-04 | airworthiness@caa.gov.mv                                                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAD Malta                 | 2026-05-05                           | 2026-06-04 | civil.aviation@transport.gov.mt                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | AFAC Mexico               | 2026-05-05                           | 2026-06-04 | tramites@afac.gob.mx                                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
+| ACG Montenegro            | 2026-05-09                           | 2026-06-08 | acv@caa.me (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA NZ                    | 2026-05-05                           | 2026-06-04 | info@caa.govt.nz                                                                             | **No** (Personal-use; silence ≠ permission)               |
 | Luftfartstilsynet Norway  | 2026-05-05                           | 2026-06-04 | postmottak@caa.no (sent); `nlr@caa.no` register-specific — use for follow-up                 | **Yes** (Unknown; public-record fallback after follow-up) |
 | PCAA Pakistan             | 2026-05-05                           | 2026-06-04 | umair.sufyan@caapakistan.com.pk (named individual)                                           | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -165,7 +166,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country              | Agency         | Register URL                                                                                                        | Language                 |
 | -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |
 | Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(emailed 2026-05-09 — see In flight section above)** | Estonian                 |
 
 ### CJK / East Asian
