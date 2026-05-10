@@ -168,7 +168,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## AESA — Spanish State Aviation Safety Agency (Agencia Estatal de Seguridad Aérea)
 
 - **Status:** 🛠️ Cleared — implementation pending (license cleared via AESA portal Legal Notice; PDF parser path needed before ingest)
-- **Classification:** **Open** with attribution (verified 2026-05-09 from AESA portal Legal Notice; reclassified from Unknown)
+- **Classification:** **Open** with attribution (verified 2026-05-10 from AESA portal Legal Notice; reclassified from Unknown)
 - **Source URL:** https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas
 - **Bulk download URL:** https://www.seguridadaerea.gob.es/sites/default/files/aeronaves_inscritas.pdf (direct PDF, "list of aircraft registered in Spain on 1 May 2026, updated periodically")
 - **License:** **Open with attribution.** Per the [AESA portal Legal Notice](https://www.seguridadaerea.gob.es/en/politica-de-privacidad-y-aviso-legal), verbatim: _"The total or partial reproduction of the contents published on the portal is prohibited, unless the source of origin is cited. However, the contents that are considered as open data at the Electronic Headquarters may be reproduced, in accordance with the provisions of Royal Decree 1495/2011, of October 24, on the development of Law 37/2007, on the reuse of public sector information."_ Functionally CC BY 4.0-equivalent: source citation is mandatory; the open-data subset layers Spain's PSI Directive implementation (Aporta framework) on top.
@@ -228,9 +228,9 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## ENAC — Italian Civil Aviation Authority (Ente Nazionale per l'Aviazione Civile)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found despite portal hunt)
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found despite portal hunt)
 - **Source URL:** https://www.enac.gov.it/sicurezza-aerea/aeronavigabilita-iniziale/registro-aeromobili/
-- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed no CSV/PDF/JSON dump anywhere on `enac.gov.it` or `dati.mit.gov.it`. The register is governed by Codice della Navigazione + Codice Civile — access is per-record via formal "visure" extracts (paid procedure under Italian Civil Code rules). A yes-reply from ENAC must clear **both** license and a bulk access channel (FTP, direct dump, FOI, or similar) before ingest is feasible.
+- **Bulk download URL:** **None published.** Recon 2026-05-10 confirmed no CSV/PDF/JSON dump anywhere on `enac.gov.it` or `dati.mit.gov.it`. The register is governed by Codice della Navigazione + Codice Civile — access is per-record via formal "visure" extracts (paid procedure under Italian Civil Code rules). A yes-reply from ENAC must clear **both** license and a bulk access channel (FTP, direct dump, FOI, or similar) before ingest is feasible.
 - **License:** Pending verification. ENAC publishes other datasets on `dati.mit.gov.it` under [CC BY (Creative Commons Attribuzione)](https://dati.mit.gov.it/catalog/dataset/?organization=enac) — specifically "Imprese titolari di licenza di trasporto aereo" and "Elenco Organizzazioni Registrate per l'addestramento al volo" — but the aircraft register is **deliberately excluded**. Pattern matches Switzerland FOCA: agency publishes some open data, withholds the register specifically. [IODL 2.0](https://www.dati.gov.it/iodl/2.0/) is the Italian open-data license framework but does not apply absent an explicit ENAC declaration on the register.
 - **Update cadence:** TBD (no published artifact has a refresh schedule)
 - **Permission email:** Sent 2026-05-05 to `registro.aeromobili@enac.gov.it`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
@@ -241,7 +241,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## FOCA / BAZL — Swiss Federal Office of Civil Aviation (Bundesamt für Zivilluftfahrt)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** **Personal-use** (verified 2026-05-09 from Swiss Federal Council site-wide Terms and Conditions; reclassified from Unknown)
+- **Classification:** **Personal-use** (verified 2026-05-10 from Swiss Federal Council site-wide Terms and Conditions; reclassified from Unknown)
 - **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search
 - **Bulk download URL:** Search app supports CSV export; direct bulk endpoint unverified (the register is **not** published on `opendata.swiss` despite BAZL publishing other datasets there)
 - **License:** **Personal-use only.** Per the [Swiss Federal Council Terms and Conditions](https://www.admin.ch/gov/en/start/terms-and-conditions.html) (site-wide policy covering all `*.admin.ch` domains, including `bazl.admin.ch` and `app02.bazl.admin.ch`), verbatim: _"Copyright and any other rights relating to texts, illustrations, photos or any other data available on the Federal authorities' websites are the exclusive property of the federal authorities or of any other expressly mentioned owners. Any reproduction requires the prior written consent of the copyright holder."_ The register is also governed by the [Bundesgesetz über das Luftfahrzeugbuch](https://www.fedlex.admin.ch/eli/cc/1960/1245_1301_1297/de) (Federal Act on the Aircraft Register), separate from open-data rules. BAZL deliberately publishes other datasets (noise pollution, drone zones, aerodromes) on `opendata.swiss` with explicit Open licenses while omitting the aircraft register — a choice, not an oversight.
@@ -254,12 +254,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Luftfartstilsynet — Civil Aviation Authority of Norway
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — `data.norge.no` dataset listed with **"Public access"** tag but the **License field is empty**; no explicit license declaration found, so we cannot claim NLOD without confirmation)
+- **Classification:** Unknown (verified 2026-05-10 — `data.norge.no` dataset listed with **"Public access"** tag but the **License field is empty**; no explicit license declaration found, so we cannot claim NLOD without confirmation)
 - **Source URL:** https://luftfartstilsynet.no/aktorer/norges-luftfartoyregister/registrerte-luftfartoy/
-- **Bulk download URL:** https://data.caa.no/nlr/norgesluftfartoyregister.json (direct JSON, no auth required; verified via `data.norge.no` dataset listing 2026-05-09)
+- **Bulk download URL:** https://data.caa.no/nlr/norgesluftfartoyregister.json (direct JSON, no auth required; verified via `data.norge.no` dataset listing 2026-05-10)
 - **License:** Pending verification. `data.norge.no` tags the dataset **"Public access"** but the License field is empty. Metadata also contains a contradiction: `isAccessibleForFree: false` despite the public-access tag. Norwegian public-sector data generally falls under [NLOD (Norwegian License for Open Government Data)](https://data.norge.no/nlod/en/2.0), broadly equivalent to CC BY 4.0, but Luftfartstilsynet has not made that declaration explicit on the dataset page. Stays Unknown until reply.
 - **Update cadence:** Daily at 16:00 Oslo time (per `data.norge.no` dataset metadata)
-- **Permission email:** Sent 2026-05-05 to `postmottak@caa.no` (general inbox). Register-specific desk `nlr@caa.no` surfaced 2026-05-09 — preferred address for any follow-up. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-05 to `postmottak@caa.no` (general inbox). Register-specific desk `nlr@caa.no` surfaced 2026-05-10 — preferred address for any follow-up. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
@@ -267,12 +267,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Transportstyrelsen — Swedish Transport Agency
 
 - **Status:** Future — permission request sent, awaiting reply (**leans Excluded** if no reply by 2026-06-04 — see below)
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
 - **Source URL:** https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg
-- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed the register is **search-only** (no CSV/PDF/JSON dump on `transportstyrelsen.se` and no listing on `dataportal.se` for the aircraft register). Pattern matches Italy ENAC and Iceland ICETRA: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
+- **Bulk download URL:** **None published.** Recon 2026-05-10 confirmed the register is **search-only** (no CSV/PDF/JSON dump on `transportstyrelsen.se` and no listing on `dataportal.se` for the aircraft register). Pattern matches Italy ENAC and Iceland ICETRA: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
 - **License:** Pending verification. Swedish public-sector data is bound by the EU PSI Directive baseline (reuse permitted under attribution), but Transportstyrelsen has not published an open-data declaration for the aircraft register. Unlike its Nordic neighbour Finland (Traficom publishes the equivalent register under CC BY 4.0), Sweden has not made the same declaration.
 - **Update cadence:** TBD (no published artifact has a refresh schedule)
-- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se` (general aviation inbox). Register-specific desk `lfr@transportstyrelsen.se` surfaced 2026-05-09 — preferred address for any follow-up. Named register staff also surfaced for cold-call escalation: Magdalena Forssén, Christer Larsson, Fredrik Wallin (phone +46 771 503 503). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se` (general aviation inbox). Register-specific desk `lfr@transportstyrelsen.se` surfaced 2026-05-10 — preferred address for any follow-up. Named register staff also surfaced for cold-call escalation: Magdalena Forssén, Christer Larsson, Fredrik Wallin (phone +46 771 503 503). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 **Note for the eventual follow-up email (after 2026-06-04):** lead with the Finland Traficom comparable — neighbouring Nordic agency that publishes the equivalent register under CC BY 4.0 — and the EU PSI Directive baseline. Both are clean, public reference points.
@@ -282,9 +282,9 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## AFAC — Mexican Federal Civil Aviation Agency (Agencia Federal de Aviación Civil)
 
 - **Status:** Future — permission request sent, awaiting reply (**leaning Excluded** pending AFAC confirmation)
-- **Classification:** Unknown (verified 2026-05-09 — flagged as worst-case among the recon batch)
+- **Classification:** Unknown (verified 2026-05-10 — flagged as worst-case among the recon batch)
 - **Source URL:** https://www.gob.mx/afac
-- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed `portal-de-servicios.afac.gob.mx` is a **login-walled** user-account portal (no public read interface), and `datos.gob.mx` searches do not surface the Registro Aeronáutico Mexicano (RAM). The register is governed by the [Reglamento del Registro Aeronáutico Mexicano](http://www.ordenjuridico.gob.mx/Documentos/Federal/html/wo88684.html).
+- **Bulk download URL:** **None published.** Recon 2026-05-10 confirmed `portal-de-servicios.afac.gob.mx` is a **login-walled** user-account portal (no public read interface), and `datos.gob.mx` searches do not surface the Registro Aeronáutico Mexicano (RAM). The register is governed by the [Reglamento del Registro Aeronáutico Mexicano](http://www.ordenjuridico.gob.mx/Documentos/Federal/html/wo88684.html).
 - **License:** Pending verification. Third-party sources (e.g., l2baviation) describe **per-record access at ~$10 USD per search** under the RAM Reglamento. Could not confirm on AFAC's own documentation — could be describing certified legal extracts (visure-equivalent) rather than basic public access. If AFAC reply confirms a fee-gated model, **this flips to Excluded** (same exclusion pattern as UK CAA G-INFO + Israel CAAI). Held at Unknown until primary-source confirmation.
 - **Update cadence:** TBD (no published artifact has a refresh schedule)
 - **Permission email:** Sent 2026-05-05 to `tramites@afac.gob.mx`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
@@ -295,7 +295,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Austro Control — Austria
 
 - **Status:** Future — permission request sent, awaiting reply (**most "shovel-ready" of the unresolved Unknowns** — XLSX bulk file exists; engine handles xlsx natively)
-- **Classification:** Unknown (verified 2026-05-09 — bulk file confirmed; license declaration not found)
+- **Classification:** Unknown (verified 2026-05-10 — bulk file confirmed; license declaration not found)
 - **Source URL:** https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/overview__supplement
 - **Bulk download URL:** Annual XLSX dump ("Total December 31, 2025 file (XLSX, 162 KB)" — last update January 8, 2026) plus monthly PDF supplements (e.g., `Nachtrag_2025_05_EN.pdf`, `Nachtrag_2025_09_EN.pdf`). Engine handles `xlsx` natively → if license clears, **Austria is engineering-ready with no parser work needed**. Optional ignore the PDF deltas, just re-pull the annual XLSX.
 - **License:** Pending verification. Austro Control is on `data.gv.at` but **only for Spatial Data Infrastructure** (drone zones, airspace) — the aircraft register is **deliberately omitted**. Same pattern as Switzerland FOCA: agency publishes some open data with explicit licenses but withholds the register specifically. The XLSX is hosted directly on `austrocontrol.at` with no terms-of-use or imprint license tag discoverable. Note: Austro Control is a GmbH (corporate entity wholly owned by the Austrian state), not a federal ministry — corporate entities tend toward more restrictive copyright defaults.
@@ -373,7 +373,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Traficom — Finnish Transport and Communications Agency
 
 - **Status:** 🛠️ Cleared — implementation pending (license cleared via Traficom open-data page; ZIP-CSV unpack wrapper needed before ingest)
-- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-09 from Traficom open-data page; reclassified from Unknown)
+- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-10 from Traficom open-data page; reclassified from Unknown)
 - **Source URL:** https://tieto.traficom.fi/en/open-data (Traficom open-data catalog) + https://www.avoindata.fi/data/en_GB/dataset/854b277b-7472-4d0a-9a46-a8e34822a2e0 (avoindata.fi listing)
 - **Bulk download URL:** https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip (direct ZIP-CSV; ~1,331 rows; 127 kB unpacked / 123 kB packed)
 - **Variable list:** https://tieto.traficom.fi/files/media/file/MuuttujaluetteloIlmaalusrekisteri.xlsx
@@ -394,12 +394,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## Trafikstyrelsen — Danish Civil Aviation and Railway Authority
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
 - **Source URL:** https://www.trafikstyrelsen.dk/arbejdsomraader/luftfart/ansoegninger-individuelle/flyejer/luftfartoejsregister
-- **Bulk download URL:** **None published.** Recon 2026-05-09: the public register page describes only application procedures (registration, change of ownership, deletion, IDERA, rights register). A SharePoint document library exists at `selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Luftfartøjsregistret og luftfartsgodkendelser` but the URL returns empty (login-walled or affected by current outage — see operational note below). Pattern matches Italy/Iceland/Sweden: yes-reply must clear **both** license and a bulk access channel.
+- **Bulk download URL:** **None published.** Recon 2026-05-10: the public register page describes only application procedures (registration, change of ownership, deletion, IDERA, rights register). A SharePoint document library exists at `selvbetjening.trafikstyrelsen.dk/civilluftfart/Dokumenter/Luftfartøjsregistret og luftfartsgodkendelser` but the URL returns empty (login-walled or affected by current outage — see operational note below). Pattern matches Italy/Iceland/Sweden: yes-reply must clear **both** license and a bulk access channel.
 - **License:** Pending verification. Datavejviser.dk (Denmark's data catalog) publishes its own metadata under CC0 but that does not speak to register data licensing. No register-specific declaration discoverable.
 - **Update cadence:** TBD (no published artifact has a refresh schedule)
-- **Operational note (2026-05-09):** Register is **currently offline**. Trafikstyrelsen page leads with banner: _"Teknisk fejl på nationalitetsregistret. Adgangen til nationalitetsregistret er i øjeblikket utilgængelig grundet en teknisk fejl."_ ("Technical error on the nationality register. Access is currently unavailable due to a technical error.") A 2019 news archive entry shows the register has gone down before — recurring reliability concern, signal about how seriously the agency treats the artifact.
+- **Operational note (2026-05-10):** Register is **currently offline**. Trafikstyrelsen page leads with banner: _"Teknisk fejl på nationalitetsregistret. Adgangen til nationalitetsregistret er i øjeblikket utilgængelig grundet en teknisk fejl."_ ("Technical error on the nationality register. Access is currently unavailable due to a technical error.") A 2019 news archive entry shows the register has gone down before — recurring reliability concern, signal about how seriously the agency treats the artifact.
 - **Permission email:** Sent 2026-05-05 to `info@trafikstyrelsen.dk` (general inbox; no register-specific desk surfaced publicly in this recon). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
@@ -409,35 +409,35 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Transpordiamet — Estonian Transport Administration
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
 - **Source URL:** https://transpordiamet.ee/ohusoidukite-register (Estonian-language page; English page at `transpordiamet.ee/en/vehicle-ship-airplane/aircraft-registration/aircraft-register` describes registration procedures only)
 - **Bulk download URL:** **HTML table inline on the register page.** Full register (~150 entries) is rendered as an HTML table with columns: Registration mark (ES-XXX) / Aircraft type / Serial number / Owner / Operator. No CSV/XLSX/PDF download. Pattern matches Georgia GCAA — HTML scrape required.
 - **License:** No declaration on the register page. **Register deliberately omitted from `andmed.eesti.ee`** (Estonia's national open-data portal). Transpordiamet publishes 5+ other datasets there (vehicles, traffic accidents, road register, public transport register, vehicle statistics) under the portal's explicit terms ("right to reuse and redistribute it for both commercial and non-commercial purposes"). The aircraft register's exclusion is a deliberate choice. Same pattern as Switzerland FOCA, Austria Austro Control, Italy ENAC.
 - **Update cadence:** TBD (HTML table refresh cadence not stated on the page)
-- **Permission email:** Sent 2026-05-09 to `info@transpordiamet.ee` (general inbox; no register-specific desk surfaced publicly). Email led with the Finland Traficom comparable (CC BY 4.0 on avoindata.fi) and noted that Transpordiamet already publishes other datasets on andmed.eesti.ee under open-reuse terms. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@transpordiamet.ee` (general inbox; no register-specific desk surfaced publicly). Email led with the Finland Traficom comparable (CC BY 4.0 on avoindata.fi) and noted that Transpordiamet already publishes other datasets on andmed.eesti.ee under open-reuse terms. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CAA Macedonia — Civil Aviation Agency of the Republic of North Macedonia (Агенција за цивилно воздухопловство)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; "All Rights Reserved" boilerplate footer only)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; "All Rights Reserved" boilerplate footer only)
 - **Source URL:** https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/ (English) + Macedonian Cyrillic equivalent at the same site
 - **Bulk download URL:** Direct PDF on date-stamped path, e.g. https://www.caa.gov.mk/wp-content/uploads/2026/04/AIRCRAFT-REGISTER-20.04.2026.pdf (April 20, 2026 snapshot — fresh). Filename pattern: `AIRCRAFT-REGISTER-DD.MM.YYYY.pdf`. WordPress site.
 - **License:** Pending verification. Site footer asserts _"© Copyright 2019. All Rights Reserved"_ — copyright + "All Rights Reserved" boilerplate. No explicit reuse permission declared.
 - **Update cadence:** Periodic (latest version dated 2026-04-20; cadence not stated explicitly)
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **eighth** use case for the PDF parser path.
-- **Permission email:** Sent 2026-05-09 to `caa@gov.mk` (general Agency inbox; site does not surface a register-specific desk). Phone +389 2 3 18 16 01; address Dame Gruev 1, 1000 Skopje. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `caa@gov.mk` (general Agency inbox; site does not surface a register-specific desk). Phone +389 2 3 18 16 01; address Dame Gruev 1, 1000 Skopje. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## DAC Luxembourg — Direction de l'Aviation Civile
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** **Personal-use** (verified 2026-05-09 from explicit DAC "Aspects légaux" terms; no recon-first ambiguity)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** **Personal-use** (verified 2026-05-10 from explicit DAC "Aspects légaux" terms; no recon-first ambiguity)
 - **Source URL:** https://dac.gouvernement.lu/fr/demarches/immatriculation-aeronefs/releve-immatriculations.html
 - **Bulk download URL:** Direct PDF on date-stamped filename pattern, e.g. https://dac.gouvernement.lu/dam-assets/documents/navigabilité/releve-aeronefs/relev-aronefs-10-04-2026.pdf (361 KB; latest as of recon was 2026-04-10; page last modified 2026-04-22).
 - **License:** **Personal-use only.** Per DAC's [Aspects légaux](https://dac.gouvernement.lu/fr/support/aspects-legaux.html), default rule is verbatim French: _"Sauf indication contraire, l'Etat du Grand-Duché de Luxembourg n'accorde **aucune licence ou autorisation** relative aux droits de propriété intellectuelle qu'il a sur ce site, ses éléments ou les Services."_ The text-document exception is narrow: _"l'usager est autorisé à consulter, télécharger et imprimer les documents de type texte sans demande préalable"_ — i.e., **consult, download, print** only; not redistribute, not modify. Same legal posture as France DGAC and Switzerland FOCA.
@@ -445,81 +445,81 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **PII pre-handling at source (good news for our pipeline):** Per the register page (verbatim French): _"Les données relatives à des personnes physiques sont considérées comme des données à caractère personnel et ne figurent pas dans l'extrait de liste pour des raisons de conformité aux dispositions RGPD."_ DAC already strips natural-person data per GDPR. Same flavor as France DGAC and Lithuania TKA.
 - **Format note (engineering):** Bulk file is **PDF**, same blocker as Spain AESA. Engine handles csv/ods/xlsx; PDF parsing is a new format adapter (would be reusable for Spain).
 - **Register absent from data.public.lu** (only "Tableau de tri de la DAC" — records management taxonomy — listed there, not the aircraft register). Same Switzerland/Austria pattern. Notable contrast: data.public.lu portal default is CC0 for ~90% of datasets — DAC is the outlier in withholding the register.
-- **Permission email:** Sent 2026-05-09 to `nav@av.etat.lu` (Département Navigabilité; phone +352 247-74924/74900). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and the data.public.lu CC0 portal default as Baltic/EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **The 30-day fallback does NOT apply** — DAC is Personal-use; silence ≠ permission, must wait for affirmative reply. Template: `docs/agency-permission-request.md` (lightly customized for Personal-use posture).
+- **Permission email:** Sent 2026-05-10 to `nav@av.etat.lu` (Département Navigabilité; phone +352 247-74924/74900). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and the data.public.lu CC0 portal default as Baltic/EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **The 30-day fallback does NOT apply** — DAC is Personal-use; silence ≠ permission, must wait for affirmative reply. Template: `docs/agency-permission-request.md` (lightly customized for Personal-use posture).
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## Dopravný úrad — Slovak Transport Authority (NSAT — Národný supervízny orgán)
 
-- **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.sk; just asking which license applies)
+- **Status:** Future — permission request sent 2026-05-10 (license confirmation only — bulk channel and dataset already public on data.gov.sk; just asking which license applies)
 - **Classification:** Unknown — strongly leaning Open (CC BY 4.0 inferred from data.gov.sk portal default, not directly verified)
 - **Source URL:** https://data.gov.sk/dataset/register-lietadiel (portal listing) + https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/ (NSAT register page) + https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/ (overview)
 - **Bulk download URL:** Listed on data.gov.sk dataset page (PDF format per third-party description). Dataset page is JS-rendered SPA — direct file URL not extractable from server response without browser execution. Will confirm with NSAT in their reply.
 - **License:** Pending verification. data.gov.sk portal default for Slovak public-sector data is CC BY 4.0 (search filter confirms). Strongly inferred Open per portal norms but the dataset page renders client-side so direct license tag was not extractable; email asks for explicit confirmation.
 - **Update cadence:** TBD (file refresh frequency not stated in surfaced metadata)
 - **Format note (engineering):** Bulk file is **PDF** per third-party description. Same blocker as Spain AESA, Luxembourg DAC, Croatia CCAA, Hungary KKM — **fifth** use case for the PDF parser path. PDF parser priority continues to climb.
-- **Permission email:** Sent 2026-05-09 to `register.lietadiel@nsat.sk` (register-specific desk; phone 0918 382 016). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. NSAT physical address: Letisko M.R. Štefánika, 823 05 Bratislava. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case).
+- **Permission email:** Sent 2026-05-10 to `register.lietadiel@nsat.sk` (register-specific desk; phone 0918 382 016). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. NSAT physical address: Letisko M.R. Štefánika, 823 05 Bratislava. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case).
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CAA Kyrgyzstan — State Agency for Civil Aviation of the Kyrgyz Republic (Государственное агентство гражданской авиации)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; copyright boilerplate footer only)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; copyright boilerplate footer only)
 - **Source URL:** https://caa.kg/ru/reestr-grazhdanskikh-vozdushnykh-sudov-kyrgyzskoy-respubliki (Russian) + https://caa.kg/en/node/46 (English) + https://caa.kg/ky/node/46 (Kyrgyz)
 - **Bulk download URL:** **HTML scrape** — register published as an inline HTML table on the page (~64 aircraft visible in main content); Drupal 10 site.
-- **Schema (verified by direct fetch 2026-05-09):** № / Operator (only — no owner name) / Type of Aircraft / Registration number (EX-XXX) / Date of Registration / Serial Number / Date of Manufacture. **PII pre-stripped at source** — only operator names, no owner personal data. Compatible with PRD CC.4 PII drop policy.
+- **Schema (verified by direct fetch 2026-05-10):** № / Operator (only — no owner name) / Type of Aircraft / Registration number (EX-XXX) / Date of Registration / Serial Number / Date of Manufacture. **PII pre-stripped at source** — only operator names, no owner personal data. Compatible with PRD CC.4 PII drop policy.
 - **License:** Pending verification. Site footer asserts _"Copyright © 2025 Государственное агентство гражданской авиации"_ — copyright assertion + boilerplate. No explicit reuse permission declared.
 - **Update cadence:** Recent — latest update on register page is 2026-03-19 (less than 2 months stale at recon time)
 - **Format note (engineering):** **HTML scrape** — fourth use case for the HTML scrape adapter (joins Estonia, Georgia GCAA, Montenegro). Pattern is a single page with an inline table, simpler than Montenegro's paginated table + per-aircraft detail pages.
-- **Permission email:** Sent 2026-05-09 to `mail@caa.kg` (general Agency inbox). Phone +996 312 25 16 19; address Azhibek-Baatyra 1, Bishkek. Email cited Latvia CAA, Lithuania TKA as small-EU peer comparables (Kyrgyzstan is non-EU but similar regional norms apply). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `mail@caa.kg` (general Agency inbox). Phone +996 312 25 16 19; address Azhibek-Baatyra 1, Bishkek. Email cited Latvia CAA, Lithuania TKA as small-EU peer comparables (Kyrgyzstan is non-EU but similar regional norms apply). Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## AACM Macau — Civil Aviation Authority of Macao SAR (Autoridade de Aviação Civil da RAEM)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.aacm.gov.mo/en/industry-page/RegisteredAircraft (English) + https://www.aacm.gov.mo/pt/industry-page/RegisteredAircraft (Portuguese)
 - **Bulk download URL:** **None published.** Page surfaces a list view only. No CSV/XLSX/PDF/JSON export discoverable.
 - **License:** Pending verification. No explicit license declaration on the Registry pages.
 - **Update cadence:** TBD
 - **Format note (engineering):** Likely HTML scrape if bulk channel is not granted — joins Estonia, Georgia, Montenegro, Kyrgyzstan in the HTML-scrape bucket.
-- **Permission email:** Sent 2026-05-09 to `aacm@aacm.gov.mo` (general Authority inbox; phone +853 2851 1213). Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `aacm@aacm.gov.mo` (general Authority inbox; phone +853 2851 1213). Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CAAT Thailand — Civil Aviation Authority of Thailand
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration)
 - **Source URL:** https://www.caat.or.th/en/certificates-licenses/aircraft/guidance-material/registration-of-an-aircraft/ + https://www.caat.or.th/en/archives/52215 (legacy register link)
 - **Bulk download URL:** Direct PDF on date-stamped path, e.g. https://www.caat.or.th/wp-content/uploads/2024/01/Aircraft-Registration-Information-08-Jan-2025.pdf (most recently surfaced 2025-01-08; ~16 months stale at recon time). Filename pattern: `Aircraft-Registration-Information-DD-MMM-YYYY.pdf`. WordPress site.
 - **License:** Pending verification. No explicit license declaration on registry pages.
 - **Update cadence:** Periodic (date-stamped snapshots; cadence appears semi-annual based on visible files but not stated explicitly). Email asks for confirmation.
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — joins the now-large PDF parser path use-case set.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format + dated-snapshot pattern. Pass 2: data.go.th cross-check (register not catalogued there) + dedicated international-focal-point inbox confirmed.
-- **Permission email:** Sent 2026-05-09 to `inter_focalpoint@caat.or.th` (CAAT international focal point) cc `saraban@caat.or.th` (general saraban / formal correspondence). Phone +66 2 568 8800; address 333/105 Lak Si Plaza, Khamphaeng Phet 6 Rd., Bangkok 10210. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade + offered to coordinate publication on data.go.th. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `inter_focalpoint@caat.or.th` (CAAT international focal point) cc `saraban@caat.or.th` (general saraban / formal correspondence). Phone +66 2 568 8800; address 333/105 Lak Si Plaza, Khamphaeng Phet 6 Rd., Bangkok 10210. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade + offered to coordinate publication on data.go.th. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
 
-- **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
+- **Status:** Future — permission request sent 2026-05-10 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
 - **Classification:** Unknown — strongly leaning Open (CC BY 4.0 inferred from data.gov.lt portal default, not directly verified)
 - **Source URL:** https://data.gov.lt/datasets/2735/ (dataset page) + https://tka.lt/en/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/ (TKA register page)
 - **Bulk download URL:** **Spinta API** at https://get.data.gov.lt/datasets/gov/tka/registras/Irasas (paginated JSON via cursor; metadata at `/:ns`). Multiple formats listed on dataset page: HTML, CSV, JSON, JSONL, ASCII, RDF.
-- **Schema (verified by direct API fetch 2026-05-09):** `_id`, `_revision`, `vda_id`, `duomenu_sviezumas` (data freshness), `registracijos_nr` (registration number, e.g. "LY-XXX"), `statusas` (status), `kategorija` (category), `rusis` (kind), `tipas` (type/model), `savininko_tipas` (owner **type**), `naudotojo_tipas` (operator **type**), `pagaminimas` (manufacture date), `pirma_registracija` (first registration), `paskutine_registracija` (last registration), `tsppp_galiojimas` (airworthiness validity), `baze` (base airport), `bazes_adresas` (base address), `geometrija` (geometry), `keleiviu_sk` (passenger count), `mkm` (MTOW kg), `oro_sraigtas` (propeller).
+- **Schema (verified by direct API fetch 2026-05-10):** `_id`, `_revision`, `vda_id`, `duomenu_sviezumas` (data freshness), `registracijos_nr` (registration number, e.g. "LY-XXX"), `statusas` (status), `kategorija` (category), `rusis` (kind), `tipas` (type/model), `savininko_tipas` (owner **type**), `naudotojo_tipas` (operator **type**), `pagaminimas` (manufacture date), `pirma_registracija` (first registration), `paskutine_registracija` (last registration), `tsppp_galiojimas` (airworthiness validity), `baze` (base airport), `bazes_adresas` (base address), `geometrija` (geometry), `keleiviu_sk` (passenger count), `mkm` (MTOW kg), `oro_sraigtas` (propeller).
 - **PII pre-handling at source (good news for our pipeline):** Schema carries only **owner type and operator type** (categorical) — no owner/operator names. PII has been pre-stripped at source. Same flavor as France DGAC's GDPR pre-stripping. Excellent fit for our PRD CC.4 PII drop policy.
 - **License:** Pending verification. data.gov.lt portal default for Lithuanian public-sector data is CC BY 4.0, but the dataset page is JS-rendered (not directly fetchable) and the Spinta API envelope does not carry license metadata. Strongly inferred Open per portal norms but not directly verified — email asks for explicit confirmation.
 - **Update cadence:** Continuous (per-record `duomenu_sviezumas` field; data fresh as of 2026-03-09 verified)
 - **Format note (engineering):** New format adapter needed — JSON via Spinta API with cursor pagination. Engine handles csv/ods/xlsx natively; JSON would be a new path. Lighter lift than Spain's PDF problem; slightly bigger than Latvia's CSV. Bonus: all data.gov.lt datasets use the same Spinta API pattern, so wrapper would be reusable for any future Lithuanian source.
-- **Permission email:** v1 sent 2026-05-09 to `joris.dumcius@tka.lt` (Joris Dumčius, listed on `lrvalstybe.lt` as head of Aircraft Section) — **bounced**: _"Your message wasn't delivered to joris.dumcius@tka.lt because the address couldn't be found, or is unable to receive mail."_ Likely stale third-party directory entry (Dumčius may have left, or the listed email was never valid). v2 sent 2026-05-09 to `info@tka.lt` (verified general inbox) cc `audrius.turauskas@tka.lt` (Patarėjas, +370 645 63674; also Cloudflare-decoded but unverified — info@ will route regardless). v2 body explicitly references the bounce and asks for forwarding to whoever currently manages the Aircraft Section. Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA as Baltic peer comparable (CC0-1.0 on data.gov.lv). Other escalation contacts on the same page: Vitalijus Krivoščenko (`vitalijus.krivoscenko@tka.lt`, +370 658 47947), Egidijus Šimkus (`egidijus.simkus@tka.lt`, +370 612 73317). Follow-up due 2026-06-08 if no reply to v2 by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case).
+- **Permission email:** v1 sent 2026-05-10 to `joris.dumcius@tka.lt` (Joris Dumčius, listed on `lrvalstybe.lt` as head of Aircraft Section) — **bounced**: _"Your message wasn't delivered to joris.dumcius@tka.lt because the address couldn't be found, or is unable to receive mail."_ Likely stale third-party directory entry (Dumčius may have left, or the listed email was never valid). v2 sent 2026-05-10 to `info@tka.lt` (verified general inbox) cc `audrius.turauskas@tka.lt` (Patarėjas, +370 645 63674; also Cloudflare-decoded but unverified — info@ will route regardless). v2 body explicitly references the bounce and asks for forwarding to whoever currently manages the Aircraft Section. Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA as Baltic peer comparable (CC0-1.0 on data.gov.lv). Other escalation contacts on the same page: Vitalijus Krivoščenko (`vitalijus.krivoscenko@tka.lt`, +370 658 47947), Egidijus Šimkus (`egidijus.simkus@tka.lt`, +370 612 73317). Follow-up due 2026-06-09 if no reply to v2 by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case).
 - **Reply (verbatim):** _pending_
 
 ---
@@ -527,12 +527,12 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## CAA Latvia — Civilās aviācijas aģentūra (Civil Aviation Agency of Latvia)
 
 - **Status:** 🛠️ Cleared — implementation pending (license cleared via data.gov.lv; CSV format → engine handles natively, only YAML config + fixtures needed)
-- **Classification:** **Open** — CC0-1.0 (verified 2026-05-09 from data.gov.lv; reclassified from Unknown). Same posture as Netherlands ILT.
+- **Classification:** **Open** — CC0-1.0 (verified 2026-05-10 from data.gov.lv; reclassified from Unknown). Same posture as Netherlands ILT.
 - **Source URL:** https://data.gov.lv/dati/lv/dataset/gaisa-kugu-registrs (dataset page) + https://www.caa.gov.lv/en/aircraft-register (agency register page)
 - **Bulk download URL:** https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv (direct CSV, no auth required)
 - **Bonus resource:** https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/c550723e-4954-4057-8a7a-ed4a19f06b4b/download/output_metadata.json (sibling JSON metadata)
 - **License:** **CC0-1.0** (public domain dedication, no attribution required). Verbatim license tag on the data.gov.lv dataset page: "CC0-1.0". This is even more permissive than CC BY 4.0 — same posture as Netherlands ILT. We will still cite Latvia CAA in our documentation as a courtesy.
-- **Update cadence:** Monthly ("reizi mēnesī" per dataset metadata). First published 2023-09-08. **The "last updated 2025-04-29" field on the dataset page refers to the metadata record itself (description / tags / etc.), NOT the data file content.** Verified 2026-05-09 by direct CSV fetch — most recent registration in the file was 2026-04-10 (YL-MBL); the data file is freshly refreshed monthly even though the metadata-record date looks stale.
+- **Update cadence:** Monthly ("reizi mēnesī" per dataset metadata). First published 2023-09-08. **The "last updated 2025-04-29" field on the dataset page refers to the metadata record itself (description / tags / etc.), NOT the data file content.** Verified 2026-05-10 by direct CSV fetch — most recent registration in the file was 2026-04-10 (YL-MBL); the data file is freshly refreshed monthly even though the metadata-record date looks stale.
 - **Format note (engineering):** Direct CSV. Engine handles `csv` natively. **Zero parser work needed.** Just standard `sources/lv-caa.yaml` + `fixtures/lv-caa/` ground-truth + doc rows. Closest existing analogue: ILT Netherlands.
 - **Data contact:** `ivo.tukris@caa.gov.lv` (Ivo Tukris, listed as "Saziņas e-pasts datu jautājumiem" / data-questions email on the dataset page) — only relevant if data quality issues arise; not needed for license clearance.
 - **Permission email:** **None needed.** License is fully explicit on the public open-data portal. No email required.
@@ -544,10 +544,28 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## DGCA Lebanon — Directorate General of Civil Aviation (المديرية العامة للطيران المدني / Direction Générale de l'Aviation Civile)
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — two-pass recon; no public license declaration)
+- **Source URL:** https://www.lebcaa.com/a_r.shtml (legacy domain, register page) + https://www.dgca.gov.lb (current domain, JS-rendered institutional site)
+- **Bulk download URL:** None — register published as inline HTML list on `lebcaa.com/a_r.shtml`. No bulk channel discoverable. OD- registration prefix.
+- **License:** Pending verification. No explicit license declaration on either domain. lebcaa.com is the legacy domain (`.shtml` suffix, classic HTML); dgca.gov.lb is the current domain but contact information is JS-rendered and not surfaced via static fetch. Lebanon does not operate a national open-data portal in the EU/UK sense.
+- **Update cadence:** TBD — register page does not surface a "last updated" stamp.
+- **Format note (engineering):** **HTML scrape adapter** — fifth use case (alongside Estonia, Georgia, Montenegro, Kyrgyzstan). No bulk export, no PDF, no XLSX; only an inline HTML table on the legacy domain.
+- **Recon depth (two-pass):**
+  - **Pass 1:** Confirmed register URL on legacy `lebcaa.com`, no bulk download, only inline HTML; current domain `dgca.gov.lb` lacks a discoverable register page.
+  - **Pass 2:** DGCA contact page is JS-rendered; multiple searches across Lebanese government listings, ICAO state-letter directories, and aviation industry directories did not surface a verified email address. `info@dgca.gov.lb` selected as the standard ministry-style pattern; unverified.
+- **Operational context:** Lebanon's protracted political and economic crisis is acknowledged in the email body; the template includes a "suspend on request" clause if the agency would prefer not to engage at this time.
+- **Permission email:** Sent 2026-05-10 to `info@dgca.gov.lb` (best-guess pattern based on current ministry domain; unverified — if bounces, retry via `lebcaa.com` legacy domain or fall back to physical/diplomatic channel). Body explicitly asks for (1) license terms, (2) bulk channel if any, (3) correct correspondence channel — covering the unverified-email risk. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## Közlekedési Hatóság — Hungarian Transport Authority (Légügyi Felügyeleti Hatósági Főosztály — Air Supervision Authority Department)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found on the document page or surrounding materials)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found on the document page or surrounding materials)
 - **Source URL:** https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604 (document page; bilingual Hungarian/English)
 - **Bulk download URL:** Direct PDF on hash-stamped path, e.g. https://kozlekedesihatosag.kormany.hu/documents/66238/342548/2026.05.08.+%28Friss%C3%ADt%C3%A9s%29.pdf/765eb23b-d4c4-6713-ca89-05c92024e2f3?version=278.0&t=1778240402523&download=true (May 8, 2026 snapshot; 2.8 MB; "Frissítés" = "Update"). Filename pattern: `YYYY.MM.DD.+(Frissítés).pdf` — date-stamped per release.
 - **Update cadence:** **Near-daily** (business-day) — version history shows 278 versions since 2020-08-14 ≈ ~46 versions/year ≈ one update per business day. Most frequent of any agency recon'd to date.
@@ -555,220 +573,220 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Format note (engineering):** Bulk file is **PDF** (bilingual Hungarian/English columns). Same blocker as Spain AESA, Luxembourg DAC, Croatia CCAA. PDF parser path is now justified by **four** use cases — moving up the engineering priority list.
 - **Register absent from data.gov.hu** (Hungarian open-data portal does not list it).
 - **PII status:** Per third-party review, the published list contains aircraft owner names and addresses — no GDPR pre-strip noted. Mapping config will need to drop owner/operator address fields per PRD CC.4 PII drop policy.
-- **Permission email:** Sent 2026-05-09 to `lfhf@ekm.gov.hu` (Légügyi Felügyeleti Hatósági Főosztály — Air Supervision Authority Department) cc `caa@ekm.gov.hu` (general CAA inbox). Note: `ekm.gov.hu` domain corresponds to Építési és Közlekedési Minisztérium (Ministry of Construction and Transport, parent ministry of the Transport Authority). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Phone +36 (1) 273-5525 / +36 (1) 373-1432; physical: 2220 Vecsés, Lincoln út 1; mailing: 1442 Budapest, Pf.: 89. Recent register-edit staff visible in PDF metadata: Csemniczky Kristóf (creator), Nyilas Tímea (last modified 2026-05-08). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `lfhf@ekm.gov.hu` (Légügyi Felügyeleti Hatósági Főosztály — Air Supervision Authority Department) cc `caa@ekm.gov.hu` (general CAA inbox). Note: `ekm.gov.hu` domain corresponds to Építési és Közlekedési Minisztérium (Ministry of Construction and Transport, parent ministry of the Transport Authority). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Phone +36 (1) 273-5525 / +36 (1) 373-1432; physical: 2220 Vecsés, Lincoln út 1; mailing: 1442 Budapest, Pf.: 89. Recent register-edit staff visible in PDF metadata: Csemniczky Kristóf (creator), Nyilas Tímea (last modified 2026-05-08). Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## GDCA / CAC Armenia — Civil Aviation Committee of the Republic of Armenia (formerly General Department of Civil Aviation)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration)
 - **Source URL:** http://www.aviation.am/registered_aircrafts (Armenian + English; HTTP-only) + http://www.gdca.am (legacy domain, also active)
 - **Bulk download URL:** Direct PDF at `aviation.am/registered_aircrafts` (per third-party reference; latest noted update 2025-02-26 — over a year stale)
 - **License:** Pending verification. No explicit license declaration found.
 - **Update cadence:** Concerning — third-party reference shows last update 2025-02-26, suggesting infrequent refresh. May require email confirmation of current cadence.
 - **Format note (engineering):** Bulk file is **PDF**. Tenth use case for the PDF parser path.
 - **Naming note:** The agency was renamed from "General Department of Civil Aviation" (GDCA) to "Civil Aviation Committee" — both `aviation.am` and `gdca.am` domains remain active; email and correspondence may use either name.
-- **Permission email:** Sent 2026-05-09 to `info@aviation.am` (primary domain) cc `info@gdca.am` (legacy domain) — neither email verified to be valid; if both bounce, retry via secretariat or named contact. Phone +374 1 028 2066. Email cited Latvia CAA, Lithuania TKA as small-EU peer comparables (Armenia is non-EU but eligible under similar regional norms). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@aviation.am` (primary domain) cc `info@gdca.am` (legacy domain) — neither email verified to be valid; if both bounce, retry via secretariat or named contact. Phone +374 1 028 2066. Email cited Latvia CAA, Lithuania TKA as small-EU peer comparables (Armenia is non-EU but eligible under similar regional norms). Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CAA Bulgaria — Главна дирекция "Гражданска въздухоплавателна администрация" (Directorate General Civil Aviation Administration)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no explicit license declaration; "All rights reserved" boilerplate footer only)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no explicit license declaration; "All rights reserved" boilerplate footer only)
 - **Source URL:** https://www.caa.bg/bg/category/300/17238 (Bulgarian) + https://www.caa.bg/en/node/17238 (English)
 - **Bulk download URL:** Direct XLSX on date-stamped path, e.g. https://www.caa.bg/sites/default/files/upload/documents/2025-05/Aircraft_Register_20250430.xlsx (35.45 KB; small register). Filename pattern: `Aircraft_Register_YYYYMMDD.xlsx`.
-- **Update cadence:** **Concerning — file dated 2025-04-30 was still the latest as of recon 2026-05-09**, i.e., over a year stale. Path includes `/2025-05/` folder, suggesting the file is filed by upload date. Hungary updates near-daily; Bulgaria appears to be annual at best. Will need to confirm refresh cadence in the email reply.
+- **Update cadence:** **Concerning — file dated 2025-04-30 was still the latest as of recon 2026-05-10**, i.e., over a year stale. Path includes `/2025-05/` folder, suggesting the file is filed by upload date. Hungary updates near-daily; Bulgaria appears to be annual at best. Will need to confirm refresh cadence in the email reply.
 - **License:** Pending verification. Site footer asserts _"Главна дирекция 'Гражданска въздухоплавателна администрация' © 2005-2026 Всички права запазени"_ ("Directorate General 'Civil Aviation Administration' © 2005-2026 All rights reserved") — standard Bulgarian government boilerplate. No explicit reuse permission declared on the document page.
 - **Format note (engineering):** Bulk file is **XLSX** — engine handles `xlsx` natively. **Zero parser work needed.** If license clears, this is engineering-ready (just YAML config + fixtures). Closest existing analogue: Austria Austro Control (annual XLSX).
 - **Register absent from data.egov.bg** Bulgarian open-data portal listing for CAA does not surface the aircraft register specifically; portal listing exists for the agency but the register is not catalogued there.
-- **Permission email:** Sent 2026-05-09 to `AIRWORTHINESS@caa.bg` (Airworthiness Department — owner of `/category/300` URL hierarchy where the register lives) cc `caa@caa.bg` (general inbox). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Address: Sofia 1000, "Diakon Ignatiy" Str. №9; phone +359 (02) 937-1047. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `AIRWORTHINESS@caa.bg` (Airworthiness Department — owner of `/category/300` URL hierarchy where the register lives) cc `caa@caa.bg` (general inbox). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Address: Sofia 1000, "Diakon Ignatiy" Str. №9; phone +359 (02) 937-1047. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## BHDCA — Bosnia and Herzegovina Directorate of Civil Aviation (Direkcija za civilno zrakoplovstvo BiH)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; "All rights reserved" boilerplate footer only)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; "All rights reserved" boilerplate footer only)
 - **Source URL:** http://www.bhdca.gov.ba/index.php/hr/doc/registar-civilnih-zrakoplova (Croatian) + http://www.bhdca.gov.ba/index.php/en/doc/registar-civilnih-zrakoplova (English)
 - **Bulk download URL:** PDF embedded on register page, hosted at `http://www.bhdca.gov.ba/website/dokumenti/Plovidbenost/IzvodRegistar/BiHAircraftRegisterHR.pdf` (Croatian extract; English variant at `BiHAircraftRegisterENG.pdf` per third-party reference)
 - **License:** Pending verification. Site footer asserts _"© 2021 BHDCA - Bosna i Hercegovina DIREKCIJA ZA CIVILNO ZRAKOPLOVSTVO. All rights reserved."_ — copyright + "all rights reserved" boilerplate. No explicit reuse permission declared on the document page.
 - **Update cadence:** TBD (footer dated 2021 — site appears not actively maintained; refresh frequency unclear)
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **seventh** use case for the PDF parser path.
-- **Operational reliability concern (2026-05-09):** Site uses `http://` (not HTTPS) and the footer is dated 2021. Suggests the agency website is not actively maintained, which may impact response reliability. Multilingual structure (HR/EN/SR/BS) reflects BiH's three constituent peoples + English.
-- **Permission email:** Sent 2026-05-09 to `bhdca@bhdca.gov.ba` (general Directorate inbox; site does not surface a register-specific direct email — register staff "Aircraft Register Official – REG" position 2-2-5 in Airworthiness Section but no direct email visible). Phone +387 51 921-222; Fax +387 51 921-520; address V kozarske brigade 18, 78000 Banja Luka. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Operational reliability concern (2026-05-10):** Site uses `http://` (not HTTPS) and the footer is dated 2021. Suggests the agency website is not actively maintained, which may impact response reliability. Multilingual structure (HR/EN/SR/BS) reflects BiH's three constituent peoples + English.
+- **Permission email:** Sent 2026-05-10 to `bhdca@bhdca.gov.ba` (general Directorate inbox; site does not surface a register-specific direct email — register staff "Aircraft Register Official – REG" position 2-2-5 in Airworthiness Section but no direct email visible). Phone +387 51 921-222; Fax +387 51 921-520; address V kozarske brigade 18, 78000 Banja Luka. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CAA Moldova — Autoritatea Aeronautică Civilă a Republicii Moldova
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration)
 - **Source URL:** https://www.caa.md/rom/register/ (Romanian) + https://www.caa.md/en (English landing) + https://www.caa.md/registru-aerian-3-84 (legacy CMS path)
 - **Bulk download URL:** Direct PDF at https://www.caa.md/modules/filemanager/files/documentum/Registrul_Aerian_al_Republicii_Moldova.pdf
 - **License:** Pending verification. No explicit license declaration on the document page or in surrounding materials. Default copyright applies.
 - **Update cadence:** TBD (refresh frequency not stated explicitly)
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **ninth** use case for the PDF parser path.
-- **Permission email:** Sent 2026-05-09 to `info@caa.gov.md` (general inbox; note domain is `caa.gov.md` while website is `caa.md` — if v1 bounces, retry via `caa.md`-domain inbox or contact form). Phone +373 22 823 500. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@caa.gov.md` (general inbox; note domain is `caa.gov.md` while website is `caa.md` — if v1 bounces, retry via `caa.md`-domain inbox or contact form). Phone +373 22 823 500. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## MCAA Mongolia — The Civil Aviation Authority of Mongolia
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; PDF bulk exists but stale)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; PDF bulk exists but stale)
 - **Source URL:** https://www.mcaa.gov.mn/ (English landing) + https://mcaa.gov.mn/?p=1758 (legacy register page) + https://www.mcaa.gov.mn/t7mhit9.polynosic/?lang=en (current register section, JS-rendered)
 - **Bulk download URL:** Direct PDF at https://mcaa.gov.mn/PDF/REGISTER.PDF — last surfaced version dated **2022-07-16** (~3 years stale at recon time). Email asks for refresh cadence confirmation.
 - **License:** Pending verification. No explicit license declaration on registry pages. Pass 2 cross-check confirmed no data.gov.mn / opendata.gov.mn listing for MCAA aircraft data — Mongolia does not appear to have a national open-data portal that includes aviation.
 - **Update cadence:** **Concerning** — only 2022-07-16 version surfaced; email explicitly asks for current cadence.
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — joins the now-large PDF parser path use-case set. Email asks for structured-format upgrade (CSV/XLSX/JSON) which would help downstream consumption.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check + alternate-domain check + page fetch attempts.
-- **Permission email:** Sent 2026-05-09 to `info@mcaa.gov.mn` (general Authority inbox; phone +976 71282064). Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@mcaa.gov.mn` (general Authority inbox; phone +976 71282064). Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## IACM Mozambique — Instituto de Aviação Civil de Moçambique
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable; no canonical public consultation URL surfaced)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable; no canonical public consultation URL surfaced)
 - **Source URL:** https://www.iacm.gov.mz/ (institutional landing); register-specific page not surfaced during recon
 - **Bulk download URL:** **None published.** No bulk file or consultation portal discoverable from public-facing IACM materials.
 - **License:** Pending verification. No explicit license declaration found.
 - **Update cadence:** TBD
 - **Format note (engineering):** No bulk file, no consultation portal — IACM has the weakest public discoverability of any African agency recon'd so far. Yes-reply must include both license clearance AND publication channel.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL search returned only technical regulatory documents (MOZCATS standards), not the register itself. Pass 2: contact discovery + attempted public-page surface — no consultation URL found.
-- **Permission email:** Sent 2026-05-09 to `info@iacm.gov.mz` (general inbox) cc `geral@iacm.gov.mz`. Phone +258 82 3021250; address Alameda do Aeroporto, C. Postal 227, Maputo. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + canonical public URL. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@iacm.gov.mz` (general inbox) cc `geral@iacm.gov.mz`. Phone +258 82 3021250; address Alameda do Aeroporto, C. Postal 227, Maputo. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + canonical public URL. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## ACG Montenegro — Agencija za civilno vazduhoplovstvo Crne Gore
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; copyright boilerplate footer only)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; copyright boilerplate footer only)
 - **Source URL:** https://www.caa.me/en/registri (English) + https://www.caa.me/me/registri (Montenegrin/Serbian)
 - **Bulk download URL:** **HTML scrape** — register published as a paginated HTML table (~7 pages, ~70 aircraft) with per-aircraft detail pages at `/en/4o-XXX`. Searchable by manufacturer / aircraft model / operator. Drupal 7 site. Pattern matches Estonia Transpordiamet and Georgia GCAA.
-- **Schema (verified by direct fetch 2026-05-09):** Registarska oznaka (Registration mark, 4O-XXX) / Redni broj u registru (Registry sequence) / Ime (Owner/Operator name — visible) / Tip (Aircraft type). Detail pages at `/en/4o-XXX` likely have additional aircraft data.
+- **Schema (verified by direct fetch 2026-05-10):** Registarska oznaka (Registration mark, 4O-XXX) / Redni broj u registru (Registry sequence) / Ime (Owner/Operator name — visible) / Tip (Aircraft type). Detail pages at `/en/4o-XXX` likely have additional aircraft data.
 - **License:** Pending verification. Site footer asserts _"Copyright © 2016 CAA Montenegro"_ — copyright assertion + boilerplate (note dated 2016, suggesting infrequent footer updates). No explicit reuse permission declared.
 - **Update cadence:** Continuous (Drupal 7 CMS — operators add/remove via admin interface; no batch refresh schedule)
 - **Format note (engineering):** **HTML scrape** required — pagination + per-aircraft detail-page traversal. Pattern matches Estonia (HTML scrape) and Georgia GCAA (HTML scrape). Engine handles csv/ods/xlsx; HTML scraping is a separate format adapter (would be reusable for Estonia + Georgia + Macedonia future scrapes).
-- **Permission email:** Sent 2026-05-09 to `acv@caa.me` (general Agency inbox; site does not surface a register-specific desk). Phone +382 20 625 507; address Josip Broza Tito bb, 81000 Podgorica. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `acv@caa.me` (general Agency inbox; site does not surface a register-specific desk). Phone +382 20 625 507; address Josip Broza Tito bb, 81000 Podgorica. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## DGAC Guatemala — Dirección General de Aeronáutica Civil
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.dgac.gob.gt/registro-aeronautico-nacional/ (description) + http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves (legacy Java/Tomcat consultation portal on non-standard port :8080)
 - **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only) on a legacy `:8080` URL — likely a Java application server. Pattern matches Chile DGAC, Colombia UAEAC, Dominican Republic IDAC.
 - **License:** Pending verification. No explicit license declaration on the Registry pages.
 - **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
 - **Format note (engineering):** No bulk file exists. The legacy `:8080/cass/servlet/` Java endpoint suggests an older system unlikely to support a clean export channel without explicit DGAC effort.
-- **Permission email:** Sent 2026-05-09 to `registro.aeronautico@dgac.gob.gt` (register-specific desk; phone +502 2321-5130). Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `registro.aeronautico@dgac.gob.gt` (register-specific desk; phone +502 2321-5130). Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## IDAC Dominican Republic — Instituto Dominicano de Aviación Civil
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.idac.gob.do/en/national-aircraft-regulatory-and-registry-directorate/ (description) + https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/ (public consultation portal)
 - **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only). datos.gob.do has IDAC organization page but the aircraft register is not catalogued there. Pattern matches Chile DGAC, Colombia UAEAC, Sweden Transportstyrelsen.
 - **License:** Pending verification. No explicit license declaration on the Registry pages.
 - **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
 - **Format note (engineering):** No bulk file exists. If IDAC reply confirms permission, would require establishing a new export channel via correspondence (potentially via datos.gob.do listing).
 - **Domain note:** Website is `idac.gob.do` (`.gob`); email is `info@idac.gov.do` (`.gov`). Email sent to both `.gov.do` and `.gob.do` variants for safety.
-- **Permission email:** Sent 2026-05-09 to `info@idac.gov.do` cc `dtac@idac.gov.do` cc `info@idac.gob.do` (general + technical + alt-domain). Phone +1 809-221-7909; address Ave. México Esq. 30 de Marzo, Santo Domingo. Email cited Latvia CAA, Lithuania TKA as peer comparables, and noted IDAC's existing presence on datos.gob.do as a potential publication channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@idac.gov.do` cc `dtac@idac.gov.do` cc `info@idac.gob.do` (general + technical + alt-domain). Phone +1 809-221-7909; address Ave. México Esq. 30 de Marzo, Santo Domingo. Email cited Latvia CAA, Lithuania TKA as peer comparables, and noted IDAC's existing presence on datos.gob.do as a potential publication channel. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## DGAC Chile — Dirección General de Aeronáutica Civil
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/ (description) + https://servicios.dgac.gob.cl/rna-web/publico.html (public consultation portal)
 - **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only). Login-walled administrative portal at `servicios.dgac.gob.cl/rna-web/`. Pattern matches Sweden Transportstyrelsen, Italy ENAC, Iceland ICETRA — yes-reply must clear **both** license and bulk access channel.
 - **License:** Pending verification. No explicit license declaration on the Registry pages. datos.gob.cl exists as Chile's open-data portal but the Registro Nacional de Aeronaves is not catalogued there (search did not surface it).
 - **Update cadence:** TBD (consultation portal is presumably current; bulk refresh schedule not relevant absent a bulk channel)
 - **Format note (engineering):** No bulk file exists. If DGAC reply confirms permission, would require establishing a new export channel via correspondence.
-- **Permission email:** v1 (Spanish) sent 2026-05-09 to `registro.aeronaves@dgac.gob.cl` (draft `r-1087699892897272722`); **v2 (English) sent 2026-05-09 to same address per English-first strategy** (draft `r-1888376151312130960`). v1 to be deleted before sending — strategy is English-first to all agencies regardless of primary language. Phone (56 2) 24392460 / (56 2) 24392488; address Miguel Claro 1314, Providencia, Santiago. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** v1 (Spanish) sent 2026-05-10 to `registro.aeronaves@dgac.gob.cl` (draft `r-1087699892897272722`); **v2 (English) sent 2026-05-10 to same address per English-first strategy** (draft `r-1888376151312130960`). v1 to be deleted before sending — strategy is English-first to all agencies regardless of primary language. Phone (56 2) 24392460 / (56 2) 24392488; address Miguel Claro 1314, Providencia, Santiago. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## DINACIA Uruguay — Dirección Nacional de Aviación Civil e Infraestructura Aeronáutica
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; bulk channel reported but not directly verified)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; bulk channel reported but not directly verified)
 - **Source URL:** https://www.dinacia.gub.uy/ (institutional landing); register-specific section unverified pending DINACIA reply
 - **Bulk download URL:** **Reported but not verified.** Third-party reference (l2baviation) indicates DINACIA publishes the register as XLSX downloadable from the "Aeronaves" section, but direct file URL not surfaced from accessible site content. Email asks for canonical URL confirmation.
 - **License:** Pending verification. No explicit license declaration on the site materials.
 - **Update cadence:** TBD
 - **Format note (engineering):** If reported XLSX bulk file is confirmed, format is **engine-native** (xlsx supported). No parser work needed if license + bulk URL clear together.
-- **Permission email:** Sent 2026-05-09 to `dinacia@dinacia.gub.uy` (general inbox) cc `certaero@dinacia.gub.uy` (certificate submissions — likely register-adjacent). Phone +598 2604 0408; address Av. Wilson Ferreira Aldunate 5519, Montevideo. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asks for bulk URL confirmation. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `dinacia@dinacia.gub.uy` (general inbox) cc `certaero@dinacia.gub.uy` (certificate submissions — likely register-adjacent). Phone +598 2604 0408; address Av. Wilson Ferreira Aldunate 5519, Montevideo. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asks for bulk URL confirmation. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## UAEAC Colombia — Unidad Administrativa Especial de Aeronáutica Civil
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.aerocivil.gov.co/autoridad_aeronautica/publicaciones/3704/registro-de-aeronaves/ (description) + https://www.aerocivil.gov.co/consulta-en-linea/consulta-de-matriculas-de-aeronaves (public consultation portal)
 - **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only). Pattern matches Chile DGAC, Sweden Transportstyrelsen, Italy ENAC — yes-reply must clear **both** license and bulk access channel.
 - **License:** Pending verification. No explicit license declaration on the Registry pages. datos.gov.co listing search confirmed: only Aerocivil procurement (SECOP) datasets are surfaced; aircraft register absent.
 - **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
 - **Format note (engineering):** No bulk file exists. If UAEAC reply confirms permission, would require establishing a new export channel via correspondence.
-- **Permission email:** Sent 2026-05-09 to `atencionalciudadano@aerocivil.gov.co` (Citizen Attention; site does not surface a register-specific desk publicly). Phone +57 (601) 425 1000; address Avenida El Dorado 103-15, Bogotá. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `atencionalciudadano@aerocivil.gov.co` (Citizen Attention; site does not surface a register-specific desk publicly). Phone +57 (601) 425 1000; address Avenida El Dorado 103-15, Bogotá. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## ANAC Togo — Agence Nationale de l'Aviation Civile du Togo
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/ (consultation portal) + https://www.anac-togo.tg/ (institutional landing)
 - **Bulk download URL:** **None published.** Consultation portal is search-only; documents page at `anac-togo.tg/documents-a-telecharger/` exists but does not surface the register PDF.
 - **License:** Pending verification. No explicit license declaration on the Registry pages.
 - **Update cadence:** **Concerning** — third-party references cite last-updated date of 2022-07-16 (~3 years stale at recon time). Email asks for confirmation.
 - **Format note (engineering):** No bulk file. If ANAC reply confirms permission, would require establishing a new export channel via correspondence.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check (Geodata Togo + Togo Open Data for Africa — neither lists aviation) + contact discovery + page-fetch attempts.
-- **Permission email:** Sent 2026-05-09 to `anac@anac-togo.tg` (general inbox) cc `secretariat@anac-togo.tg`. Phone +228 22263740; address B.P. 2699 Lomé. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + refresh cadence. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `anac@anac-togo.tg` (general inbox) cc `secretariat@anac-togo.tg`. Phone +228 22263740; address B.P. 2699 Lomé. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + refresh cadence. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## AAC Cabo Verde — Agência de Aviação Civil de Cabo Verde
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel discoverable)
 - **Source URL:** https://www.aac.cv/artigos/registo-aeronautico (current path) + https://www.aac.cv/aeronaves-aac/registo-de-aeronaves.html (legacy path noted by third-party)
 - **Bulk download URL:** **None published.** Web-page list only; no CSV/XLSX/PDF/JSON export discoverable.
 - **License:** Pending verification. No explicit license declaration on registry pages. Cabo Verde does not appear to have a national open-data portal (no `dados.gov.cv` discoverable for aviation data).
 - **Update cadence:** TBD
 - **Format note (engineering):** No bulk file. Likely HTML scrape if AAC reply confirms permission without offering structured data.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check (no `dados.gov.cv` aviation portal) + contact discovery.
-- **Permission email:** Sent 2026-05-09 to `info@aac.cv` (general AAC inbox; phone +238 260 34 30; address Achada Grande Frente, Praia CP371). Email cited Latvia CAA, Lithuania TKA as peer comparables and asked for license + bulk channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `info@aac.cv` (general AAC inbox; phone +238 260 34 30; address Achada Grande Frente, Praia CP371). Email cited Latvia CAA, Lithuania TKA as peer comparables and asked for license + bulk channel. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## OFNAC Haiti — Office National de l'Aviation Civile
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel; no general or registry-specific email surfaced publicly)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; no bulk channel; no general or registry-specific email surfaced publicly)
 - **Source URL:** https://ofnac.gouv.ht/ (institutional landing) + https://registreimm.net/aircraftSearchingView (consultation portal — separate domain, hosted by/for OFNAC)
 - **Bulk download URL:** **None published.** Consultation portal is search-only; no CSV/XLSX/PDF/JSON export.
 - **License:** Pending verification. No explicit license declaration on registry pages.
@@ -777,37 +795,37 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Operational context:** Haiti has been experiencing prolonged political instability and security challenges; response timelines may be impacted. Email acknowledges this and offers to suspend on request.
 - **Contact discoverability:** **Unusual** — OFNAC contact page lists only phones (+509 29102224, +509 29102226), fax (BP 1346), and physical address (11, Boulevard Toussaint Louverture). **No general inbox email published on the OFNAC site.** Only `division.ais@ofnac.gouv.ht` (Aeronautical Information Division) surfaced from third-party documents. Email asks for the correct correspondence channel.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: contact page fetch (no email visible) + targeted email search to surface `division.ais@`.
-- **Permission email:** Sent 2026-05-09 to `division.ais@ofnac.gouv.ht` (Aeronautical Information Division — only confirmed OFNAC email; body asks them to forward to register-responsible office). Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + correct correspondence channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `division.ais@ofnac.gouv.ht` (Aeronautical Information Division — only confirmed OFNAC email; body asks them to forward to register-responsible office). Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + correct correspondence channel. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found; explicit copyright notice only)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found; explicit copyright notice only)
 - **Source URL:** https://www.ccaa.hr/en/list-of-registered-aircraft-94674 (English) + https://www.ccaa.hr/popis-registriranih-zrakoplova-64123 (Croatian)
 - **Bulk download URL:** Direct PDF on hash-stamped path, e.g. https://www.ccaa.hr/file/2714b6440e95696d4822bbfcc5ada5086ac7 (April 1, 2026 snapshot; ~250 aircraft across 26 pages). Updated **first day of each month** per the publishing page.
-- **Schema (verified by direct PDF fetch 2026-05-09):** Registration mark (LZ-XXX) / Registry sequence number / Manufacturer / Aircraft type / Serial number / Owner / Address.
+- **Schema (verified by direct PDF fetch 2026-05-10):** Registration mark (LZ-XXX) / Registry sequence number / Manufacturer / Aircraft type / Serial number / Owner / Address.
 - **PII pre-handling at source (partial):** Private individuals' names are masked as **"Fizička osoba"** (Natural person) but **company names AND addresses are fully visible**. GDPR-compliant baseline — natural persons protected, legal entities not (legal-entity data is not GDPR-protected). Compatible with our PRD CC.4 PII drop policy; we'd still drop addresses at mapping per project rules.
 - **License:** Pending verification. CCAA's page footer asserts _"Copyright © 2019 - 2026 Croatian Civil Aviation Agency"_ — explicit copyright assertion. Page also carries a publishing disclaimer (verbatim English): _"Agency does not guarantee the completeness and accuracy of data in the table after it is published on the Agency's website. Since data is subject to everyday changes, the users are instructed to address the Agency and check the precise data in the manually kept main book of the Croatian Register of Civil Aircraft."_ This is an **accuracy disclaimer**, not a redistribution restriction. Default copyright applies absent a permission grant. Same pattern as Switzerland FOCA, Austria Austro Control, Italy ENAC, Estonia Transpordiamet, Czech Republic CAA — agency publishes data on its own site without an open-data declaration.
 - **Update cadence:** Monthly (first day of each month per publishing page)
 - **Format note (engineering):** Bulk file is **PDF**, same blocker as Spain AESA + Luxembourg DAC. Engine handles csv/ods/xlsx; PDF parsing is a new format adapter (would be third use-case for that work).
 - **Register absent from data.gov.hr** (Croatian open-data portal does not list it).
-- **Permission email:** Sent 2026-05-09 to `registar@ccaa.hr` (registry-specific desk; surfaced from CCAA Aircraft Registry contacts page). Email cited Latvia CAA (CC0 on data.gov.lv) and Lithuania TKA (CC BY 4.0 on data.gov.lt) as Baltic peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `registar@ccaa.hr` (registry-specific desk; surfaced from CCAA Aircraft Registry contacts page). Email cited Latvia CAA (CC0 on data.gov.lv) and Lithuania TKA (CC BY 4.0 on data.gov.lt) as Baltic peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## CAA CR — Civil Aviation Authority of the Czech Republic (Úřad pro civilní letectví)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
 - **Source URL:** https://lr.caa.gov.cz/letecky-rejstrik?lang=en (English UI available)
 - **Bulk download URL:** **None published.** The register interface is a JS-rendered SPA (Angular/React) with search-only frontend; no CSV/XLSX/PDF/JSON download discoverable from the public-facing page. Pattern matches Switzerland FOCA, Austria Austro Control, Italy ENAC, Estonia Transpordiamet.
 - **License:** No declaration on the register page. **Register absent from data.gov.cz** (Czech national open-data catalog) — site-search returned zero results for "letecký" / "aircraft" datasets from the Civil Aviation Authority. **Notable leverage point:** Czech Republic enacted a 2024 law mandating that "public registries, registers, lists and records maintained by law" be progressively published as open data on data.gov.cz. The aircraft register fits this category but is not yet listed — either compliance gap, awaiting implementation, or claimed exemption. This is a citable legal basis for the request, stronger than peer-comparable.
 - **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-09 to `dousova@caa.cz` (Jana Doušová, register department head; cc `podatelna@caa.gov.cz` for formal record). Email led with the Czech 2024 open-data law citation as primary leverage and the Finland Traficom comparable as peer example. Other named register staff for escalation: Milada Jechová (`jechova@caa.cz`), Jana Pospíšilová (`pospisilova@caa.cz`); reception phone +420 225 421 111. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `dousova@caa.cz` (Jana Doušová, register department head; cc `podatelna@caa.gov.cz` for formal record). Email led with the Czech 2024 open-data law citation as primary leverage and the Finland Traficom comparable as peer example. Other named register staff for escalation: Milada Jechová (`jechova@caa.cz`), Jana Pospíšilová (`pospisilova@caa.cz`); reception phone +420 225 421 111. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
@@ -999,9 +1017,9 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 ## ICETRA — Icelandic Transport Authority (Samgöngustofa)
 
 - **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found despite portal hunt)
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found despite portal hunt)
 - **Source URL:** https://island.is/en/aircraft-registry
-- **Bulk download URL:** **None published.** Recon 2026-05-09 confirmed the register page is **search-only** (by TF- number or owner name); `icetra.is/aviation/aircraft/register` redirects to the same island.is search interface. Iceland has no obvious central open-data catalog (no `data.gov.is` discoverable) and the aircraft register is not surfaced anywhere as a downloadable artifact. Pattern matches Italy ENAC: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
+- **Bulk download URL:** **None published.** Recon 2026-05-10 confirmed the register page is **search-only** (by TF- number or owner name); `icetra.is/aviation/aircraft/register` redirects to the same island.is search interface. Iceland has no obvious central open-data catalog (no `data.gov.is` discoverable) and the aircraft register is not surfaced anywhere as a downloadable artifact. Pattern matches Italy ENAC: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
 - **License:** Pending verification. island.is general policy is GDPR/privacy-focused — no aircraft-register-specific license declaration found. Nordic open-data norms generally permissive (Norway uses NLOD, Denmark uses CC BY) but Iceland-specific terms not declared anywhere we could find.
 - **Update cadence:** TBD (no published artifact has a refresh schedule)
 - **Permission email:** Sent 2026-05-05 to `samgongustofa@samgongustofa.is`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
@@ -1077,10 +1095,10 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## AACR — Romanian Civil Aeronautical Authority (Autoritatea Aeronautică Civilă Română) — Excluded
 
-- **Status:** ❌ Excluded (verified 2026-05-09)
+- **Status:** ❌ Excluded (verified 2026-05-10)
 - **Classification:** Restrictive — fee-gated per-record access, no bulk channel
 - **Source URL:** https://www.caa.ro/en/pages/inmatricularea-aeronavelor (CAPTCHA-walled to bots)
-- **License:** Per AACR's own published procedures (verified manually 2026-05-09 by passing the CAPTCHA), section VIII: _"Based on the provisions of art. 6.7 of the RACR IA as well as the provisions of other specific normative acts, the interested persons may request the AACR to be provided with information regarding the civil aircraft registered in the RUIAC. When submitting the application, the applicant will pay the **tariff charged by AACR in such situations (45 euro / aircraft + VAT)**, the proof of payment of the tariff being attached to the application submitted to the AACR Registry."_ (Last update: 11/03/2021, 10:38:53.)
+- **License:** Per AACR's own published procedures (verified manually 2026-05-10 by passing the CAPTCHA), section VIII: _"Based on the provisions of art. 6.7 of the RACR IA as well as the provisions of other specific normative acts, the interested persons may request the AACR to be provided with information regarding the civil aircraft registered in the RUIAC. When submitting the application, the applicant will pay the **tariff charged by AACR in such situations (45 euro / aircraft + VAT)**, the proof of payment of the tariff being attached to the application submitted to the AACR Registry."_ (Last update: 11/03/2021, 10:38:53.)
 - **Why excluded:** Per-record fee of €45 + VAT (~€55.80 with Romanian standard VAT). Romania has ~150–200 RYR-prefixed aircraft; estimated full bulk-pull cost ~€11,000–€14,000. No discounted bulk channel exists. Same exclusion criteria as **UK CAA G-INFO** (paid single-PC product) and **Israel CAAI** (per-aircraft fee + FOI for bulk). Under PRD CC.1 (Restrictive), no usable deployment shape exists for a non-commercial source-available project.
 - **Revisit condition:** AACR changes the access model — for example, if the RUIAC is added to data.gov.ro under an open license, or if a free bulk-export channel becomes available.
 
@@ -1088,29 +1106,29 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAD Serbia — Civil Aviation Directorate of the Republic of Serbia (Direktorat civilnog vazduhoplovstva Republike Srbije)
 
-- **Status:** Future — permission request sent 2026-05-09, awaiting reply
-- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
 - **Source URL:** https://cad.gov.rs/strana/20841/Аccess-to-the-electronic-aircraft-registry (English) + https://cad.gov.rs/lat/strana/20841/registar-vazduhoplova (Serbian Latin)
 - **Bulk download URL:** Direct PDF on path `https://cad.gov.rs/upload/plovidbenost/Registar%20vazduhoplova.pdf` (latest snapshot; historical date-stamped versions at `/upload/plovidbenost/YYYY/Registar%20vazduhoplova/Registar-DD.MM.YYYY.pdf`)
 - **License:** Pending verification. No explicit license declaration on the document page or in surrounding materials. Site footer asserts _"Copyright © Civil Aviation Directorate of the Republic of Serbia 2004-2026"_. Default copyright applies absent a permission grant.
 - **Update cadence:** Periodic (date-stamped versions visible across multiple years)
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as Spain AESA, Luxembourg DAC, Croatia CCAA, Hungary KKM, Slovakia NSAT — **sixth** use case for the PDF parser path.
-- **Permission email:** Sent 2026-05-09 to `dgca@cad.gov.rs` (general Directorate inbox; site does not surface a register-specific desk). Phone +381 11 292 70 00; address Skadarska 23, 11000 Belgrade. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** Sent 2026-05-10 to `dgca@cad.gov.rs` (general Directorate inbox; site does not surface a register-specific desk). Phone +381 11 292 70 00; address Skadarska 23, 11000 Belgrade. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
 
 ## SAAU — State Aviation Administration of Ukraine (Державна авіаційна служба України)
 
-- **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.ua; just asking which license applies)
+- **Status:** Future — permission request sent 2026-05-10 (license confirmation only — bulk channel and dataset already public on data.gov.ua; just asking which license applies)
 - **Classification:** Unknown — strongly leaning Open (CC BY 4.0 inferred from data.gov.ua portal default, not directly verified)
 - **Source URL:** https://data.gov.ua/dataset/08a647a0-7829-46ab-aa50-5afb7146a7a8 (open-data portal listing) + https://avia.gov.ua/state-civil-aircraft-register-of-ukraine/ (SAAU register page) + https://avia.gov.ua/reyestr-tsivilnih-povitryanih-suden-ukrayini/ (Ukrainian-language landing)
 - **Bulk download URL:** Excel file linked from SAAU register page (`avia.gov.ua/register_of_aircraft.xls` per third-party reference; URL needs verification at ingest time). Dataset on data.gov.ua updates **daily with automatic refresh**.
 - **License:** Pending verification. data.gov.ua portal default for Ukrainian public-sector data is CC BY 4.0 (Ukrainian government open-data norms). Strongly inferred Open per portal norms but the dataset page renders client-side so direct license tag was not extractable; email asks for explicit confirmation.
 - **Update cadence:** Daily auto-update on data.gov.ua per dataset description
 - **Format note (engineering):** Bulk file is **Excel (.xls/.xlsx)**. Engine handles `xlsx` natively; if it's the older `.xls` format the parser may need a small adjustment, but lighter than the PDF parser path. Pattern matches Austria Austro Control, Bulgaria CAA.
-- **Wartime operational context (verified 2026-05-09):** Russia's invasion of Ukraine (since February 2022) is ongoing as of recon date. Engagement with Ukraine is **fully permitted** — Ukraine is a US ally; sanctions apply to Russia, not Ukraine. However: response times may be impacted; some aircraft data is operationally sensitive. Email explicitly offers to suspend ingest on operational-security request at any time.
-- **Permission email:** Sent 2026-05-09 to `vdz@avia.gov.ua` (Відділ документообігу та контролю / Documentation and Control Department; phone +380 44 351 55 80). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Acknowledged wartime context and offered to suspend on request. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case + wartime acknowledgment).
+- **Wartime operational context (verified 2026-05-10):** Russia's invasion of Ukraine (since February 2022) is ongoing as of recon date. Engagement with Ukraine is **fully permitted** — Ukraine is a US ally; sanctions apply to Russia, not Ukraine. However: response times may be impacted; some aircraft data is operationally sensitive. Email explicitly offers to suspend ingest on operational-security request at any time.
+- **Permission email:** Sent 2026-05-10 to `vdz@avia.gov.ua` (Відділ документообігу та контролю / Documentation and Control Department; phone +380 44 351 55 80). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Acknowledged wartime context and offered to suspend on request. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case + wartime acknowledgment).
 - **Reply (verbatim):** _pending_
 
 ---
