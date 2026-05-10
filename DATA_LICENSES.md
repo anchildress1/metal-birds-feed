@@ -493,6 +493,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAAT Thailand — Civil Aviation Authority of Thailand
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration)
+- **Source URL:** https://www.caat.or.th/en/certificates-licenses/aircraft/guidance-material/registration-of-an-aircraft/ + https://www.caat.or.th/en/archives/52215 (legacy register link)
+- **Bulk download URL:** Direct PDF on date-stamped path, e.g. https://www.caat.or.th/wp-content/uploads/2024/01/Aircraft-Registration-Information-08-Jan-2025.pdf (most recently surfaced 2025-01-08; ~16 months stale at recon time). Filename pattern: `Aircraft-Registration-Information-DD-MMM-YYYY.pdf`. WordPress site.
+- **License:** Pending verification. No explicit license declaration on registry pages.
+- **Update cadence:** Periodic (date-stamped snapshots; cadence appears semi-annual based on visible files but not stated explicitly). Email asks for confirmation.
+- **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — joins the now-large PDF parser path use-case set.
+- **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format + dated-snapshot pattern. Pass 2: data.go.th cross-check (register not catalogued there) + dedicated international-focal-point inbox confirmed.
+- **Permission email:** Sent 2026-05-09 to `inter_focalpoint@caat.or.th` (CAAT international focal point) cc `saraban@caat.or.th` (general saraban / formal correspondence). Phone +66 2 568 8800; address 333/105 Lak Si Plaza, Khamphaeng Phet 6 Rd., Bangkok 10210. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade + offered to coordinate publication on data.go.th. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
 
 - **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)

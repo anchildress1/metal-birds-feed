@@ -97,6 +97,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | FOCA Switzerland          | 2026-05-05                           | 2026-06-04 | aircraftregistry@bazl.admin.ch                                                               | **No** (Personal-use; silence ≠ permission)               |
 | CAA Taiwan                | 2026-05-05                           | 2026-06-04 | gencaa@mail.caa.gov.tw                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | TCAA Tanzania             | 2026-05-05 (v2 to `tcaa@tcaa.go.tz`) | 2026-06-04 | tcaa@tcaa.go.tz (v1 to ~~airworthinessinspectors@tcaa.go.tz~~ / ~~info@tcaa.go.tz~~ bounced) | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAAT Thailand             | 2026-05-09                           | 2026-06-08 | inter_focalpoint@caat.or.th (cc saraban@caat.or.th; international focal point)               | **Yes** (Unknown; public-record fallback after follow-up) |
 | TTCAA Trinidad & Tobago   | 2026-05-05                           | 2026-06-04 | ttcaa@caa.gov.tt                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | SAAU Ukraine              | 2026-05-09                           | 2026-06-08 | vdz@avia.gov.ua (Documentation and Control Dept; license confirmation only; wartime ack)     | **Yes** (Unknown; public-record fallback after follow-up) |
 | DINACIA Uruguay           | 2026-05-09                           | 2026-06-08 | dinacia@dinacia.gub.uy (cc certaero@dinacia.gub.uy)                                          | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -178,7 +179,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country  | Agency | Register URL                                                           | Language             |
 | -------- | ------ | ---------------------------------------------------------------------- | -------------------- |
-| Thailand | CAAT   | [caat.or.th](https://www.caat.or.th/en/archives/52215)                 | Thai (English UI)    |
 
 ### Caucasus / Central Asia
 
