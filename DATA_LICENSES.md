@@ -420,6 +420,19 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAA CR — Civil Aviation Authority of the Czech Republic (Úřad pro civilní letectví)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Source URL:** https://lr.caa.gov.cz/letecky-rejstrik?lang=en (English UI available)
+- **Bulk download URL:** **None published.** The register interface is a JS-rendered SPA (Angular/React) with search-only frontend; no CSV/XLSX/PDF/JSON download discoverable from the public-facing page. Pattern matches Switzerland FOCA, Austria Austro Control, Italy ENAC, Estonia Transpordiamet.
+- **License:** No declaration on the register page. **Register absent from data.gov.cz** (Czech national open-data catalog) — site-search returned zero results for "letecký" / "aircraft" datasets from the Civil Aviation Authority. **Notable leverage point:** Czech Republic enacted a 2024 law mandating that "public registries, registers, lists and records maintained by law" be progressively published as open data on data.gov.cz. The aircraft register fits this category but is not yet listed — either compliance gap, awaiting implementation, or claimed exemption. This is a citable legal basis for the request, stronger than peer-comparable.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-09 to `dousova@caa.cz` (Jana Doušová, register department head; cc `podatelna@caa.gov.cz` for formal record). Email led with the Czech 2024 open-data law citation as primary leverage and the Finland Traficom comparable as peer example. Other named register staff for escalation: Milada Jechová (`jechova@caa.cz`), Jana Pospíšilová (`pospisilova@caa.cz`); reception phone +420 225 421 111. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CAAM — Civil Aviation Authority of Malaysia
 
 - **Status:** Future — permission request submitted via webform 2026-05-05, awaiting reply
