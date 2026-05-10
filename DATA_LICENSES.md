@@ -420,6 +420,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAA Macedonia — Civil Aviation Agency of the Republic of North Macedonia (Агенција за цивилно воздухопловство)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; "All Rights Reserved" boilerplate footer only)
+- **Source URL:** https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/ (English) + Macedonian Cyrillic equivalent at the same site
+- **Bulk download URL:** Direct PDF on date-stamped path, e.g. https://www.caa.gov.mk/wp-content/uploads/2026/04/AIRCRAFT-REGISTER-20.04.2026.pdf (April 20, 2026 snapshot — fresh). Filename pattern: `AIRCRAFT-REGISTER-DD.MM.YYYY.pdf`. WordPress site.
+- **License:** Pending verification. Site footer asserts _"© Copyright 2019. All Rights Reserved"_ — copyright + "All Rights Reserved" boilerplate. No explicit reuse permission declared.
+- **Update cadence:** Periodic (latest version dated 2026-04-20; cadence not stated explicitly)
+- **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **eighth** use case for the PDF parser path.
+- **Permission email:** Sent 2026-05-09 to `caa@gov.mk` (general Agency inbox; site does not surface a register-specific desk). Phone +389 2 3 18 16 01; address Dame Gruev 1, 1000 Skopje. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## DAC Luxembourg — Direction de l'Aviation Civile
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
@@ -513,6 +527,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Format note (engineering):** Bulk file is **XLSX** — engine handles `xlsx` natively. **Zero parser work needed.** If license clears, this is engineering-ready (just YAML config + fixtures). Closest existing analogue: Austria Austro Control (annual XLSX).
 - **Register absent from data.egov.bg** Bulgarian open-data portal listing for CAA does not surface the aircraft register specifically; portal listing exists for the agency but the register is not catalogued there.
 - **Permission email:** Sent 2026-05-09 to `AIRWORTHINESS@caa.bg` (Airworthiness Department — owner of `/category/300` URL hierarchy where the register lives) cc `caa@caa.bg` (general inbox). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Address: Sofia 1000, "Diakon Ignatiy" Str. №9; phone +359 (02) 937-1047. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## BHDCA — Bosnia and Herzegovina Directorate of Civil Aviation (Direkcija za civilno zrakoplovstvo BiH)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; "All rights reserved" boilerplate footer only)
+- **Source URL:** http://www.bhdca.gov.ba/index.php/hr/doc/registar-civilnih-zrakoplova (Croatian) + http://www.bhdca.gov.ba/index.php/en/doc/registar-civilnih-zrakoplova (English)
+- **Bulk download URL:** PDF embedded on register page, hosted at `http://www.bhdca.gov.ba/website/dokumenti/Plovidbenost/IzvodRegistar/BiHAircraftRegisterHR.pdf` (Croatian extract; English variant at `BiHAircraftRegisterENG.pdf` per third-party reference)
+- **License:** Pending verification. Site footer asserts _"© 2021 BHDCA - Bosna i Hercegovina DIREKCIJA ZA CIVILNO ZRAKOPLOVSTVO. All rights reserved."_ — copyright + "all rights reserved" boilerplate. No explicit reuse permission declared on the document page.
+- **Update cadence:** TBD (footer dated 2021 — site appears not actively maintained; refresh frequency unclear)
+- **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **seventh** use case for the PDF parser path.
+- **Operational reliability concern (2026-05-09):** Site uses `http://` (not HTTPS) and the footer is dated 2021. Suggests the agency website is not actively maintained, which may impact response reliability. Multilingual structure (HR/EN/SR/BS) reflects BiH's three constituent peoples + English.
+- **Permission email:** Sent 2026-05-09 to `bhdca@bhdca.gov.ba` (general Directorate inbox; site does not surface a register-specific direct email — register staff "Aircraft Register Official – REG" position 2-2-5 in Airworthiness Section but no direct email visible). Phone +387 51 921-222; Fax +387 51 921-520; address V kozarske brigade 18, 78000 Banja Luka. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---

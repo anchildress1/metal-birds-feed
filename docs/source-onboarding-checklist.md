@@ -44,6 +44,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | BCAA Bahamas              | 2026-05-05                           | 2026-06-04 | atl@caabahamas.com                                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
 | BCAA / DGTA Belgium       | 2026-05-05                           | 2026-06-04 | bcaa.registration@mobilit.fgov.be                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | BDCA Belize               | 2026-05-05                           | 2026-06-04 | director@civilaviation.gov.bz                                                                | **Yes** (Unknown; public-record fallback after follow-up) |
+| BHDCA Bosnia & Herzegovina | 2026-05-09                          | 2026-06-08 | bhdca@bhdca.gov.ba (general Directorate inbox)                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAB Botswana             | 2026-05-05                           | 2026-06-04 | caab@caab.co.bw                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | ANAC Brasil               | 2026-05-05                           | 2026-06-04 | rab@anac.gov.br                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Bulgaria              | 2026-05-09                           | 2026-06-08 | AIRWORTHINESS@caa.bg (cc caa@caa.bg; Airworthiness Department)                               | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -67,6 +68,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | KOCA Korea                | 2026-05-05                           | 2026-06-04 | lia0404@korea.kr                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | TKA Lithuania             | 2026-05-09 (v2 to `info@tka.lt`)     | 2026-06-08 | info@tka.lt (cc audrius.turauskas@tka.lt; v1 to ~~joris.dumcius@tka.lt~~ bounced)            | **Yes** (Unknown; public-record fallback after follow-up) |
 | DAC Luxembourg            | 2026-05-09                           | 2026-06-08 | nav@av.etat.lu (Département Navigabilité)                                                    | **No** (Personal-use; silence ≠ permission)               |
+| CAA Macedonia (North)     | 2026-05-09                           | 2026-06-08 | caa@gov.mk (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAM Malaysia             | 2026-05-05                           | 2026-06-04 | webform at caam.gov.my/contact-us                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Maldives              | 2026-05-05                           | 2026-06-04 | airworthiness@caa.gov.mv                                                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAD Malta                 | 2026-05-05                           | 2026-06-04 | civil.aviation@transport.gov.mt                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -163,8 +165,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country              | Agency         | Register URL                                                                                                        | Language                 |
 | -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
-| Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |
 | Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |
 | Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(emailed 2026-05-09 — see In flight section above)** | Estonian                 |
 
