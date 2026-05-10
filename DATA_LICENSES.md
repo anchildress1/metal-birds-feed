@@ -479,6 +479,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## AACM Macau — Civil Aviation Authority of Macao SAR (Autoridade de Aviação Civil da RAEM)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.aacm.gov.mo/en/industry-page/RegisteredAircraft (English) + https://www.aacm.gov.mo/pt/industry-page/RegisteredAircraft (Portuguese)
+- **Bulk download URL:** **None published.** Page surfaces a list view only. No CSV/XLSX/PDF/JSON export discoverable.
+- **License:** Pending verification. No explicit license declaration on the Registry pages.
+- **Update cadence:** TBD
+- **Format note (engineering):** Likely HTML scrape if bulk channel is not granted — joins Estonia, Georgia, Montenegro, Kyrgyzstan in the HTML-scrape bucket.
+- **Permission email:** Sent 2026-05-09 to `aacm@aacm.gov.mo` (general Authority inbox; phone +853 2851 1213). Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
 
 - **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
@@ -586,6 +600,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Update cadence:** TBD (refresh frequency not stated explicitly)
 - **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **ninth** use case for the PDF parser path.
 - **Permission email:** Sent 2026-05-09 to `info@caa.gov.md` (general inbox; note domain is `caa.gov.md` while website is `caa.md` — if v1 bounces, retry via `caa.md`-domain inbox or contact form). Phone +373 22 823 500. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## MCAA Mongolia — The Civil Aviation Authority of Mongolia
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; PDF bulk exists but stale)
+- **Source URL:** https://www.mcaa.gov.mn/ (English landing) + https://mcaa.gov.mn/?p=1758 (legacy register page) + https://www.mcaa.gov.mn/t7mhit9.polynosic/?lang=en (current register section, JS-rendered)
+- **Bulk download URL:** Direct PDF at https://mcaa.gov.mn/PDF/REGISTER.PDF — last surfaced version dated **2022-07-16** (~3 years stale at recon time). Email asks for refresh cadence confirmation.
+- **License:** Pending verification. No explicit license declaration on registry pages. Pass 2 cross-check confirmed no data.gov.mn / opendata.gov.mn listing for MCAA aircraft data — Mongolia does not appear to have a national open-data portal that includes aviation.
+- **Update cadence:** **Concerning** — only 2022-07-16 version surfaced; email explicitly asks for current cadence.
+- **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — joins the now-large PDF parser path use-case set. Email asks for structured-format upgrade (CSV/XLSX/JSON) which would help downstream consumption.
+- **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check + alternate-domain check + page fetch attempts.
+- **Permission email:** Sent 2026-05-09 to `info@mcaa.gov.mn` (general Authority inbox; phone +976 71282064). Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---

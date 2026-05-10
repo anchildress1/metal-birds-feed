@@ -74,12 +74,14 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAA Kyrgyzstan            | 2026-05-09                           | 2026-06-08 | mail@caa.kg (general Agency inbox)                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
 | TKA Lithuania             | 2026-05-09 (v2 to `info@tka.lt`)     | 2026-06-08 | info@tka.lt (cc audrius.turauskas@tka.lt; v1 to ~~joris.dumcius@tka.lt~~ bounced)            | **Yes** (Unknown; public-record fallback after follow-up) |
 | DAC Luxembourg            | 2026-05-09                           | 2026-06-08 | nav@av.etat.lu (Département Navigabilité)                                                    | **No** (Personal-use; silence ≠ permission)               |
+| AACM Macao (SAR)          | 2026-05-09                           | 2026-06-08 | aacm@aacm.gov.mo (general Authority inbox)                                                   | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Macedonia (North)     | 2026-05-09                           | 2026-06-08 | caa@gov.mk (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAM Malaysia             | 2026-05-05                           | 2026-06-04 | webform at caam.gov.my/contact-us                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Maldives              | 2026-05-05                           | 2026-06-04 | airworthiness@caa.gov.mv                                                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAD Malta                 | 2026-05-05                           | 2026-06-04 | civil.aviation@transport.gov.mt                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | AFAC Mexico               | 2026-05-05                           | 2026-06-04 | tramites@afac.gob.mx                                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Moldova               | 2026-05-09                           | 2026-06-08 | info@caa.gov.md (note: domain differs from `caa.md` website — verify if bounces)             | **Yes** (Unknown; public-record fallback after follow-up) |
+| MCAA Mongolia             | 2026-05-09                           | 2026-06-08 | info@mcaa.gov.mn (general Authority inbox; stale PDF, refresh cadence requested)             | **Yes** (Unknown; public-record fallback after follow-up) |
 | ACG Montenegro            | 2026-05-09                           | 2026-06-08 | acv@caa.me (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA NZ                    | 2026-05-05                           | 2026-06-04 | info@caa.govt.nz                                                                             | **No** (Personal-use; silence ≠ permission)               |
 | Luftfartstilsynet Norway  | 2026-05-05                           | 2026-06-04 | postmottak@caa.no (sent); `nlr@caa.no` register-specific — use for follow-up                 | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -176,8 +178,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country  | Agency | Register URL                                                           | Language             |
 | -------- | ------ | ---------------------------------------------------------------------- | -------------------- |
-| Macau    | AACM   | [aacm.gov.mo](https://www.aacm.gov.mo/overview_aircraft.php?pageid=84) | Chinese / Portuguese |
-| Mongolia | MCAA   | [mcaa.gov.mn](https://www.mcaa.gov.mn/?p=1758)                         | Mongolian            |
 | Thailand | CAAT   | [caat.or.th](https://www.caat.or.th/en/archives/52215)                 | Thai (English UI)    |
 
 ### Caucasus / Central Asia
