@@ -420,6 +420,22 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## DAC Luxembourg — Direction de l'Aviation Civile
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** **Personal-use** (verified 2026-05-09 from explicit DAC "Aspects légaux" terms; no recon-first ambiguity)
+- **Source URL:** https://dac.gouvernement.lu/fr/demarches/immatriculation-aeronefs/releve-immatriculations.html
+- **Bulk download URL:** Direct PDF on date-stamped filename pattern, e.g. https://dac.gouvernement.lu/dam-assets/documents/navigabilité/releve-aeronefs/relev-aronefs-10-04-2026.pdf (361 KB; latest as of recon was 2026-04-10; page last modified 2026-04-22).
+- **License:** **Personal-use only.** Per DAC's [Aspects légaux](https://dac.gouvernement.lu/fr/support/aspects-legaux.html), default rule is verbatim French: _"Sauf indication contraire, l'Etat du Grand-Duché de Luxembourg n'accorde **aucune licence ou autorisation** relative aux droits de propriété intellectuelle qu'il a sur ce site, ses éléments ou les Services."_ The text-document exception is narrow: _"l'usager est autorisé à consulter, télécharger et imprimer les documents de type texte sans demande préalable"_ — i.e., **consult, download, print** only; not redistribute, not modify. Same legal posture as France DGAC and Switzerland FOCA.
+- **Update cadence:** Periodic (date-stamped filename pattern; refresh frequency not contractually committed)
+- **PII pre-handling at source (good news for our pipeline):** Per the register page (verbatim French): _"Les données relatives à des personnes physiques sont considérées comme des données à caractère personnel et ne figurent pas dans l'extrait de liste pour des raisons de conformité aux dispositions RGPD."_ DAC already strips natural-person data per GDPR. Same flavor as France DGAC and Lithuania TKA.
+- **Format note (engineering):** Bulk file is **PDF**, same blocker as Spain AESA. Engine handles csv/ods/xlsx; PDF parsing is a new format adapter (would be reusable for Spain).
+- **Register absent from data.public.lu** (only "Tableau de tri de la DAC" — records management taxonomy — listed there, not the aircraft register). Same Switzerland/Austria pattern. Notable contrast: data.public.lu portal default is CC0 for ~90% of datasets — DAC is the outlier in withholding the register.
+- **Permission email:** Sent 2026-05-09 to `nav@av.etat.lu` (Département Navigabilité; phone +352 247-74924/74900). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and the data.public.lu CC0 portal default as Baltic/EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **The 30-day fallback does NOT apply** — DAC is Personal-use; silence ≠ permission, must wait for affirmative reply. Template: `docs/agency-permission-request.md` (lightly customized for Personal-use posture).
+- **Reply (verbatim):** _pending_
+
+---
+
 ## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
 
 - **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
