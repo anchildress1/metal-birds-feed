@@ -75,6 +75,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | Luftfartstilsynet Norway  | 2026-05-05                           | 2026-06-04 | postmottak@caa.no (sent); `nlr@caa.no` register-specific — use for follow-up                 | **Yes** (Unknown; public-record fallback after follow-up) |
 | PCAA Pakistan             | 2026-05-05                           | 2026-06-04 | umair.sufyan@caapakistan.com.pk (named individual)                                           | **Yes** (Unknown; public-record fallback after follow-up) |
 | CASA PNG                  | 2026-05-05                           | 2026-06-04 | info@casapng.gov.pg                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAD Serbia                | 2026-05-09                           | 2026-06-08 | dgca@cad.gov.rs (general Directorate inbox)                                                  | **Yes** (Unknown; public-record fallback after follow-up) |
 | SCAA Seychelles           | 2026-05-05                           | 2026-06-04 | secretariat@scaa.sc                                                                          | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAS Singapore            | 2026-05-05                           | 2026-05-26 | webform (3–15 business-day SLA)                                                              | **No** (Personal-use; silence ≠ permission)               |
 | Dopravný úrad Slovakia    | 2026-05-09                           | 2026-06-08 | register.lietadiel@nsat.sk (register-specific desk; license confirmation only)               | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -162,7 +163,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country              | Agency         | Register URL                                                                                                        | Language                 |
 | -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Serbia               | CAD Serbia     | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry)                                                     | Serbian (English UI)     |
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |
 | Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |

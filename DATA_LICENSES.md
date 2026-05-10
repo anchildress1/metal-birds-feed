@@ -821,6 +821,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAD Serbia — Civil Aviation Directorate of the Republic of Serbia (Direktorat civilnog vazduhoplovstva Republike Srbije)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found)
+- **Source URL:** https://cad.gov.rs/strana/20841/Аccess-to-the-electronic-aircraft-registry (English) + https://cad.gov.rs/lat/strana/20841/registar-vazduhoplova (Serbian Latin)
+- **Bulk download URL:** Direct PDF on path `https://cad.gov.rs/upload/plovidbenost/Registar%20vazduhoplova.pdf` (latest snapshot; historical date-stamped versions at `/upload/plovidbenost/YYYY/Registar%20vazduhoplova/Registar-DD.MM.YYYY.pdf`)
+- **License:** Pending verification. No explicit license declaration on the document page or in surrounding materials. Site footer asserts _"Copyright © Civil Aviation Directorate of the Republic of Serbia 2004-2026"_. Default copyright applies absent a permission grant.
+- **Update cadence:** Periodic (date-stamped versions visible across multiple years)
+- **Format note (engineering):** Bulk file is **PDF**. Same blocker as Spain AESA, Luxembourg DAC, Croatia CCAA, Hungary KKM, Slovakia NSAT — **sixth** use case for the PDF parser path.
+- **Permission email:** Sent 2026-05-09 to `dgca@cad.gov.rs` (general Directorate inbox; site does not surface a register-specific desk). Phone +381 11 292 70 00; address Skadarska 23, 11000 Belgrade. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## SAAU — State Aviation Administration of Ukraine (Державна авіаційна служба України)
 
 - **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.ua; just asking which license applies)
