@@ -420,6 +420,26 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAA Latvia — Civilās aviācijas aģentūra (Civil Aviation Agency of Latvia)
+
+- **Status:** 🛠️ Cleared — implementation pending (license cleared via data.gov.lv; CSV format → engine handles natively, only YAML config + fixtures needed)
+- **Classification:** **Open** — CC0-1.0 (verified 2026-05-09 from data.gov.lv; reclassified from Unknown). Same posture as Netherlands ILT.
+- **Source URL:** https://data.gov.lv/dati/lv/dataset/gaisa-kugu-registrs (dataset page) + https://www.caa.gov.lv/en/aircraft-register (agency register page)
+- **Bulk download URL:** https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv (direct CSV, no auth required)
+- **Bonus resource:** https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/c550723e-4954-4057-8a7a-ed4a19f06b4b/download/output_metadata.json (sibling JSON metadata)
+- **License:** **CC0-1.0** (public domain dedication, no attribution required). Verbatim license tag on the data.gov.lv dataset page: "CC0-1.0". This is even more permissive than CC BY 4.0 — same posture as Netherlands ILT. We will still cite Latvia CAA in our documentation as a courtesy.
+- **Update cadence:** Monthly ("reizi mēnesī" per dataset metadata). First published 2023-09-08. **The "last updated 2025-04-29" field on the dataset page refers to the metadata record itself (description / tags / etc.), NOT the data file content.** Verified 2026-05-09 by direct CSV fetch — most recent registration in the file was 2026-04-10 (YL-MBL); the data file is freshly refreshed monthly even though the metadata-record date looks stale.
+- **Format note (engineering):** Direct CSV. Engine handles `csv` natively. **Zero parser work needed.** Just standard `sources/lv-caa.yaml` + `fixtures/lv-caa/` ground-truth + doc rows. Closest existing analogue: ILT Netherlands.
+- **Data contact:** `ivo.tukris@caa.gov.lv` (Ivo Tukris, listed as "Saziņas e-pasts datu jautājumiem" / data-questions email on the dataset page) — only relevant if data quality issues arise; not needed for license clearance.
+- **Permission email:** **None needed.** License is fully explicit on the public open-data portal. No email required.
+- **Reply (verbatim):** _N/A — no email sent_
+
+### Required attribution (verbatim — courtesy, not legally required under CC-0)
+
+> Aircraft register data published by Civilās aviācijas aģentūra (CAA Latvia) on [data.gov.lv](https://data.gov.lv/dati/lv/dataset/gaisa-kugu-registrs) under [CC0-1.0 (public domain)](https://creativecommons.org/publicdomain/zero/1.0/). Acknowledgment provided as a courtesy; not legally required under CC-0.
+
+---
+
 ## CAA CR — Civil Aviation Authority of the Czech Republic (Úřad pro civilní letectví)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply

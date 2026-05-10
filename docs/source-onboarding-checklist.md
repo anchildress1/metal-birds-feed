@@ -33,6 +33,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | ---------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | AESA Spain        | Open with attribution — AESA portal Legal Notice + Royal Decree 1495/2011 (Spain PSI / Aporta); CC BY-equiv. | Bulk file is **PDF** ([aeronaves_inscritas.pdf](https://www.seguridadaerea.gob.es/sites/default/files/aeronaves_inscritas.pdf)); engine handles csv/ods/xlsx — new PDF parser path needed | Sent 2026-05-05 to `rmac.aesa@seguridadaerea.es` as courtesy; reply not gating use          |
 | Traficom Finland  | Open — CC BY 4.0 explicit on Traficom open-data page                                                          | Bulk file is **ZIP-packed CSV** ([direct download](https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip)); engine handles csv natively — thin unzip-then-parse wrapper needed (reusable for FI vehicles/vessels/rail)  | Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc `tietojenluovutus@traficom.fi`) as courtesy; reply not gating use |
+| CAA Latvia        | Open — CC0-1.0 (public domain) explicit on data.gov.lv                                                        | Direct CSV ([download](https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv)); engine handles csv natively — **zero parser work**, only YAML config + fixtures needed | None needed — license fully clear via portal; same posture as ILT NL |
 
 ### 🟡 In flight — waiting on reply
 
@@ -164,7 +165,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |
 | Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |
-| Latvia               | CAA            | [caa.gov.lv](https://www.caa.gov.lv/lv/gaisa-kugu-registrs)                                                         | Latvian                  |
 | Lithuania            | TKA            | [tka.lt](https://tka.lt/oro-transportas/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/?lang=en) | Lithuanian (English UI)  |
 | Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(emailed 2026-05-09 — see In flight section above)** | Estonian                 |
 
