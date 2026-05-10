@@ -488,6 +488,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAA Bulgaria — Главна дирекция "Гражданска въздухоплавателна администрация" (Directorate General Civil Aviation Administration)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no explicit license declaration; "All rights reserved" boilerplate footer only)
+- **Source URL:** https://www.caa.bg/bg/category/300/17238 (Bulgarian) + https://www.caa.bg/en/node/17238 (English)
+- **Bulk download URL:** Direct XLSX on date-stamped path, e.g. https://www.caa.bg/sites/default/files/upload/documents/2025-05/Aircraft_Register_20250430.xlsx (35.45 KB; small register). Filename pattern: `Aircraft_Register_YYYYMMDD.xlsx`.
+- **Update cadence:** **Concerning — file dated 2025-04-30 was still the latest as of recon 2026-05-09**, i.e., over a year stale. Path includes `/2025-05/` folder, suggesting the file is filed by upload date. Hungary updates near-daily; Bulgaria appears to be annual at best. Will need to confirm refresh cadence in the email reply.
+- **License:** Pending verification. Site footer asserts _"Главна дирекция 'Гражданска въздухоплавателна администрация' © 2005-2026 Всички права запазени"_ ("Directorate General 'Civil Aviation Administration' © 2005-2026 All rights reserved") — standard Bulgarian government boilerplate. No explicit reuse permission declared on the document page.
+- **Format note (engineering):** Bulk file is **XLSX** — engine handles `xlsx` natively. **Zero parser work needed.** If license clears, this is engineering-ready (just YAML config + fixtures). Closest existing analogue: Austria Austro Control (annual XLSX).
+- **Register absent from data.egov.bg** Bulgarian open-data portal listing for CAA does not surface the aircraft register specifically; portal listing exists for the agency but the register is not catalogued there.
+- **Permission email:** Sent 2026-05-09 to `AIRWORTHINESS@caa.bg` (Airworthiness Department — owner of `/category/300` URL hierarchy where the register lives) cc `caa@caa.bg` (general inbox). Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Address: Sofia 1000, "Diakon Ignatiy" Str. №9; phone +359 (02) 937-1047. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
