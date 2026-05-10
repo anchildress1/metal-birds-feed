@@ -62,6 +62,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | JCAA Jamaica              | 2026-05-05                           | 2026-06-04 | info@jcaa.gov.jm                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | CARC Jordan               | 2026-05-05                           | 2026-06-04 | info@carc.gov.jo (cc Bilal.Nazzal@CARC.GOV.JO)                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | KOCA Korea                | 2026-05-05                           | 2026-06-04 | lia0404@korea.kr                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| TKA Lithuania             | 2026-05-09                           | 2026-06-08 | joris.dumcius@tka.lt (cc info@tka.lt; head of Aircraft Section; license confirmation only)   | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAM Malaysia             | 2026-05-05                           | 2026-06-04 | webform at caam.gov.my/contact-us                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Maldives              | 2026-05-05                           | 2026-06-04 | airworthiness@caa.gov.mv                                                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAD Malta                 | 2026-05-05                           | 2026-06-04 | civil.aviation@transport.gov.mt                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -165,7 +166,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |
 | Montenegro           | ACG            | [caa.me](https://www.caa.me/en/registri)                                                                            | Montenegrin (English UI) |
-| Lithuania            | TKA            | [tka.lt](https://tka.lt/oro-transportas/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/?lang=en) | Lithuanian (English UI)  |
 | Estonia              | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(emailed 2026-05-09 — see In flight section above)** | Estonian                 |
 
 ### CJK / East Asian

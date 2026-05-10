@@ -420,6 +420,22 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
+
+- **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
+- **Classification:** Unknown — strongly leaning Open (CC BY 4.0 inferred from data.gov.lt portal default, not directly verified)
+- **Source URL:** https://data.gov.lt/datasets/2735/ (dataset page) + https://tka.lt/en/katalogas/register-of-civil-aircraft-of-the-republic-of-lithuania/ (TKA register page)
+- **Bulk download URL:** **Spinta API** at https://get.data.gov.lt/datasets/gov/tka/registras/Irasas (paginated JSON via cursor; metadata at `/:ns`). Multiple formats listed on dataset page: HTML, CSV, JSON, JSONL, ASCII, RDF.
+- **Schema (verified by direct API fetch 2026-05-09):** `_id`, `_revision`, `vda_id`, `duomenu_sviezumas` (data freshness), `registracijos_nr` (registration number, e.g. "LY-XXX"), `statusas` (status), `kategorija` (category), `rusis` (kind), `tipas` (type/model), `savininko_tipas` (owner **type**), `naudotojo_tipas` (operator **type**), `pagaminimas` (manufacture date), `pirma_registracija` (first registration), `paskutine_registracija` (last registration), `tsppp_galiojimas` (airworthiness validity), `baze` (base airport), `bazes_adresas` (base address), `geometrija` (geometry), `keleiviu_sk` (passenger count), `mkm` (MTOW kg), `oro_sraigtas` (propeller).
+- **PII pre-handling at source (good news for our pipeline):** Schema carries only **owner type and operator type** (categorical) — no owner/operator names. PII has been pre-stripped at source. Same flavor as France DGAC's GDPR pre-stripping. Excellent fit for our PRD CC.4 PII drop policy.
+- **License:** Pending verification. data.gov.lt portal default for Lithuanian public-sector data is CC BY 4.0, but the dataset page is JS-rendered (not directly fetchable) and the Spinta API envelope does not carry license metadata. Strongly inferred Open per portal norms but not directly verified — email asks for explicit confirmation.
+- **Update cadence:** Continuous (per-record `duomenu_sviezumas` field; data fresh as of 2026-03-09 verified)
+- **Format note (engineering):** New format adapter needed — JSON via Spinta API with cursor pagination. Engine handles csv/ods/xlsx natively; JSON would be a new path. Lighter lift than Spain's PDF problem; slightly bigger than Latvia's CSV. Bonus: all data.gov.lt datasets use the same Spinta API pattern, so wrapper would be reusable for any future Lithuanian source.
+- **Permission email:** Sent 2026-05-09 to `joris.dumcius@tka.lt` (Joris Dumčius, head of Aircraft Section / Orlaivių skyriaus vadovas; cc `info@tka.lt`). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA as Baltic peer comparable (CC0-1.0 on data.gov.lv). Other named register staff for escalation: Audrius Turauskas (Patarėjas, +370 645 63674), Vitalijus Krivoščenko (Patarėjas, +370 658 47947), Egidijus Šimkus (Grupės vadovas, +370 612 73317). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case).
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CAA Latvia — Civilās aviācijas aģentūra (Civil Aviation Agency of Latvia)
 
 - **Status:** 🛠️ Cleared — implementation pending (license cleared via data.gov.lv; CSV format → engine handles natively, only YAML config + fixtures needed)
