@@ -55,6 +55,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | DCA Cyprus                | 2026-05-05                           | 2026-06-04 | director@dca.mcw.gov.cy                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA CR Czech Republic     | 2026-05-09                           | 2026-06-08 | dousova@caa.cz (cc podatelna@caa.gov.cz; Jana Doušová, register dept head)                   | **Yes** (Unknown; public-record fallback after follow-up) |
 | Trafikstyrelsen Denmark   | 2026-05-05                           | 2026-06-04 | info@trafikstyrelsen.dk                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
+| IDAC Dominican Republic   | 2026-05-09                           | 2026-06-08 | info@idac.gov.do (cc dtac@idac.gov.do, info@idac.gob.do — `.gov` vs `.gob` domain variants)  | **Yes** (Unknown; public-record fallback after follow-up) |
 | Transpordiamet Estonia    | 2026-05-09                           | 2026-06-08 | info@transpordiamet.ee                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | ECAA Ethiopia             | 2026-05-05                           | 2026-06-04 | caa.airnav@ethionet.et                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAF Fiji                 | 2026-05-05                           | 2026-06-04 | info@caaf.org.fj                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -150,7 +151,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country            | Agency    | Register URL                                                                                                                                         | Language                |
 | ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Dominican Republic | IDAC      | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                          | Spanish                 |
 | Guatemala          | DGAC      | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                           | Spanish                 |
 | Uruguay            | DINACIA   | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                         | Spanish                 |
 | Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                     | French / Haitian Creole |

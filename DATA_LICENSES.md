@@ -605,6 +605,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## IDAC Dominican Republic — Instituto Dominicano de Aviación Civil
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.idac.gob.do/en/national-aircraft-regulatory-and-registry-directorate/ (description) + https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/ (public consultation portal)
+- **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only). datos.gob.do has IDAC organization page but the aircraft register is not catalogued there. Pattern matches Chile DGAC, Colombia UAEAC, Sweden Transportstyrelsen.
+- **License:** Pending verification. No explicit license declaration on the Registry pages.
+- **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
+- **Format note (engineering):** No bulk file exists. If IDAC reply confirms permission, would require establishing a new export channel via correspondence (potentially via datos.gob.do listing).
+- **Domain note:** Website is `idac.gob.do` (`.gob`); email is `info@idac.gov.do` (`.gov`). Email sent to both `.gov.do` and `.gob.do` variants for safety.
+- **Permission email:** Sent 2026-05-09 to `info@idac.gov.do` cc `dtac@idac.gov.do` cc `info@idac.gob.do` (general + technical + alt-domain). Phone +1 809-221-7909; address Ave. México Esq. 30 de Marzo, Santo Domingo. Email cited Latvia CAA, Lithuania TKA as peer comparables, and noted IDAC's existing presence on datos.gob.do as a potential publication channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## DGAC Chile — Dirección General de Aeronáutica Civil
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
