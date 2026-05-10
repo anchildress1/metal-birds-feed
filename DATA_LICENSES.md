@@ -619,6 +619,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## UAEAC Colombia — Unidad Administrativa Especial de Aeronáutica Civil
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.aerocivil.gov.co/autoridad_aeronautica/publicaciones/3704/registro-de-aeronaves/ (description) + https://www.aerocivil.gov.co/consulta-en-linea/consulta-de-matriculas-de-aeronaves (public consultation portal)
+- **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only). Pattern matches Chile DGAC, Sweden Transportstyrelsen, Italy ENAC — yes-reply must clear **both** license and bulk access channel.
+- **License:** Pending verification. No explicit license declaration on the Registry pages. datos.gov.co listing search confirmed: only Aerocivil procurement (SECOP) datasets are surfaced; aircraft register absent.
+- **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
+- **Format note (engineering):** No bulk file exists. If UAEAC reply confirms permission, would require establishing a new export channel via correspondence.
+- **Permission email:** Sent 2026-05-09 to `atencionalciudadano@aerocivil.gov.co` (Citizen Attention; site does not surface a register-specific desk publicly). Phone +57 (601) 425 1000; address Avenida El Dorado 103-15, Bogotá. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply

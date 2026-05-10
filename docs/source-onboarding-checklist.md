@@ -50,6 +50,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | ANAC Brasil               | 2026-05-05                           | 2026-06-04 | rab@anac.gov.br                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Bulgaria              | 2026-05-09                           | 2026-06-08 | AIRWORTHINESS@caa.bg (cc caa@caa.bg; Airworthiness Department)                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGAC Chile                | 2026-05-09 (English v2; v1 Spanish to delete) | 2026-06-08 | registro.aeronaves@dgac.gob.cl                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
+| UAEAC Colombia            | 2026-05-09                           | 2026-06-08 | atencionalciudadano@aerocivil.gov.co (Citizen Attention)                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CCAA Croatia              | 2026-05-09                           | 2026-06-08 | registar@ccaa.hr (registry-specific desk)                                                    | **Yes** (Unknown; public-record fallback after follow-up) |
 | DCA Cyprus                | 2026-05-05                           | 2026-06-04 | director@dca.mcw.gov.cy                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA CR Czech Republic     | 2026-05-09                           | 2026-06-08 | dousova@caa.cz (cc podatelna@caa.gov.cz; Jana Doušová, register dept head)                   | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -149,7 +150,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country            | Agency    | Register URL                                                                                                                                         | Language                |
 | ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Colombia           | UAEAC     | [aerocivil.gov.co](https://www.aerocivil.gov.co/consultas-en-linea/matriculas-de-aeronaves/)                                                         | Spanish                 |
 | Dominican Republic | IDAC      | [idac.gob.do](https://serviciosvirtualestac.idac.gob.do/ConsultaAeronaves/)                                                                          | Spanish                 |
 | Guatemala          | DGAC      | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                           | Spanish                 |
 | Uruguay            | DINACIA   | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                         | Spanish                 |
