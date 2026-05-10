@@ -61,6 +61,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAAF Fiji                 | 2026-05-05                           | 2026-06-04 | info@caaf.org.fj                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGAC France               | 2026-05-05                           | 2026-06-04 | immat@aviation-civile.gouv.fr                                                                | **No** (Personal-use; silence ≠ permission)               |
 | GCAA Georgia              | 2026-05-05                           | 2026-06-04 | office@gcaa.ge (English per English-first strategy)                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| DGAC Guatemala            | 2026-05-09                           | 2026-06-08 | registro.aeronautico@dgac.gob.gt (register-specific desk)                                    | **Yes** (Unknown; public-record fallback after follow-up) |
 | KKM Hungary               | 2026-05-09                           | 2026-06-08 | lfhf@ekm.gov.hu (cc caa@ekm.gov.hu; Légügyi Felügyeleti Hatósági Főosztály)                  | **Yes** (Unknown; public-record fallback after follow-up) |
 | ICETRA Iceland            | 2026-05-05                           | 2026-06-04 | samgongustofa@samgongustofa.is                                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGCA India                | 2026-05-05                           | 2026-06-04 | rkanand.dgca@nic.in, mdevula.dgca@nic.in (DDGs Airworthiness)                                | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -151,7 +152,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country            | Agency    | Register URL                                                                                                                                         | Language                |
 | ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Guatemala          | DGAC      | [dgac.gob.gt](http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves)                                                                           | Spanish                 |
 | Uruguay            | DINACIA   | [dinacia.gub.uy](https://www.dinacia.gub.uy)                                                                                                         | Spanish                 |
 | Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                     | French / Haitian Creole |
 | Togo               | ANAC Togo | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                    | French                  |

@@ -605,6 +605,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## DGAC Guatemala — Dirección General de Aeronáutica Civil
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.dgac.gob.gt/registro-aeronautico-nacional/ (description) + http://cass.dgac.gob.gt:8080/cass/servlet/consultaaeronaves (legacy Java/Tomcat consultation portal on non-standard port :8080)
+- **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only) on a legacy `:8080` URL — likely a Java application server. Pattern matches Chile DGAC, Colombia UAEAC, Dominican Republic IDAC.
+- **License:** Pending verification. No explicit license declaration on the Registry pages.
+- **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
+- **Format note (engineering):** No bulk file exists. The legacy `:8080/cass/servlet/` Java endpoint suggests an older system unlikely to support a clean export channel without explicit DGAC effort.
+- **Permission email:** Sent 2026-05-09 to `registro.aeronautico@dgac.gob.gt` (register-specific desk; phone +502 2321-5130). Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## IDAC Dominican Republic — Instituto Dominicano de Aviación Civil
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
