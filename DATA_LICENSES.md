@@ -546,6 +546,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAA Moldova — Autoritatea Aeronautică Civilă a Republicii Moldova
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration)
+- **Source URL:** https://www.caa.md/rom/register/ (Romanian) + https://www.caa.md/en (English landing) + https://www.caa.md/registru-aerian-3-84 (legacy CMS path)
+- **Bulk download URL:** Direct PDF at https://www.caa.md/modules/filemanager/files/documentum/Registrul_Aerian_al_Republicii_Moldova.pdf
+- **License:** Pending verification. No explicit license declaration on the document page or in surrounding materials. Default copyright applies.
+- **Update cadence:** TBD (refresh frequency not stated explicitly)
+- **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — **ninth** use case for the PDF parser path.
+- **Permission email:** Sent 2026-05-09 to `info@caa.gov.md` (general inbox; note domain is `caa.gov.md` while website is `caa.md` — if v1 bounces, retry via `caa.md`-domain inbox or contact form). Phone +373 22 823 500. Email cited Latvia CAA, Lithuania TKA, and Finland Traficom as small-EU peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## ACG Montenegro — Agencija za civilno vazduhoplovstvo Crne Gore
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply

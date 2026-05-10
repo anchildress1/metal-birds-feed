@@ -73,6 +73,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAA Maldives              | 2026-05-05                           | 2026-06-04 | airworthiness@caa.gov.mv                                                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAD Malta                 | 2026-05-05                           | 2026-06-04 | civil.aviation@transport.gov.mt                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | AFAC Mexico               | 2026-05-05                           | 2026-06-04 | tramites@afac.gob.mx                                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAA Moldova               | 2026-05-09                           | 2026-06-08 | info@caa.gov.md (note: domain differs from `caa.md` website — verify if bounces)             | **Yes** (Unknown; public-record fallback after follow-up) |
 | ACG Montenegro            | 2026-05-09                           | 2026-06-08 | acv@caa.me (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA NZ                    | 2026-05-05                           | 2026-06-04 | info@caa.govt.nz                                                                             | **No** (Personal-use; silence ≠ permission)               |
 | Luftfartstilsynet Norway  | 2026-05-05                           | 2026-06-04 | postmottak@caa.no (sent); `nlr@caa.no` register-specific — use for follow-up                 | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -154,7 +155,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Togo               | ANAC Togo | [anac-togo.tg](https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/)                                    | French                  |
 | Cabo Verde         | AAC       | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                   | Portuguese              |
 | Mozambique         | IACM      | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                 | Portuguese              |
-| Moldova            | CAA       | [caa.md](https://www.caa.md/registru-aerian-3-84)                                                                                                    | Romanian                |
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)
 
