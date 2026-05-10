@@ -46,6 +46,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | BDCA Belize               | 2026-05-05                           | 2026-06-04 | director@civilaviation.gov.bz                                                                | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAB Botswana             | 2026-05-05                           | 2026-06-04 | caab@caab.co.bw                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | ANAC Brasil               | 2026-05-05                           | 2026-06-04 | rab@anac.gov.br                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
+| CCAA Croatia              | 2026-05-09                           | 2026-06-08 | registar@ccaa.hr (registry-specific desk)                                                    | **Yes** (Unknown; public-record fallback after follow-up) |
 | DCA Cyprus                | 2026-05-05                           | 2026-06-04 | director@dca.mcw.gov.cy                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA CR Czech Republic     | 2026-05-09                           | 2026-06-08 | dousova@caa.cz (cc podatelna@caa.gov.cz; Jana Doušová, register dept head)                   | **Yes** (Unknown; public-record fallback after follow-up) |
 | Trafikstyrelsen Denmark   | 2026-05-05                           | 2026-06-04 | info@trafikstyrelsen.dk                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -161,7 +162,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Bulgaria             | CAA            | [caa.bg](http://www.caa.bg/bg/category/300/17238)                                                                   | Bulgarian                |
 | Slovakia             | NSA Slovakia   | [nsat.sk](https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/)     | Slovak                   |
 | Hungary              | KKM            | [kozlekedesihatosag.kormany.hu](https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604)                     | Hungarian                |
-| Croatia              | CCAA           | [ccaa.hr](https://www.ccaa.hr/en/list-of-registered-aircraft-94674)                                                 | Croatian (English UI)    |
 | Serbia               | CAD Serbia     | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry)                                                     | Serbian (English UI)     |
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |

@@ -472,6 +472,23 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration found; explicit copyright notice only)
+- **Source URL:** https://www.ccaa.hr/en/list-of-registered-aircraft-94674 (English) + https://www.ccaa.hr/popis-registriranih-zrakoplova-64123 (Croatian)
+- **Bulk download URL:** Direct PDF on hash-stamped path, e.g. https://www.ccaa.hr/file/2714b6440e95696d4822bbfcc5ada5086ac7 (April 1, 2026 snapshot; ~250 aircraft across 26 pages). Updated **first day of each month** per the publishing page.
+- **Schema (verified by direct PDF fetch 2026-05-09):** Registration mark (LZ-XXX) / Registry sequence number / Manufacturer / Aircraft type / Serial number / Owner / Address.
+- **PII pre-handling at source (partial):** Private individuals' names are masked as **"Fizička osoba"** (Natural person) but **company names AND addresses are fully visible**. GDPR-compliant baseline — natural persons protected, legal entities not (legal-entity data is not GDPR-protected). Compatible with our PRD CC.4 PII drop policy; we'd still drop addresses at mapping per project rules.
+- **License:** Pending verification. CCAA's page footer asserts _"Copyright © 2019 - 2026 Croatian Civil Aviation Agency"_ — explicit copyright assertion. Page also carries a publishing disclaimer (verbatim English): _"Agency does not guarantee the completeness and accuracy of data in the table after it is published on the Agency's website. Since data is subject to everyday changes, the users are instructed to address the Agency and check the precise data in the manually kept main book of the Croatian Register of Civil Aircraft."_ This is an **accuracy disclaimer**, not a redistribution restriction. Default copyright applies absent a permission grant. Same pattern as Switzerland FOCA, Austria Austro Control, Italy ENAC, Estonia Transpordiamet, Czech Republic CAA — agency publishes data on its own site without an open-data declaration.
+- **Update cadence:** Monthly (first day of each month per publishing page)
+- **Format note (engineering):** Bulk file is **PDF**, same blocker as Spain AESA + Luxembourg DAC. Engine handles csv/ods/xlsx; PDF parsing is a new format adapter (would be third use-case for that work).
+- **Register absent from data.gov.hr** (Croatian open-data portal does not list it).
+- **Permission email:** Sent 2026-05-09 to `registar@ccaa.hr` (registry-specific desk; surfaced from CCAA Aircraft Registry contacts page). Email cited Latvia CAA (CC0 on data.gov.lv) and Lithuania TKA (CC BY 4.0 on data.gov.lt) as Baltic peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CAA CR — Civil Aviation Authority of the Czech Republic (Úřad pro civilní letectví)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
