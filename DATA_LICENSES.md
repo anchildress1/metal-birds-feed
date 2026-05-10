@@ -605,6 +605,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## DGAC Chile — Dirección General de Aeronáutica Civil
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/ (description) + https://servicios.dgac.gob.cl/rna-web/publico.html (public consultation portal)
+- **Bulk download URL:** **None published.** Only per-aircraft consultation portal (search-only). Login-walled administrative portal at `servicios.dgac.gob.cl/rna-web/`. Pattern matches Sweden Transportstyrelsen, Italy ENAC, Iceland ICETRA — yes-reply must clear **both** license and bulk access channel.
+- **License:** Pending verification. No explicit license declaration on the Registry pages. datos.gob.cl exists as Chile's open-data portal but the Registro Nacional de Aeronaves is not catalogued there (search did not surface it).
+- **Update cadence:** TBD (consultation portal is presumably current; bulk refresh schedule not relevant absent a bulk channel)
+- **Format note (engineering):** No bulk file exists. If DGAC reply confirms permission, would require establishing a new export channel via correspondence.
+- **Permission email:** v1 (Spanish) sent 2026-05-09 to `registro.aeronaves@dgac.gob.cl` (draft `r-1087699892897272722`); **v2 (English) sent 2026-05-09 to same address per English-first strategy** (draft `r-1888376151312130960`). v1 to be deleted before sending — strategy is English-first to all agencies regardless of primary language. Phone (56 2) 24392460 / (56 2) 24392488; address Miguel Claro 1314, Providencia, Santiago. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
