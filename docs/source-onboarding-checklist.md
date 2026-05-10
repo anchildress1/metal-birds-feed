@@ -49,6 +49,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAAB Botswana             | 2026-05-05                           | 2026-06-04 | caab@caab.co.bw                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | ANAC Brasil               | 2026-05-05                           | 2026-06-04 | rab@anac.gov.br                                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA Bulgaria              | 2026-05-09                           | 2026-06-08 | AIRWORTHINESS@caa.bg (cc caa@caa.bg; Airworthiness Department)                               | **Yes** (Unknown; public-record fallback after follow-up) |
+| AAC Cabo Verde            | 2026-05-09                           | 2026-06-08 | info@aac.cv (general AAC inbox)                                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | DGAC Chile                | 2026-05-09 (English v2; v1 Spanish to delete) | 2026-06-08 | registro.aeronaves@dgac.gob.cl                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | UAEAC Colombia            | 2026-05-09                           | 2026-06-08 | atencionalciudadano@aerocivil.gov.co (Citizen Attention)                                     | **Yes** (Unknown; public-record fallback after follow-up) |
 | CCAA Croatia              | 2026-05-09                           | 2026-06-08 | registar@ccaa.hr (registry-specific desk)                                                    | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -158,7 +159,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 | Country            | Agency    | Register URL                                                                                                                                         | Language                |
 | ------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | Haiti              | OFNAC     | [registreimm.net](https://registreimm.net/aircraftSearchingView)                                                                                     | French / Haitian Creole |
-| Cabo Verde         | AAC       | [aac.cv](http://www.aac.cv/index.php?option=com_content&task=view&id=25&Itemid=63)                                                                   | Portuguese              |
 | Mozambique         | IACM      | [iacm.gov.mz](https://www.iacm.gov.mz/direccao-de-seguranca-de-voo/)                                                                                 | Portuguese              |
 
 ### Germanic / Nordic (German / Dutch / Danish / Swedish / Norwegian / Finnish)

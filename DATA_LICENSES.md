@@ -735,6 +735,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## AAC Cabo Verde — Agência de Aviação Civil de Cabo Verde
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.aac.cv/artigos/registo-aeronautico (current path) + https://www.aac.cv/aeronaves-aac/registo-de-aeronaves.html (legacy path noted by third-party)
+- **Bulk download URL:** **None published.** Web-page list only; no CSV/XLSX/PDF/JSON export discoverable.
+- **License:** Pending verification. No explicit license declaration on registry pages. Cabo Verde does not appear to have a national open-data portal (no `dados.gov.cv` discoverable for aviation data).
+- **Update cadence:** TBD
+- **Format note (engineering):** No bulk file. Likely HTML scrape if AAC reply confirms permission without offering structured data.
+- **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check (no `dados.gov.cv` aviation portal) + contact discovery.
+- **Permission email:** Sent 2026-05-09 to `info@aac.cv` (general AAC inbox; phone +238 260 34 30; address Achada Grande Frente, Praia CP371). Email cited Latvia CAA, Lithuania TKA as peer comparables and asked for license + bulk channel. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
