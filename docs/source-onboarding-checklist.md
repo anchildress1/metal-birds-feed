@@ -67,6 +67,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | JCAA Jamaica              | 2026-05-05                           | 2026-06-04 | info@jcaa.gov.jm                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
 | CARC Jordan               | 2026-05-05                           | 2026-06-04 | info@carc.gov.jo (cc Bilal.Nazzal@CARC.GOV.JO)                                               | **Yes** (Unknown; public-record fallback after follow-up) |
 | KOCA Korea                | 2026-05-05                           | 2026-06-04 | lia0404@korea.kr                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAA Kyrgyzstan            | 2026-05-09                           | 2026-06-08 | mail@caa.kg (general Agency inbox)                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
 | TKA Lithuania             | 2026-05-09 (v2 to `info@tka.lt`)     | 2026-06-08 | info@tka.lt (cc audrius.turauskas@tka.lt; v1 to ~~joris.dumcius@tka.lt~~ bounced)            | **Yes** (Unknown; public-record fallback after follow-up) |
 | DAC Luxembourg            | 2026-05-09                           | 2026-06-08 | nav@av.etat.lu (Département Navigabilité)                                                    | **No** (Personal-use; silence ≠ permission)               |
 | CAA Macedonia (North)     | 2026-05-09                           | 2026-06-08 | caa@gov.mk (general Agency inbox)                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -185,7 +186,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country    | Agency | Register URL                                               | Language         |
 | ---------- | ------ | ---------------------------------------------------------- | ---------------- |
-| Kyrgyzstan | CAA    | [caa.kg](https://caa.kg/reestr-vs/)                        | Kyrgyz / Russian |
 
 ### Middle East
 

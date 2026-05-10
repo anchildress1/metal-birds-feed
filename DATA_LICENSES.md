@@ -464,6 +464,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAA Kyrgyzstan — State Agency for Civil Aviation of the Kyrgyz Republic (Государственное агентство гражданской авиации)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; copyright boilerplate footer only)
+- **Source URL:** https://caa.kg/ru/reestr-grazhdanskikh-vozdushnykh-sudov-kyrgyzskoy-respubliki (Russian) + https://caa.kg/en/node/46 (English) + https://caa.kg/ky/node/46 (Kyrgyz)
+- **Bulk download URL:** **HTML scrape** — register published as an inline HTML table on the page (~64 aircraft visible in main content); Drupal 10 site.
+- **Schema (verified by direct fetch 2026-05-09):** № / Operator (only — no owner name) / Type of Aircraft / Registration number (EX-XXX) / Date of Registration / Serial Number / Date of Manufacture. **PII pre-stripped at source** — only operator names, no owner personal data. Compatible with PRD CC.4 PII drop policy.
+- **License:** Pending verification. Site footer asserts _"Copyright © 2025 Государственное агентство гражданской авиации"_ — copyright assertion + boilerplate. No explicit reuse permission declared.
+- **Update cadence:** Recent — latest update on register page is 2026-03-19 (less than 2 months stale at recon time)
+- **Format note (engineering):** **HTML scrape** — fourth use case for the HTML scrape adapter (joins Estonia, Georgia GCAA, Montenegro). Pattern is a single page with an inline table, simpler than Montenegro's paginated table + per-aircraft detail pages.
+- **Permission email:** Sent 2026-05-09 to `mail@caa.kg` (general Agency inbox). Phone +996 312 25 16 19; address Azhibek-Baatyra 1, Bishkek. Email cited Latvia CAA, Lithuania TKA as small-EU peer comparables (Kyrgyzstan is non-EU but similar regional norms apply). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## TKA — Transporto kompetencijų agentūra (Transport Competence Agency of Lithuania)
 
 - **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.lt; just asking which license applies)
