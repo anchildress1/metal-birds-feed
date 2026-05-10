@@ -516,6 +516,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## GDCA / CAC Armenia — Civil Aviation Committee of the Republic of Armenia (formerly General Department of Civil Aviation)
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration)
+- **Source URL:** http://www.aviation.am/registered_aircrafts (Armenian + English; HTTP-only) + http://www.gdca.am (legacy domain, also active)
+- **Bulk download URL:** Direct PDF at `aviation.am/registered_aircrafts` (per third-party reference; latest noted update 2025-02-26 — over a year stale)
+- **License:** Pending verification. No explicit license declaration found.
+- **Update cadence:** Concerning — third-party reference shows last update 2025-02-26, suggesting infrequent refresh. May require email confirmation of current cadence.
+- **Format note (engineering):** Bulk file is **PDF**. Tenth use case for the PDF parser path.
+- **Naming note:** The agency was renamed from "General Department of Civil Aviation" (GDCA) to "Civil Aviation Committee" — both `aviation.am` and `gdca.am` domains remain active; email and correspondence may use either name.
+- **Permission email:** Sent 2026-05-09 to `info@aviation.am` (primary domain) cc `info@gdca.am` (legacy domain) — neither email verified to be valid; if both bounce, retry via secretariat or named contact. Phone +374 1 028 2066. Email cited Latvia CAA, Lithuania TKA as small-EU peer comparables (Armenia is non-EU but eligible under similar regional norms). Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CAA Bulgaria — Главна дирекция "Гражданска въздухоплавателна администрация" (Directorate General Civil Aviation Administration)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply

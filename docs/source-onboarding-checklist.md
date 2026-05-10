@@ -40,6 +40,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | Source                    | Sent                                 | Follow-up  | Sent to                                                                                      | Fallback applies?                                         |
 | ------------------------- | ------------------------------------ | ---------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | ANAC Argentina            | 2026-05-05                           | 2026-06-04 | registro@anac.gob.ar                                                                         | **Yes** (Unknown; public-record fallback after follow-up) |
+| CAC Armenia               | 2026-05-09                           | 2026-06-08 | info@aviation.am (cc info@gdca.am; neither verified — retry if bounces)                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | Austro Control Austria    | 2026-05-05                           | 2026-06-04 | register@austrocontrol.at                                                                    | **Yes** (Unknown; public-record fallback after follow-up) |
 | BCAA Bahamas              | 2026-05-05                           | 2026-06-04 | atl@caabahamas.com                                                                           | **Yes** (Unknown; public-record fallback after follow-up) |
 | BCAA / DGTA Belgium       | 2026-05-05                           | 2026-06-04 | bcaa.registration@mobilit.fgov.be                                                            | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -184,7 +185,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country    | Agency | Register URL                                               | Language         |
 | ---------- | ------ | ---------------------------------------------------------- | ---------------- |
-| Armenia    | GDCA   | [aviation.am](http://www.aviation.am/registered_aircrafts) | Armenian         |
 | Kyrgyzstan | CAA    | [caa.kg](https://caa.kg/reestr-vs/)                        | Kyrgyz / Russian |
 
 ### Middle East
