@@ -720,6 +720,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## ANAC Togo — Agence Nationale de l'Aviation Civile du Togo
+
+- **Status:** Future — permission request sent 2026-05-09, awaiting reply
+- **Classification:** Unknown (verified 2026-05-09 — no public license declaration; no bulk channel discoverable)
+- **Source URL:** https://www.anac-togo.tg/espace-professionnel/aeronefs/consultation-du-registre-dimmatriculation/ (consultation portal) + https://www.anac-togo.tg/ (institutional landing)
+- **Bulk download URL:** **None published.** Consultation portal is search-only; documents page at `anac-togo.tg/documents-a-telecharger/` exists but does not surface the register PDF.
+- **License:** Pending verification. No explicit license declaration on the Registry pages.
+- **Update cadence:** **Concerning** — third-party references cite last-updated date of 2022-07-16 (~3 years stale at recon time). Email asks for confirmation.
+- **Format note (engineering):** No bulk file. If ANAC reply confirms permission, would require establishing a new export channel via correspondence.
+- **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check (Geodata Togo + Togo Open Data for Africa — neither lists aviation) + contact discovery + page-fetch attempts.
+- **Permission email:** Sent 2026-05-09 to `anac@anac-togo.tg` (general inbox) cc `secretariat@anac-togo.tg`. Phone +228 22263740; address B.P. 2699 Lomé. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + refresh cadence. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CCAA — Croatian Civil Aviation Agency (Hrvatska agencija za civilno zrakoplovstvo)
 
 - **Status:** Future — permission request sent 2026-05-09, awaiting reply
