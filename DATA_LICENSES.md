@@ -821,6 +821,21 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## SAAU — State Aviation Administration of Ukraine (Державна авіаційна служба України)
+
+- **Status:** Future — permission request sent 2026-05-09 (license confirmation only — bulk channel and dataset already public on data.gov.ua; just asking which license applies)
+- **Classification:** Unknown — strongly leaning Open (CC BY 4.0 inferred from data.gov.ua portal default, not directly verified)
+- **Source URL:** https://data.gov.ua/dataset/08a647a0-7829-46ab-aa50-5afb7146a7a8 (open-data portal listing) + https://avia.gov.ua/state-civil-aircraft-register-of-ukraine/ (SAAU register page) + https://avia.gov.ua/reyestr-tsivilnih-povitryanih-suden-ukrayini/ (Ukrainian-language landing)
+- **Bulk download URL:** Excel file linked from SAAU register page (`avia.gov.ua/register_of_aircraft.xls` per third-party reference; URL needs verification at ingest time). Dataset on data.gov.ua updates **daily with automatic refresh**.
+- **License:** Pending verification. data.gov.ua portal default for Ukrainian public-sector data is CC BY 4.0 (Ukrainian government open-data norms). Strongly inferred Open per portal norms but the dataset page renders client-side so direct license tag was not extractable; email asks for explicit confirmation.
+- **Update cadence:** Daily auto-update on data.gov.ua per dataset description
+- **Format note (engineering):** Bulk file is **Excel (.xls/.xlsx)**. Engine handles `xlsx` natively; if it's the older `.xls` format the parser may need a small adjustment, but lighter than the PDF parser path. Pattern matches Austria Austro Control, Bulgaria CAA.
+- **Wartime operational context (verified 2026-05-09):** Russia's invasion of Ukraine (since February 2022) is ongoing as of recon date. Engagement with Ukraine is **fully permitted** — Ukraine is a US ally; sanctions apply to Russia, not Ukraine. However: response times may be impacted; some aircraft data is operationally sensitive. Email explicitly offers to suspend ingest on operational-security request at any time.
+- **Permission email:** Sent 2026-05-09 to `vdz@avia.gov.ua` (Відділ документообігу та контролю / Documentation and Control Department; phone +380 44 351 55 80). Email is short and focused on **license confirmation only** — bulk channel is already public, we are only asking which license applies. Email cited Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt), and Finland Traficom (CC BY 4.0 on avoindata.fi) as small-EU peer comparables. Acknowledged wartime context and offered to suspend on request. Follow-up due 2026-06-08 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md` (heavily abbreviated for license-confirmation use case + wartime acknowledgment).
+- **Reply (verbatim):** _pending_
+
+---
+
 ## UK CAA — Excluded
 
 - **Status:** ❌ Excluded (Future / Blocked)

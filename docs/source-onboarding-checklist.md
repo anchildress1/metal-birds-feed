@@ -85,6 +85,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | CAA Taiwan                | 2026-05-05                           | 2026-06-04 | gencaa@mail.caa.gov.tw                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | TCAA Tanzania             | 2026-05-05 (v2 to `tcaa@tcaa.go.tz`) | 2026-06-04 | tcaa@tcaa.go.tz (v1 to ~~airworthinessinspectors@tcaa.go.tz~~ / ~~info@tcaa.go.tz~~ bounced) | **Yes** (Unknown; public-record fallback after follow-up) |
 | TTCAA Trinidad & Tobago   | 2026-05-05                           | 2026-06-04 | ttcaa@caa.gov.tt                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
+| SAAU Ukraine              | 2026-05-09                           | 2026-06-08 | vdz@avia.gov.ua (Documentation and Control Dept; license confirmation only; wartime ack)     | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
 
@@ -161,7 +162,6 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 | Country              | Agency         | Register URL                                                                                                        | Language                 |
 | -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| Ukraine              | SAAU           | [avia.gov.ua](https://avia.gov.ua/State-Civil-Aircraft-Register-of-Ukraine/)                                        | Ukrainian                |
 | Serbia               | CAD Serbia     | [cad.gov.rs](https://cad.gov.rs/strana/20841/aircraft-registry)                                                     | Serbian (English UI)     |
 | Bosnia & Herzegovina | BHDCA          | [bhdca.gov.ba](https://www.bhdca.gov.ba/index.php/en/regulations-and-areas/airworthiness)                           | Bosnian (English UI)     |
 | Macedonia            | CAA            | [caa.gov.mk](https://www.caa.gov.mk/en/safety/airworthiness-and-aircraft-registration/)                             | Macedonian (English UI)  |
