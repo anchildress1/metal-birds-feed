@@ -755,6 +755,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## UZCAA Uzbekistan — State Civil Aviation Inspectorate (via parent Ministry of Transport)
+
+- **Status:** Future — permission request sent 2026-05-11 via parent Ministry of Transport; awaiting reply
+- **Classification:** Unknown — leans Open given Uzbekistan's explicit open-data legal framework (verified 2026-05-11 via Uzbekistan VPN user browsing of gov.uz pages)
+- **Source URL:** https://gov.uz/en/mintrans (Ministry of Transport) + uzcaa.uz (UZCAA — TLS handshake fails from US sandbox; likely TLS-config issue rather than geo-block based on user-reported reachability from Uzbekistan)
+- **Bulk download URL:** TBD — UK- prefix; per WebSearch the page uzcaa.uz/en/registries exists but direct fetch unsuccessful from sandbox.
+- **License:** **Pending verification — leans Open.** Uzbekistan has an explicit published open-data legal framework documented on gov.uz: (a) Law of the Republic of Uzbekistan No. 400-I (24 April 1997) "On Guarantees and Freedom of Access to Information"; (b) Resolution of the President No. PQ-4273 (4 September 2019) "On additional measures to ensure the openness and transparency of state administration"; (c) Resolution of the Cabinet of Ministers No. 808 (23 December 2020) "On measures to further develop the field of open data in the Republic of Uzbekistan" + the CONCEPT for the development of the open-data field 2021–2025. Permission email cites this framework directly and asks whether the aircraft register qualifies as an open dataset under it.
+- **Update cadence:** TBD
+- **Contact-discovery note:** UZCAA's own site (uzcaa.uz) returns TLS handshake failure from the US sandbox. Per user verification via Uzbekistan VPN 2026-05-11: the canonical Ministry of Transport contact published on gov.uz is `info@mintrans.uz`, with Minister Mahkamov Ilhom Rustamovich as the head of the parent ministry. Email routed via parent Ministry with explicit forward request to UZCAA (same pattern as Morocco DGAC routing via DCCsiteweb@transport.gov.ma).
+- **Permission email:** Sent 2026-05-11 to `info@mintrans.uz` addressed to Minister Mahkamov Ilhom Rustamovich. Body cites Uzbekistan open-data legal framework (Law 400-I, Resolution PQ-4273, Resolution 808 + CONCEPT 2021-2025) and Law O'RQ-547 (2 July 2019) "On Personal Data" for the PII handling commitment. Asks Ministry to forward to UZCAA / State Civil Aviation Inspectorate if Ministry is not the appropriate desk. Plain-text body per Option A; closing greeting in Uzbek ("Hurmat bilan"). Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## UAEAC Colombia — Unidad Administrativa Especial de Aeronáutica Civil
 
 - **Status:** Future — permission request sent 2026-05-10, awaiting reply
