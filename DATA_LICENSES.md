@@ -372,16 +372,31 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Traficom — Finnish Transport and Communications Agency
 
-- **Status:** 🛠️ Cleared — implementation pending (license cleared via Traficom open-data page; ZIP-CSV unpack wrapper needed before ingest)
-- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-10 from Traficom open-data page; reclassified from Unknown)
+- **Status:** 🛠️ Cleared — implementation pending (license cleared **with agency confirmation**; ZIP-CSV unpack wrapper needed before ingest)
+- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-10 from Traficom open-data page; **confirmed by Traficom in writing 2026-05-11**)
 - **Source URL:** https://tieto.traficom.fi/en/open-data (Traficom open-data catalog) + https://www.avoindata.fi/data/en_GB/dataset/854b277b-7472-4d0a-9a46-a8e34822a2e0 (avoindata.fi listing)
 - **Bulk download URL:** https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip (direct ZIP-CSV; ~1,331 rows; 127 kB unpacked / 123 kB packed)
 - **Variable list:** https://tieto.traficom.fi/files/media/file/MuuttujaluetteloIlmaalusrekisteri.xlsx
-- **License:** **CC BY 4.0** (Creative Commons Nimeä 4.0 International). Verbatim from the Traficom open-data page: _"The material been licensed under the Creative Commons Nimeä 4.0 International license — http://creativecommons.org/licenses/by/4.0/deed.en"_. Same posture as CASA Australia: attribution required.
+- **License:** **CC BY 4.0** (Creative Commons Nimeä 4.0 International). Verbatim from the Traficom open-data page: _"The material been licensed under the Creative Commons Nimeä 4.0 International license — http://creativecommons.org/licenses/by/4.0/deed.en"_. Same posture as CASA Australia: attribution required. **Agency confirmation received 2026-05-11** — see Reply section below.
 - **Update cadence:** Annual (single dated dump per year — material 12 Jan 2026, published 17 Feb 2026; no monthly refresh)
 - **Format note (engineering):** Bulk file is **ZIP-packed CSV**. Engine handles `csv` natively; needs a thin "unzip-then-parse" wrapper. Bonus: same pattern used for Finnish vehicles, vessels, and rolling-stock open data — wrapper is reusable for any future Finnish source.
-- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Reply no longer gates use** — license already cleared via the Traficom open-data page. Email stands as a courtesy / relationship gesture; not waiting on it.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Substantive reply received 2026-05-11 from Joakim Savela, Adviser, Data Disclosure unit** — confirms Open-data terms, approves attribution text. Email path validated; no follow-up needed.
+- **Reply (verbatim):** Received 2026-05-11 from Joakim Savela (preserved verbatim per AGENTS.md):
+
+  > Hello,
+  >
+  > Open data can be freely used by anyone for any purpose, as long as the original source of the data is mentioned.
+  >
+  > The example attribution text you provided is good.
+  >
+  > Best regards,
+  >
+  > Joakim Savela
+  > Adviser
+  > Data Disclosure unit
+  > Finnish Transport and Communications Agency Traficom
+
+  This is the **first substantive license-confirming reply** received during the metal-birds-feed permission outreach. It confirms (a) CC BY 4.0 terms apply to the register data without any additional conditions, (b) the project's standard attribution text is acceptable to Traficom verbatim, (c) the Data Disclosure unit is the canonical contact for any future register-related correspondence. The only remaining blocker for Finland ingest is the ZIP-CSV unpack wrapper (engineering).
 
 ### Required attribution (verbatim, place in README Attribution section)
 
@@ -859,13 +874,14 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## AAC El Salvador — Autoridad de Aviación Civil de El Salvador
 
-- **Status:** Future — permission request sent 2026-05-10, awaiting reply
-- **Classification:** Unknown — YS- prefix; Registro Aeronáutico Salvadoreño (RAS)
+- **Status:** Future — v1 to `jsalguero@aac.gob.sv` bounced 2026-05-11 (Salguero no longer on AAC roster — agency reorganized); v2 sent 2026-05-11 to verified register chief; awaiting reply
+- **Classification:** Unknown — YS- prefix; Registro de Aviación Civil Salvadoreño (RAS)
 - **Source URL:** https://www.aac.gob.sv/registro-aeronautico/
 - **Bulk download URL:** TBD — register page exists, format not surfaced via static fetch
 - **License:** Pending verification. No license declaration surfaced. El Salvador has an open-government framework on transparencia.gob.sv — body asks about potential tie-in.
-- **Permission email:** Sent 2026-05-10 to `jsalguero@aac.gob.sv` (Director, Consejo de Aviación Civil — verified via AAC funcionarios page; named senior individual). Phone (registro desk) +503 2565-4413; address Km 9 1/2 carretera Panamericana, Ilopango. Plain-text body per Option A. Body asks for forward to Registro Aeronáutico desk if Director-level not the appropriate channel. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Contact-discovery note:** Original recon (2026-05-10) addressed Jesús Salguero from a then-current AAC funcionarios page. He has since been replaced; mailbox does not exist on the current AAC server (Google Workspace MX, strict mailbox validation). Re-probed AAC funcionarios page 2026-05-11 with Cloudflare-decoded emails (page uses CF email obfuscation; only 2 of 37 emails were visible in raw hrefs — the rest required decoding). Current register-relevant contacts: **Licda. Carolina Canizalez, Jefe del Registro de Aviación Civil Salvadoreño** (rarevalo@aac.gob.sv, phone +503 2565-4413 — note name/email-prefix mismatch indicates recent handover, but mailbox is in use per page listing); **Lic. Homero Morales, Director Ejecutivo** (hmorales@aac.gob.sv, phone 2565-4406). Other potentially relevant: TMA Miguel Chorro, Jefe de Estándares de Vuelo - Aeronavegabilidad (mchorro@); Ing. Renato Neira, Jefe de Departamento de Ingeniería Aeronáutica (rneira@); P.A. Jaime Palomares, Subdirector de Seguridad de Vuelo (jpalomares@); TMA Adrián Martínez, Jefe de Certificaciones (amartinez@). Current Presidente del CDAC is Ing. Jorge Puquirre (jpuquirre@).
+- **Permission email:** v1 to `jsalguero@aac.gob.sv` bounced 2026-05-11 (Salguero off roster). v2 sent 2026-05-11 to `rarevalo@aac.gob.sv` (Canizalez, Jefe RAS) cc `hmorales@aac.gob.sv` (Morales, Director Ejecutivo). Phone (registro desk) +503 2565-4413; address Km 9 1/2 carretera Panamericana, Ilopango. Plain-text body per Option A. Body explicitly acknowledges the v1 bounce and notes the current routing. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to jsalguero@aac.gob.sv because the address couldn't be found, or is unable to receive mail."_ Substantive reply on v2 still pending.
 
 ---
 
@@ -907,25 +923,55 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## DINAC Paraguay — Dirección Nacional de Aeronáutica Civil
 
-- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Status:** Future — permission request sent 2026-05-10; routing acknowledgment received 2026-05-11 from Registro Aeronáutico Nacional (RAN) desk; substantive license reply still pending
 - **Classification:** Unknown — ZP- prefix; Registro Aeronáutico Nacional (RAN) governed by DINAC R-47
 - **Source URL:** https://www.dinac.gov.py/
 - **Bulk download URL:** TBD — institutional landing; format not surfaced via static fetch. DINAC R-47 PDF available at https://www.dinac.gov.py/Seguridad_Operacional/docs/DINAC_R47_APROBADA_04_10_2021.pdf
 - **License:** Pending verification. No license declaration surfaced.
-- **Permission email:** Sent 2026-05-10 to `sec_gral@dinac.gov.py` (External Document Reception per DINAC site — designated formal correspondence channel). Phone +595 21 211 366. Plain-text body per Option A. Body cites DINAC R-47 and asks for forward to RAN desk if not the right route. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Internal routing confirmed (2026-05-11):** DINAC Secretaría General forwarded the request internally to the RAN desk. **Nieves Bobadilla**, Registro Aeronáutico Nacional (RAN), Dirección Nacional de Aeronáutica Civil, acknowledged receipt directly with CC to anchildress1@gmail.com. Direct register-desk contact established. For any follow-up before the 30-day mark, route via Ms. Bobadilla at RAN rather than re-emailing Secretaría General.
+- **Permission email:** Sent 2026-05-10 to `sec_gral@dinac.gov.py` (External Document Reception per DINAC site — designated formal correspondence channel). Phone +595 21 211 366 / +595 21 212530. Plain-text body per Option A. Body cites DINAC R-47 and asks for forward to RAN desk if not the right route — routing was performed exactly as requested. Follow-up due 2026-06-09 if no substantive reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Internal forwarding chain received 2026-05-11 (preserved verbatim per AGENTS.md):
+
+  > Buen día
+  >
+  > Recibido
+  >
+  > Nieves Bobadilla.
+  >
+  > Registro Aeronáutico Nacional
+  > (RAN)
+  > Dirección Nacional de Aeronáutica Civil
+  > República del Paraguay
+  >
+  > De: Secretaría General Enviado: lunes, 11 de mayo de 2026 8:15:52 Para: ran Cc: anchildress1@gmail.com Asunto: RV: Permission to redistribute the Paraguayan Civil Aircraft Register with attribution
+  >
+  > Eikuaauka og̃uahéva (Guaraní)
+  > Favor acusar recibo (Spanish)
+  >
+  > Maitei rorýmante (Guaraní)
+  > Saludos cordiales (Spanish)
+  >
+  > Secretaría General
+  > Dirección Nacional de Aeronáutica Civil - DINAC
+  > Teléfono: +595 21 212530
+  > Dirección: Mariscal López esquina 22 de setiembre
+  > Ministerio De Defensa Nacional - Piso 2°
+
+  Literal English translation: "Good morning. Received. Nieves Bobadilla. Registro Aeronáutico Nacional (RAN), Dirección Nacional de Aeronáutica Civil, Republic of Paraguay." Forwarding chain: "From: Secretaría General. Sent: Monday, May 11, 2026 8:15:52. To: ran. Cc: anchildress1@gmail.com. Subject: RV: Permission to redistribute the Paraguayan Civil Aircraft Register with attribution." Bilingual Guaraní/Spanish footer: "Please acknowledge receipt. / Cordial greetings. Secretaría General, DINAC. Phone: +595 21 212530. Address: Mariscal López corner 22 de setiembre, Ministry of National Defence, 2nd floor."
+
+  This is a routing acknowledgment, not a substantive license reply. It confirms (a) email delivery, (b) DINAC's Secretaría General routed the request to the correct desk (RAN) exactly as the body requested, (c) Nieves Bobadilla at RAN has the file. Posture remains Unknown; 30-day public-record fallback clock continues from 2026-05-10. Substantive reply on license + bulk-file format still pending.
 
 ---
 
 ## DGAC Peru — Dirección General de Aeronáutica Civil (Ministerio de Transportes y Comunicaciones)
 
-- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Status:** Future — permission request sent 2026-05-10 to pmarin@ (assumed delivered) cc ncarhuay@ (bounced 2026-05-11); awaiting substantive reply
 - **Classification:** Unknown — OB- prefix; under MTC umbrella
 - **Source URL:** https://portal.mtc.gob.pe/transportes/aeronautica_civil/ (DGAC public-facing page within MTC portal)
 - **Bulk download URL:** TBD — search-only consultation pattern; datos.gob.pe cross-check pending. SIVLAM (sivlam.mtc.gob.pe) is for pilot-license queries, not aircraft register.
 - **License:** Pending verification. No license declaration surfaced.
-- **Permission email:** Sent 2026-05-10 to `pmarin@mtc.gob.pe` cc `ncarhuay@mtc.gob.pe` (DGAC officials verified via ATC Network with named address). Phone +511 6157800 ext. 1173; address Zorritos Nº 1203, Lima 1. Plain-text body per Option A. Body asks for forward to Dirección de Certificaciones y Autorizaciones or Registro Aeronáutico if not the right desk. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-10 to `pmarin@mtc.gob.pe` cc ~~`ncarhuay@mtc.gob.pe`~~ (DGAC officials originally sourced via ATC Network with named addresses). Phone +511 6157800 ext. 1173; address Zorritos Nº 1203, Lima 1. Plain-text body per Option A. Body asks for forward to Dirección de Certificaciones y Autorizaciones or Registro Aeronáutico if not the right desk. CC `ncarhuay@mtc.gob.pe` bounced 2026-05-11 ("address couldn't be found, or is unable to receive mail"); drop from any follow-up. Primary `pmarin@mtc.gob.pe` not in bounce — assumed delivered. Follow-up due 2026-06-09 if no substantive reply. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to ncarhuay@mtc.gob.pe because the address couldn't be found, or is unable to receive mail."_ Substantive reply pending; CC dead but primary remains in flight.
 
 ---
 
@@ -1097,15 +1143,46 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAA Maldives — Maldives Civil Aviation Authority
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
+- **Status:** 🛠️ Cleared — implementation pending (license confirmed by agency 2026-05-11; PDF parser path needed before ingest — same engineering blocker as AESA Spain)
+- **Classification:** **Open with attribution + error disclaimer** (reclassified from Unknown 2026-05-11 after substantive reply from Director Airworthiness)
 - **Source URL:** https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
-- **Bulk download URL:** TBD (PDF download per avcodes)
-- **License:** Pending verification.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `airworthiness@caa.gov.mv` (Airworthiness desk). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Bulk download URL:** https://caa.gov.mv/attachments/0Jy9EQclEAaFIxUenyNFxRtphFFSJDK77mj18haV.pdf (direct PDF link from register page; ~70 KB; 8-page register with per-tail entries; 8Q- prefix; page footer disclaimer repeated on each page)
+- **License:** **Open with attribution and mandatory error-statement disclaimer.** Confirmed verbatim in writing by Mr. Abdulla Mohamed, Director Airworthiness, Maldives Civil Aviation Authority, on 2026-05-11. Three conditions extracted from the reply: (1) use of the register is **actively encouraged** — machine-friendly format welcomed; (2) attribution "would be nice"; (3) error/accuracy statement equivalent to the one on CAA's published register **must be included**. Functionally same posture as CASA Australia / Traficom Finland CC BY 4.0 with an added Maldives-specific disclaimer requirement.
+- **Mandatory error statement (verbatim from CAA Maldives register footer):**
+
+  > Note: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
+
+  This statement appears on every page of the published register PDF and must be reproduced verbatim in any operator-deployed surface that displays Maldives data.
+
+- **Update cadence:** TBD (page footer "3/26/2026, Page 8 of 8" suggests the register version checked is dated 2026-03-26; refresh cadence unconfirmed but appears to be on-demand / occasional rather than scheduled).
+- **Format note (engineering):** Bulk file is **PDF** (same blocker as AESA Spain). The PDF parser path is now required to be in place before either Spain or Maldives can be ingested. PDF structure is per-tail entries with a repeated footer disclaimer that should be parsed as metadata, not as a record row.
+- **Permission email:** Sent 2026-05-05 to `airworthiness@caa.gov.mv` (Airworthiness desk — verified correct routing in practice since the reply came from the Director Airworthiness). **Reply no longer gates use** — license confirmed. Thank-you reply being drafted 2026-05-11; not waiting on it.
+- **Reply (verbatim):** Received 2026-05-11 from Abdulla Mohamed, Director Airworthiness, Maldives Civil Aviation Authority (preserved verbatim per AGENTS.md):
+
+  > Dear Ashley,
+  >
+  > 1. Use of register - we actually encourage the use of the register, and a more machine friendly format would be welcome by our users.
+  > 2. Attribution - would be nice.
+  > 3. Conditions, procedures etc - We feel it would be important to include a statement on errors similar to the one on our register.
+  >
+  > We thank you for your efforts to improve civil aviation in general.
+  >
+  > Regards,
+  > Abdulla Mohamed Director Airworthiness Maldives Civil Aviation Authority
+
+  This is the **second substantive license-confirming reply** received during the metal-birds-feed permission outreach (Finland Traficom was first, also 2026-05-11). It confirms (a) the CAA Maldives actively encourages redistribution of the register in a machine-friendly format, (b) attribution is welcomed, (c) the no-warranty disclaimer must be replicated alongside any redistributed data. Director Airworthiness is the canonical contact for any future register-related correspondence.
+
 - **Note on naming:** Referred to as "CAA Maldives" in this project to distinguish from the Civil Aviation Authority of Malaysia (also "CAAM") — same acronym, different agencies.
+
+### Required attribution (verbatim, place in README Attribution section)
+
+> Source: Maldives Civil Aviation Authority — https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
+>
+> Redistributed with permission granted by Mr. Abdulla Mohamed (Director Airworthiness, CAA Maldives) in correspondence dated 2026-05-11. Per CAA Maldives required notice:
+>
+> > Note: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
+>
+> The material has been changed: CAA Maldives aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Maldives.
 
 ---
 
@@ -1399,14 +1476,15 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## ANAC Angola — Autoridade Nacional da Aviação Civil de Angola (formerly INAVIC)
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Status:** Future — v1 to fabricated domain bounced 2026-05-11 (anac.co.ao is NXDOMAIN — does not exist); v2 sent 2026-05-11 to verified canonical `anac@anac.ao`; awaiting reply
 - **Classification:** Unknown (verified 2026-05-11)
-- **Source URL:** https://inavic.gov.ao/
+- **Source URL:** https://anac.ao/ (current canonical) + https://inavic.gov.ao/ (legacy site, still up, still publishes stale `.co.ao` addresses — agency hasn't updated their own contact page)
 - **Bulk download URL:** TBD
 - **License:** Pending verification.
 - **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-11 to `anac@anac.co.ao` cc `reclamacoes@anac.co.ao`. INAVIC merged into ANAC Angola — use ANAC mail surface. D2- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Contact-discovery note:** Original 2026-05-11 send (v1) went to `anac@anac.co.ao` cc `reclamacoes@anac.co.ao` — both addresses on the `.co.ao` TLD, which is NXDOMAIN. The subagent pulled these from inavic.gov.ao/contactos (legacy INAVIC contact page), where the agency itself still publishes the stale addresses. v1 bounced entirely. Verified canonical domain is `.ao` (not `.co.ao`); contacto page at https://anac.ao/ao/contactos publishes `anac@anac.ao` + `sec.anac.ao@gmail.com` (unusual gmail fallback for a gov agency, but officially published). Phone: +244 921 320 429 / +244 921 320 442. Address: Aeroporto Internacional Dr. António Agostinho Neto, Estrada Nacional 230, Km 40, Icolo e Bengo, Angola.
+- **Permission email:** v1 to `anac@anac.co.ao` cc `reclamacoes@anac.co.ao` bounced 2026-05-11 (NXDOMAIN). v2 sent 2026-05-11 to `anac@anac.ao` cc `sec.anac.ao@gmail.com` (both verified on anac.ao/ao/contactos). D2- prefix. Plain-text body per Option A. v2 body explicitly acknowledges the v1 bounce and notes the legacy inavic.gov.ao contact-page contact-info inaccuracy. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to reclamacoes@anac.co.ao because the domain anac.co.ao couldn't be found. Check for typos or unnecessary spaces and try again."_ (Same NDR shape implied for `anac@anac.co.ao` since the entire domain is NXDOMAIN.) Substantive reply on v2 still pending.
 
 ---
 
@@ -1439,28 +1517,54 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## AAC RDC — Autorité de l'Aviation Civile de la République Démocratique du Congo
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Status:** Future — permission request sent 2026-05-11; automated reply received 2026-05-11 (off-topic — overflight/landing clearance portal redirect); awaiting substantive human reply
 - **Classification:** Unknown (verified 2026-05-11)
 - **Source URL:** https://www.aacrdc.org/
+- **Operational subdomain:** https://clearance.aacrdc.org/ (online portal for overflight and landing clearance requests, per circular AAC/100/DG/TMJ/KMF/007/2025 dated 2025-08-29; not register-relevant but confirms the agency is operationally active and modernizing)
 - **Bulk download URL:** TBD — AAC RDC nav lists 'Registre des aéronefs 9S' + 'Registre des aéronefs étrangers' but link destinations are empty; register publication anticipated but not wired.
 - **License:** Pending verification.
 - **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-11 to `info@aacrdc.org` (general inbox). 9Q- prefix. Body asks for confirmation that the register pages will be wired. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-11 to `info@aacrdc.org` (general inbox). 9Q- prefix. Body asks for confirmation that the register pages will be wired. Plain-text body per Option A. Follow-up due 2026-06-10 if no substantive reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Automated reply received 2026-05-11 (preserved verbatim per AGENTS.md):
+
+  > Important Information
+  >
+  > We would like to inform you that all overflight and/or landing requests must now be submitted online through our portal: https://clearance.aacrdc.org . This is in accordance with circular note No. AAC/100/DG/TMJ/KMF/007/2025 dated August 29, 2025.
+  >
+  > Flights not affected by this provision:
+  >
+  > - State aircraft
+  > - Diplomatic flights
+  > - MEDEVAC flights
+  > - MONUSCO flights
+  > - Scheduled flights
+  > - Exit authorizations
+
+  This is an automated keyword-triggered reply (likely picked up "request" or "permission" in the body) that redirects all clearance-related inbound mail to the new portal. It does NOT address the register-redistribution question we asked. Treating as non-responsive — the 30-day public-record fallback clock continues from 2026-05-11. Follow-up still due 2026-06-10 if no human reply by then.
 
 ---
 
 ## ACM — Aviation Civile de Madagascar
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Status:** Future — permission request sent 2026-05-11 to `acm@acm.mg` (delivered); CC `communications@acm.mg` bounced (mailbox does not exist); substantive reply still pending
 - **Classification:** Unknown (verified 2026-05-11)
 - **Source URL:** http://www.acm.mg/
 - **Bulk download URL:** TBD — DSEA (Direction de la Sécurité et de l'Utilisation des Aéronefs) maintains the register.
 - **License:** Pending verification.
 - **Update cadence:** TBD
 - **Operational note:** **SSL cert chain at acm.mg is broken** — operator-side fix required before any ingest pipeline can fetch from acm.mg over HTTPS. Recheck periodically.
-- **Permission email:** Sent 2026-05-11 to `acm@acm.mg` cc `communications@acm.mg`. Phone +261 20 22 22 438. 5R- prefix. DG family name RAKOTO appointed per Décret 2023-155 du 15/02/2023. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-11 to `acm@acm.mg` (delivered). CC `communications@acm.mg` bounced — that mailbox is published on the ACM homepage HTML but no actual mailbox exists behind it (verified by NDR from postmaster@acm.mg: `550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup`, originating from ACMWEB.ACM.MG Microsoft Exchange server). Drop `communications@acm.mg` from any future correspondence. Phone +261 20 22 22 438. 5R- prefix. DG family name RAKOTO appointed per Décret 2023-155 du 15/02/2023. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Bounce NDR received 2026-05-11 from `postmaster@acm.mg` (preserved verbatim per AGENTS.md):
+
+  > Échec de la remise pour ces destinataires ou groupes :
+  > communications@acm.mg
+  > Nous n'avons pas trouvé l'adresse de courrier que vous avez entrée. Vérifiez l'adresse de courrier du destinataire et essayez de renvoyer le message. Si le problème persiste, contactez l'administrateur de votre courrier.
+  > Informations de diagnostic pour les administrateurs :
+  > Serveur de génération : ACMWEB.ACM.MG
+  > communications@acm.mg
+  > Remote Server returned '550 5.1.10 RESOLVER.ADR.RecipientNotFound; Recipient not found by SMTP address lookup'
+
+  Bounce affects ONLY the CC. Primary `acm@acm.mg` is not in the failed-recipients list and is assumed delivered.
 
 ---
 
@@ -1507,15 +1611,29 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## SACAA — South African Civil Aviation Authority
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Status:** Future — permission request sent 2026-05-11; automated case-acknowledgment received 2026-05-11 (case ref 120146, 3-business-day SLA); substantive reply pending
 - **Classification:** Unknown — leans Excluded (verified 2026-05-11; restrictive TOU + PAIA framework)
 - **Source URL:** https://www.caa.co.za/
 - **Bulk download URL:** TBD — SACAR (South African Civil Aircraft Register) exists; public access pattern TBD.
 - **License:** Pending verification.
 - **PAIA note:** Restrictive TOU + Promotion of Access to Information Act (PAIA) framework — yes-reply must confirm whether the register is available via PAIA request or in bulk. **Leans Excluded** if reply confirms PAIA-only access (PAIA grants one-off copies under conditions, not ongoing redistribution rights — same pattern as Israel CAAI FOI / Japan JCAB consultation).
 - **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-11 to `clientcare@caa.co.za`. Phone +27 11 545 1000. ZS- prefix. Aircraft Inspection and Registration Section within Airworthiness Department named on /industry-information/airworthiness/ but no individual officer surfaced. Body forwards to Registration Section. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2; pending reclassification on reply — if PAIA-only, moves to Excluded).
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-11 to `clientcare@caa.co.za`. Phone +27 11 545 1000. ZS- prefix. Aircraft Inspection and Registration Section within Airworthiness Department named on /industry-information/airworthiness/ but no individual officer surfaced. Body forwards to Registration Section. Plain-text body per Option A. Follow-up due 2026-06-10 if no substantive reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2; pending reclassification on reply — if PAIA-only, moves to Excluded).
+- **Reply (verbatim):** Automated case-acknowledgment received 2026-05-11 from SACAA Contact Centre (preserved verbatim per AGENTS.md):
+
+  > Dear Client,
+  >
+  > We have opened a case for your enquiry. One of our Officers will respond to you within the next 3 business days.
+  >
+  > Should you need to follow up on this case, please contact us with this reference 120146.
+  >
+  > Kindly note that this is an automated response to acknowledge receipt of your enquiry.
+  >
+  > Regards
+  > SACAA Contact Centre
+  > 0860 267 435
+
+  Case reference: **120146**. Expected substantive response window: 3 business days (≈ 2026-05-14 / 2026-05-15). For follow-up: cite case 120146; phone 0860 267 435. Posture unchanged pending substantive reply.
 
 ---
 
