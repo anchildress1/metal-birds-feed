@@ -1397,6 +1397,200 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## ANAC Angola — Autoridade Nacional da Aviação Civil de Angola (formerly INAVIC)
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://inavic.gov.ao/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `anac@anac.co.ao` cc `reclamacoes@anac.co.ao`. INAVIC merged into ANAC Angola — use ANAC mail surface. D2- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CCAA — Cameroon Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.ccaa.aero/index.php/en/
+- **Bulk download URL:** TBD — third-party Aeroflight publishes a TJ- register in zipped .txt suggesting bulk format exists somewhere, but no canonical CCAA-hosted file found.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `contact@ccaa.aero` (general inbox). TJ- prefix. Body asks for bulk-file location. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ANAC CI — Autorité Nationale de l'Aviation Civile de Côte d'Ivoire
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.anac.ci/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Contact channel note:** SPA — /contact returns 404. Emails extracted from JS bundle with 'Contact / Contacts utiles / Directeur Général' context.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `info@anac.ci` cc `dpo@anac.ci` (verified emails extracted from JS bundle with 'Contact / Contacts utiles / Directeur Général' context). Phone +225 27 21 58 69 00. TU- prefix. DPO contact included for awareness of PII handling. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## AAC RDC — Autorité de l'Aviation Civile de la République Démocratique du Congo
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.aacrdc.org/
+- **Bulk download URL:** TBD — AAC RDC nav lists 'Registre des aéronefs 9S' + 'Registre des aéronefs étrangers' but link destinations are empty; register publication anticipated but not wired.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `info@aacrdc.org` (general inbox). 9Q- prefix. Body asks for confirmation that the register pages will be wired. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ACM — Aviation Civile de Madagascar
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** http://www.acm.mg/
+- **Bulk download URL:** TBD — DSEA (Direction de la Sécurité et de l'Utilisation des Aéronefs) maintains the register.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Operational note:** **SSL cert chain at acm.mg is broken** — operator-side fix required before any ingest pipeline can fetch from acm.mg over HTTPS. Recheck periodically.
+- **Permission email:** Sent 2026-05-11 to `acm@acm.mg` cc `communications@acm.mg`. Phone +261 20 22 22 438. 5R- prefix. DG family name RAKOTO appointed per Décret 2023-155 du 15/02/2023. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DCA Mauritius — Department of Civil Aviation
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://civil-aviation.govmu.org/
+- **Bulk download URL:** TBD — main register publicity TBD. **Mortgage register is publicly available** per Civil Aviation Regulations 2007 — statutory carve-out is a positive signal.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Mortgage-register note:** Body asks about both the main register and the statutorily-public mortgage register under Civil Aviation Regulations 2007 (the public mortgage register is a strong civil-law carve-out signal).
+- **Permission email:** Sent 2026-05-11 to `civil-aviation@govmu.org` (Department of Civil Aviation). Address: SSR International Airport, Plaisance, Plaine Magnien. Phone (230) 603-2000, Fax (230) 637-3164. 3B- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## NCAA — Nigerian Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://ncaa.gov.ng/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `info@ncaa.gov.ng`. 5N- prefix. Strong directorate structure visible on site; body forwards to Airworthiness Standards Directorate. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ANACIM — Agence Nationale de l'Aviation Civile et de la Météorologie (Senegal)
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.anacim.sn/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Domain note:** Legacy `anacs.sn` DNS dead — drop from any reference. ANACIM = former ANACS merged with meteorology agency in 2011.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `anacim@anacim.sn` (verified on homepage with 'Contact / Directeur Général' context). Phone +221 33 865 60 00, Fax +221 33 820 04 03. 6V- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## SACAA — South African Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown — leans Excluded (verified 2026-05-11; restrictive TOU + PAIA framework)
+- **Source URL:** https://www.caa.co.za/
+- **Bulk download URL:** TBD — SACAR (South African Civil Aircraft Register) exists; public access pattern TBD.
+- **License:** Pending verification.
+- **PAIA note:** Restrictive TOU + Promotion of Access to Information Act (PAIA) framework — yes-reply must confirm whether the register is available via PAIA request or in bulk. **Leans Excluded** if reply confirms PAIA-only access (PAIA grants one-off copies under conditions, not ongoing redistribution rights — same pattern as Israel CAAI FOI / Japan JCAB consultation).
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `clientcare@caa.co.za`. Phone +27 11 545 1000. ZS- prefix. Aircraft Inspection and Registration Section within Airworthiness Department named on /industry-information/airworthiness/ but no individual officer surfaced. Body forwards to Registration Section. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2; pending reclassification on reply — if PAIA-only, moves to Excluded).
+- **Reply (verbatim):** _pending_
+
+---
+
+## UCAA — Uganda Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://caa.go.ug/
+- **Bulk download URL:** TBD — UCAA publishes Advisory Circular CAA-AC-AWS001 describing registration procedure but the corresponding register listing itself not surfaced.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `aviation@caa.co.ug`. 5X- prefix. Body asks for the register file. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAAZ — Civil Aviation Authority of Zimbabwe
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.caaz.co.zw/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Named-contacts note:** DG: George Mashababe; Director Flight Safety & Standards: Mavis Musakasa — most senior named contacts surfaced in Africa batch. Body routes through topical operational inbox; multiple specific inboxes available for follow-up.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `licencing@caaz.co.zw` cc `airworthiness@caaz.co.zw` cc `pr@caaz.co.zw`. Z- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## GCAA Ghana — Ghana Civil Aviation Authority — Excluded
+
+- **Status:** ❌ Excluded (verified 2026-05-11)
+- **Classification:** Excluded — password-walled electronic access; no public register surface
+- **Source URL:** https://www.gcaa.com.gh/web/
+- **License:** Register is electronic but **password-only access** per GCAA Flight Standards Part 4; no public register surface.
+- **Why excluded:** Same exclusion pattern as Germany LBA — register is structurally non-public. A permission email is not meaningful for a password-walled regulatory system that is not designed for bulk redistribution.
+- **Acronym collision note:** **Acronym collision with Georgia GCAA** — Georgia GCAA is in flight in this project as `ge-gcaa`, do not conflate. 9G- prefix.
+- **Revisit condition:** GCAA Ghana publishes the register under an explicit open license, or restructures access to provide a bulk channel.
+
+---
+
+## KCAA — Kenya Civil Aviation Authority — Excluded
+
+- **Status:** ❌ Excluded (verified 2026-05-11)
+- **Classification:** Excluded — per-aircraft register extract on formal request + fee; no bulk channel exists
+- **Source URL:** https://kcaa.or.ke/
+- **License:** Per-aircraft register extract on formal request + fee; no bulk channel exists.
+- **Why excluded:** Same exclusion pattern as Israel CAAI + Romania AACR + Japan JCAB + UK G-INFO — fee-gated per-record access with no bulk-redistribution channel. Under PRD CC.1 (Restrictive), no usable deployment shape exists for a non-commercial source-available project. 5Y- prefix.
+- **Revisit condition:** KCAA establishes a bulk-redistribution channel or publishes the register under an open license on a Kenyan open-data portal.
+
+---
+
+## RCAA — Rwanda Civil Aviation Authority — Excluded
+
+- **Status:** ❌ Excluded (verified 2026-05-11)
+- **Classification:** Excluded — register "maintained on premises" per RCAR Part 2; no public bulk channel
+- **Source URL:** https://www.caa.gov.rw/
+- **License:** Register "maintained on premises" per RCAR Part 2 — phrasing indicates on-site consultation only.
+- **Why excluded:** Same exclusion pattern as Japan JCAB / Bahrain BCAA (appointment-only) — on-premises consultation framework structurally incompatible with redistribution. 9XR- prefix.
+- **Revisit condition:** RCAA publishes the register under an explicit open license or establishes a bulk-redistribution channel.
+
+---
+
+## ZCAA — Zambia Civil Aviation Authority — Deferred
+
+- **Status:** Deferred — no contact channel surfaceable as of 2026-05-11
+- **Classification:** Unknown (deferred — no contact)
+- **Source URL:** https://www.caa.co.zm/
+- **License:** Pending verification.
+- **Why deferred:** Laravel + Vue SPA; no email surfaces in HTML or in the 1.7MB JS bundle. /contact-us, /about-us, /publications all return the same SPA loader shell. No contact channel surfaceable, so no permission request can be sent. Not Excluded (no license declaration rules it out) and not in flight (no email could be sent). 9J- prefix.
+- **Recheck condition:** ZCAA site re-architecture, or third-party (avcodes.co.uk update, ATC Network) surfacing an inbox.
+
+---
+
 ## AACR — Romanian Civil Aeronautical Authority (Autoritatea Aeronautică Civilă Română) — Excluded
 
 - **Status:** ❌ Excluded (verified 2026-05-10)
