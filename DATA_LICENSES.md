@@ -820,6 +820,115 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## DGAC Bolivia — Dirección General de Aeronáutica Civil del Estado Plurinacional de Bolivia
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — leans Open ("Registro Público de Aeronaves" framing is a positive signal); CP- prefix
+- **Source URL:** https://www.dgac.gob.bo/registro-publico-de-aeronaves/
+- **Bulk download URL:** TBD — page exists but format not surfaced via static fetch
+- **License:** Pending verification. No explicit license declaration. The "público" (public) framing on the register name leans toward open access.
+- **Permission email:** Sent 2026-05-10 to `dgacbol@dgac.gob.bo` cc `contacto@dgac.gob.bo` (both verified via DGAC site with phone/address). Phone +591-2-2444450; address Av. Arce No 2631, Edificio Multicine Piso 9, La Paz. Plain-text body per Option A. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGAC Costa Rica — Dirección General de Aviación Civil
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — TI- prefix
+- **Source URL:** https://sub.dgac.go.cr/aeronautica_/registro-aeronautico/
+- **Bulk download URL:** TBD — register page exists, format not surfaced via static fetch
+- **License:** Pending verification. No license declaration on register page.
+- **Contact channel note:** Official ventanilla única (single window) inbox per DGAC contact page — designated as the canonical channel for all procedures and documentation. Email address was Cloudflare-obfuscated in the contact page HTML; decoded via standard CF XOR pattern.
+- **Permission email:** Sent 2026-05-10 to `ventanillaunica@dgac.go.cr` (Cloudflare-decoded). Phone (506) 2242-8000; address La Uruca, San José. Plain-text body per Option A. Body asks for forward to Registro Aeronáutico desk if not the right route. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGAC Ecuador — Dirección General de Aviación Civil
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — open-data portal presence is a positive signal; HC- prefix
+- **Source URL:** https://www.aviacioncivil.gob.ec/registro-aeronautico/ (Registro Aeronáutico) + https://datosabiertos.gob.ec/organization/dgac (DGAC org page on Ecuador open-data portal)
+- **Bulk download URL:** TBD — register page exists; DGAC publishes other datasets on datosabiertos.gob.ec but the aircraft register itself is not yet on the portal.
+- **License:** Pending verification. Open-data portal presence is a positive signal — body explicitly asks whether the aircraft register would be a candidate for datosabiertos.gob.ec publication.
+- **Permission email:** Sent 2026-05-10 to `oswaldo.veloz@aviacioncivil.gob.ec` (Registro Aeronáutico desk — verified via search citing role + email). Phone +593 2 2947400 ext. 4841; address Buenos Aires OE1-53 y Av. 10 de Agosto, Quito. Plain-text body per Option A. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## AAC El Salvador — Autoridad de Aviación Civil de El Salvador
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — YS- prefix; Registro Aeronáutico Salvadoreño (RAS)
+- **Source URL:** https://www.aac.gob.sv/registro-aeronautico/
+- **Bulk download URL:** TBD — register page exists, format not surfaced via static fetch
+- **License:** Pending verification. No license declaration surfaced. El Salvador has an open-government framework on transparencia.gob.sv — body asks about potential tie-in.
+- **Permission email:** Sent 2026-05-10 to `jsalguero@aac.gob.sv` (Director, Consejo de Aviación Civil — verified via AAC funcionarios page; named senior individual). Phone (registro desk) +503 2565-4413; address Km 9 1/2 carretera Panamericana, Ilopango. Plain-text body per Option A. Body asks for forward to Registro Aeronáutico desk if Director-level not the appropriate channel. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## AHAC Honduras — Agencia Hondureña de Aeronáutica Civil
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — HR- prefix; Departamento de Registro Aeronáutico Nacional (RAN) under Decreto No. 55-2004 (Ley de Aeronáutica Civil)
+- **Source URL:** https://www.ahac.gob.hn/RAN
+- **Bulk download URL:** TBD — register page exists, format not surfaced via static fetch
+- **License:** Pending verification. No license declaration surfaced.
+- **Permission email:** Sent 2026-05-10 to `secretariaadministrativa@ahac.gob.hn` cc `licencias@ahac.gob.hn` (both verified via AHAC site as dept mailboxes). Plain-text body per Option A. Body cites Decreto 55-2004 and asks for forward to RAN dept if not the right route. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## INAC Nicaragua — Instituto Nicaragüense de Aeronáutica Civil
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — YN- prefix
+- **Source URL:** https://www.inac.gob.ni/
+- **Bulk download URL:** TBD — institutional landing; no register-specific page surfaced via static fetch
+- **License:** Pending verification. No license declaration surfaced. INAC is an autonomous technical entity under the Ley General de Aeronáutica Civil (Law 595, October 2006).
+- **Permission email:** Sent 2026-05-10 to `info@inac.gob.ni` (verified via INAC contact page). Phone (505) 2276-8580 / 2233-2907; address KM 11.5 Carretera Norte, Managua. Plain-text body per Option A. Body asks for forward to register dept if not the right route. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## AAC Panama — Autoridad de Aeronáutica Civil de Panamá
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — HP- prefix; Sistema Nacional de Registro Aeronáutico (SNRA) hosts the Registro Aeronáutico Civil de Panamá (R.A.C.P.)
+- **Source URL:** https://sigob.aeronautica.gob.pa/snra/subtipo/2 (R.A.C.P. search portal within the SNRA)
+- **Bulk download URL:** TBD — search portal pattern; AAC has organization page on `datosabiertos.gob.pa` (open-data portal presence is a positive signal).
+- **License:** Pending verification. No license declaration surfaced.
+- **Permission email:** Sent 2026-05-10 to `Rafael.barcenas@aeronautica.gob.pa` cc `paola.aparicio@aeronautica.gob.pa` (named officials verified via ATC Network with phone/address). Phone +507 520-1555; address Albrook, Calle Héctor Conte Bermúdez Edificio 646, Panamá 5. Plain-text body per Option A. Body asks whether the R.A.C.P. could be eligible for publication on `datosabiertos.gob.pa`. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DINAC Paraguay — Dirección Nacional de Aeronáutica Civil
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — ZP- prefix; Registro Aeronáutico Nacional (RAN) governed by DINAC R-47
+- **Source URL:** https://www.dinac.gov.py/
+- **Bulk download URL:** TBD — institutional landing; format not surfaced via static fetch. DINAC R-47 PDF available at https://www.dinac.gov.py/Seguridad_Operacional/docs/DINAC_R47_APROBADA_04_10_2021.pdf
+- **License:** Pending verification. No license declaration surfaced.
+- **Permission email:** Sent 2026-05-10 to `sec_gral@dinac.gov.py` (External Document Reception per DINAC site — designated formal correspondence channel). Phone +595 21 211 366. Plain-text body per Option A. Body cites DINAC R-47 and asks for forward to RAN desk if not the right route. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGAC Peru — Dirección General de Aeronáutica Civil (Ministerio de Transportes y Comunicaciones)
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown — OB- prefix; under MTC umbrella
+- **Source URL:** https://portal.mtc.gob.pe/transportes/aeronautica_civil/ (DGAC public-facing page within MTC portal)
+- **Bulk download URL:** TBD — search-only consultation pattern; datos.gob.pe cross-check pending. SIVLAM (sivlam.mtc.gob.pe) is for pilot-license queries, not aircraft register.
+- **License:** Pending verification. No license declaration surfaced.
+- **Permission email:** Sent 2026-05-10 to `pmarin@mtc.gob.pe` cc `ncarhuay@mtc.gob.pe` (DGAC officials verified via ATC Network with named address). Phone +511 6157800 ext. 1173; address Zorritos Nº 1203, Lima 1. Plain-text body per Option A. Body asks for forward to Dirección de Certificaciones y Autorizaciones or Registro Aeronáutico if not the right desk. Follow-up due 2026-06-09. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## CAA Slovenia — Javna agencija za civilno letalstvo Republike Slovenije (Civil Aviation Agency of Slovenia)
 
 - **Status:** Future — permission request sent 2026-05-10 (v2 to register-specific desk), awaiting reply
