@@ -1266,6 +1266,137 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## ANAC Algeria — Autorité Nationale de l'Aviation Civile
+
+- **Status:** Future — v2 permission request sent 2026-05-11 (Personal-use classification, awaiting reply)
+- **Classification:** Personal-use (verified verbatim 2026-05-11 from Politique d'utilisation Section 6)
+- **Source URL:** https://www.anac.dz/en/home/
+- **Bulk download URL:** TBD — data.gov.dz cross-check pending
+- **License surface:** https://www.anac.dz/wp-content/uploads/2025/01/Politique-dutilisation-du-site-web-de-lANAC-25122024.pdf (Politique d'utilisation du site web de l'ANAC, dated 25/12/2024)
+- **License (verbatim French, Section 6):** _"L'utilisateur ne peut utiliser ce site qu'à des fins licites, personnelles et non commerciales."_ (English: "The user may only use this site for lawful, personal, and non-commercial purposes.")
+- **Additional note on Section 4:** Politique forbids removing attribution / IP notices from exports — implies that exports under personal use are permitted with attribution.
+- **Update cadence:** TBD
+- **Permission email:** v2 sent 2026-05-11 to `contact@anac.dz` after Personal-use posture was confirmed verbatim from the PDF policy. v1 superseded before send. Plain-text body per Option A. 7T- prefix. Follow-up due 2026-06-10 if no reply by then. **The 30-day fallback does NOT apply** — Personal-use is an explicit license claim that excludes redistribution; silence ≠ permission. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAA Bahrain — Civil Aviation Affairs (Ministry of Transportation and Telecommunications)
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown — leans Excluded (verified 2026-05-11)
+- **Source URL:** https://www.mtt.gov.bh/civil-aviation
+- **Bulk download URL:** None known. Register access is appointment-only viewing per Article 48 of Civil Aviation Law 14/2013.
+- **License (verbatim — Article 48 mapping):** Register is _"available in the Aeronautical Licensing Directorate... made available to the public to view, under prior appointment on any business days & hours"_ — same structural pattern as Germany LBA (statutorily non-public), Japan JCAB (consultation-only with no-copy restriction), Israel CAAI (per-aircraft).
+- **Why leans Excluded:** Appointment-only viewing with no bulk channel and no copy mechanism is structurally incompatible with redistribution. Will revisit classification once CAA Bahrain replies — if they confirm "no bulk channel exists," moves to Excluded.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `aerolicensing@mtt.gov.bh` (Aeronautical Licensing Directorate; verified via Article 48 mapping to the relevant directorate). A9C- prefix. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2, pending reclassification on reply).
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGCA Kuwait — Directorate General of Civil Aviation
+
+- **Status:** Future — v2 permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.dgca.gov.kw/CivilAviationSafety (Aviation Safety Department) + https://kas2.dgca.gov.kw/kasd/wp-content/uploads/2022/03/Reg-Cir-2020-20-NPA-2019-17-KCASR-7-Online.pdf (KCASR 7 — Kuwait Civil Aviation Safety Regulation 7, aircraft registration)
+- **Bulk download URL:** TBD — KCASR 7 governs the aircraft register; bulk format not yet surfaced.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** v2 sent 2026-05-11 to `president@dgca.gov.kw` cc `info@dgca.gov.kw` — Shaikh Eng. Humoud Mubarak H. J. Al-Sabah, President of Civil Aviation (user-provided named contact). v1 to general info@dgca.gov.kw was superseded before send in favor of the named-contact routing. 9K- prefix. Phone +965 24310400 / 24719847. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGAC Morocco — Direction Générale de l'Aviation Civile (under Ministère du Transport et de la Logistique)
+
+- **Status:** Future — v2 permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://transport.gov.ma/fr/secteurs/aviation-civile (DGAC migrated to parent ministry site per Décret 2-21-968 du 25 joumada I 1443 / 30 décembre 2021)
+- **Bulk download URL:** TBD — former `aviationcivile.gov.ma` subdomain decommissioning (TLS handshake aborts, server returns 0 bytes; recheck weekly). Migration to parent ministry not yet fully complete — /fr/secteurs/aviation-civile/procedures-et-formulaires still contains "Lorem ipsum" placeholder content.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Migration context:** DGAC moved to the parent ministry site per Décret 2-21-968 (25 joumada I 1443 / 30 décembre 2021). Direction de l'Aéronautique Civile is the register-relevant sub-Directorate under the new ministerial structure.
+- **Permission email:** v2 sent 2026-05-11 to `DCCsiteweb@transport.gov.ma` (Ministry webmaster; verified live via /fr/contactez-nous on 2026-05-11 via Moroccan VPN — the parent ministry contact page surfaced this address after the DGAC subdomain went dark). v1 (old draft to dead aviationcivile.gov.ma webform) was deleted before send. Body asks for forward to Direction de l'Aéronautique Civile (register-relevant sub-Directorate per Decree 2-21-968). CN- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAA Oman — Civil Aviation Authority of Oman (formerly PACA — Public Authority for Civil Aviation)
+
+- **Status:** 🛠️ Cleared — implementation pending (license cleared via Oman Open Data Use License; awaiting CAA reply on dataset publication or license-extension scope)
+- **Classification:** **Open** — CC BY 4.0-compatible per published declaration (verified verbatim 2026-05-11)
+- **Source URL:** https://www.caa.gov.om/en/opendata-5/opendata (Open Data portal — currently publishes only airport-traffic statistics 2010-2024 in XLSX/CSV/PDF; per-tail aircraft register is **not yet published**)
+- **Bulk download URL:** None published for the per-tail aircraft register. Open Data portal publishes only airport-traffic statistics.
+- **License surface:** https://www.caa.gov.om/upload/files/%D8%B1%D8%AE%D8%B5%D8%A9%20%D8%A7%D8%B3%D8%AA%D8%AE%D8%AF%D8%A7%D9%85%20%D8%A7%D9%84%D8%A8%D9%8A%D8%A7%D9%86%D8%A7%D8%AA%20%D8%A7%D9%84%D9%85%D9%81%D8%AA%D9%88%D8%AD%D8%A9%281%29.pdf — "Oman Open Data Use License" (رخصة استخدام البيانات المفتوحة). The footer marketing name on the portal is "Open Government License - Oman" but this PDF is the actual legal instrument.
+- **License (verbatim Arabic, Clause 6.2):** _"تتوافق الرخصة مع رخصة المشاع الإبداعي 'CREATIVE COMMONS' (CC BY 4.0) الإصدار الرابع"_ (English: "This license is compatible with the Creative Commons CC BY 4.0 license, version four.")
+- **License (verbatim Arabic, Clause 2 summary):** Clause 2 grants the right to **commercial AND non-commercial use, copy, download, publish, distribute, and merge** the open data.
+- **License (Clause 4 exclusions):** personal data, government emblems, IP-protected content, identity documents, classified data.
+- **Why Open (same tier as AESA Spain, CASA Australia, Traficom Finland, Latvia, Netherlands ILT):** License is cleared via published declaration — no agency reply needed for license use. Same pattern as CASA CC BY 4.0 and AESA Open with attribution.
+- **Implementation status:** Register dataset is **not yet published** on the portal — ingest is blocked on dataset availability, not on license clearance.
+- **Update cadence:** Per portal refresh cadence (airport-traffic data updated 2010-2024 range; register dataset cadence TBD pending publication).
+- **Permission email:** Sent 2026-05-11 to `customerservice@caa.gov.om` (Customer Service Department). Phone +968 24354436 / 24354437 / 24354433 / 24354435. A4O- prefix. **Email function:** courtesy + dataset publication request (license already cleared via published declaration). Body acknowledges the license verbatim and asks (1) publish register as open dataset on the portal OR (2) confirm CC BY 4.0-compatible license extends to register data ingested from other CAA public surfaces. **Reply does not gate license use** — license already cleared via published declaration. Reply will determine whether the register dataset is published on the portal directly or whether the same terms extend to register data ingested from other public CAA surfaces.
+- **Reply (verbatim):** _pending_
+
+---
+
+## QCAA — Qatar Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.caa.gov.qa/en + https://www.caa.gov.qa/en/aeronautical-information-management (Aeronautical Information Management department)
+- **Bulk download URL:** TBD — register-specific dataset not surfaced.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `pr@caa.gov.qa`. A7- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## GACA — General Authority of Civil Aviation, Saudi Arabia
+
+- **Status:** Future — v3 permission/dataset-publication request sent 2026-05-11, awaiting reply
+- **Classification:** **Conditional Open** (verified verbatim 2026-05-11; reclassified from Personal-use)
+- **Source URL:** https://gaca.gov.sa/en/Open-Data + https://gaca.gov.sa/en/open-data/open-data-library (Open Data Library — currently publishes only KSA Airports Traffic 2010-2024 in PDF/XLSX/CSV; per-tail aircraft register is **not yet published** on the Open Data Library)
+- **License surface:** https://gaca.gov.sa/en/open-data-policy (GACA Data Usage Policy and Disclaimer)
+- **License (verbatim from live policy, verified 2026-05-11):** _"Open data refers to a set of information available without technical, financial, or legal restrictions that individuals can benefit from and use as needed."_
+- **Terms of Reuse (verbatim, Data Usage Policy):** source attribution required (with link to gaca.gov.sa); use restrictions (no political purposes, no unlawful/criminal activities, no racist/incitement use, nothing contrary to KSA customs/traditions). **No non-commercial bar, no redistribution bar.** Functionally CC BY-like with use-conduct guardrails.
+- **Reclassification note (2026-05-11):** Previously misclassified as **Personal-use** on a cautious reading of the phrase _"use it at their own personal responsibility"_ — which is a liability disclaimer, not a commercial-use bar. Re-research of the live Data Usage Policy on 2026-05-11 (via Saudi VPN) surfaced the verbatim "Open data refers to a set of information available without technical, financial, or legal restrictions" phrase, which is functionally CC BY-like. Reclassified to Conditional Open.
+- **Library inventory note:** The Open Data Library currently publishes only **KSA Airports Traffic 2010-2024** (PDF/XLSX/CSV) — the per-tail aircraft register itself is not on the portal. v3 email asks for dataset publication. Pattern matches Oman CAA.
+- **Update cadence:** Library refresh cadence appears annual (Airports Traffic covers 2010-2024 in single file); register dataset cadence TBD pending publication.
+- **Permission email history:** v1 (`r-5748368082994260425`, unverified `airworthinessInspector@`) and v2 (`r6367671060463685780`, Personal-use framing) both superseded. v3 sent 2026-05-11 to `1929@gaca.gov.sa` — dataset-publication request format (same shape as Oman v2) — body acknowledges the Conditional Open framework verbatim and asks (1) publish register as open dataset on the Open Data Library OR (2) confirm the Data Usage Policy extends to register data ingested from other GACA public surfaces.
+- **Permission email (current — v3):** Sent 2026-05-11 to `1929@gaca.gov.sa` (verified live via mailto: on /helping-and-support/contact-us on 2026-05-11 via Saudi VPN; was previously a guess from cached Wayback). HZ- prefix. Phone +966 11 525 3333 (intl) + 1929 (local short code). Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Conditional Open is Unknown-equivalent for the register specifically since the register isn't published on the portal yet; 30-day fallback applies — was previously No-fallback under wrong Personal-use classification, now revised). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DGAC Tunisia — Direction Générale de l'Aviation Civile (under Ministère du Transport)
+
+- **Status:** Future — v2 permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.transport.tn/fr/aviation/article (Transport Aérien section) + https://www.transport.tn/fr/aviation/reglement (Lois et Règlements). Old path `/fr/aviation/` now returns 404 — site reorganized.
+- **Bulk download URL:** TBD — data.gov.tn cross-check pending.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** v2 sent 2026-05-11 to `nidhal.souilmi@transport.state.tn` cc `boc@transport.state.tn` — Nidhal Souilmi, Directeur Général de l'Aviation Civile (named contact verified live via /fr/aviation/contact on 2026-05-11 via Tunisian VPN). v1 to unverified `be.dgac@mt.gov.tn` superseded. TS- prefix. Phone 71906563 / Fax 71906571. Address 17 Rue Khaireddine Pacha, Tunis. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## GCAA — General Civil Aviation Authority of the United Arab Emirates
+
+- **Status:** Future — v2 permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.gcaa.gov.ae/ + https://www.gcaa.gov.ae/en/Departments/AS/Pages/Airworthiness.aspx (Airworthiness Department) + https://www.gcaa.gov.ae/en/services/aircraft-registration (Aircraft Registration service)
+- **Open data portal:** https://opendata.fcsc.gov.ae/@general-authority-civil-aviation (FCSC Open Data portal — currently publishes "Accepted Aircraft Models" type approvals, NOT the per-tail register)
+- **Bulk download URL:** TBD — per-tail register not yet on FCSC portal.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** v2 sent 2026-05-11 to `customercare@gcaa.gov.ae` — direct email after VPN-based verification surfaced this address (verified live via /en/contact-us on 2026-05-11 via UAE VPN). Previously misclassified as webform-only; v1 webform copy-paste draft superseded. Body asks for forward to Airworthiness Department or Aircraft Registration team if customercare@ is wrong inbox. A6- prefix. Phone +971 800 4466 / WhatsApp +971 4 777 1777 / 171 local short. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## AACR — Romanian Civil Aeronautical Authority (Autoritatea Aeronautică Civilă Română) — Excluded
 
 - **Status:** ❌ Excluded (verified 2026-05-10)
@@ -1409,6 +1540,18 @@ These are commercial registration services for foreign aircraft owners. They mak
   > "[E]veryone is permitted, with the consent of the registrar, to review the aircraft registration register in Israel."
 - **Why excluded:** Three concurrent blockers — (1) per-aircraft fee + registrar consent for individual lookups, (2) bulk access only via FOI request, which grants one-off copies under conditions and does not confer redistribution rights, (3) no public bulk publication on data.gov.il in any current form. Same structural pattern as Germany LBA: the agency cannot grant what its statutory framework doesn't permit it to publish openly. An FOI request for redistribution rights would be a heavy ask with significant pushback and is not justified for a hobby project's ~600 4X-prefixed aircraft.
 - **Revisit condition:** Israel publishes the register on data.gov.il (or successor portal) under an explicit open license (CC BY, CC0, or equivalent). Re-evaluate annually.
+
+---
+
+## Egypt — ECAA (Egyptian Civil Aviation Authority) — Excluded
+
+- **Status:** ❌ Excluded (verified 2026-05-11)
+- **Classification:** Excluded (redistribution gating under national civil-aviation statutory framework; verbatim citation pending)
+- **Source URL:** https://www.civilaviation.gov.eg/
+- **License:** Law 93/2003 (Egyptian Civil Aviation Law) framework was reviewed in prior triage; redistribution gating noted. **Pending verbatim statutory citation — flag for re-verification before any ingest.**
+- **Why excluded:** Statutory framework under Law 93/2003 gates redistribution; same structural exclusion family as Germany LBA, Israel CAAI, Japan JCAB, Romania AACR — agency cannot grant what its statute does not permit. Verbatim citation not captured in the prior triage pass; do not change classification without it.
+- **Note:** SU- prefix. Same acronym collision as Ethiopia ECAA (the Ethiopian Civil Aviation Authority is a separate entity that has been emailed 2026-05-05 and sits in **In flight** — do not conflate).
+- **Revisit condition:** Egypt amends Law 93/2003 to provide an open-data / bulk-redistribution channel for the aircraft register, or ECAA publishes the register under an explicit open license on a national open-data portal. Re-evaluate annually. **A verbatim statutory citation must be captured before any reclassification.**
 
 ---
 
