@@ -558,7 +558,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
   - **Pass 1:** Confirmed register URL on legacy `lebcaa.com`, no bulk download.
   - **Pass 2:** DGCA contact page JS-rendered; chose `info@dgca.gov.lb` as best-guess.
   - **Pass 3 (after v1 bounce):** DNS recon revealed `dgca.gov.lb` MX is a placeholder (no mailserver); searches surfaced a successor authority on `caa.gov.lb` with live mail infrastructure. v2 sent to new domain.
-- **Permission email:** v1 sent 2026-05-10 to `info@dgca.gov.lb` **bounced** (server misconfigured — entire `dgca.gov.lb` domain has no working email). v2 sent 2026-05-10 to `info@caa.gov.lb` cc `contact@caa.gov.lb` (new authority domain; both addresses are educated guesses since the JS-rendered site does not surface contact info on static fetch, but DNS confirms the mail infrastructure is live). Plain-text body per Option A (markdown stripped at send time). Body explicitly asks for (1) confirmation that caa.gov.lb is the correct point of contact, (2) license terms, (3) canonical register URL, (4) any restrictions; includes wartime/crisis "suspend on request" clause. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Permission email:** v1 sent 2026-05-10 to `info@dgca.gov.lb` **bounced** (server misconfigured — entire `dgca.gov.lb` domain has no working email infrastructure). v2 sent 2026-05-10 to `info@caa.gov.lb` (delivered — no bounce; counts as sent) cc ~~`contact@caa.gov.lb`~~ (bounced — hedge guess on the new authority domain was wrong; the `info@` mailbox is the only verified inbox). DNS confirmed live MX on `caa.gov.lb` via mysecurecloudhost.com. Plain-text body per Option A (markdown stripped at send time). Body explicitly asks for (1) confirmation that caa.gov.lb is the correct point of contact, (2) license terms, (3) canonical register URL, (4) any restrictions; includes wartime/crisis "suspend on request" clause. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
@@ -765,6 +765,69 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Format note (engineering):** No bulk file. If ANAC reply confirms permission, would require establishing a new export channel via correspondence.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format. Pass 2: open-data portal cross-check (Geodata Togo + Togo Open Data for Africa — neither lists aviation) + contact discovery + page-fetch attempts.
 - **Permission email:** Sent 2026-05-10 to `anac@anac-togo.tg` (general inbox) cc `secretariat@anac-togo.tg`. Phone +228 22263740; address B.P. 2699 Lomé. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + bulk channel + refresh cadence. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## AAC Albania — Autoriteti i Aviacionit Civil të Shqipërisë (Albanian Civil Aviation Authority)
+
+- **Status:** Future — permission request sent 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; ZA- prefix; small register)
+- **Source URL:** https://www.aac.gov.al/ (institutional landing; register-specific page not surfaced via static fetch)
+- **Bulk download URL:** None known. Static-fetch did not surface a register page or bulk download.
+- **License:** Pending verification.
+- **Domain note:** Web domain is `aac.gov.al` (routes through central Albanian gov mail). Email domain per ATC Network contact field is `acaa.gov.al` (dedicated M365 mail infra, distinct from web domain). DNS confirms both domains live with separate mail handling.
+- **Permission email:** v1 to `info@aac.gov.al` superseded before send (pattern guess; would have routed via central `mail.gov.al` relay). v2 sent 2026-05-10 to `info@acaa.gov.al` (verified via ATC Network mailto link; M365 MX confirmed via DNS dig — `acaa-gov-al.mail.protection.outlook.com`). Plain-text body per Option A. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## HCAA Greece — Hellenic Civil Aviation Authority (Υπηρεσία Πολιτικής Αεροπορίας)
+
+- **Status:** Future — permission request sent 2026-05-10 (v2 with structured subject per HCAA routing rules), awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; SX- prefix)
+- **Source URL:** https://hcaa.gov.gr/en (current authority site) + http://www.ypa.gr/en/flight-safety/aircraft-register/ (legacy register page)
+- **Bulk download URL:** TBD — DAAR (Flight Standards Directorate, Department of Airworthiness and Aircraft Register) maintains the register. data.gov.gr cross-check pending.
+- **License:** Pending verification. EU PSI Directive may apply.
+- **Routing note (user-provided):** `info@hcaa.gov.gr` is the routing inbox for Flight Standards Directorate (A2). Subject line follows a strict format: `[Part of Regulation] — [Document Type] — [Carrier or Name]`. Closest fit for an aircraft-register licensing request is Part-21 + Certificate Issuance.
+- **Permission email:** v1 (unstructured subject) superseded before send. v2 sent 2026-05-10 to `info@hcaa.gov.gr` with structured subject `Part-21 — Certificate Issuance — Ashley CHILDRESS` per HCAA routing rules. Body opens with a note acknowledging the menu-fit is imperfect (this is a policy/redistribution question, not an actual Certificate Issuance) and asks for forwarding if needed. Plain-text body per Option A. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ULC Poland — Urząd Lotnictwa Cywilnego (Polish Civil Aviation Authority)
+
+- **Status:** Future — permission request sent 2026-05-10 (v2 to register-relevant department), awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; SP- prefix)
+- **Source URL:** https://ulc.gov.pl/technika-lotnicza/rejestr-cywilnych-statkow-powietrznych (Rejestr Cywilnych Statków Powietrznych) + https://bip.ulc.gov.pl/rejestry (BIP ULC — Public Information Bulletin)
+- **Bulk download URL:** TBD — dane.gov.pl cross-check pending.
+- **License:** Pending verification. EU PSI Directive + Polish public-information access law may apply (BIP listing is a legal-mandate disclosure venue).
+- **Permission email:** v1 to `kancelaria@ulc.gov.pl` (Chancellery, standard PL gov pattern) superseded before send. v2 sent 2026-05-10 to `ltt@ulc.gov.pl` (Department of Airworthiness; Director Marcin Perkowski, Deputy Director Justyna Iglewska; phone 22 520 73 36, fax 22 520 73 73 — user-provided from ULC site). Plain-text body per Option A. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ANAC Portugal — Autoridade Nacional da Aviação Civil
+
+- **Status:** Future — permission request submitted via webform 2026-05-10, awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; CS- prefix)
+- **Source URL:** https://www.anac.pt/vPT/Generico/Aeronaves/RegistoAeronauticoNacional/Paginas/RegistoAeronauticoNacional.aspx (RAN — Registo Aeronáutico Nacional)
+- **Bulk download URL:** None published. Per-record certified information available on request via RAN.
+- **License:** Pending verification. EU PSI Directive may apply.
+- **Contact channel note:** ANAC's official contact page is **webform-only** — verified that no public email exists for the agency. Routing options on the form include "Direção Jurídica" (Legal Direction) and "Direção de Aeronavegabilidade" (Airworthiness Direction). v1 draft to pattern-guessed `geral@anac.pt` was superseded before send and the body re-submitted via the webform.
+- **Permission email:** Submitted 2026-05-10 via webform at https://www.anac.pt/VPT/FOOTER/Paginas/Contactenos.aspx (route: Direção Jurídica or Direção de Aeronavegabilidade). Plain-text body per Option A. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAA Slovenia — Javna agencija za civilno letalstvo Republike Slovenije (Civil Aviation Agency of Slovenia)
+
+- **Status:** Future — permission request sent 2026-05-10 (v2 to register-specific desk), awaiting reply
+- **Classification:** Unknown (verified 2026-05-10 — no public license declaration; S5- prefix)
+- **Source URL:** https://www.caa.si/register-zrakoplovov.html (register page in Slovenian) + https://register.caa.si/ (eCAA public consultation portal)
+- **Bulk download URL:** TBD — podatki.gov.si cross-check pending.
+- **License:** Pending verification. EU PSI Directive may apply.
+- **Permission email:** v1 to generic `info@caa.si` superseded before send. v2 sent 2026-05-10 to `matej.dolinar@caa.si` (Matej Dolinar, Airworthiness Division / Sektor za plovnost — verified via search snippet; phone 01 244 66 34) cc `info@caa.si` (general). Body cites Latvia CAA (CC0 on data.gov.lv), Lithuania TKA (CC BY 4.0 on data.gov.lt Spinta API), and Finland Traficom (CC BY 4.0 on avoindata.fi) as Baltic+Nordic peer comparables. Plain-text body per Option A. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
 - **Reply (verbatim):** _pending_
 
 ---
