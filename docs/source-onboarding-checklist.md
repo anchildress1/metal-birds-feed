@@ -56,7 +56,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | DCA Cyprus                | 2026-05-05                           | 2026-06-04 | director@dca.mcw.gov.cy                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAA CR Czech Republic     | 2026-05-10                           | 2026-06-09 | dousova@caa.cz (cc podatelna@caa.gov.cz; Jana Doušová, register dept head)                   | **Yes** (Unknown; public-record fallback after follow-up) |
 | Trafikstyrelsen Denmark   | 2026-05-05                           | 2026-06-04 | info@trafikstyrelsen.dk                                                                      | **Yes** (Unknown; public-record fallback after follow-up) |
-| IDAC Dominican Republic   | 2026-05-10 (v2 to `info@idac.gov.do`) | 2026-06-09 | info@idac.gov.do (cc direccion@idac.gov.do, contacto@idac.gov.do; v1 to ~~info@idac.gob.do~~ bounced — `.gob.do` does not host mailboxes) | **Yes** (Unknown; public-record fallback after follow-up) |
+| IDAC Dominican Republic   | 2026-05-10 (v2 to `info@idac.gov.do`) | 2026-06-09 | info@idac.gov.do (cc direccion@idac.gov.do — both delivered; cc ~~contacto@idac.gov.do~~ also bounced; v1 to ~~info@idac.gob.do~~ bounced — `.gob.do` does not host mailboxes) | **Yes** (Unknown; public-record fallback after follow-up) |
 | Transpordiamet Estonia    | 2026-05-10                           | 2026-06-09 | info@transpordiamet.ee                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | ECAA Ethiopia             | 2026-05-05                           | 2026-06-04 | caa.airnav@ethionet.et                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAF Fiji                 | 2026-05-05                           | 2026-06-04 | info@caaf.org.fj                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -192,6 +192,116 @@ The lists below are grouped by language family for organizational clarity (so a 
 ### Middle East
 
 > Note: Lebanon (DGCA Lebanon) was emailed in English on 2026-05-10 and now sits in the **In flight** section above. No agencies remain deferred in this group.
+
+---
+
+## Phase 3 — beyond avcodes (initial recon)
+
+The avcodes.co.uk list (~86 entries) is not exhaustive of world civil aviation authorities. This section captures agencies with national aircraft registers that are NOT on avcodes but exist and operate registers. Initial Pass 1 recon completed 2026-05-10 — agency confirmed, register URL surfaced where possible, license posture indicator noted. Most land in **Unknown** and need a permission email (Pass 2 + send).
+
+**Auto-deferred — sanctions / active conflict exposure (no research):**
+
+| Country | Reason |
+| --- | --- |
+| Belarus | OFAC/EU sanctions; same posture as Russia |
+| Venezuela | OFAC sectoral sanctions; defer pending sectoral aviation carve-out review |
+| Cuba (IACC) | OFAC blanket; same posture as Russia |
+| Iran (CAO.IR) | OFAC blanket sanctions |
+| Syria (SyCAA) | OFAC blanket sanctions |
+| North Korea | OFAC blanket sanctions |
+| Yemen (CAMA) | Active conflict; aviation infrastructure non-functioning |
+| Sudan (CAA Sudan) | Active conflict |
+| Libya (LCAA) | Sectoral sanctions + fragmented governance |
+| Iraq (ICAA) | Conflict-recovery posture; defer |
+| Myanmar (DCA Myanmar) | Active conflict + post-coup sanctions exposure |
+
+### Europe (avcodes-gap)
+
+| Country | Agency | Register URL | Format hint | License posture | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Portugal | ANAC (Autoridade Nacional de Aviação Civil) | [anac.pt](https://www.anac.pt) → RAN (Registo Aeronáutico Nacional) | Per-record consultation, free in PT/EN; bulk channel TBD | Unknown — no license declaration surfaced | CS- prefix. Per-record certified info on request (no charge stated). |
+| Poland | ULC (Urząd Lotnictwa Cywilnego) | [ulc.gov.pl/technika-lotnicza/rejestr-cywilnych-statkow-powietrznych](https://ulc.gov.pl/technika-lotnicza/rejestr-cywilnych-statkow-powietrznych) | Online register page, also BIP ULC ([bip.ulc.gov.pl/rejestry](https://bip.ulc.gov.pl/rejestry)) | Unknown — Polish open-data portal (dane.gov.pl) cross-check pending | SP- prefix. EU PSI Directive may apply. |
+| Greece | HCAA (Hellenic Civil Aviation Authority) | [hcaa.gov.gr](https://hcaa.gov.gr/en) (current) + [ypa.gr](http://www.ypa.gr/en/flight-safety/aircraft-register/) (legacy) | Web register page via DAAR (Department of Airworthiness and Aircraft Register) | Unknown — data.gov.gr cross-check pending | SX- prefix. EU PSI Directive may apply. |
+| Albania | AAC (Autoriteti i Aviacionit Civil) | [aac.gov.al](https://www.aac.gov.al/) | TBD — register page not surfaced | Unknown — no license declaration | ZA- prefix. Small register. Contact: info@aac.gov.al |
+| Slovenia | CAA Slovenia (Javna agencija za civilno letalstvo) | [caa.si/register-zrakoplovov.html](https://www.caa.si/register-zrakoplovov.html) | Online register search | Unknown — podatki.gov.si cross-check pending | S5- prefix. EU PSI Directive may apply. Contact: info@caa.si |
+
+### Latin America (avcodes-gap)
+
+| Country | Agency | Register URL | Format hint | License posture | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Peru | DGAC (MTC — Ministerio de Transportes y Comunicaciones) | [portal.mtc.gob.pe](https://portal.mtc.gob.pe/transportes/aeronautica_civil/) + [sivlam.mtc.gob.pe](https://sivlam.mtc.gob.pe/) consultation | Search-only consultation portal | Unknown — datos.gob.pe cross-check pending | OB- prefix. |
+| Bolivia | DGAC | [dgac.gob.bo/registro-publico-de-aeronaves](https://www.dgac.gob.bo/registro-publico-de-aeronaves/) | "Registro Público de Aeronaves" — page exists, format TBD | Unknown — "público" framing leans Open | CP- prefix. Contact: dgacbol@dgac.gob.bo |
+| Ecuador | DGAC (Dirección General de Aviación Civil) | [aviacioncivil.gob.ec/registro-aeronautico](https://www.aviacioncivil.gob.ec/registro-aeronautico/) + [datosabiertos.gob.ec/organization/dgac](https://datosabiertos.gob.ec/organization/dgac) | Has open-data portal organization page — **promising** | Unknown — open-data presence suggests potential Open posture | HC- prefix. |
+| Paraguay | DINAC | [dinac.gov.py](https://www.dinac.gov.py) | TBD — governed by DINAC R-47 regulation | Unknown | ZP- prefix. |
+| Costa Rica | DGAC | [dgac.go.cr](https://www.dgac.go.cr/WEB/list/plantilla?type=Plantilla2&key=RegistroAeronauticoPlantilla2) | Register page exists, format TBD | Unknown — datosabiertos.go.cr cross-check pending | TI- prefix. |
+| Panama | AAC (Autoridad Aeronáutica Civil) | [aeronautica.gob.pa](https://www.aeronautica.gob.pa/) + [sigob.aeronautica.gob.pa/snra/subtipo/2](https://sigob.aeronautica.gob.pa/snra/subtipo/2) search portal | Search portal (R.A.C.P. — Registro Aeronáutico Civil de Panamá) | Unknown | HP- prefix. Contact: rafael.barcenas@aeronautica.gob.pa or paola.aparicio@aeronautica.gob.pa |
+| El Salvador | AAC (Autoridad de Aviación Civil) | [aac.gob.sv/registro-aeronautico](https://aac.gob.sv/registro-aeronautico) | Register page exists, format TBD | Unknown | YS- prefix. Phone: +503 2565-4413. |
+| Honduras | AHAC (Agencia Hondureña de Aeronáutica Civil) | [ahac.gob.hn](https://www.ahac.gob.hn/) | TBD | Unknown | HR- prefix. |
+| Nicaragua | INAC (Instituto Nicaragüense de Aeronáutica Civil) | [inac.gob.ni](https://www.inac.gob.ni/) | TBD | Unknown | YN- prefix. |
+
+### MENA (avcodes-gap)
+
+| Country | Agency | Register URL | Format hint | License posture | Notes |
+| --- | --- | --- | --- | --- | --- |
+| UAE | GCAA (General Civil Aviation Authority) | [gcaa.gov.ae](https://www.gcaa.gov.ae/) + [opendata.fcsc.gov.ae/@general-authority-civil-aviation](https://opendata.fcsc.gov.ae/@general-authority-civil-aviation) | Has open-data portal presence — but published dataset is "Accepted Aircraft Models" (type approvals, not the per-tail register) | Unknown for the register specifically — **promising open-data posture but the per-tail register itself is not yet visible on the portal** | A6- prefix. |
+| Saudi Arabia | GACA (General Authority of Civil Aviation) | [gaca.gov.sa/en/Open-Data](https://gaca.gov.sa/en/Open-Data) | **Explicit Open Data section on official site** — strongest signal in this batch | Unknown but strongest Open lean of the entire Phase 3 batch — needs Pass 2 to confirm aircraft register specifically is on the portal | HZ- prefix. |
+| Egypt | ECAA (Egyptian Civil Aviation Authority) | [civilaviation.gov.eg](https://www.civilaviation.gov.eg/ECAA/Legisation) | TBD | Unknown | SU- prefix. Same acronym collision as Ethiopia ECAA. |
+| Qatar | QCAA (Qatar Civil Aviation Authority) | [caa.gov.qa](https://www.caa.gov.qa/en) | Has "Open Data" section in navigation but register-specific dataset not surfaced | Unknown | A7- prefix. Contact: pr@caa.gov.qa |
+| Kuwait | DGCA Kuwait (Directorate General of Civil Aviation) | [dgca.gov.kw](https://www.dgca.gov.kw/) + [kcaa.dgca.gov.kw](https://kcaa.dgca.gov.kw/) | TBD | Unknown | 9K- prefix. Acronym collision with Lebanon legacy DGCA. |
+| Bahrain | CAA Bahrain (Civil Aviation Affairs) | [mtt.gov.bh/civil-aviation](https://www.mtt.gov.bh/civil-aviation) | TBD | Unknown | A9C- prefix. |
+| Oman | PACA (Public Authority for Civil Aviation, renamed to CAA) | [paca.gov.om](https://www.paca.gov.om/) | TBD | Unknown | A4O- prefix. |
+| Morocco | DGAC Morocco | [aviationcivile.gov.ma](https://www.aviationcivile.gov.ma/) | TBD — data.gov.ma cross-check pending | Unknown | CN- prefix. |
+| Tunisia | DGAC Tunisia (Office de l'aviation civile et des aéroports / Direction Générale de l'Aviation Civile) | [transport.tn/fr/aviation](https://www.transport.tn/fr/aviation/) | TBD — data.gov.tn cross-check pending | Unknown | TS- prefix. Contact: be.dgac@mt.gov.tn |
+| Algeria | ANAC Algeria (formerly DACM) | [anac.dz](https://www.anac.dz/en/home/) | TBD — data.gov.dz cross-check pending | Unknown | 7T- prefix. |
+
+### Africa (avcodes-gap)
+
+| Country | Agency | Register URL | Format hint | License posture | Notes |
+| --- | --- | --- | --- | --- | --- |
+| South Africa | SACAA (South African Civil Aviation Authority) | [caa.co.za](https://www.caa.co.za/) → SACAR (South African Civil Aircraft Register) | TBD — register exists, public access pattern TBD | Unknown | ZS- prefix. |
+| Nigeria | NCAA (Nigerian Civil Aviation Authority) | [ncaa.gov.ng](https://ncaa.gov.ng/) | TBD | Unknown | 5N- prefix. |
+| Kenya | KCAA (Kenya Civil Aviation Authority) | [kcaa.or.ke](https://kcaa.or.ke/) | Per-aircraft register extract on formal request + fee | **Leans Excluded** (fee-gated per-record, same pattern as Israel CAAI / Romania AACR / Japan JCAB) | 5Y- prefix. Pass 2 must confirm whether bulk channel exists before formal classification. |
+| Ghana | GCAA Ghana (Ghana Civil Aviation Authority) | [gcaa.com.gh](https://www.gcaa.com.gh/web/) | Register is electronic but **password-only access** per GCAA Flight Standards Part 4 | **Leans Personal-use or Excluded** — password-walled access is a strong restrictive signal | 9G- prefix. Acronym collision with Georgia GCAA. |
+| Senegal | ANACIM (Agence Nationale de l'Aviation Civile et de la Météorologie) | [anacs.sn/immatriculation.php](https://www.anacs.sn/immatriculation.php) (legacy ANACS domain still cited) + anacim.sn (current) | Web register page (legacy) | Unknown — legacy domain status needs Pass 2 verification | 6V- prefix. ANACIM = ANACS merged with meteorology agency in 2011. |
+| Côte d'Ivoire | ANAC CI (Autorité Nationale de l'Aviation Civile) | [anac.ci](https://www.anac.ci/) | TBD | Unknown | TU- prefix. |
+| Cameroon | CCAA (Cameroon Civil Aviation Authority) | [ccaa.aero](https://www.ccaa.aero/index.php/en/) | Third-party Aeroflight has TJ- register in zipped .txt — suggests bulk format exists somewhere | Unknown | TJ- prefix. |
+| Angola | INAVIC / ANAC Angola (renamed) | [inavic.gov.ao](https://inavic.gov.ao/) | TBD | Unknown | D2- prefix. |
+| Zimbabwe | CAAZ (Civil Aviation Authority of Zimbabwe) | [caaz.co.zw](https://www.caaz.co.zw/) | TBD | Unknown | Z- prefix. Contacts: licencing@caaz.co.zw, pr@caaz.co.zw |
+| Zambia | ZCAA (Zambia Civil Aviation Authority) | [caa.co.zm](https://www.caa.co.zm/) | TBD | Unknown | 9J- prefix. |
+| Madagascar | ACM (Aviation Civile de Madagascar) | [acm.mg](http://www.acm.mg/) | TBD — DSEA (Directorate for Safety and Use of Aircraft) maintains register | Unknown | 5R- prefix. |
+| Mauritius | DCA Mauritius (Department of Civil Aviation) | [civil-aviation.govmu.org](https://civil-aviation.govmu.org/) | **Mortgage register is publicly available** per Civil Aviation Regulations 2007; main register publicity TBD | Unknown but **leans partial-Open** (publicly-accessible mortgage register is a statutory carve-out) | 3B- prefix. |
+| Rwanda | RCAA (Rwanda Civil Aviation Authority) | [caa.gov.rw](https://www.caa.gov.rw/) | Register "maintained on premises" per RCAR Part 2 — phrasing suggests on-site consultation | Unknown — leans toward consultation-only | 9XR- prefix. |
+| Uganda | UCAA (Uganda Civil Aviation Authority) | [caa.go.ug](https://caa.go.ug/) | TBD | Unknown | 5X- prefix. |
+| DRC | AAC RDC (Autorité de l'Aviation Civile de la République Démocratique du Congo) | [aacrdc.org](https://www.aacrdc.org/) | TBD | Unknown | 9Q- prefix. |
+
+### Asia (avcodes-gap)
+
+| Country | Agency | Register URL | Format hint | License posture | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Vietnam | CAAV (Civil Aviation Authority of Vietnam) | [caa.gov.vn](https://caa.gov.vn/) | TBD — online public service portal exists for applications | Unknown | VN- prefix. |
+| Philippines | CAAP (Civil Aviation Authority of the Philippines) | [caap.gov.ph](https://www.caap.gov.ph/) | TBD | Unknown | RP- prefix (with sub-letters: RP-C civilian, RP-R restricted, RP-G government, RP-U unmanned). |
+| Cambodia | SSCA (State Secretariat of Civil Aviation) | [civilaviation.gov.kh](http://www.civilaviation.gov.kh/en/) | TBD | Unknown | XU- prefix. Contacts: admin-info@ssca.gov.kh, ssca-int@ssca.gov.kh |
+| Laos | DCAL (Department of Civil Aviation, Lao PDR) | [dcal.gov.la](https://www.dcal.gov.la/) | Third-party Air-Britain has RDPL- register PDF — suggests bulk format exists somewhere | Unknown | RDPL- prefix (5-char, unusual). |
+| Bangladesh | CAAB (Civil Aviation Authority of Bangladesh) | [caab.portal.gov.bd](https://caab.portal.gov.bd/) | TBD | Unknown | S2- prefix. Acronym collision with Bosnia BHDCA. Contact: adminceoffice@caab.gov.bd |
+| Nepal | CAAN (Civil Aviation Authority of Nepal) | [caanepal.gov.np](https://caanepal.gov.np/) | TBD — Flight Safety Standards Department maintains | Unknown | 9N- prefix. |
+| Bhutan | BCAA Bhutan (Bhutan Civil Aviation Authority) | [bcaa.gov.bt](https://bcaa.gov.bt/) | TBD — very small register (~5 aircraft total) | Unknown | A5- prefix. Tiny fleet — low priority. |
+
+### Phase 3 follow-up priorities
+
+Ranked by license-posture promise:
+
+1. **Saudi GACA** — explicit Open Data section on official site. Highest probability of clean Open posture in the batch.
+2. **UAE GCAA** — open-data portal presence (FCSC). Register-specific dataset not yet visible but the infrastructure is there.
+3. **Ecuador DGAC** — has an organization page on datosabiertos.gob.ec. Pass 2 should confirm whether the register is one of their datasets.
+4. **Bolivia DGAC** — "Registro Público de Aeronaves" framing leans Open.
+5. **Mauritius DCA** — statutorily-public mortgage register is a strong civil-law carve-out signal.
+
+**Likely-Excluded candidates** (Pass 2 must confirm before final classification):
+
+- **Kenya KCAA** — fee-gated per-record extract; bulk channel not surfaced. Pattern matches Israel/Romania/Japan.
+- **Ghana GCAA** — password-walled electronic register access per GCAA Flight Standards Part 4.
+
+**Everything else** is Unknown and needs the standard permission-email workflow once Pass 2 confirms the register URL and contact path.
 
 ---
 
