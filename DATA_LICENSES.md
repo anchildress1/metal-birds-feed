@@ -1580,14 +1580,17 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
-## ZCAA — Zambia Civil Aviation Authority — Deferred
+## ZCAA — Zambia Civil Aviation Authority
 
-- **Status:** Deferred — no contact channel surfaceable as of 2026-05-11
-- **Classification:** Unknown (deferred — no contact)
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
 - **Source URL:** https://www.caa.co.zm/
+- **Bulk download URL:** TBD (Laravel + Vue SPA; register file not surfaced from any public page or JS bundle)
 - **License:** Pending verification.
-- **Why deferred:** Laravel + Vue SPA; no email surfaces in HTML or in the 1.7MB JS bundle. /contact-us, /about-us, /publications all return the same SPA loader shell. No contact channel surfaceable, so no permission request can be sent. Not Excluded (no license declaration rules it out) and not in flight (no email could be sent). 9J- prefix.
-- **Recheck condition:** ZCAA site re-architecture, or third-party (avcodes.co.uk update, ATC Network) surfacing an inbox.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `derrick.luembe@caa.co.zm` (cc: `info@caa.co.zm`). Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Contact-discovery note:** ZCAA's website is a Laravel + Vue SPA that surfaces no public contact email on /contact-us, /about-us, /publications, or in its JS bundle. DG name (Derrick Luembe) and email format (`firstname.lastname@caa.co.zm`) were reconstructed from third-party business directories (Rocketreach, ZoomInfo, ATC Network) on 2026-05-11. MX records (`caa-co-zm.mail.protection.outlook.com`) confirm M365 routing is live. The permission-email body explicitly discloses this reconstruction so the recipient can correct the routing if needed. 9J- prefix.
+- **Reply (verbatim):** _pending_
 
 ---
 

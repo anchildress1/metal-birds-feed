@@ -35,14 +35,6 @@ License is cleared via public license declaration (no email reply needed). Inges
 | Traficom Finland  | Open — CC BY 4.0 explicit on Traficom open-data page                                                          | Bulk file is **ZIP-packed CSV** ([direct download](https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip)); engine handles csv natively — thin unzip-then-parse wrapper needed (reusable for FI vehicles/vessels/rail)  | Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc `tietojenluovutus@traficom.fi`) as courtesy; reply not gating use |
 | CAA Latvia        | Open — CC0-1.0 (public domain) explicit on data.gov.lv                                                        | Direct CSV ([download](https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv)); engine handles csv natively — **zero parser work**, only YAML config + fixtures needed | None needed — license fully clear via portal; same posture as ILT NL |
 
-### 🔍 Deferred — contact path unresolved
-
-Sites that are live but where no public contact channel could be surfaced after Round 2 research. Not Excluded (no license declaration ruled them out) and not in flight (no email could be sent). Re-check periodically.
-
-| Source       | Researched | Recheck condition                                                                                                                                                                                                  |
-| ------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ZCAA Zambia  | 2026-05-11 | Laravel + Vue SPA; no email surfaces in HTML or in the 1.7MB JS bundle. /contact-us, /about-us, /publications all return the same SPA loader shell. No contact channel surfaceable. **Recheck condition:** ZCAA site re-architecture, or third-party (avcodes.co.uk update, ATC Network) surfacing an inbox. |
-
 ### 🟡 In flight — waiting on reply
 
 | Source                    | Sent                                 | Follow-up  | Sent to                                                                                      | Fallback applies?                                         |
@@ -147,6 +139,7 @@ Sites that are live but where no public contact channel could be surfaced after 
 | SAAU Ukraine              | 2026-05-10                           | 2026-06-09 | vdz@avia.gov.ua (Documentation and Control Dept; license confirmation only; wartime ack)     | **Yes** (Unknown; public-record fallback after follow-up) |
 | GCAA UAE                  | 2026-05-11 (v2 — direct email after VPN-based verification surfaced customercare@) | 2026-06-10 | customercare@gcaa.gov.ae (verified live via /en/contact-us on 2026-05-11 via UAE VPN; A6- prefix; phone +971 800 4466 / WhatsApp +971 4 777 1777 / 171 local; body asks for forward to Airworthiness Department or Aircraft Registration team; v1 webform copy-paste draft superseded) | **Yes** (Unknown; public-record fallback after follow-up) |
 | DINACIA Uruguay           | 2026-05-10                           | 2026-06-09 | dinacia@dinacia.gub.uy (cc certaero@dinacia.gub.uy)                                          | **Yes** (Unknown; public-record fallback after follow-up) |
+| ZCAA Zambia               | 2026-05-11 (undeferred after WebSearch-based contact reconstruction) | 2026-06-10 | derrick.luembe@caa.co.zm cc info@caa.co.zm (DG Derrick Luembe; email format `firstname.lastname@caa.co.zm` per Rocketreach/ZoomInfo directories; MX records confirm M365 routing live at `caa-co-zm.mail.protection.outlook.com`; 9J- prefix; body explicitly discloses email was reconstructed from third-party directories; site itself is a Laravel + Vue SPA that surfaces no public email) | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAZ Zimbabwe             | 2026-05-11                           | 2026-06-10 | licencing@caaz.co.zw cc airworthiness@caaz.co.zw cc pr@caaz.co.zw (Z- prefix; DG: George Mashababe; Director Flight Safety & Standards: Mavis Musakasa — most senior named contacts surfaced in Africa batch but body routes through topical operational inbox; multiple specific inboxes available for follow-up) | **Yes** (Unknown; public-record fallback after follow-up) |
 
 ### ❌ Excluded — do not pursue
@@ -275,7 +268,7 @@ The avcodes.co.uk list (~86 entries) is not exhaustive of world civil aviation a
 
 ### Africa (avcodes-gap)
 
-> All 15 Africa-gap agencies processed 2026-05-11. Eleven emailed (Angola, Cameroon, Côte d'Ivoire, DRC, Madagascar, Mauritius, Nigeria, Senegal, South Africa, Uganda, Zimbabwe) — see In flight section above. Three excluded (Ghana, Kenya, Rwanda) — see Excluded section. One deferred (Zambia) — see Deferred section.
+> All 15 Africa-gap agencies processed 2026-05-11. Twelve emailed (Angola, Cameroon, Côte d'Ivoire, DRC, Madagascar, Mauritius, Nigeria, Senegal, South Africa, Uganda, Zambia, Zimbabwe) — see In flight section above. Three excluded (Ghana, Kenya, Rwanda) — see Excluded section.
 
 ### Asia (avcodes-gap)
 
