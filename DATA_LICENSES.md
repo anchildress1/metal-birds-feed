@@ -1594,6 +1594,105 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## CAAB Bangladesh — Civil Aviation Authority of Bangladesh
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://caab.portal.gov.bd/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Operational note:** **caab.gov.bd direct hosts a self-signed cert** — operator-side workaround required for production ingest. The canonical portal at `caab.portal.gov.bd` is fine; the direct `caab.gov.bd` domain (referenced from internal pages like `new.caab.gov.bd/contactof.html`) presents a self-signed certificate and will fail strict TLS verification. Recheck periodically.
+- **Acronym-collision note:** **Acronym collision with Bosnia BHDCA + Botswana CAAB** — Bosnia BHDCA is in flight in this project as `ba-bhdca`, Botswana CAAB is in flight as `bw-caab`. Do not conflate. S2- prefix (Bangladesh).
+- **Permission email:** Sent 2026-05-11 to `mahmud.pr@caab.gov.bd` cc `apmctg@caab.gov.bd` (verified mailto: on new.caab.gov.bd/contactof.html). Chairman: Air Vice Marshal Md Mostafa Mahmood Siddiq, BSP, GUP, ndc, afwc, acsc, psc — appointed 03/07/2025, verified via chairmanf.html. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## BCAA Bhutan — Bhutan Civil Aviation Authority
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://bcaa.gov.bt/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Register-size note:** Very small register (~5 aircraft total). Low priority by fleet volume, but trivially small — ingest planning impact is negligible once the license clears.
+- **Permission email:** Sent 2026-05-11 to `airworthiness@bcaa.gov.bt` cc `bcaa@bcaa.gov.bt`. 7 leadership emails verified mailto: on /contact/: airworthiness@, bcaa@, anad@, fsd@, ops@, pel@, drone@. DG Mr. Kinley Wangchuk, promoted 2026-01-12 per BCAA announcement. A5- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## SSCA Cambodia — State Secretariat of Civil Aviation
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** http://www.civilaviation.gov.kh/en/
+- **Bulk download URL:** TBD
+- **License:** Pending verification — leans Excluded if register fee confirmed.
+- **Update cadence:** TBD
+- **Fee-signal note:** SSCA has a "Regulatory Fees and Charge" menu item on the site — this is a fee signal but not register-specific. The email body explicitly asks whether register access is fee-gated; a yes-reply confirming a fee model would reclassify SSCA toward Excluded (same pattern as Israel CAAI, Romania AACR, Japan JCAB, UK G-INFO).
+- **Permission email:** Sent 2026-05-11 to `admin-info@ssca.gov.kh` cc `ssca-int@ssca.gov.kh` (both verified on /en/about-ssca). XU- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). **Leans Excluded** if reply confirms fee model. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## DCAL Laos — Department of Civil Aviation, Lao PDR
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.dcal.gov.la/
+- **Bulk download URL:** TBD — canonical DCAL-hosted bulk file not surfaced.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Third-party note:** Third-party Air-Britain hosts an RDPL- register PDF — the existence of a third-party-published PDF suggests a bulk format exists upstream, but the canonical DCAL-hosted source has not been surfaced. The permission-email body explicitly asks DCAL for the canonical source URL. No Lao national open-data portal — `data.la` and `data.opendevelopmentlaos.net` both DNS-fail.
+- **Permission email:** Sent 2026-05-11 to `info@dcal.gov.la` cc `laodca@laotel.com`. info@ verified mailto: on homepage. RDPL- prefix (5-char, unusual). Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAAN Nepal — Civil Aviation Authority of Nepal
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://caanepal.gov.np/
+- **Bulk download URL:** TBD — Flight Safety Standards Department maintains the register.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Open-data-portal note:** `data.nepal.gov.np` DNS-fails — no national open-data portal surfaced.
+- **Permission email:** Sent 2026-05-11 to `dgca@caanepal.gov.np` (verified mailto: on homepage). DG Mr. Deo Chandra Lal Karn — named on site; also DG Aviation Services Mr. Prem Nath Thakur, DG Corporate Mr. Binod Prasad Neupane, DG Aviation Safety & Security Reg Mr. Bikram Raj Gautam. `gyanendra.bhul@caanepal.gov.np` also verified secondary contact. 9N- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAAP Philippines — Civil Aviation Authority of the Philippines
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://www.caap.gov.ph/
+- **Bulk download URL:** TBD — `data.gov.ph` is live and searchable but no aircraft-register dataset surfaced.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `awociddiv@caap.gov.ph` cc `fod@caap.gov.ph`. 5 division emails verified mailto: on /contact-us: awociddiv@, fod@, maosec@, opcen@, rpassec@. RP- prefix with sub-letters: RP-C civilian, RP-R restricted, RP-G government, RP-U unmanned. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAAV Vietnam — Civil Aviation Authority of Vietnam (Cục Hàng không Việt Nam)
+
+- **Status:** Future — permission request sent, awaiting reply
+- **Classification:** Unknown
+- **Source URL:** https://caa.gov.vn/
+- **Bulk download URL:** TBD
+- **License:** Pending verification — no national open-data portal (`data.gov.vn` DNS-fails).
+- **Update cadence:** TBD
+- **Operational note:** **english.caa.gov.vn returns SSL handshake error — broken regardless of geography.** Use the Vietnamese-language `caa.gov.vn` as the canonical source. Operator-side workaround not required for `caa.gov.vn`; the English subdomain is simply unusable.
+- **Contact-discovery note:** v1 recon error — an earlier subagent misidentified the site as a SPA and fabricated `fssd@caa.gov.vn` from third-party directories; the v1 draft was deleted before send. The v2 (sent) email is addressed to `dunguv@caa.gov.vn`, sourced from a verified `mailto:` link on `/lanh-dao-cuc-hang-khong-viet-nam.htm` (the agency's leadership page). The page also surfaces verified emails for the three Deputy DGs: Đỗ Hồng Cẩm `camdh@`, Hồ Minh Tấn `hmtan@`, Đào Xuân Hoạch `hoachdx@` — available for follow-up if `dunguv@` does not reply.
+- **Permission email:** Sent 2026-05-11 to `dunguv@caa.gov.vn`. DG Cục trưởng Uông Việt Dũng. VN- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## AACR — Romanian Civil Aeronautical Authority (Autoritatea Aeronautică Civilă Română) — Excluded
 
 - **Status:** ❌ Excluded (verified 2026-05-10)
