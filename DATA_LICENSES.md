@@ -1484,7 +1484,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Update cadence:** TBD
 - **Contact-discovery note:** Original 2026-05-11 send (v1) went to `anac@anac.co.ao` cc `reclamacoes@anac.co.ao` — both addresses on the `.co.ao` TLD, which is NXDOMAIN. The subagent pulled these from inavic.gov.ao/contactos (legacy INAVIC contact page), where the agency itself still publishes the stale addresses. v1 bounced entirely. Verified canonical domain is `.ao` (not `.co.ao`); contacto page at https://anac.ao/ao/contactos publishes `anac@anac.ao` + `sec.anac.ao@gmail.com` (unusual gmail fallback for a gov agency, but officially published). Phone: +244 921 320 429 / +244 921 320 442. Address: Aeroporto Internacional Dr. António Agostinho Neto, Estrada Nacional 230, Km 40, Icolo e Bengo, Angola.
 - **Permission email:** v1 to `anac@anac.co.ao` cc `reclamacoes@anac.co.ao` bounced 2026-05-11 (NXDOMAIN). v2 sent 2026-05-11 to `anac@anac.ao` cc `sec.anac.ao@gmail.com` (both verified on anac.ao/ao/contactos). D2- prefix. Plain-text body per Option A. v2 body explicitly acknowledges the v1 bounce and notes the legacy inavic.gov.ao contact-page contact-info inaccuracy. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to reclamacoes@anac.co.ao because the domain anac.co.ao couldn't be found. Check for typos or unnecessary spaces and try again."_ (Same NDR shape implied for `anac@anac.co.ao` since the entire domain is NXDOMAIN.) Substantive reply on v2 still pending.
+- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to reclamacoes@anac.co.ao because the domain anac.co.ao couldn't be found. Check for typos or unnecessary spaces and try again."_ (Same NDR shape implied for `anac@anac.co.ao` since the entire domain is NXDOMAIN.)
+
+  **v2 auto-redirect received 2026-05-11** from `anac@anac.ao` (preserved verbatim per AGENTS.md):
+
+  > Dear Sirs,
+  >
+  > We would like to inform you that our email address has changed and this contact is no longer active. Please forward your message to the new address: sec.anac.ao@gmail.com
+  >
+  > We appreciate your understanding and apologize for any inconvenience caused.
+  >
+  > With best regards,
+  > Office of Support to the Board of Directors.
+
+  Interpretation: the v2 send hit `anac@anac.ao` (now defunct) and CC'd `sec.anac.ao@gmail.com` (which the auto-redirect confirms IS the current canonical address). So our v2 already reached the right destination via the CC. No further redirect-send needed; `sec.anac.ao@gmail.com` is the verified-by-agency-auto-reply canonical address going forward. The agency's own `anac.ao` website still publishes the now-defunct `anac@anac.ao` as primary — anac.ao/ao/contactos page needs updating on their end. Substantive reply on the redistribution question still pending; clock continues from 2026-05-11.
 
 ---
 
@@ -1987,3 +2000,303 @@ These are commercial registration services for foreign aircraft owners. They mak
 - **Reply (verbatim):** _pending_
 - **Action if denied:** drop Singapore from the project. The terms are too restrictive to proceed without explicit permission.
 - **Note on the no-automated-access clause:** the form submission explicitly requested both (a) redistribution permission, and (b) a sanctioned mechanism for periodic programmatic access (since the no-scraping clause is separate from the no-redistribute clause).
+
+---
+
+## ANAC Bénin — Agence Nationale de l'Aviation Civile du Bénin
+
+- **Status:** Future — v1 to anac@anac.bj bounced 2026-05-11 (mailbox not found); v2 sent 2026-05-11 to alternate-domain Gmail address; awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://anac.bj/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Contact-discovery note:** Original v1 to `anac@anac.bj` bounced 2026-05-11 ("address couldn't be found, or is unable to receive mail"). The entire `anac.bj` mail domain appears to have routing issues — same routing concern applies to CC `anacaero@anac.bj` even though only the primary was in the NDR. Public references (Globenin / Mali Pages) document multiple alternate addresses: `secretariatanacbenin@gmail.com` (Gmail fallback), `secretariatanacbenin@yahoo.fr` (Yahoo fallback), `anacaero@leland.bj` (alternate domain on `leland.bj`). v2 routed via Gmail address with alternate-domain CC to maximize delivery probability. DG: Prudencio Behanzin. TY- prefix.
+- **Permission email:** v1 to `anac@anac.bj` cc `anacaero@anac.bj` bounced 2026-05-11 (anac.bj mail routing). v2 sent 2026-05-11 to `secretariatanacbenin@gmail.com` cc `anacaero@leland.bj`. Plain-text body per Option A. v2 body explicitly acknowledges the v1 bounce and contact-discovery situation. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to anac@anac.bj because the address couldn't be found, or is unable to receive mail."_ Substantive reply on v2 still pending.
+
+---
+
+## ANAC Burkina — Agence Nationale de l'Aviation Civile du Burkina Faso
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://anac.bf/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Contact-discovery note:** Alternate domain `anacburkina.org` (not `.bf`) used for the contact email. Verified live on /contact/.
+- **Permission email:** Sent 2026-05-11 to `info@anacburkina.org` (verified live on /contact/). XT- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Ministry of Transport — Cook Islands
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.transport.gov.ck/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `mot.information@cookislands.gov.ck` (verified live on /contact-2/). E5- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ECCAA — Eastern Caribbean Civil Aviation Authority (regional)
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.eccaa.aero/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Regional body note:** ECCAA is the Eastern Caribbean Civil Aviation Authority — a regional body covering 7 OECS member states: Antigua V2-, Anguilla VP-A, Dominica J7-, Grenada J3-, St Kitts V4-, St Lucia J6-, St Vincent J8-.
+- **Contact-discovery note:** Contact email `contact@eccaa.aero` was surfaced via WebSearch + CAPA confirmation; not displayed on the landing page. Permission-email body explicitly discloses the contact-discovery source so the recipient can correct routing if needed.
+- **Permission email:** Sent 2026-05-11 to `contact@eccaa.aero`. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ESWACAA — Eswatini Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.eswacaa.co.sz/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Domain note:** Correct domain is `eswacaa.co.sz` — NOT `swazicaa.co.sz` as referenced in some older sources. The country renamed from Swaziland to Eswatini in 2018; ensure any internal references use the current domain.
+- **Named-contacts note:** DG: Ms. Andile Mtetwa-Amaeshi.
+- **Permission email:** Sent 2026-05-11 to `info@eswacaa.co.sz` (verified live on /get-in-touch/). 3DC- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## GCAA — Guyana Civil Aviation Authority
+
+- **Status:** Future — v1 to aisguyana@gcaa-gy.org returned mailbox-full bounce 2026-05-11 (552 5.2.2 Quota exceeded); v2 sent 2026-05-11 to aig@gcaa-gy.org alternate inbox; awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.gcaa-gy.org/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Site-access note:** Site root WAF-blocked to curl from the US sandbox (403 from openresty/1.25.3.1; sandbox User-Agent rejected). User-verified the contact page in browser 2026-05-11: **the GCAA contact page (https://www.gcaa-gy.org/contact-us.html) publishes only one Guyana email — `aisguyana@gcaa-gy.org` — for Aeronautical Information Management Services.** No DG-specific or register-specific inbox is surfaced on the verified live page.
+- **Named-contacts note:** DG: Lt. Col. (Retd) Egbert Field A.A. (referenced on /director-generals-message.html — also WAF-blocked from sandbox, not directly verified).
+- **Permission email:** v1 sent 2026-05-11 to `aisguyana@gcaa-gy.org` — bounced same day with "552 5.2.2 <aisguyana@gcaa-gy.org> Quota exceeded (mailbox for user is full)". v2 sent 2026-05-11 to `aig@gcaa-gy.org` (Aircraft Accident Investigation inbox surfaced via WebSearch references to a different GCAA page that was not user-browser-verified — this is a fallback guess, not a confirmed published address). 8R- prefix. v2 body explicitly acknowledges both the v1 quota-exceeded bounce and that aig@ is not the register desk; asks for forwarding to the correct inbox. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+
+  **No third send planned.** If aig@ v2 bounces or sits silent past the follow-up date, Guyana moves to deferred state ("single canonical inbox quota-full at agency; no alternate verified") rather than chasing further pattern-guessed addresses. Mailbox-full is operational on the agency side — the right next attempt (if needed) is a retry to `aisguyana@gcaa-gy.org` after the agency clears the quota, not another invented alternate.
+
+- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"<aisguyana@gcaa-gy.org>: host 127.0.0.2[127.0.0.2] said: 552 5.2.2 <aisguyana@gcaa-gy.org> Quota exceeded (mailbox for user is full) (in reply to end of DATA command)"_. Mailbox exists but is full — distinct from RecipientNotFound. Substantive reply on v2 still pending.
+
+---
+
+## CAD HK — Civil Aviation Department, Hong Kong SAR
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.cad.gov.hk/english/planereg.html
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Statutory framework note:** Hong Kong CAP 486 (Personal Data (Privacy) Ordinance, PDPO) governs PII handling for any per-tail register data. Aircraft registration procedure governed by Air Navigation (Hong Kong) Order 1995 (form DCA99). The permission-email body references both for clarity.
+- **Permission email:** Sent 2026-05-11 to `enquiry@cad.gov.hk` (verified live mailto: on /english/enquiries_and_complaints.html). B-H/B-K/B-L prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Aviation Administration of Kazakhstan
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://caa.gov.kz/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `frontoffice@caa.gov.kz` (verified live mailto: on homepage). UP- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## CAA Kosovo (AAC) — Civil Aviation Authority of the Republic of Kosovo
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://caa.rks-gov.net/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Contact-discovery note:** 5 emails verified live on /en/kontakti: `infocaa@caa-ks.org`, `gat@caa-ks.org`, `drones@caa-ks.org`, `flight.approval@rks-gov.net`, `khaia@rks-gov.net`. Permission email routes primary + first cc; remaining mailboxes available for follow-up.
+- **Permission email:** Sent 2026-05-11 to `infocaa@caa-ks.org` cc `gat@caa-ks.org`. Z6- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## LCAA — Liberia Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://lcaa.gov.lr/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Address note:** P.O. Box 68, Harbel, Margibi County.
+- **Permission email:** Sent 2026-05-11 to `liberiacaa@lcaa.gov.lr` (WebSearch-confirmed via CAPA). A8- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## ANAC Mauritanie — Agence Nationale de l'Aviation Civile de Mauritanie
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.anac.mr/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `anac@anac.mr` cc `survol.dta@anac.mr` (both verified in homepage HTML). 5T- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## PASO — Pacific Aviation Safety Office (regional)
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://paso.aero/
+- **Bulk download URL:** N/A — PASO is the regional safety regulator, NOT the per-state aircraft register registrar.
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Regional body note:** PASO provides safety oversight to 12 Pacific Island member states: Solomon Islands H4-, Vanuatu YJ-, Samoa 5W-, Tonga A3-, Kiribati T3-, Nauru C2-, Palau T8A-, Tuvalu T2-, Cook Islands E5-, Niue E6-, Marshall Islands V7-, FSM V6-. Aircraft registers themselves are maintained by each member state's national CAA where one exists.
+- **Contact-discovery note:** `info@paso.aero` is verified live. The permission-email body explicitly asks PASO to forward the request to the per-state CAA contacts since PASO itself does not maintain aircraft registers.
+- **Permission email:** Sent 2026-05-11 to `info@paso.aero`. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## INAC — Instituto Nacional de Aviação Civil de São Tomé e Príncipe
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://www.inac.st/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `inac@cstome.net` (verified live mailto:). S9- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## SLCAA — Sierra Leone Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://slcaa.gov.sl/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Named-contacts note:** DG: Madam Musayeroh Barrie.
+- **Permission email:** Sent 2026-05-11 to `info@slcaa.gov.sl` (WebSearch-confirmed). 9L- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## SSCAA — South Sudan Civil Aviation Authority
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://sscaa.gov.ss/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `support@sscaa.gov.ss` (verified live mailto:). Z8- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## SHGM — Sivil Havacılık Genel Müdürlüğü (Türkiye)
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://web.shgm.gov.tr/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Statutory framework note:** Turkey's KVKK (Kişisel Verilerin Korunması Kanunu — Personal Data Protection Law) governs PII handling for any per-tail register data. Permission-email body references it for clarity.
+- **Named-contacts note:** Yetkili (Authorized officer): Bülent Göral, Sicil Müdürlüğü (Registry Department), verified on /tr/hava-araci-islemleri/2205-tescil-islemleri. DG Civil Aviation: Prof. Dr. Kemal Yüksek. Phone: +90 312 203 60 00.
+- **Permission email:** Sent 2026-05-11 to `bulent.goral@shgm.gov.tr` (verified live on /tr/hava-araci-islemleri/2205-tescil-islemleri). TC- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## State Service for Civil Aviation — Turkmenistan
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11)
+- **Source URL:** https://caa.gov.tm/
+- **Bulk download URL:** TBD
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Permission email:** Sent 2026-05-11 to `info-office@caa.gov.tm` (verified live). EZ- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
+## Sanctions / conflict-affected — Excluded (group, sanctions audit 2026-05-11)
+
+Each entry below has a sanctions / active-conflict exclusion rationale and a documented revisit condition. The sanctions audit was completed 2026-05-11 — Afghanistan ACAA and Niger ANAC are newly added in this audit; the remaining entries reflect prior batch triage consolidated here.
+
+| Country     | Agency                          | Prefix | Rationale                                                             | Revisit condition                               |
+| ----------- | ------------------------------- | ------ | --------------------------------------------------------------------- | ----------------------------------------------- |
+| Afghanistan | ACAA                            | YA-    | Taliban-era authority; OFAC restrictions; no contact (new 2026-05-11) | Sanctions framework changes                     |
+| Belarus     | Aviation Dept of Min. Transport | EW-    | OFAC/EU sanctions exposure                                            | US/Belarus sanctions ease                       |
+| Cuba        | IACC                            | CU-    | OFAC blanket sanctions; do not contact                                | US/Cuba sanctions ease                          |
+| Iran        | CAO.IR                          | EP-    | OFAC blanket sanctions; geo-block on cao.ir                           | US/Iran sanctions ease                          |
+| Iraq        | ICAA                            | YI-    | Conflict-recovery posture                                             | Stable governance + bulk channel surfaced       |
+| Libya       | LCAA                            | 5A-    | Sectoral sanctions + fragmented governance                            | Unified governance + sanctions ease             |
+| Myanmar     | DCA Myanmar                     | XY-    | Post-coup OFAC exposure; junta posture; active conflict               | Political transition + sanctions ease           |
+| Niger       | ANAC Niger                      | 5U-    | 2023 coup; sanctions-watch posture (new 2026-05-11)                   | Government stabilization + sanctions clarity    |
+| North Korea | GACA DPRK                       | P-     | OFAC blanket; do not contact                                          | US/DPRK sanctions ease (effectively never)      |
+| Sudan       | CAA Sudan                       | ST-    | Active civil war; aviation infrastructure non-functioning             | Conflict ends + aviation infrastructure returns |
+| Syria       | SyCAA                           | YK-    | OFAC blanket sanctions                                                | US/Syria sanctions ease                         |
+| Venezuela   | INAC                            | YV-    | OFAC sectoral sanctions                                               | Sectoral aviation carve-out review              |
+| Yemen       | CAMA                            | 7O-    | Active conflict; aviation infrastructure non-functioning              | Conflict ends + aviation infrastructure returns |
+
+**Why excluded as a class:** OFAC violations are civil-strict-liability for US-person operators. Engaging with sanctioned-state agencies — even for non-commercial permission requests — carries compliance risk that does not justify the cost-benefit for a hobby project. Active-conflict entries are excluded because the aviation infrastructure is not functioning enough to produce a maintainable register feed; revisit when the situation stabilizes.
+
+---
+
+## No-agency / no-own-register — Excluded (group, 2026-05-11)
+
+Microstates and small jurisdictions without a dedicated civil aviation register authority. These are not sanctions-affected; they simply do not maintain a separate aircraft register that can be ingested.
+
+| Country          | Prefix | Reason                                                                                                                             |
+| ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Andorra          | n/a    | Landlocked microstate; no civil aviation register; aviation activity falls under FR/ES airspace.                                   |
+| Eritrea          | n/a    | No public web presence found for Eritrea Civil Aviation Authority (aviation.gov.er unreachable). Revisit if web presence restored. |
+| Liechtenstein    | HB-    | No own register; civil aviation operates under Switzerland HB- prefix via FOCA/BAZL (already excluded as Personal-use).            |
+| Micronesia (FSM) | V6-    | No dedicated CAA web presence verified; likely under PASO arrangement.                                                             |
+| Monaco           | 3A-    | No own register; aviation under DGAC France 3A- (DGAC France already in flight).                                                   |
+| Nauru            | C2-    | No dedicated CAA; aircraft activity covered under PASO.                                                                            |
+| Niue             | E6-    | New Zealand-associated state; no separate register found.                                                                          |
+| Palau            | T8A-   | Aviation under Bureau of Aviation Palau / Ministry of Public Infrastructure; no separate public register found. PASO arrangement.  |
+| Samoa            | 5W-    | Ministry of Works, Transport and Infrastructure handles aviation but no separate register page found. PASO arrangement.            |
+| Timor-Leste      | n/a    | ANATL is air-navigation-service only; no separate civil aircraft register authority confirmed.                                     |
+| Tonga            | A3-    | No dedicated CAA web presence; PASO arrangement.                                                                                   |
+| Tuvalu           | T2-    | No dedicated CAA; PASO arrangement.                                                                                                |
+| Vatican          | HV-    | HV- prefix historic; no civil aviation activity.                                                                                   |
+
+**Why excluded as a class:** No registrar = no register to ingest. For PASO-arrangement entries, the PASO permission request (sent 2026-05-11) explicitly asks for forwarding to any per-state CAA that does maintain a separate register.
+
+---
+
+## DCA Aruba / Registry of Aruba — Excluded (commercial offshore, reconfirmed 2026-05-11)
+
+- **Status:** ❌ Excluded (verified 2026-05-11; same exclusion family as Cayman / Isle of Man / Guernsey / Jersey / Turks & Caicos)
+- **Classification:** Excluded (commercial / paid-SaaS offshore registry pattern)
+- **Source URL:** https://www.theregistryofaruba.com/ + https://www.p4registry.com/
+- **License:** Paid SaaS-style MTOW-based commercial offshore registry; 24-48h registration product.
+- **Why excluded:** Not in business of bulk redistribution; same structural exclusion as the other commercial offshore registries already grouped above. P4- prefix.
+- **Revisit condition:** Aruba restructures DCA into an open-data publisher (unlikely given the business model) or a free community mirror appears with verifiable license. Re-evaluate annually.
+- **Note:** Previously listed in the "Also fits this pattern but not currently tracked" trailer alongside Bermuda and San Marino — now explicitly excluded with its own entry as of 2026-05-11. Bermuda (VP-B, BCAA) and San Marino (T7-, CAA San Marino) remain in that trailer for future research if ever needed.
