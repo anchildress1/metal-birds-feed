@@ -152,6 +152,7 @@ License is cleared via public license declaration (no email reply needed). Inges
 | FOCA Switzerland          | 2026-05-05                           | 2026-06-04 | aircraftregistry@bazl.admin.ch                                                               | **No** (Personal-use; silence ≠ permission)               |
 | CAA Taiwan                | 2026-05-05                           | 2026-06-04 | gencaa@mail.caa.gov.tw                                                                       | **Yes** (Unknown; public-record fallback after follow-up) |
 | TCAA Tanzania             | 2026-05-05 (v2 to `tcaa@tcaa.go.tz`) | 2026-06-04 | tcaa@tcaa.go.tz (v1 to ~~airworthinessinspectors@tcaa.go.tz~~ / ~~info@tcaa.go.tz~~ bounced) | **Yes** (Unknown; public-record fallback after follow-up) |
+| Tajikistan CAA            | 2026-05-11 (verified live mailto: on caa.tj/sitemap via Tajikistan VPN user browsing; agency full name "Agency of Civil Aviation under the Government of the Republic of Tajikistan") | 2026-06-10 | info@caa.tj (EY- prefix; site in Tajik Cyrillic; the sitemap explicitly references the Agency Director's office; previously deferred "needs headless verify" — undeferred 2026-05-11) | **Yes** (Unknown; public-record fallback after follow-up) |
 | CAAT Thailand             | 2026-05-10                           | 2026-06-09 | inter_focalpoint@caat.or.th (cc saraban@caat.or.th; international focal point)               | **Yes** (Unknown; public-record fallback after follow-up) |
 | ANAC Togo                 | 2026-05-10                           | 2026-06-09 | anac@anac-togo.tg (cc secretariat@anac-togo.tg)                                              | **Yes** (Unknown; public-record fallback after follow-up) |
 | TTCAA Trinidad & Tobago   | 2026-05-05                           | 2026-06-04 | ttcaa@caa.gov.tt                                                                             | **Yes** (Unknown; public-record fallback after follow-up) |
@@ -229,7 +230,6 @@ These agencies were researched 2026-05-11 but the contact path could not be veri
 | Marshall Islands | (no dedicated CAA found, V7-)       | Subagent could not verify a separate civil aircraft register authority; likely under Ministry/maritime registry arrangement | Recheck if RMI establishes separate aircraft CAA                  |
 | Solomon Islands  | CAASI (H4-)                         | Site live but no email surfaceable from landing, /aboutus, or executive-contact pages            | Recheck if site adds email or PASO routes                                      |
 | Somalia          | SCAA (6O-)                          | Current scaa.gov.so contact page 2 KB (empty); 2014 FAA document references stale SCAMA addresses on different domain | Recheck if scaa.gov.so populates contact                                       |
-| Tajikistan       | State Aviation Admin (EY-)          | caa.tj redirects to egov.tj e-gov SPA shell; needs headless verify                                | VPN-deferred / headless-browser-deferred                                       |
 
 ### 🌐 Non-English registries (English-first strategy)
 

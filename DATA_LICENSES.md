@@ -1317,6 +1317,20 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+## Tajikistan Civil Aviation Agency — Agentii Aviatsiyai Grazhdanii Nazdi Hukumati Chumhurii Tochikiston
+
+- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Classification:** Unknown (verified 2026-05-11 via Tajikistan VPN user browsing)
+- **Source URL:** https://caa.tj/ + https://caa.tj/sitemap (site in Tajik Cyrillic — Агентии Авиатсияи Граждании Назди Ҳукумати Ҷумҳурии Тоҷикистон)
+- **Bulk download URL:** TBD — EY- prefix
+- **License:** Pending verification.
+- **Update cadence:** TBD
+- **Contact-discovery note:** Site was previously deferred "needs headless verify" because the prior recon report claimed caa.tj redirected to an e-gov SPA shell. User browsing from Tajikistan VPN 2026-05-11 surfaced `info@caa.tj` as a verified live mailto: on the canonical caa.tj/sitemap page — undeferred and routed directly. Sitemap references the Agency Director's office at /tg/direktori-agentii-aviatsiyai-grazhdanii-nazdi-khukumati-chumkhurii-tochikiston.
+- **Permission email:** Sent 2026-05-11 to `info@caa.tj`. EY- prefix. Plain-text body per Option A. Body asks for forward to the Director's office or the aircraft registration team if info@ is not the appropriate desk. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** _pending_
+
+---
+
 ## TCAA — Tanzania Civil Aviation Authority
 
 - **Status:** Future — permission request sent (v2 after v1 bounce), awaiting reply
