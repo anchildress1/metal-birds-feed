@@ -87,6 +87,8 @@ Conditions to comply with:
 
 Action: include CASA attribution and CC BY 4.0 link in `DATA_LICENSES.md`. Engine output is normalized → counts as "changed material" under CC BY 4.0. **No email.**
 
+Live since 2026-05-08 (`sources/au-casa.yaml`). Translation drove three new transforms (`casa_full_registration` for the VH- prefix, `date_dd_slash_or_null` for DD/MM/YYYY, `casa_airframe` for the airframe-by-engine-count split) and two canonical-schema additions (`operator: { ... }` distinct from `owner`, `idera_authorised_party: string | null` for the Cape Town Convention designated party). See AGENTS.md "no silent loss of upstream information" — extending the canonical schema is the default response when a registry publishes a structurally meaningful field, not dropping it at the mapping config.
+
 ### Canada — Transport Canada
 
 Civil Aircraft Register published under the **Government of Canada Open Data Licence Agreement for Unrestricted Use of Canada's Data** (not OGL-Canada — which is a separate, simpler license used elsewhere on open.canada.ca). The license is click-wrap: by downloading the data, the operator acknowledges acceptance of the full terms.

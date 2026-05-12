@@ -7,17 +7,20 @@ export type ScalarTransformName =
   | 'float_or_null'
   | 'date_yyyymmdd_or_null'
   | 'date_yyyy_slash_or_null'
+  | 'date_dd_slash_or_null'
   | 'iso_date_only_or_null'
   | 'mph_to_ktas_or_null'
   | 'binary_to_hex_or_null'
   | 'faa_n_number'
   | 'faa_cert_class'
   | 'tc_full_registration'
-  | 'nl_ilt_registration_or_null';
+  | 'nl_ilt_registration_or_null'
+  | 'casa_full_registration'
+  | 'casa_engine_detail_or_null';
 
 export type ArrayTransformName = 'faa_cert_ops';
 
-export type CompoundTransformName = 'tc_airframe' | 'nl_ilt_airframe';
+export type CompoundTransformName = 'tc_airframe' | 'nl_ilt_airframe' | 'casa_airframe';
 
 export interface FieldMapping {
   field?: string;
