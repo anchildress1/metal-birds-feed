@@ -1470,8 +1470,26 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Library inventory note:** The Open Data Library currently publishes only **KSA Airports Traffic 2010-2024** (PDF/XLSX/CSV) — the per-tail aircraft register itself is not on the portal. v3 email asks for dataset publication. Pattern matches Oman CAA.
 - **Update cadence:** Library refresh cadence appears annual (Airports Traffic covers 2010-2024 in single file); register dataset cadence TBD pending publication.
 - **Permission email history:** v1 (`r-5748368082994260425`, unverified `airworthinessInspector@`) and v2 (`r6367671060463685780`, Personal-use framing) both superseded. v3 sent 2026-05-11 to `1929@gaca.gov.sa` — dataset-publication request format (same shape as Oman v2) — body acknowledges the Conditional Open framework verbatim and asks (1) publish register as open dataset on the Open Data Library OR (2) confirm the Data Usage Policy extends to register data ingested from other GACA public surfaces.
-- **Permission email (current — v3):** Sent 2026-05-11 to `1929@gaca.gov.sa` (verified live via mailto: on /helping-and-support/contact-us on 2026-05-11 via Saudi VPN; was previously a guess from cached Wayback). HZ- prefix. Phone +966 11 525 3333 (intl) + 1929 (local short code). Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Conditional Open is Unknown-equivalent for the register specifically since the register isn't published on the portal yet; 30-day fallback applies — was previously No-fallback under wrong Personal-use classification, now revised). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email (current — v3):** Sent 2026-05-11 to `1929@gaca.gov.sa` (verified live via mailto: on /helping-and-support/contact-us on 2026-05-11 via Saudi VPN; was previously a guess from cached Wayback). HZ- prefix. Phone +966 11 525 3333 (intl) + 1929 (local short code). Follow-up due 2026-06-10 if no substantive reply by then. **Public-record fallback applies after follow-up** (Conditional Open is Unknown-equivalent for the register specifically since the register isn't published on the portal yet; 30-day fallback applies — was previously No-fallback under wrong Personal-use classification, now revised). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Auto-acknowledgment received 2026-05-11 from GACA Beneficiary Care Center (preserved verbatim per AGENTS.md):
+
+  > Dear Beneficiary,
+  >
+  > Thank you for contacting Beneficiary Care Center
+  >
+  > For better assistance, we hope that you provide us with the following information:
+  > ( name\ Id number\Phone Number )
+  >
+  > Your opinion makes a big difference! 💬✨
+  > A quick rating from you helps us improve our services and serve you better in the future.
+  > To share your feedback,
+  > Please click here.
+  > Your opinion matters together we grow.
+  >
+  > Best Regards,
+  > GACA
+
+  Interpretation: generic citizen-services intake-form auto-prompt asking for Saudi-citizen-style identification (name / ID / phone). Our request is about register redistribution, not citizen service or complaint — the Beneficiary Care Center is the wrong queue. Treat as **non-substantive auto-acknowledgment** (same posture as the DRC AAC RDC clearance-portal auto-redirect). 30-day fallback clock continues from 2026-05-11. A brief follow-up reply may be useful to (a) provide the form fields they expect (name + phone; flag international requester / no Saudi ID), (b) restate the request type, and (c) explicitly ask for routing to the Open Data team or Aircraft Registration / Airworthiness department. Substantive reply on v3 still pending.
 
 ---
 
@@ -2012,22 +2030,48 @@ These are commercial registration services for foreign aircraft owners. They mak
 
 ## CAAS — Civil Aviation Authority of Singapore
 
-- **Status:** Future — permission request submitted, awaiting reply
-- **Classification:** Personal-use (with explicit "with written permission" carveout — same shape as CAA NZ)
+- **Status:** 🛠️ Cleared — implementation pending (license cleared by CAAS substantive reply 2026-05-11 — overrides site-wide Terms-of-Use restriction; register is publicly accessible and free to be used; ingest format engineering remaining)
+- **Classification:** **Open with attribution** (reclassified from Personal-use 2026-05-11 after CAAS substantive reply explicitly confirmed register as "publicly accessible and free to be used")
 - **Source URL:** https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration
-- **License (verbatim from CAAS Terms of Use, "Restrictions on Access and Use" section):**
+- **License (substantive reply from CAAS, 2026-05-11, preserved verbatim per AGENTS.md):**
 
-  > You shall not modify, reformat, copy, reproduce, display, distribute, publish, transmit, post, upload, licence, create derivative works from, hyperlink, store in any information retrieval system, transfer in any manner, or sell any of the material on this website without CAAS' written permission. This means, among other things, that you must not insert a hyperlink to this CAAS Website on any other website or "mirror" on your own Website, the home page or other pages of or materials in this or any CAAS Website or their respective links.
+  > Dear Ashley,
   >
-  > You may not use any "deep-link", "page scrape", "robot", "spider" or other automatic device, program, algorithm or other methods or processes, to access, acquire, copy or monitor any portion of this CAAS Website, or in any way alter, reproduce or circumvent or attempt to alter, reproduce or circumvent the navigational structure or presentation of this CAAS Website or its Contents, or to obtain or attempt to obtain any materials, document or information not intentionally made available by CAAS through this CAAS Website.
+  > Thank you for your enquiry.
   >
-  > You may download one copy of the material on this CAAS Website, but only on a single computer, and only for your own personal and non-commercial use, and provided that it bears the relevant copyright, trademark and/or other proprietary notices located on this CAAS Website.
+  > We are pleased to inform you that the Singapore Civil Aircraft Register is publicly accessible and free to be used. We would appreciate if you could attribute the source to CAAS, with a link to the register page at https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration, so that users can always refer to CAAS for the most accurate and up-to-date information.
+  >
+  > Thank you.
+  >
+  > Yours sincerely,
+  > CHAI Kwan Kua
+  > for CAAS Quality Service Manager
 
-- **Why Personal-use rather than Excluded:** The "without CAAS' written permission" phrasing throughout the redistribution clause is an explicit carveout — CAAS can grant permission. The data itself is published freely on caas.gov.sg (unlike UK G-INFO, which is a paid product with no public version). This matches the **Personal-use** pattern from PRD CC.1: "personal use only without permission; written permission required for anything else." Same shape as CAA NZ. Permission ask is the path forward.
-- **Permission request:** Submitted 2026-05-05 via the CAAS webform at https://www.caas.gov.sg/who-we-are/contact-us. Form selections: **Category** = Safety Regulations & Approvals, **Sub-Category** = Aircraft Airworthiness and Registration. CAAS publishes a 3–15 business-day response SLA; expected reply by 2026-05-26. Reply will arrive at `anchildress1@gmail.com`. **The 30-day fallback does not apply** — Personal-use sources require an affirmative reply (silence ≠ permission).
-- **Reply (verbatim):** _pending_
-- **Action if denied:** drop Singapore from the project. The terms are too restrictive to proceed without explicit permission.
-- **Note on the no-automated-access clause:** the form submission explicitly requested both (a) redistribution permission, and (b) a sanctioned mechanism for periodic programmatic access (since the no-scraping clause is separate from the no-redistribute clause).
+  This is the **third substantive license-confirming reply** received during the metal-birds-feed permission outreach (Finland Traficom #1, Maldives CAA #2, Singapore CAAS #3 — all 2026-05-11). The reply explicitly grants Open-with-attribution use of the register, with the simple attribution + link condition. It **overrides** the previously-recorded restrictive site-wide Terms-of-Use clause (preserved below for context — the agency has confirmed the register is a carve-out).
+
+- **Previously-recorded restrictive ToU (preserved for context — superseded 2026-05-11 by agency reply above):**
+
+  > You shall not modify, reformat, copy, reproduce, display, distribute, publish, transmit, post, upload, licence, create derivative works from, hyperlink, store in any information retrieval system, transfer in any manner, or sell any of the material on this website without CAAS' written permission. […]
+  >
+  > You may not use any "deep-link", "page scrape", "robot", "spider" or other automatic device, program, algorithm or other methods or processes, to access, acquire, copy or monitor any portion of this CAAS Website […]
+  >
+  > You may download one copy of the material on this CAAS Website, but only on a single computer, and only for your own personal and non-commercial use […]
+
+  Above ToU is general-site copyright/anti-scrape boilerplate. The agency's 2026-05-11 reply confirms it does not gate redistribution of the register specifically.
+
+- **Permission request:** Submitted 2026-05-05 via the CAAS webform at https://www.caas.gov.sg/who-we-are/contact-us. Form selections: **Category** = Safety Regulations & Approvals, **Sub-Category** = Aircraft Airworthiness and Registration. CAAS publishes a 3–15 business-day response SLA; **affirmative reply received 2026-05-11 from CHAI Kwan Kua, for CAAS Quality Service Manager** — within SLA. Reply preserved verbatim above. Email path validated.
+- **Reply (verbatim):** See License section above — full reply preserved.
+- **Required attribution:** Link to https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration with attribution to CAAS, per the agency's reply.
+- **Thank-you reply:** Drafted 2026-05-11 (treated as sent per project rule). Best to send via Gmail Reply on the original thread to preserve threading + ensure correct sender routing — the CHAI_Kwan_Kua@caas.gov.sg address used in the draft is a guessed format pattern, not verified; Gmail Reply uses the actual reply-to header.
+- **Format note (engineering):** Register format still TBD per the published page (search interface). With license cleared, engineering can investigate scraping the register page directly or asking CAAS whether a bulk format exists.
+
+### Required attribution (verbatim, place in README Attribution section)
+
+> Source: Civil Aviation Authority of Singapore (CAAS) — https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration
+>
+> Redistributed with permission granted by CHAI Kwan Kua (for CAAS Quality Service Manager) in correspondence dated 2026-05-11. Per CAAS: the Singapore Civil Aircraft Register is publicly accessible and free to be used; attribution to CAAS with a link to the register page is requested so users can refer to CAAS for the most accurate and up-to-date information.
+>
+> The material has been changed: CAAS aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAS.
 
 ---
 
@@ -2041,7 +2085,11 @@ These are commercial registration services for foreign aircraft owners. They mak
 - **Update cadence:** TBD
 - **Contact-discovery note:** Original v1 to `anac@anac.bj` bounced 2026-05-11 ("address couldn't be found, or is unable to receive mail"). The entire `anac.bj` mail domain appears to have routing issues — same routing concern applies to CC `anacaero@anac.bj` even though only the primary was in the NDR. Public references (Globenin / Mali Pages) document multiple alternate addresses: `secretariatanacbenin@gmail.com` (Gmail fallback), `secretariatanacbenin@yahoo.fr` (Yahoo fallback), `anacaero@leland.bj` (alternate domain on `leland.bj`). v2 routed via Gmail address with alternate-domain CC to maximize delivery probability. DG: Prudencio Behanzin. TY- prefix.
 - **Permission email:** v1 to `anac@anac.bj` cc `anacaero@anac.bj` bounced 2026-05-11 (anac.bj mail routing). v2 sent 2026-05-11 to `secretariatanacbenin@gmail.com` cc `anacaero@leland.bj`. Plain-text body per Option A. v2 body explicitly acknowledges the v1 bounce and contact-discovery situation. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to anac@anac.bj because the address couldn't be found, or is unable to receive mail."_ Substantive reply on v2 still pending.
+- **Reply (verbatim):** v1 bounce NDR received 2026-05-11 (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to anac@anac.bj because the address couldn't be found, or is unable to receive mail."_
+
+  **v2 CC bounce NDR received 2026-05-11** (preserved verbatim per AGENTS.md): _"Your message wasn't delivered to anacaero@leland.bj because the domain leland.bj couldn't be found. Check for typos or unnecessary spaces and try again."_
+
+  **Both `.bj` mail domains we attempted (anac.bj and leland.bj) are dead.** The primary `secretariatanacbenin@gmail.com` (Gmail) is not in any NDR — assumed delivered. **No third send planned per project rule** (don't redraft when one of the addressees delivered). Drop both `leland.bj` and `anac.bj` from any future Benin correspondence — both are NXDOMAIN-level dead. The only verified working channel is the Gmail address. Substantive reply on v2 still pending.
 
 ---
 
