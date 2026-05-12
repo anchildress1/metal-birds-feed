@@ -1,0 +1,165 @@
+id: au-casa
+label: CASA Australian Civil Aircraft Register
+country: AU
+encoding: utf8
+trim_all: true
+
+download:
+  url: https://services.casa.gov.au/CSV/acrftreg.csv
+  format: file
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    acrftreg: acrftreg.csv
+
+primary: acrftreg
+delimiter: ','
+format: csv
+
+source_id: Mark
+registration: Mark
+
+mapping:
+  registration:
+    field: Mark
+    transform: casa_full_registration
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    field: ICAOtypedesig
+    transform: trim_or_null
+
+  status:
+    field: regType
+    transform: trim_or_null
+    lookup:
+      'Full Registration': valid
+      SUSPENDED: restricted
+    default: other
+
+  country:
+    constant: AU
+
+  manufacturer:
+    field: Manu
+    transform: trim_or_null
+
+  model:
+    field: Model
+    transform: trim_or_null
+
+  serial_number:
+    field: Serial
+    transform: trim_or_null
+
+  year_manufactured:
+    field: Yearmanu
+    transform: int_or_null
+
+  airframe_type:
+    fields: ['Airframe', 'engnum']
+    compound_transform: casa_airframe
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    field: CoAcata
+    transform: trim_or_null
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    field: Engmanu
+    transform: casa_engine_detail_or_null
+
+  engine.model:
+    field: Engmodel
+    transform: casa_engine_detail_or_null
+
+  engine.type:
+    field: Engtype
+    transform: trim_or_null
+    lookup:
+      'Not Applicable': none
+      Piston: reciprocating
+      'Diesel Engine': reciprocating
+      Turboshaft: turbo-shaft
+      Turboprop: turbo-prop
+      Turbofan: turbo-fan
+      Turbojet: turbo-jet
+      Rotary: rotary
+      Electric: electric
+    default: ~
+
+  engine.count:
+    field: engnum
+    transform: int_or_null
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: regholdname
+    transform: trim_or_null
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    field: regholdState
+    transform: trim_or_null
+
+  owner.country:
+    field: regholdCountry
+    transform: trim_or_null
+
+  operator.name:
+    field: regopName
+    transform: trim_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    field: regopState
+    transform: trim_or_null
+
+  operator.country:
+    field: regopCountry
+    transform: trim_or_null
+
+  idera_authorised_party:
+    field: IDERA_Authorised_Party
+    transform: trim_or_null
+
+  certification_date:
+    field: Datefirstreg
+    transform: date_dd_slash_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    field: Regexpirydate
+    transform: date_dd_slash_or_null
+
+  last_action_date:
+    field: regholdCommdate
+    transform: date_dd_slash_or_null
+
+  cruise_speed_ktas:
+    constant: ~
