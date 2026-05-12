@@ -27,6 +27,7 @@ export const AirframeTypeSchema = z.enum([
   'glider',
   'balloon',
   'blimp',
+  'fixed-wing',
   'fixed-wing-single-engine',
   'fixed-wing-multi-engine',
   'rotorcraft',

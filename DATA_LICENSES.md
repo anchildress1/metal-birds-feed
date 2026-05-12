@@ -372,15 +372,16 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Traficom — Finnish Transport and Communications Agency
 
-- **Status:** 🛠️ Cleared — implementation pending (license cleared **with agency confirmation**; ZIP-CSV unpack wrapper needed before ingest)
-- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-10 from Traficom open-data page; **confirmed by Traficom in writing 2026-05-11**)
+- **Status:** 🚧 License clear, **data shape blocking** — public bulk channel is identifier-stripped and not ingestable; new ask to Traficom is an identifier-bearing channel, not a license reconfirmation.
+- **Classification:** **Open** — CC BY 4.0 (verified 2026-05-10 from Traficom open-data page; **confirmed by Traficom in writing 2026-05-11**). License remains cleared for any future identifier-bearing bulk channel.
 - **Source URL:** https://tieto.traficom.fi/en/open-data (Traficom open-data catalog) + https://www.avoindata.fi/data/en_GB/dataset/854b277b-7472-4d0a-9a46-a8e34822a2e0 (avoindata.fi listing)
-- **Bulk download URL:** https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip (direct ZIP-CSV; ~1,331 rows; 127 kB unpacked / 123 kB packed)
+- **Bulk download URL:** https://eservices.traficom.fi/LicensesServices/Forms/AircraftRegister.aspx?download=zip (direct ZIP-CSV; ~1,330 rows; 127 kB unpacked / 123 kB packed) — **identifier-stripped, not ingestable**
 - **Variable list:** https://tieto.traficom.fi/files/media/file/MuuttujaluetteloIlmaalusrekisteri.xlsx
 - **License:** **CC BY 4.0** (Creative Commons Nimeä 4.0 International). Verbatim from the Traficom open-data page: _"The material been licensed under the Creative Commons Nimeä 4.0 International license — http://creativecommons.org/licenses/by/4.0/deed.en"_. Same posture as CASA Australia: attribution required. **Agency confirmation received 2026-05-11** — see Reply section below.
 - **Update cadence:** Annual (single dated dump per year — material 12 Jan 2026, published 17 Feb 2026; no monthly refresh)
-- **Format note (engineering):** Bulk file is **ZIP-packed CSV**. Engine handles `csv` natively; needs a thin "unzip-then-parse" wrapper. Bonus: same pattern used for Finnish vehicles, vessels, and rolling-stock open data — wrapper is reusable for any future Finnish source.
-- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Substantive reply received 2026-05-11 from Joakim Savela, Adviser, Data Disclosure unit** — confirms Open-data terms, approves attribution text. Email path validated; no follow-up needed.
+- **Data-shape blocker (verified 2026-05-12 by direct fetch):** The public ZIP contains a single CSV `aircraftregister.csv` with 24 columns: `Aircraft_name, Legal_Basis, Aircraft_model_category, Minimum_Crew, Maximum_Passengers, MTOM_kg, ELA1_flag, ELA2_flag, Complex_aircraft, Number_of_engines, Count_of_Propellers, ICAO, Aircraft_Construction_Year, Initial_Registration_Date, Import_Previous_country, Engine_1_Manufacturer, Engine_1, …, Engine_4_Manufacturer, Engine_4`. The file is GDPR-stripped to per-aircraft fleet stats: **no registration mark (OH-XXX), no source_id / unique ID, no Mode-S 24-bit hex, no owner, no operator, no serial number**. The canonical schema requires at minimum a unique ID and a registration; this channel carries neither. Each row corresponds to a real aircraft (1,330 rows ≈ Finnish register size), just stripped of identity. **Re-engage Traficom for an identifier-bearing bulk channel before reattempting.**
+- **Format note (engineering):** Engine already handles ZIP+CSV via `format: zip` + `format: csv` (FAA pattern). The blocker is data shape, not parser path.
+- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Substantive reply received 2026-05-11 from Joakim Savela, Adviser, Data Disclosure unit** — confirms Open-data terms, approves attribution text. The license clearance stands; a separate follow-up will be required to ask whether Traficom can publish an identifier-bearing bulk channel under the same CC BY 4.0 terms.
 - **Reply (verbatim):** Received 2026-05-11 from Joakim Savela (preserved verbatim per AGENTS.md):
 
   > Hello,
@@ -396,7 +397,7 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
   > Data Disclosure unit
   > Finnish Transport and Communications Agency Traficom
 
-  This is the **first substantive license-confirming reply** received during the metal-birds-feed permission outreach. It confirms (a) CC BY 4.0 terms apply to the register data without any additional conditions, (b) the project's standard attribution text is acceptable to Traficom verbatim, (c) the Data Disclosure unit is the canonical contact for any future register-related correspondence. The only remaining blocker for Finland ingest is the ZIP-CSV unpack wrapper (engineering).
+  This is the **first substantive license-confirming reply** received during the metal-birds-feed permission outreach. It confirms (a) CC BY 4.0 terms apply to the register data without any additional conditions, (b) the project's standard attribution text is acceptable to Traficom verbatim, (c) the Data Disclosure unit is the canonical contact for any future register-related correspondence. **However**, the underlying public bulk channel is GDPR-stripped per-aircraft fleet stats (no registration mark, no source_id, no Mode-S hex, no owner/operator) — verified by direct fetch 2026-05-12 — so canonical-schema ingest is impossible from this channel. The next ask of Traficom is publication of an identifier-bearing bulk channel under the same CC BY 4.0 terms, not a license reconfirmation.
 
 ### Required attribution (verbatim, place in README Attribution section)
 
@@ -541,14 +542,14 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAA Latvia — Civilās aviācijas aģentūra (Civil Aviation Agency of Latvia)
 
-- **Status:** 🛠️ Cleared — implementation pending (license cleared via data.gov.lv; CSV format → engine handles natively, only YAML config + fixtures needed)
+- **Status:** ✅ Live (`sources/lv-caa.yaml` + `fixtures/lv-caa/` shipped on branch `feat/lv-caa`)
 - **Classification:** **Open** — CC0-1.0 (verified 2026-05-10 from data.gov.lv; reclassified from Unknown). Same posture as Netherlands ILT.
 - **Source URL:** https://data.gov.lv/dati/lv/dataset/gaisa-kugu-registrs (dataset page) + https://www.caa.gov.lv/en/aircraft-register (agency register page)
 - **Bulk download URL:** https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv (direct CSV, no auth required)
 - **Bonus resource:** https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/c550723e-4954-4057-8a7a-ed4a19f06b4b/download/output_metadata.json (sibling JSON metadata)
 - **License:** **CC0-1.0** (public domain dedication, no attribution required). Verbatim license tag on the data.gov.lv dataset page: "CC0-1.0". This is even more permissive than CC BY 4.0 — same posture as Netherlands ILT. We will still cite Latvia CAA in our documentation as a courtesy.
 - **Update cadence:** Monthly ("reizi mēnesī" per dataset metadata). First published 2023-09-08. **The "last updated 2025-04-29" field on the dataset page refers to the metadata record itself (description / tags / etc.), NOT the data file content.** Verified 2026-05-10 by direct CSV fetch — most recent registration in the file was 2026-04-10 (YL-MBL); the data file is freshly refreshed monthly even though the metadata-record date looks stale.
-- **Format note (engineering):** Direct CSV. Engine handles `csv` natively. **Zero parser work needed.** Just standard `sources/lv-caa.yaml` + `fixtures/lv-caa/` ground-truth + doc rows. Closest existing analogue: ILT Netherlands.
+- **Format note (engineering):** Direct CSV (UTF-8, comma-delimited, CRLF, no BOM). Engine handles `csv` natively via `format: file` + `format: csv`. Schema: `Registration_Mark, Model, Construction_Year, Serial_No, Registered_on, Aircraft_Model_Category` — six columns, no owner/operator, no engine info, no Mode-S hex, no ICAO type code. Sailplane/Glider/Powered glider/Powered Sailplanes collapse to `glider` (canonical schema does not differentiate auxiliary power); `Aircraft` category maps to the generic `fixed-wing` enum value (added to `AirframeTypeSchema` alongside this source) — Latvia publishes fixed-wing as a category without disambiguating engine count, so the generic value preserves the structural signal without inventing detail the source doesn't carry.
 - **Data contact:** `ivo.tukris@caa.gov.lv` (Ivo Tukris, listed as "Saziņas e-pasts datu jautājumiem" / data-questions email on the dataset page) — only relevant if data quality issues arise; not needed for license clearance.
 - **Permission email:** **None needed.** License is fully explicit on the public open-data portal. No email required.
 - **Reply (verbatim):** _N/A — no email sent_

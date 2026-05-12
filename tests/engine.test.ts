@@ -546,6 +546,146 @@ describe('CASA fixture translation', () => {
   });
 });
 
+const LV_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'lv-caa');
+const LV_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'lv-caa.yaml');
+
+const lvFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(LV_FIXTURES, 'input', filename));
+
+let lvRecords: Map<string, Aircraft>;
+let lvStats: EngineStats;
+
+beforeAll(async () => {
+  const config = loadSourceConfig(LV_CONFIG_PATH);
+  const files = new Map([['output', lvFixtureBuffer('output.csv')]]);
+  const result = await translate(config, files);
+  lvRecords = result.records;
+  lvStats = result.stats;
+});
+
+describe('CAA Latvia fixture translation', () => {
+  it('translates all 10 fixture rows with no failures', () => {
+    expect(lvStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0 });
+    expect(lvRecords.size).toBe(10);
+  });
+
+  describe('YL-001 — hot-air balloon, vintage', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = lvRecords.get('YL-001')!;
+    });
+    it('has correct identity', () => {
+      expect(r.source).toBe('lv-caa');
+      expect(r.source_id).toBe('YL-001');
+      expect(r.registration).toBe('YL-001');
+      expect(r.country).toBe('LV');
+    });
+    it('maps Balloon (hot-air) to balloon', () => expect(r.airframe_type).toBe('balloon'));
+    it('parses ISO datetime with +03:00 offset to YYYY-MM-DD', () =>
+      expect(r.certification_date).toBe('1995-07-31'));
+    it('captures Construction_Year as int', () => expect(r.year_manufactured).toBe(1991));
+    it('has status=valid (Latvia register is active-only)', () => expect(r.status).toBe('valid'));
+  });
+
+  describe('YL-AAO — Aircraft with missing Construction_Year', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = lvRecords.get('YL-AAO')!;
+    });
+    it('maps the engine-count-ambiguous "Aircraft" category to generic fixed-wing', () =>
+      expect(r.airframe_type).toBe('fixed-wing'));
+    it('leaves year_manufactured null when Construction_Year is blank', () =>
+      expect(r.year_manufactured).toBeNull());
+    it('still preserves model + serial', () => {
+      expect(r.model).toBe('BD-500-1A11');
+      expect(r.serial_number).toBe('55050');
+    });
+  });
+
+  describe('YL-AAS — Aircraft category with year present', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = lvRecords.get('YL-AAS')!;
+    });
+    it('maps to generic fixed-wing regardless of year populated', () =>
+      expect(r.airframe_type).toBe('fixed-wing'));
+    it('captures year', () => expect(r.year_manufactured).toBe(2019));
+  });
+
+  describe('YL-ERA — Bell 407 helicopter', () => {
+    it('maps Helicopter to rotorcraft', () =>
+      expect(lvRecords.get('YL-ERA')?.airframe_type).toBe('rotorcraft'));
+  });
+
+  describe('YL-MTO — gyroplane', () => {
+    it('maps Gyroplane to gyroplane', () =>
+      expect(lvRecords.get('YL-MTO')?.airframe_type).toBe('gyroplane'));
+    it('preserves model with parenthesized year', () =>
+      expect(lvRecords.get('YL-MTO')?.model).toBe('MTOsport (2017)'));
+  });
+
+  describe('YL-ASK — unpowered glider, blank year', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = lvRecords.get('YL-ASK')!;
+    });
+    it('maps Glider to glider', () => expect(r.airframe_type).toBe('glider'));
+    it('leaves year null when Construction_Year is blank', () =>
+      expect(r.year_manufactured).toBeNull());
+  });
+
+  describe('YL-DAA — sailplane', () => {
+    it('maps Sailplane to glider (canonical schema does not differentiate)', () =>
+      expect(lvRecords.get('YL-DAA')?.airframe_type).toBe('glider'));
+  });
+
+  describe('YL-A01 — powered glider', () => {
+    it('maps Powered glider to glider', () =>
+      expect(lvRecords.get('YL-A01')?.airframe_type).toBe('glider'));
+  });
+
+  describe('YL-AGA — powered sailplanes', () => {
+    it('maps Powered Sailplanes to glider', () =>
+      expect(lvRecords.get('YL-AGA')?.airframe_type).toBe('glider'));
+  });
+
+  describe('YL-DBG — quoted model with embedded comma and escaped double-quotes', () => {
+    it('preserves the model verbatim, including embedded quotes', () =>
+      expect(lvRecords.get('YL-DBG')?.model).toBe('Powered sailplane based on L-13 "BLANIK"'));
+    it('keeps year and serial intact alongside quoted model', () => {
+      const r = lvRecords.get('YL-DBG')!;
+      expect(r.year_manufactured).toBe(1964);
+      expect(r.serial_number).toBe('173001');
+    });
+  });
+
+  it('every Latvia record carries country=LV and owner.country=LV with no PII or engine data', () => {
+    for (const r of lvRecords.values()) {
+      expect(r.country).toBe('LV');
+      expect(r.owner.country).toBe('LV');
+      expect(r.owner.name).toBeNull();
+      expect(r.owner.kind).toBeNull();
+      expect(r.owner.state).toBeNull();
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.engine).toEqual({
+        manufacturer: null,
+        model: null,
+        type: null,
+        count: null,
+        horsepower: null,
+        thrust_lbs: null,
+      });
+      expect(r.icao_hex).toBeNull();
+      expect(r.icao_type_code).toBeNull();
+      expect(r.manufacturer).toBeNull();
+      expect(r.airworthiness_date).toBeNull();
+      expect(r.expiration_date).toBeNull();
+      expect(r.last_action_date).toBeNull();
+      expect(r.idera_authorised_party).toBeNull();
+    }
+  });
+});
+
 describe('engine — negative and edge cases', () => {
   it('throws for unknown non-defaulted lookup value', async () => {
     const config = loadSourceConfig(CONFIG_PATH);
