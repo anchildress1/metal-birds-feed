@@ -1,0 +1,163 @@
+id: lv-caa
+label: CAA Latvia Civil Aircraft Register
+country: LV
+encoding: utf8
+trim_all: true
+
+download:
+  url: https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv
+  format: file
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    output: output.csv
+
+primary: output
+delimiter: ','
+format: csv
+
+# Registration_Mark is unique per aircraft (YL- prefix), already complete in the source —
+# no suffix-prefixing transform like CASA/TC. Used both as the canonical source_id and as
+# the registration field.
+source_id: Registration_Mark
+registration: Registration_Mark
+
+mapping:
+  registration:
+    field: Registration_Mark
+    transform: trim_or_null
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # The data.gov.lv export publishes only currently-registered aircraft (the CAA replaces
+  # the file each refresh with the active fleet snapshot). Cancelled/deregistered records
+  # never appear, so status is constant `valid` for every row.
+  status:
+    constant: valid
+
+  country:
+    constant: LV
+
+  # Latvia's export carries Model as a single column with no separate Manufacturer field;
+  # leaving manufacturer null is honest. Model strings may embed the OEM (e.g. "Bell 407")
+  # but parsing that out reliably would be guesswork.
+  manufacturer:
+    constant: ~
+
+  model:
+    field: Model
+    transform: trim_or_null
+
+  serial_number:
+    field: Serial_No
+    transform: trim_or_null
+
+  year_manufactured:
+    field: Construction_Year
+    transform: int_or_null
+
+  # "Aircraft" in the source covers all fixed-wing entries without disambiguating engine
+  # count, so it maps to the generic `fixed-wing` enum value — preserves the structural
+  # signal (fixed-wing-powered, not balloon/glider/rotorcraft/gyroplane) without inventing
+  # an engine count the source doesn't publish. Sailplane/Glider/Powered glider/Powered
+  # Sailplanes all collapse to `glider` since the canonical schema does not differentiate
+  # auxiliary power. Balloon (hot-air) ships in only one hot-air variant in the register.
+  airframe_type:
+    field: Aircraft_Model_Category
+    transform: trim_or_null
+    lookup:
+      'Aircraft': fixed-wing
+      'Balloon (hot-air)': balloon
+      'Glider': glider
+      'Sailplane': glider
+      'Powered glider': glider
+      'Powered Sailplanes': glider
+      'Helicopter': rotorcraft
+      'Gyroplane': gyroplane
+    default: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # CAA Latvia does not publish owner identity in the bulk register; only country can be
+  # asserted (LV) since this is the Latvian register. Same posture as NL ILT.
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: LV
+
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  # Registered_on is the initial registration timestamp (ISO 8601 with a TZ offset). The
+  # canonical schema stores plain YYYY-MM-DD; iso_date_only_or_null slices the first 10
+  # characters and validates the calendar date.
+  certification_date:
+    field: Registered_on
+    transform: iso_date_only_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
