@@ -4,13 +4,16 @@ pre-commit:
     format:
       # Only format files actually staged for this commit — running prettier across the
       # whole repo would auto-stage unrelated working-tree drift via stage_fixed.
+      # Calls bun directly: make format-files FILES="{staged_files}" broke because
+      # lefthook expands {staged_files} without quotes, causing make to treat each
+      # extra filename as a build target instead of part of the FILES= variable.
       glob: '*.{ts,tsx,js,jsx,md,json,yaml,yml}'
-      run: make format-files FILES="{staged_files}"
+      run: bun x prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
     lint:
-      run: make lint
+      run: bun x eslint .
     scan-secrets:
-      run: make secret-scan
+      run: gitleaks git --staged --redact
     actionlint:
       glob: '.github/workflows/*.yml'
       run: actionlint {staged_files}
@@ -24,12 +27,12 @@ pre-commit:
 commit-msg:
   commands:
     commitlint:
-      run: make commitlint COMMIT_MSG_FILE={1}
+      run: bun x commitlint --edit {1}
 
 pre-push:
   parallel: true
   commands:
     typecheck:
-      run: make typecheck
+      run: bun x tsc --noEmit
     unit-tests:
-      run: make test
+      run: bun x vitest run --coverage

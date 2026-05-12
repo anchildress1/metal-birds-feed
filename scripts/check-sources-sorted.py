@@ -27,6 +27,7 @@ changes, update CONFIG below and the validator.
 from __future__ import annotations
 
 import sys
+import unicodedata
 from pathlib import Path
 from typing import Iterable
 
@@ -81,12 +82,22 @@ def extract_table_countries(path: Path, marker: str, col: int) -> list[tuple[int
     return countries
 
 
+def _sort_key(country: str) -> str:
+    # NFD-decompose then drop combining diacritical marks so accented chars
+    # (e.g. Côte d'Ivoire) collate with their ASCII base letter (C), not
+    # after all ASCII chars as raw Unicode code-point comparison would place them.
+    return "".join(
+        c for c in unicodedata.normalize("NFD", country)
+        if unicodedata.category(c) != "Mn"
+    ).lower()
+
+
 def find_sort_violations(rows: Iterable[tuple[int, str]]) -> list[tuple[int, str, str]]:
     """Return list of (line_no, this_country, prev_country) where this < prev."""
     violations: list[tuple[int, str, str]] = []
     prev: tuple[int, str] | None = None
     for line_no, country in rows:
-        if prev is not None and country.lower() < prev[1].lower():
+        if prev is not None and _sort_key(country) < _sort_key(prev[1]):
             violations.append((line_no, country, prev[1]))
         prev = (line_no, country)
     return violations
