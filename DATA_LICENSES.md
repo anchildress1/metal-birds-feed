@@ -200,14 +200,47 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## ANAC Brasil — Brazilian National Civil Aviation Agency (Agência Nacional de Aviação Civil)
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://sistemas.anac.gov.br/aeronaves/cons_rab.asp
-- **Bulk download URL:** TBD (search-only interface; bulk pattern unverified pending reply)
-- **License:** Pending verification. Brazilian public-sector data is generally reusable under the Lei de Acesso à Informação framework; ANAC-specific terms unverified.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `rab@anac.gov.br`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Status:** 🛠️ Cleared — implementation pending (license confirmed by agency 2026-05-11 with native CSV bulk file at the documented URL; zero parser work needed, only YAML config + fixtures needed — same engineering tier as Latvia / ILT NL)
+- **Classification:** **Open with attribution** (confirmed 2026-05-11 by ANAC Brasil — Brazilian Aeronautical Registry Technical Branch, Department of Airworthiness)
+- **Source URL:** https://sistemas.anac.gov.br/aeronaves/cons_rab.asp (search interface) + https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/ (canonical bulk download index, confirmed in reply)
+- **Bulk download URL:** https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/dados_aeronaves.csv (native CSV, ~22.7 MB, verified live 2026-05-11; alongside `dados_aeronaves.json` ~43.4 MB and `dados_aeronaves.xls` ~23.4 MB at the same directory; historical archive at `Historico_RAB/`)
+- **Open data metadata + field descriptions:** https://www.gov.br/anac/pt-br/acesso-a-informacao/dados-abertos
+- **General open-data portal:** https://sistemas.anac.gov.br/dadosabertos/
+- **License:** **Open with attribution.** Per ANAC Brasil reply 2026-05-11: "this is open data, and no prior authorization is required for its use. However, proper citation of the source is mandatory." Reuse permitted under the Brazilian Lei de Acesso à Informação framework + ANAC's open-data policy. Same functional posture as CASA Australia / Traficom Finland CC BY 4.0 — attribution required, no other restrictions.
+- **Update cadence:** Daily — directory listing verified 2026-05-11 (`dados_aeronaves.csv` regenerated daily); RAB index updates appear early each calendar day around 02:00 BRT.
+- **Format note (engineering):** Bulk file is native **CSV** — engine handles CSV natively; **zero parser work**. Latvia/ILT-tier easy. JSON alternative also available if needed (43.4 MB). Prefixes: PP-, PR-, PT-, PS-, PU- (Brazil uses several civilian prefixes).
+- **Permission email:** Sent 2026-05-05 to `rab@anac.gov.br`. **Substantive license-confirming reply received 2026-05-11 from Brazilian Aeronautical Registry Technical Branch (Department of Airworthiness)** — within 6 days of send. Email path validated; rab@ is the canonical address.
+- **Thank-you reply:** Drafted 2026-05-11 (treated as sent per project rule) to `rab@anac.gov.br`. Confirms we will proceed using the bulk CSV at the canonical URL with mandatory source citation per agency guidance, notes engineering is the only remaining work, closes in Portuguese ("Atenciosamente").
+- **Reply (verbatim):** Received 2026-05-11 from Brazilian Aeronautical Registry Technical Branch, Department of Airworthiness (preserved verbatim per AGENTS.md):
+
+  > Dear Mr./Mrs.,
+  >
+  > In response to your request, We would like to inform you that the most appropriate approach is for the institution to obtain the data directly through the following link: https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/
+  >
+  > Please note that this is open data, and no prior authorization is required for its use. However, proper citation of the source is mandatory.
+  >
+  > We also recommend accessing the general open data portal at: https://sistemas.anac.gov.br/dadosabertos/
+  >
+  > The information available in the directories is openly accessible and may be used freely, provided that the source is appropriately cited.
+  >
+  > For field descriptions, metadata, and additional details, please consult the following page: https://www.gov.br/anac/pt-br/acesso-a-informacao/dados-abertos
+  >
+  > Kind Regards,
+  >
+  > Brazilian Aeronautical Registry Technical Branch
+  > Department Of Airworthiness
+  > E-mail: rab@anac.gov.br
+  > www.gov.br/anac
+
+  This is the **fourth substantive license-confirming reply** received during the metal-birds-feed permission outreach (Finland Traficom #1, Maldives CAA #2, Singapore CAAS #3, **Brazil ANAC #4**). The reply explicitly grants open-data use of the register, with the simple attribution requirement, and provides the canonical bulk-download URL directly. Engineering is the only remaining blocker for Brazil ingest, and engineering complexity is minimal (native CSV, daily refresh — same tier as Latvia / ILT NL).
+
+### Required attribution (verbatim, place in README Attribution section)
+
+> Source: ANAC Brasil — Agência Nacional de Aviação Civil — https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/
+>
+> Open data published by ANAC Brasil. Per ANAC Brasil correspondence dated 2026-05-11: this is open data, no prior authorization is required for its use, and proper citation of the source is mandatory. Field descriptions and metadata: https://www.gov.br/anac/pt-br/acesso-a-informacao/dados-abertos.
+>
+> The material has been changed: ANAC Brasil aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by ANAC Brasil.
 
 ---
 
@@ -264,18 +297,27 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
-## Transportstyrelsen — Swedish Transport Agency
+## Transportstyrelsen — Swedish Transport Agency — Excluded by agency request
 
-- **Status:** Future — permission request sent, awaiting reply (**leans Excluded** if no reply by 2026-06-04 — see below)
-- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
+- **Status:** ❌ Excluded by explicit agency request 2026-05-11 (first formal denial received during the metal-birds-feed permission outreach)
+- **Classification:** **Excluded** — Sweden specifically asked to be left out
 - **Source URL:** https://etjanster-luftfart.transportstyrelsen.se/en-gb/sokluftfartyg
-- **Bulk download URL:** **None published.** Recon 2026-05-10 confirmed the register is **search-only** (no CSV/PDF/JSON dump on `transportstyrelsen.se` and no listing on `dataportal.se` for the aircraft register). Pattern matches Italy ENAC and Iceland ICETRA: yes-reply must clear **both** license and a bulk access channel before ingest is feasible.
-- **License:** Pending verification. Swedish public-sector data is bound by the EU PSI Directive baseline (reuse permitted under attribution), but Transportstyrelsen has not published an open-data declaration for the aircraft register. Unlike its Nordic neighbour Finland (Traficom publishes the equivalent register under CC BY 4.0), Sweden has not made the same declaration.
-- **Update cadence:** TBD (no published artifact has a refresh schedule)
-- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se` (general aviation inbox). Register-specific desk `lfr@transportstyrelsen.se` surfaced 2026-05-10 — preferred address for any follow-up. Named register staff also surfaced for cold-call escalation: Magdalena Forssén, Christer Larsson, Fredrik Wallin (phone +46 771 503 503). Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Bulk download URL:** N/A (Sweden excluded)
+- **License:** N/A (Sweden excluded by agency preference, not by license-text restriction)
+- **Permission email:** Sent 2026-05-05 to `luftfart@transportstyrelsen.se`. Substantive denial reply received 2026-05-11 from the Swedish Transport Agency / Swedish Civil Aircraft Register desk.
+- **Reply (verbatim):** Received 2026-05-11 from the Swedish Transport Agency (preserved verbatim per AGENTS.md):
 
-**Note for the eventual follow-up email (after 2026-06-04):** lead with the Finland Traficom comparable — neighbouring Nordic agency that publishes the equivalent register under CC BY 4.0 — and the EU PSI Directive baseline. Both are clean, public reference points.
+  > The Swedish Transport Agency prefers not to be a part of this project.
+  > Kindly exclude Sweden from the project.
+  >
+  > Yours Sincerely,
+  > The Swedish Civil Aircraft Register
+  > The Swedish Transport Agency
+
+  Acknowledgment reply drafted 2026-05-11 (treated as sent) confirming compliance. Sweden is excluded from any ingest. **Action commitment:** the Swedish civil aircraft register will not be ingested, normalized, or redistributed by metal-birds-feed. Per the project's standing commitment in every permission email ("we will honor any request to remove or modify our use of the data, promptly and without dispute"), this exclusion is honored without further discussion.
+
+- **Revisit condition:** Re-evaluate only on an **affirmative reply** from the Swedish Transport Agency reversing this decision. The Agency's preference is binding without expiry. If the Agency or its successor publishes the register under an explicit open license (CC BY 4.0 etc.) at a future date, that publication itself constitutes the necessary affirmative permission. Otherwise no re-contact is appropriate.
+- **Operator note:** Forks of metal-birds-feed must also honor this exclusion. Sweden's preference is not project-specific — it is an instruction from the responsible authority not to redistribute their data through this kind of channel. Any fork that re-introduces Sweden without a fresh affirmative reply from the Agency would be violating the same commitment the original project made.
 
 ---
 
@@ -381,7 +423,8 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Update cadence:** Annual (single dated dump per year — material 12 Jan 2026, published 17 Feb 2026; no monthly refresh)
 - **Data-shape blocker (verified 2026-05-12 by direct fetch):** The public ZIP contains a single CSV `aircraftregister.csv` with 24 columns: `Aircraft_name, Legal_Basis, Aircraft_model_category, Minimum_Crew, Maximum_Passengers, MTOM_kg, ELA1_flag, ELA2_flag, Complex_aircraft, Number_of_engines, Count_of_Propellers, ICAO, Aircraft_Construction_Year, Initial_Registration_Date, Import_Previous_country, Engine_1_Manufacturer, Engine_1, …, Engine_4_Manufacturer, Engine_4`. The file is GDPR-stripped to per-aircraft fleet stats: **no registration mark (OH-XXX), no source_id / unique ID, no Mode-S 24-bit hex, no owner, no operator, no serial number**. The canonical schema requires at minimum a unique ID and a registration; this channel carries neither. Each row corresponds to a real aircraft (1,330 rows ≈ Finnish register size), just stripped of identity. **Re-engage Traficom for an identifier-bearing bulk channel before reattempting.**
 - **Format note (engineering):** Engine already handles ZIP+CSV via `format: zip` + `format: csv` (FAA pattern). The blocker is data shape, not parser path.
-- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Substantive reply received 2026-05-11 from Joakim Savela, Adviser, Data Disclosure unit** — confirms Open-data terms, approves attribution text. The license clearance stands; a separate follow-up will be required to ask whether Traficom can publish an identifier-bearing bulk channel under the same CC BY 4.0 terms.
+- **Permission email:** Sent 2026-05-05 to `kirjaamo@traficom.fi` (cc: `tietojenluovutus@traficom.fi`). **Substantive reply received 2026-05-11 from Joakim Savela, Adviser, Data Disclosure unit** — confirms Open-data terms, approves attribution text. The license clearance stands.
+- **Follow-up email (identifier-bearing channel ask):** Sent 2026-05-11 to `tietojenluovutus@traficom.fi` (cc: `kirjaamo@traficom.fi`) — separate from the thank-you reply. Body acknowledges the prior license confirmation, names the GDPR-strip problem on the public ZIP-CSV (verified by direct fetch 2026-05-12), and asks three concrete questions: (1) does Traficom publish an identifier-bearing version of the register elsewhere; (2) if not, would Traficom be open to publishing one under CC BY 4.0 with the Clause 4-equivalent personal-data exclusions; (3) alternative access arrangements (per-record API, signed data-sharing agreement, etc.) on whatever terms work for the Data Disclosure unit. Awaiting reply.
 - **Reply (verbatim):** Received 2026-05-11 from Joakim Savela (preserved verbatim per AGENTS.md):
 
   > Hello,
@@ -1492,6 +1535,39 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
   Interpretation: generic citizen-services intake-form auto-prompt asking for Saudi-citizen-style identification (name / ID / phone). Our request is about register redistribution, not citizen service or complaint — the Beneficiary Care Center is the wrong queue. Treat as **non-substantive auto-acknowledgment** (same posture as the DRC AAC RDC clearance-portal auto-redirect). 30-day fallback clock continues from 2026-05-11. A brief follow-up reply may be useful to (a) provide the form fields they expect (name + phone; flag international requester / no Saudi ID), (b) restate the request type, and (c) explicitly ask for routing to the Open Data team or Aircraft Registration / Airworthiness department. Substantive reply on v3 still pending.
 
+  **Second auto-prompt received 2026-05-11 from GACA Beneficiary Care Center** (after the user-side clarifier reply was drafted; preserved verbatim per AGENTS.md — distinct from the first prompt above in that it asks for passport + mobile rather than name/ID/phone):
+
+  > Dear Beneficiary,
+  >
+  > Thank you for contacting Beneficiary Care Center
+  >
+  > For better assistance, we hope that you provide us with the following information:
+  > ( Passport Number \ Mobile Number )
+  >
+  > Your opinion makes a big difference! 💬✨
+  > A quick rating from you helps us improve our services and serve you better in the future.
+  > To share your feedback,
+  > Please click here.
+  > Your opinion matters together we grow.
+  >
+  > Best Regards,
+  > GACA
+
+  Interpretation: the Beneficiary Care Center bot escalated from the citizen-style identifiers (name / ID / phone) to traveler-style identifiers (passport / mobile), confirming that the queue is built for individual-beneficiary case handling (visa-adjacent, traveler complaint, etc.) and is still not the right channel for an open-data / register-redistribution policy question. **v1 draft of the clarifier reply included a passport reference; v1 was superseded before send by v2, which drops passport entirely** (no passport provided to the agency) and provides only a callback mobile number (kept out of the public repo) along with a restatement of the request type and an explicit ask to route to the Open Data team or Aircraft Registration / Airworthiness department. Treat both auto-prompts as **non-substantive**; 30-day fallback clock continues from 2026-05-11.
+
+  **Third auto-prompt received 2026-05-11 from GACA Beneficiary Care Center** (after the v2 clarifier reply was sent; preserved verbatim per AGENTS.md — narrower than the prior prompts, asking only for an ID number):
+
+  > Dear Beneficiary,
+  >
+  > Thank you for contacting Beneficiary Care Center
+  >
+  > For better assistance, we hope that you provide us with the following information:
+  > (Id number)
+  >
+  > Best Regards,
+
+  Interpretation: the BCC bot is iterating through identifier variants (Saudi national ID → passport → ID again) despite our v2 reply explicitly stating "I do not hold a Saudi national ID" and providing mobile + international-correspondent context. **The BCC intake automation does not accommodate the no-Saudi-ID case** — it's stuck in a loop. v3 clarifier reply drafted 2026-05-11 (treated as sent) takes a more direct tone: explicitly names the BCC intake-form mismatch with the request type, and asks GACA to either (a) route the enquiry past the Beneficiary Care Center to the Open Data team or Aircraft Registration / Airworthiness department, or (b) close the case as "no Saudi ID — international correspondent" so the project can decide whether Saudi Arabia stays in scope or is removed. Substantive reply on the underlying redistribution question still pending; 30-day clock continues from 2026-05-11. If further BCC auto-prompts arrive without human escalation, the practical path is likely to drop Saudi from the project scope rather than continue the loop.
+
 ---
 
 ## DGAC Tunisia — Direction Générale de l'Aviation Civile (under Ministère du Transport)
@@ -1544,7 +1620,28 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
   > With best regards,
   > Office of Support to the Board of Directors.
 
-  Interpretation: the v2 send hit `anac@anac.ao` (now defunct) and CC'd `sec.anac.ao@gmail.com` (which the auto-redirect confirms IS the current canonical address). So our v2 already reached the right destination via the CC. No further redirect-send needed; `sec.anac.ao@gmail.com` is the verified-by-agency-auto-reply canonical address going forward. The agency's own `anac.ao` website still publishes the now-defunct `anac@anac.ao` as primary — anac.ao/ao/contactos page needs updating on their end. Substantive reply on the redistribution question still pending; clock continues from 2026-05-11.
+  Interpretation: the v2 send hit `anac@anac.ao` (now defunct) and CC'd `sec.anac.ao@gmail.com` (which the auto-redirect confirms IS the current canonical address). So our v2 already reached the right destination via the CC. No further redirect-send needed; `sec.anac.ao@gmail.com` is the verified-by-agency-auto-reply canonical address going forward. The agency's own `anac.ao` website still publishes the now-defunct `anac@anac.ao` as primary — anac.ao/ao/contactos page needs updating on their end.
+
+  **Substantive routing acknowledgment received 2026-05-11** from Opedro at Gabinete de Apoio ao Conselho de Administração (Office of Support to the Board of Directors), Autoridade Nacional de Aviação Civil (preserved verbatim per AGENTS.md):
+
+  > Dear Sir/ Madam,
+  >
+  > Good day.
+  >
+  > The National Civil Aviation Authority of Angola acknowledges receipt of your correspondence, which we thank you for.
+  >
+  > We would like to inform you that we will respond as soon as possible.
+  >
+  > NOTE: PLEASE ACKNOWLEDGE RECEIPT OF THIS E-MAIL.
+  >
+  > Please do not hesitate to contact us if you have any further questions.
+  >
+  > Kind regards,
+  > Opedro
+  > Autoridade Nacional de Aviação Civil
+  > Gabinete de Apoio ao Conselho de Administração
+
+  This is the second message from the Gabinete de Apoio (same office that sent the auto-redirect). Confirms the file is now with a named human (Opedro) and substantive reply is forthcoming. Receipt-acknowledgment reply drafted 2026-05-11 (treated as sent). Substantive reply on the redistribution question still pending; clock continues from 2026-05-11.
 
 ---
 
@@ -2292,18 +2389,36 @@ These are commercial registration services for foreign aircraft owners. They mak
 
 ---
 
-## SHGM — Sivil Havacılık Genel Müdürlüğü (Türkiye)
+## SHGM — Sivil Havacılık Genel Müdürlüğü (Türkiye) — Excluded by agency request
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
-- **Classification:** Unknown (verified 2026-05-11)
+- **Status:** ❌ Excluded by explicit agency request 2026-05-11 (second formal denial received during the metal-birds-feed permission outreach)
+- **Classification:** **Excluded** — SHGM specifically asked to be left out after consulting internally
 - **Source URL:** https://web.shgm.gov.tr/
-- **Bulk download URL:** TBD
-- **License:** Pending verification.
-- **Update cadence:** TBD
-- **Statutory framework note:** Turkey's KVKK (Kişisel Verilerin Korunması Kanunu — Personal Data Protection Law) governs PII handling for any per-tail register data. Permission-email body references it for clarity.
-- **Named-contacts note:** Yetkili (Authorized officer): Bülent Göral, Sicil Müdürlüğü (Registry Department), verified on /tr/hava-araci-islemleri/2205-tescil-islemleri. DG Civil Aviation: Prof. Dr. Kemal Yüksek. Phone: +90 312 203 60 00.
-- **Permission email:** Sent 2026-05-11 to `bulent.goral@shgm.gov.tr` (verified live on /tr/hava-araci-islemleri/2205-tescil-islemleri). TC- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Bulk download URL:** N/A (Türkiye excluded)
+- **License:** N/A (excluded by agency preference, not by license-text restriction)
+- **Statutory framework note (preserved for context):** Turkey's KVKK (Kişisel Verilerin Korunması Kanunu — Personal Data Protection Law) governs PII handling for any per-tail register data. Originally referenced in the permission-email body.
+- **Named-contacts note (preserved for context):** Yetkili (Authorized officer): Bülent Göral, Sicil Müdürlüğü (Registry Department), verified on /tr/hava-araci-islemleri/2205-tescil-islemleri. DG Civil Aviation: Prof. Dr. Kemal Yüksek. Reply received from Fatma Reyyan AYYILDIZ (Aviation Expert, Uçuş Operasyon Dairesi / Flight Operations Department), writing on Mr. Göral's behalf. Phone: +90 312 203 60 34 (Ms. AYYILDIZ's direct line); +90 312 203 60 00 (HQ).
+- **Permission email:** Sent 2026-05-11 to `bulent.goral@shgm.gov.tr`. Substantive denial reply received 2026-05-11 from Fatma Reyyan AYYILDIZ on behalf of Mr. Göral.
+- **Reply (verbatim):** Received 2026-05-11 from Fatma Reyyan AYYILDIZ, Aviation Expert, Flight Operations Department, Directorate General of Civil Aviation (SHGM), preserved verbatim per AGENTS.md:
+
+  > Dear Ms. Childress,
+  >
+  > I am writing to you on the behalf of Mr. Göral. We have received your email and consider your request. After consulting, we have decided that it would be more appropriate not to redistribute our data and, consequently, to exclude us from the project.
+  >
+  > Thank you for your email and we wish you success with your project.
+  >
+  > Best regards
+  > Fatma Reyyan AYYILDIZ
+  > Havacılık Uzmanı | Aviation Expert
+  > Uçuş Operasyon Dairesi | Flight Operations Department
+  > Sivil Havacılık Genel Müdürlüğü
+  > Directorate General of Civil Aviation
+  > T: 00 90 312 203 60 34
+
+  Acknowledgment reply drafted 2026-05-11 (treated as sent) confirming compliance. Türkiye is excluded from any ingest. **Action commitment:** the Türkiye civil aircraft register will not be ingested, normalized, or redistributed by metal-birds-feed. Per the project's standing commitment in every permission email ("we will honor any request to remove or modify our use of the data, promptly and without dispute"), this exclusion is honored without further discussion.
+
+- **Revisit condition:** Re-evaluate only on an **affirmative reply** from SHGM reversing this decision. The Authority's preference is binding without expiry. If SHGM or its successor publishes the register under an explicit open license (CC BY 4.0 etc.) at a future date, that publication itself constitutes the necessary affirmative permission. Otherwise no re-contact is appropriate.
+- **Operator note:** Forks of metal-birds-feed must also honor this exclusion. SHGM's preference is not project-specific — it is an instruction from the responsible authority not to redistribute their data through this kind of channel. Any fork that re-introduces Türkiye without a fresh affirmative reply from SHGM would be violating the same commitment the original project made.
 
 ---
 
