@@ -468,14 +468,46 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## Transpordiamet — Estonian Transport Administration
 
-- **Status:** Future — permission request sent 2026-05-10, awaiting reply
-- **Classification:** Unknown (verified 2026-05-10 — no public license declaration found)
+- **Status:** ✅ Cleared (verified 2026-05-13 via direct reply from Ivo Tolga, Head of Airworthiness Department, Aviation Division — ref `13.5-6/26/8138-2`)
+- **Classification:** **Personal-use** (verified 2026-05-13 — non-commercial reuse and redistribution permitted with attribution; commercial use not granted)
 - **Source URL:** https://transpordiamet.ee/ohusoidukite-register (Estonian-language page; English page at `transpordiamet.ee/en/vehicle-ship-airplane/aircraft-registration/aircraft-register` describes registration procedures only)
 - **Bulk download URL:** **HTML table inline on the register page.** Full register (~150 entries) is rendered as an HTML table with columns: Registration mark (ES-XXX) / Aircraft type / Serial number / Owner / Operator. No CSV/XLSX/PDF download. Pattern matches Georgia GCAA — HTML scrape required.
-- **License:** No declaration on the register page. **Register deliberately omitted from `andmed.eesti.ee`** (Estonia's national open-data portal). Transpordiamet publishes 5+ other datasets there (vehicles, traffic accidents, road register, public transport register, vehicle statistics) under the portal's explicit terms ("right to reuse and redistribute it for both commercial and non-commercial purposes"). The aircraft register's exclusion is a deliberate choice. Same pattern as Switzerland FOCA, Austria Austro Control, Italy ENAC.
-- **Update cadence:** TBD (HTML table refresh cadence not stated on the page)
-- **Permission email:** Sent 2026-05-10 to `info@transpordiamet.ee` (general inbox; no register-specific desk surfaced publicly). Email led with the Finland Traficom comparable (CC BY 4.0 on avoindata.fi) and noted that Transpordiamet already publishes other datasets on andmed.eesti.ee under open-reuse terms. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **License:** Non-commercial reuse and redistribution with attribution, granted in writing by Transpordiamet 2026-05-13. Three explicit limitations attached (paraphrased verbatim from the reply): (1) the data is provided as publicly available information **without guarantees** regarding completeness, accuracy, or uninterrupted availability; (2) **users of the data remain responsible** for their own use and processing of the information; (3) Transpordiamet **may change the structure, availability, or content** of the published register in the future. Project posture: source-available under Polyform Shield with Supplemental Terms; commercial redistribution not permitted, so Transpordiamet's non-commercial condition is compatible and propagates as a binding non-commercial floor across the bundled dataset.
+- **Attribution text (use verbatim, including the en-dash):** `Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register`
+- **Update cadence:** TBD (HTML table refresh cadence not stated on the page; Transpordiamet retains the right to change structure/availability/content per condition 3)
+- **Permission email:** Sent 2026-05-10 to `info@transpordiamet.ee` (general inbox; no register-specific desk surfaced publicly). Email led with the Finland Traficom comparable (CC BY 4.0 on avoindata.fi) and noted that Transpordiamet already publishes other datasets on andmed.eesti.ee under open-reuse terms. Reply received 2026-05-13 from `Ivo.Tolga@transpordiamet.ee` (3 days; routed to Airworthiness Department). Thank-you reply sent 2026-05-13 confirming verbatim attribution use and acknowledging the three limitations. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Cleared with conditions 2026-05-13 from Ivo Tolga, Head of Airworthiness Department / Out-Of-Court Proceeding Officer / Aviation Division (preserved verbatim per AGENTS.md):
+
+  > Your: 10.05.2026
+  > Our: 13.05.2026 reg nr 13.5-6/26/8138-2
+  >
+  > Hello,
+  >
+  > Thank you for your letter and for explaining the purpose of your project.
+  >
+  > The Estonian Transport Administration (Transpordiamet) publishes the Estonian civil aircraft register as publicly available information. Transpordiamet does not object to the reuse and redistribution of the publicly available register data for non-commercial purposes, provided that the source is clearly attributed.
+  >
+  > Suggested attribution text:
+  >
+  > "Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register"
+  >
+  > Please note that:
+  >
+  > 1. the data is provided as publicly available information without guarantees regarding completeness, accuracy, or uninterrupted availability;
+  > 2. users of the data remain responsible for their own use and processing of the information;
+  > 3. Transpordiamet may change the structure, availability, or content of the published register in the future.
+  >
+  > Kind regards,
+  >
+  > Ivo Tolga
+  > Head of Airworthiness Department
+  > Out-Of-Court Proceeding Officer
+  > Aviation Division
+  > +372 5982 3190
+  > Valge 4 / Tallinn 11413
+  > Estonian Transport Administration (TRAM)
+
+  Interpretation: clear yes, with conditions. Non-commercial reuse and redistribution with attribution is explicitly permitted. The "publicly available information" framing is doing meaningful work — Transpordiamet is granting non-commercial reuse on top of the existing public-record posture, not creating a new license. The three limitations are standard public-data disclaimers (no warranty, user responsibility, structure may change) and do not require any pipeline change. Note that Transpordiamet's reply explicitly **does not extend to commercial reuse** — this is the boundary between Personal-use (per PRD CC.1) and Open. Same shape as Algeria, Bahrain, Kuwait, Luxembourg DAC (though DAC is stricter still — consult/download/print only).
 
 ---
 
@@ -1809,15 +1841,33 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAAZ — Civil Aviation Authority of Zimbabwe
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
+- **Status:** Future — permission request sent 2026-05-11; substantive routing acknowledgment received 2026-05-11 from CAAZ PR & Communications team via `pr@caaz.co.zw` (matter under multi-discipline internal review); substantive yes/no on redistribution still pending
 - **Classification:** Unknown (verified 2026-05-11)
 - **Source URL:** https://www.caaz.co.zw/
 - **Bulk download URL:** TBD
 - **License:** Pending verification.
-- **Named-contacts note:** DG: George Mashababe; Director Flight Safety & Standards: Mavis Musakasa — most senior named contacts surfaced in Africa batch. Body routes through topical operational inbox; multiple specific inboxes available for follow-up.
+- **Named-contacts note:** DG: George Mashababe; Director Flight Safety & Standards: Mavis Musakasa — most senior named contacts surfaced in Africa batch. Body routes through topical operational inbox; multiple specific inboxes available for follow-up. CAAZ acknowledgment reply came via the `pr@` CC, signaling that PR & Communications is the canonical correspondence channel for this matter while internal review is in progress.
 - **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-11 to `licencing@caaz.co.zw` cc `airworthiness@caaz.co.zw` cc `pr@caaz.co.zw`. Z- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-11 to `licencing@caaz.co.zw` cc `airworthiness@caaz.co.zw` cc `pr@caaz.co.zw`. Z- prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no substantive reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Substantive routing acknowledgment received 2026-05-11 from CAAZ PR & Communications (preserved verbatim per AGENTS.md):
+
+  > Good day Ashley,
+  >
+  > We acknowledge receipt of your request, and we advise that the matter is receiving internal consideration due to the legal, regulatory, data protection, cybersecurity, and sovereign oversight implications associated with redistribution of official aviation registry data.
+  >
+  > Thank you.
+  >
+  > Regards,
+  > PR & COMMUNICATIONS
+  > TEL: +263 24 2585073/80
+  > ADDR: 3rd Level, R.G.M International Airport Terminal Building, Harare, Zimbabwe
+  > EMAIL: pr@caaz.co.zw
+  > WEB: www.caaz.co.zw
+  > Safety, Security, Quality and Efficiency
+
+  Interpretation: substantive routing acknowledgment, **not yes/no**. CAAZ is taking the request seriously and has identified five concurrent review dimensions: **legal, regulatory, data protection, cybersecurity, and sovereign oversight**. The "sovereign oversight" framing is distinctive — Zimbabwe treats register-data redistribution as touching national sovereignty concerns, not just a routine licensing question. This is more careful framing than most routing acknowledgments we've received (closer in shape to AAC El Salvador's "meet with us and the Unidad de Acceso a la Información Pública" approach). Posture remains Unknown; 30-day fallback clock continues from 2026-05-11. A brief acknowledgment reply was drafted 2026-05-13 but superseded the same day; the v1 draft should be deleted before sending v2.
+
+  Follow-up sent 2026-05-13 (v2, supersedes v1 acknowledgment) to `pr@caaz.co.zw` cc `licencing@caaz.co.zw` cc `airworthiness@caaz.co.zw`, proactively addressing the data-protection and sovereign-oversight dimensions before the review concludes. Substantive content provided: (1) PII drop-list applied at the mapping layer (retain registration mark, kind, operator name, state, country; drop street/postal addresses, care-of agents, sub-national region/city/district, telephone/fax/email, free-text remarks) — uniform across every source with no per-source carve-out; (2) non-commercial posture under Polyform Shield + Supplemental Terms with operator-private R2 storage, no public read API, no user-facing display, no third-party access; project as a whole inherits the most restrictive condition imposed by any bundled source, so a personal-use or non-commercial condition from CAAZ would propagate to every downstream use; (3) removal-on-request precedent cited with Sweden Transportstyrelsen and Türkiye DGCA as working examples of honored exclusions recorded verbatim in this document; (4) attribution model — README + DATA_LICENSES entry created before any publication. Offer to provide additional detail on any of the five review dimensions or to point reviewers at specific documentation sections. Tone: substantive but deferential; no commercial language; no "open source" framing.
 
 ---
 
