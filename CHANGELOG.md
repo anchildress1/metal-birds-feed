@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.0.4](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.3...v0.0.4) (2026-05-13)
+
+
+### Features
+
+* **au-casa:** ship CASA Australia + canonical operator/IDERA fields ([#14](https://github.com/anchildress1/metal-birds-feed/issues/14)) ([cc1669f](https://github.com/anchildress1/metal-birds-feed/commit/cc1669ffca1e56c6a4552dc68344dd2fad9fc387))
+* **lv-caa:** ship CAA Latvia + add `fixed-wing` airframe enum ([#18](https://github.com/anchildress1/metal-birds-feed/issues/18)) ([0e7b861](https://github.com/anchildress1/metal-birds-feed/commit/0e7b8619ac83871c1cc5807c27b98675a84b27de))
+* NL ILT live + registry roadmap reframe + 54-source license triage ([#12](https://github.com/anchildress1/metal-birds-feed/issues/12)) ([28189e6](https://github.com/anchildress1/metal-birds-feed/commit/28189e63940378b1d8c9c751751c65718731f516))
+
 ## [0.0.3](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.2...v0.0.3) (2026-05-04)
 
 
