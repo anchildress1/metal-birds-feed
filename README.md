@@ -275,7 +275,7 @@ to populate that source alone. Rows are ordered alphabetically by country.
 | Transportstyrelsen                                             | Sweden                           | ❌ Excluded — agency request 2026-05                                                                 | n/a                                                                                                                                                                                                                                   | Excluded — by explicit agency request. Revisit only on affirmative reply reversing the decision.                                                                                                                                                               |
 | FOCA — `ch-foca` _(future)_                                    | Switzerland                      | Future — email sent 2026-05 (no fallback — Personal-use)                                             | [bazl.admin.ch search app](https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search)                                                                                                                                                      | Personal-use — Swiss Federal Council site-wide Terms require "prior written consent" for any reproduction; register deliberately omitted from opendata.swiss                                                                                                   |
 | SyCAA                                                          | Syria                            | ❌ Excluded — OFAC blanket sanctions                                                                 | n/a                                                                                                                                                                                                                                   | Excluded — YK- prefix.                                                                                                                                                                                                                                         |
-| CAA Taiwan — `tw-caa` _(future)_                               | Taiwan                           | Future — email sent 2026-05 (fallback applies)                                                       | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1)                                                                                                                                                                        | Unknown                                                                                                                                                                                                                                                        |
+| CAA Taiwan — `tw-caa` _(future)_                               | Taiwan                           | License cleared (Open under OGDL v1.0)                                                               | [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=238&lang=1)                                                                                                                                                                        | **Open** — [Open Government Data License v1.0](https://data.gov.tw/license); CAA bilateral grant scoped to non-commercial source-available use                                                                                                                 |
 | Tajikistan CAA — `tj-caa` _(future)_                           | Tajikistan                       | Future — email sent 2026-05 (fallback applies)                                                       | [caa.tj](https://caa.tj/)                                                                                                                                                                                                             | Unknown                                                                                                                                                                                                                                                        |
 | TCAA — `tz-tcaa` _(future)_                                    | Tanzania                         | Future — email sent 2026-05 (fallback applies)                                                       | [tcaa.go.tz](https://www.tcaa.go.tz/page?p=Aircraft+Registration)                                                                                                                                                                     | Unknown                                                                                                                                                                                                                                                        |
 | CAAT Thailand — `th-caat` _(future)_                           | Thailand                         | Future — email sent 2026-05 (fallback applies)                                                       | [caat.or.th register](https://www.caat.or.th/en/certificates-licenses/aircraft/guidance-material/registration-of-an-aircraft/)                                                                                                        | Unknown — no public license declaration                                                                                                                                                                                                                        |
@@ -338,15 +338,11 @@ Source: AESA — Agencia Estatal de Seguridad Aérea — https://www.seguridadae
 
 Reproduced with attribution per the [AESA portal Legal Notice](https://www.seguridadaerea.gob.es/en/politica-de-privacidad-y-aviso-legal) and Royal Decree 1495/2011 of October 24 (development of Law 37/2007 on the reuse of public sector information, for the public sector). The material has been changed: AESA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by AESA.
 
-(Notice published in advance of ingest — AESA is license-cleared but blocked on a PDF parser path; this notice activates the moment Spain data first appears in any operator deployment.)
-
-### Finnish Transport and Communications Agency (Traficom, Finland) _— blocked: identifier-stripped bulk channel_
+### Finnish Transport and Communications Agency (Traficom, Finland) _— pending implementation_
 
 Source: Traficom — Finnish Transport and Communications Agency — https://tieto.traficom.fi/en/open-data
 
-Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) (confirmed in writing by Joakim Savela, Adviser, Data Disclosure unit, 2026-05-11). The license remains cleared for any future identifier-bearing bulk channel Traficom issues.
-
-(Notice held inactive — the current public bulk channel at `eservices.traficom.fi` is GDPR-stripped fleet-stats with no registration marks, no source_id, no Mode-S hex, and no owner/operator, so canonical-schema ingest is impossible. This attribution becomes active the moment an identifier-bearing Finland channel is in use.)
+Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/). The material has been changed: Traficom aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by Traficom.
 
 ### Civilās aviācijas aģentūra (CAA Latvia)
 
@@ -356,35 +352,35 @@ Aircraft register data published by Civilās aviācijas aģentūra (CAA Latvia) 
 
 Source: Civil Aviation Authority of Singapore (CAAS) — https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration
 
-Redistributed with permission granted by CHAI Kwan Kua (for CAAS Quality Service Manager) in correspondence dated 2026-05-11. Per CAAS: the Singapore Civil Aircraft Register is publicly accessible and free to be used; attribution to CAAS with a link to the register page is requested so users can refer to CAAS for the most accurate and up-to-date information.
-
-The material has been changed: CAAS aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAS.
-
-(Notice published in advance of ingest — Singapore is license-cleared but register format is TBD on the engineering side; this notice activates the moment Singapore data first appears in any operator deployment.)
+Licensed under Open with attribution per CAAS — register is publicly accessible and free to be used, with attribution and link back to the register page. The material has been changed: CAAS aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAS.
 
 ### Maldives Civil Aviation Authority (CAA Maldives) _— pending implementation_
 
 Source: Maldives Civil Aviation Authority — https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
 
-Redistributed with permission granted by Mr. Abdulla Mohamed (Director Airworthiness, CAA Maldives) in correspondence dated 2026-05-11. Per CAA Maldives required notice (reproduced verbatim per the agency's condition):
+Licensed under Open with attribution. Per CAA Maldives required notice (reproduced verbatim per the agency's binding condition):
 
 > Note: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
 
 The material has been changed: CAA Maldives aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Maldives.
 
-(Notice published in advance of ingest — Maldives is license-cleared but blocked on a PDF parser path shared with AESA Spain; this notice activates the moment Maldives data first appears in any operator deployment.)
-
 ### Estonian Transport Administration (Transpordiamet) _— pending implementation_
 
 Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register
 
-Redistributed with permission granted by Ivo Tolga (Head of Airworthiness Department, Aviation Division, Transpordiamet) in correspondence dated 2026-05-13 (ref `13.5-6/26/8138-2`). Per Transpordiamet: non-commercial reuse and redistribution of the publicly available register data is permitted, provided the source is clearly attributed. The following limitations apply (paraphrased verbatim from the agency's reply):
+Licensed under Personal-use with attribution — non-commercial reuse and redistribution permitted. Per Transpordiamet, the following binding limitations apply:
 
 1. The data is provided as publicly available information without guarantees regarding completeness, accuracy, or uninterrupted availability;
 2. Users of the data remain responsible for their own use and processing of the information;
 3. Transpordiamet may change the structure, availability, or content of the published register in the future.
 
-(Notice published in advance of ingest — Estonia is license-cleared but blocked on the HTML-scrape adapter path shared with Georgia GCAA, Montenegro, Kyrgyzstan, and Macau; this notice activates the moment Estonia data first appears in any operator deployment.)
+### Civil Aviation Administration (CAA Taiwan, MOTC R.O.C.) _— pending implementation_
+
+Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](http://caa.gov.tw/). Licensed under the Open Government Data License, v1.0.
+
+[OGDL v1.0 full text](https://data.gov.tw/license). Register page: https://www.caa.gov.tw/article.aspx?a=238&lang=1.
+
+The material has been changed: CAA Taiwan aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Taiwan.
 
 ---
 

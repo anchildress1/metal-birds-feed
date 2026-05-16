@@ -362,14 +362,49 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAA Taiwan — Civil Aviation Administration, MOTC R.O.C.
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://www.caa.gov.tw/article.aspx?a=238&lang=1
-- **Bulk download URL:** TBD (avcodes notes Excel/PDF File available; access pattern unverified)
-- **License:** Pending verification.
-- **Update cadence:** Monthly (per avcodes notes)
-- **Permission email:** Sent 2026-05-05 to `gencaa@mail.caa.gov.tw`. Follow-up due 2026-06-04 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Status:** ✅ Cleared (verified 2026-05-15 via direct reply from Nicholas Liaw, Flight Standards Division, CAA MOTC R.O.C.)
+- **Classification:** **Open** under OGDL v1.0 (verified 2026-05-15 — Open Government Data License v1.0 cited explicitly; bilateral grant letter scoped to non-commercial source-available project, but underlying license vehicle permits commercial use under §2.1 "for any purpose")
+- **Source URL (agency homepage, per Liaw's attribution):** http://caa.gov.tw/
+- **Register page URL (footnote — actual register location):** https://www.caa.gov.tw/article.aspx?a=238&lang=1
+- **Bulk download URL:** TBD (avcodes notes Excel/PDF File available; access pattern unverified — register page navigation pending engineering verification)
+- **License:** **Open Government Data License v1.0** — full text at https://data.gov.tw/license. Key terms: §2.1 grants a "perpetual, worldwide, non-exclusive, irrevocable, royalty-free copyright license to reproduce, distribute, publicly transmit, publicly broadcast, publicly recite, publicly present, publicly perform, compile, adapt to the Open Data provided for any purpose, including but not limited to making all kinds of Derivative Works either as products or services." §3.2 requires attribution; failure to comply voids the grant ab initio. §2.4 does not grant patent or trademark rights. **Bilateral scope note:** Liaw's grant letter scoped the redistribution permission to "non-commercial, source-available project". The license vehicle (OGDL v1.0) is broader; the bilateral letter narrows the agency's specific authorization for this project. Project posture is non-commercial source-available, so this constraint is satisfied operationally; any future commercial use would require re-engagement with CAA Taiwan.
+- **Attribution text (use verbatim, including the em-dash + markdown link + `http://` target):** `Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](http://caa.gov.tw/). Licensed under the Open Government Data License, v1.0.`
+- **Attribution footnote (actual register page, not in Liaw's verbatim string):** A link to https://www.caa.gov.tw/article.aspx?a=238&lang=1 accompanies the verbatim attribution so users can locate the underlying register quickly. Liaw's three commitments require "a clear link back to our official register page" (item 1).
+- **Update cadence:** Monthly (per avcodes notes); to be confirmed during ingest.
+- **Permission email:** Sent 2026-05-05 to `gencaa@mail.caa.gov.tw`. First-touch electronic-mailbox response 2026-05-13 (case # `1159002120`, sender `poms@mail.caa.gov.tw`). Substantive reply received 2026-05-15 from `ccliaw1@mail.caa.gov.tw` (Nicholas Liaw, Flight Standards Division — routed up from general inbox). Thank-you reply sent 2026-05-15 confirming verbatim attribution use, accepting OGDL v1.0 terms, and confirming the three commitments. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Cleared 2026-05-15 from Nicholas Liaw, Flight Standards Division, CAA, MOTC Taiwan ROC (preserved verbatim per AGENTS.md):
+
+  > Dear Ashley Childress,
+  >
+  > Thank you for reaching out and for your interest in including the Taiwan civil aircraft register in your project, metal-birds-feed.
+  >
+  > Regarding your request, Civil Aviation Administration (CAA) permits the redistribution of the published register only for non-commercial, source-available project, provided that you adhere to the Open Government Data License.
+  >
+  > Please find the answers to your specific questions below:
+  >
+  > 1. Permission and Terms:
+  >    The CAA allows the use of the data as described. However, your use of this information must comply with the terms set forth in the Open Government Data License, version 1.0. You can review the full text of the license here: https://data.gov.tw/license.
+  > 2. Attribution Text:
+  >    Yes, please use the following attribution format within your project's README and DATA_LICENSES documents:
+  >    "Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](http://caa.gov.tw/). Licensed under the Open Government Data License, v1.0."
+  > 3. Restrictions and Procedures:
+  >    Beyond the attribution requirement and the terms of the aforementioned license, we appreciate your commitment to:
+  >    (1) Providing a clear link back to our official register page.
+  >    (2) Ensuring the data is refreshed regularly to maintain accuracy.
+  >    (3) Promptly addressing any future requests from the CAA regarding data modification or removal.
+  >
+  > We appreciate your professional approach and your commitment to respecting our data policies. We wish you the best of luck with your project.
+  >
+  > Kind regards,
+  >
+  > Nicholas Liaw
+  > Flight Standards Division, CAA, MOTC
+  > Taiwan, ROC
+  > TEL: +886-2-23496090 (Office)
+  > FAX: +886-2-23496071
+  > Email: ccliaw1@mail.caa.gov.tw
+
+  Interpretation: clear yes under OGDL v1.0 with bilateral scope restriction. Liaw cites Taiwan's national open-data framework license (OGDL v1.0, CC BY 4.0-equivalent — explicitly permits commercial use under §2.1) but his letter scopes the redistribution permission to "non-commercial, source-available project". The narrower of license vehicle vs. bilateral grant applies operationally, and we are non-commercial source-available, so the constraint is satisfied. Three commitments confirmed (link back to register page, regular refresh, removal-on-request) — already standard project posture across all sources. Notable detail: Liaw's attribution string uses markdown link syntax + `http://` target + em-dash; preserved verbatim. Register URL not embedded in attribution string (Liaw's string points at agency root `caa.gov.tw/`); register-page footnote added separately to satisfy commitment item 1 ("clear link back to our official register page").
 
 ---
 
