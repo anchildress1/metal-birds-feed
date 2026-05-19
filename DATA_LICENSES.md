@@ -2351,17 +2351,31 @@ These are commercial registration services for foreign aircraft owners. They mak
 
 ---
 
-## CAD HK — Civil Aviation Department, Hong Kong SAR
+## CAD HK — Civil Aviation Department, Hong Kong SAR — Excluded
 
-- **Status:** Future — permission request sent 2026-05-11, awaiting reply
-- **Classification:** Unknown (verified 2026-05-11)
-- **Source URL:** https://www.cad.gov.hk/english/planereg.html
-- **Bulk download URL:** TBD
-- **License:** Pending verification.
-- **Update cadence:** TBD
-- **Statutory framework note:** Hong Kong CAP 486 (Personal Data (Privacy) Ordinance, PDPO) governs PII handling for any per-tail register data. Aircraft registration procedure governed by Air Navigation (Hong Kong) Order 1995 (form DCA99). The permission-email body references both for clarity.
-- **Permission email:** Sent 2026-05-11 to `enquiry@cad.gov.hk` (verified live mailto: on /english/enquiries_and_complaints.html). B-H/B-K/B-L prefix. Plain-text body per Option A. Follow-up due 2026-06-10 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Status:** ❌ Excluded (verified 2026-05-19 by direct reply from Airworthiness Office, Flight Standards and Airworthiness Division, `aircraft_registration@cad.gov.hk`)
+- **Classification:** Excluded — register not publicly published; no bulk channel exists per agency statement
+- **Source URL (procedure page only):** https://www.cad.gov.hk/english/planereg.html
+- **Bulk download URL:** None — agency confirmed register is not on the CAD website
+- **License:** Excluded. CAD HK confirmed in writing that the Hong Kong aircraft registry is not published on the CAD website. No public surface exists for redistribution. Same Excluded pattern as Israel CAAI / Romania AACR / Japan JCAB / UK G-INFO / Germany LBA / Kenya KCAA — register exists but is structurally non-public.
+- **Statutory framework note:** Hong Kong CAP 486 (Personal Data (Privacy) Ordinance, PDPO) governs PII handling for any per-tail register data. Aircraft registration procedure governed by Air Navigation (Hong Kong) Order 1995 (form DCA99). PDPO compliance posture is consistent with the agency's non-publication stance.
+- **Permission email:** Sent 2026-05-11 to `enquiry@cad.gov.hk` (verified live mailto: on /english/enquiries_and_complaints.html). B-H/B-K/B-L prefix. Same-day acknowledgment received 2026-05-11 from `enquiry@cad.gov.hk`. Substantive reply received 2026-05-19 from `aircraft_registration@cad.gov.hk` (Airworthiness Office routed up from general enquiries inbox). Courtesy acknowledgment drafted 2026-05-19 confirming HK will be excluded from the project. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim):** Excluded by non-publication 2026-05-19 from Airworthiness Office, Flight Standards and Airworthiness Division, Hong Kong Civil Aviation Department (preserved verbatim per AGENTS.md):
+
+  > Dear Sir / Madam,
+  >
+  > I refer to your email dated 12 May 2026.
+  >
+  > Please be advised that the Hong Kong aircraft registry is not published on the CAD website.
+  >
+  > Should you have any further enquires regarding aircraft registration, please email to '[aircraft_registration@cad.gov.hk](mailto:aircraft_registration@cad.gov.hk)'.
+  >
+  > Best regards,
+  > Airworthiness Office
+  > Flight Standards and Airworthiness Division
+  > Hong Kong Civil Aviation Department
+
+  Interpretation: substantive non-publication statement, not a refusal-of-redistribution. CAD HK is saying the underlying data is not publicly available — there is nothing to redistribute, regardless of whether redistribution would be permitted in principle. Same shelf as Kenya KCAA / Israel CAAI / Romania AACR / Japan JCAB / UK G-INFO / Germany LBA — register exists but is structurally non-public, no usable deployment shape for a source-available project. The redirect to `aircraft_registration@cad.gov.hk` is procedural (for aircraft-registration enquiries, not bulk redistribution); not a hidden bulk channel. **Revisit condition:** CAD HK publishes the register under any explicit reuse terms on the CAD website or on data.gov.hk. Note: CAD HK reply dates the original send as "12 May 2026" — actual send was 2026-05-11 UTC, 2026-05-12 HKT.
 
 ---
 
