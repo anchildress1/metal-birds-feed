@@ -273,14 +273,30 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## FOCA / BAZL — Swiss Federal Office of Civil Aviation (Bundesamt für Zivilluftfahrt)
 
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** **Personal-use** (verified 2026-05-10 from Swiss Federal Council site-wide Terms and Conditions; reclassified from Unknown)
+- **Status:** ✅ Cleared (Open) — substantive reply received 2026-05-22 from Jonas Goetz, Head of Swiss Aircraft Registry, Registry Officer, FOCA, citing legal department determination
+- **Classification:** **Open** — reclassified from Personal-use via bilateral grant. FOCA legal department explicitly answered "none" to restrictions/conditions/procedures and stated "our registry is available for the public anyway." The admin.ch site-wide "prior written consent" Terms (which had previously locked this to Personal-use) are overridden for this dataset by FOCA's direct legal determination. Bilateral grant scoped to the project's stated non-commercial source-available posture (the request was framed that way).
 - **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search
-- **Bulk download URL:** Search app supports CSV export; direct bulk endpoint unverified (the register is **not** published on `opendata.swiss` despite BAZL publishing other datasets there)
-- **License:** **Personal-use only.** Per the [Swiss Federal Council Terms and Conditions](https://www.admin.ch/gov/en/start/terms-and-conditions.html) (site-wide policy covering all `*.admin.ch` domains, including `bazl.admin.ch` and `app02.bazl.admin.ch`), verbatim: _"Copyright and any other rights relating to texts, illustrations, photos or any other data available on the Federal authorities' websites are the exclusive property of the federal authorities or of any other expressly mentioned owners. Any reproduction requires the prior written consent of the copyright holder."_ The register is also governed by the [Bundesgesetz über das Luftfahrzeugbuch](https://www.fedlex.admin.ch/eli/cc/1960/1245_1301_1297/de) (Federal Act on the Aircraft Register), separate from open-data rules. BAZL deliberately publishes other datasets (noise pollution, drone zones, aerodromes) on `opendata.swiss` with explicit Open licenses while omitting the aircraft register — a choice, not an oversight.
-- **Update cadence:** TBD
-- **Permission email:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`. Follow-up due 2026-06-04 if no reply by then. **The 30-day fallback does NOT apply** — FOCA is Personal-use; silence ≠ permission, must wait for affirmative reply. Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Bulk download URL:** Search app supports CSV export; direct bulk endpoint unverified (the register is **not** published on `opendata.swiss` despite BAZL publishing other datasets there). Engineering verification of the CSV export path still required.
+- **License:** **Open** — FOCA bilateral grant with no restrictions or conditions. Attribution is preferred but not contractually required ("not necessarily, but I assume a notification of the source would be adequate"). Project will attribute as a courtesy regardless.
+- **Update cadence:** TBD — not addressed in the reply; refresh against the live search app.
+- **Permission email:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`. First reply 2026-05-06 from Jonas Goetz acknowledged + flagged legal-department review. Substantive reply 2026-05-22 from Jonas Goetz citing legal department determination. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim 2026-05-22, from Jonas Goetz, Head of Swiss Aircraft Registry, Registry Officer, FOCA):**
+  > Dear Ashley
+  >
+  > Thank you for your patience. Our legal department answers your questions as follows:
+  >
+  > 1. Does FOCA permit redistribution of the published register, with attribution, for a non-commercial source-available project as described above?
+  >    Yes, our registry is available for the public anyway.
+  > 2. If yes, is there a specific attribution text FOCA would like us to use? (For example: "Source: Federal Office of Civil Aviation —
+  >    [bazl.admin.ch](http://bazl.admin.ch/)".)
+  >    not necessarily, but I assume a notification of the source would be adequate
+  > 3. Are there any restrictions, conditions, or formal procedures we should follow?
+  >
+  > none
+  >
+  > Best Regards
+  > Jonas
+- **Attribution text (project use):** "Source: Federal Office of Civil Aviation (FOCA) — [bazl.admin.ch](https://www.bazl.admin.ch)" (FOCA did not require a specific format; this matches the example FOCA legal echoed back in their reply).
 
 ---
 
@@ -621,16 +637,35 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ## CAAT Thailand — Civil Aviation Authority of Thailand
 
-- **Status:** Future — permission request sent 2026-05-10, awaiting reply
-- **Classification:** Unknown (verified 2026-05-10 — no public license declaration)
-- **Source URL:** https://www.caat.or.th/en/certificates-licenses/aircraft/guidance-material/registration-of-an-aircraft/ + https://www.caat.or.th/en/archives/52215 (legacy register link)
-- **Bulk download URL:** Direct PDF on date-stamped path, e.g. https://www.caat.or.th/wp-content/uploads/2024/01/Aircraft-Registration-Information-08-Jan-2025.pdf (most recently surfaced 2025-01-08; ~16 months stale at recon time). Filename pattern: `Aircraft-Registration-Information-DD-MMM-YYYY.pdf`. WordPress site.
-- **License:** Pending verification. No explicit license declaration on registry pages.
-- **Update cadence:** Periodic (date-stamped snapshots; cadence appears semi-annual based on visible files but not stated explicitly). Email asks for confirmation.
-- **Format note (engineering):** Bulk file is **PDF**. Same blocker as other PDF sources — joins the now-large PDF parser path use-case set.
+- **Status:** ✅ Cleared (Personal-use) — substantive reply received 2026-05-21 from Aircraft Registration Division (AR), Airworthiness and Aircraft Engineering Department (AIR), CAAT
+- **Classification:** Personal-use (non-commercial restriction explicit in reply: "used and shared for your non-commercial project"); attribution required (credit CAAT + reference official website)
+- **Source URL (current):** https://www.caat.or.th/certificates-licenses/aircraft/service-manual/aircraft-registration-application/ (per CAAT 2026-05-21 — they migrated to a new website platform; the prior URL `https://www.caat.or.th/en/certificates-licenses/aircraft/guidance-material/registration-of-an-aircraft/` is superseded)
+- **Bulk download URL:** PDF on date-stamped path under the new platform; filename pattern from recon was `Aircraft-Registration-Information-DD-MMM-YYYY.pdf`. WordPress site. Refresh discovery against the new register page above.
+- **License:** **Personal-use** with attribution — CAAT bilateral grant scoped to non-commercial use; structured bulk formats (CSV/XLSX/JSON) explicitly declined ("currently not available").
+- **Update cadence:** Twice per year, normally **January and June** (per CAAT verbatim).
+- **Format note (engineering):** Bulk file is **PDF**. Joins AESA Spain + CAA Maldives PDF parser path bucket.
 - **Recon depth:** **Two-pass** (per AGENTS recon-first rule). Pass 1: register URL + format + dated-snapshot pattern. Pass 2: data.go.th cross-check (register not catalogued there) + dedicated international-focal-point inbox confirmed.
-- **Permission email:** Sent 2026-05-10 to `inter_focalpoint@caat.or.th` (CAAT international focal point) cc `saraban@caat.or.th` (general saraban / formal correspondence). Phone +66 2 568 8800; address 333/105 Lak Si Plaza, Khamphaeng Phet 6 Rd., Bangkok 10210. Email cited Latvia CAA, Lithuania TKA as peer comparables and explicitly asked for license + refresh-cadence confirmation + structured-format upgrade + offered to coordinate publication on data.go.th. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-10 to `inter_focalpoint@caat.or.th` (CAAT international focal point) cc `saraban@caat.or.th`. Reply received 2026-05-21 from `registration@caat.or.th` (Aircraft Registration Division) cc Chatchai + Aircraft Registration inbox — internal forwarding worked. Template: `docs/agency-permission-request.md`.
+- **Reply (verbatim 2026-05-21, from Aircraft Registration Division (AR), Airworthiness and Aircraft Engineering Department (AIR), CAAT):**
+  > Dear Ashley Childress,
+  > Thank you for your email and for your interest in the Thailand Aircraft Register maintained by the Civil Aviation Authority of Thailand (CAAT). Please find our responses to your inquiries below:
+  > Redistribution Terms
+  > CAAT allows the Thailand Aircraft Register data to be used and shared for your non-commercial project. Please kindly credit the Civil Aviation Authority of Thailand (CAAT) and include a reference to our official website.
+  > Refresh Cadence
+  > In general, the Thailand Aircraft Register is updated twice per year, normally in January and June.
+  > In addition, CAAT has recently migrated to a new website platform. The Thailand Aircraft Register is now available on the following webpage: https://www.caat.or.th/certificates-licenses/aircraft/service-manual/aircraft-registration-application/
+  > Bulk Channel Options
+  > At present, CAAT normally publishes the Thailand Aircraft Register in PDF format only. Structured bulk formats such as CSV, XLSX, or JSON are currently not available.
+  > Permission for Use
+  > CAAT allows the Thailand Aircraft Register data to be used and published on your website/project for reference purposes, provided that CAAT is properly credited as the data source.
+  > Thank you again for your interest and cooperation.
+  > Best Regards,
+  > Aircraft Registration Division (AR)
+  > Airworthiness and Aircraft Engineering Department (AIR)
+  > The Civil Aviation Authority of Thailand (CAAT)
+  > 222 Soi Vibhavadi Rangsit 28, Vibhavadi Rangsit Rd., Khwaeng Chatuchak, Chatuchak, Bangkok Thailand 10900
+  > Website: www.caat.or.th Email: registration@caat.or.th Tel: +66 2 568 8800 Ext. 0501
+- **Attribution text (project use):** "Source: Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th" (per CAAT verbatim direction: credit CAAT + reference official website).
 
 ---
 
@@ -889,8 +924,9 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **License:** Pending verification. No explicit license declaration on the Registry pages. datos.gov.co listing search confirmed: only Aerocivil procurement (SECOP) datasets are surfaced; aircraft register absent.
 - **Update cadence:** TBD (consultation portal presumably current; bulk refresh schedule not relevant absent a bulk channel)
 - **Format note (engineering):** No bulk file exists. If UAEAC reply confirms permission, would require establishing a new export channel via correspondence.
-- **Permission email:** Sent 2026-05-10 to `atencionalciudadano@aerocivil.gov.co` (Citizen Attention; site does not surface a register-specific desk publicly). Phone +57 (601) 425 1000; address Avenida El Dorado 103-15, Bogotá. Email cited Latvia CAA, Lithuania TKA as peer comparables. Follow-up due 2026-06-09 if no reply by then. **Public-record fallback applies after follow-up** (Unknown classification per PRD CC.2). Template: `docs/agency-permission-request.md`.
-- **Reply (verbatim):** _pending_
+- **Permission email:** Sent 2026-05-10 to `atencionalciudadano@aerocivil.gov.co` (Citizen Attention; site does not surface a register-specific desk publicly). Phone +57 (601) 425 1000; address Avenida El Dorado 103-15, Bogotá. Email cited Latvia CAA, Lithuania TKA as peer comparables. Template: `docs/agency-permission-request.md`.
+- **SGDEA case tracking:** SGDEA auto-confirmation received 2026-05-19 from `notificacionsgdea@aerocivil.gov.co` — submission logged in UAEAC's official case-tracking system. **IdControl: `2572836`** / **Radicado: `2026140000074047`**. 9-day delay from send to confirmation is typical for SGDEA processing. Substantive reply still pending. Note: `notificacionsgdea@aerocivil.gov.co` is a one-way judicial-notification mailbox; replies sent there auto-bounce with instructions to use the PQRD portal (https://aerocivilsgdea.com/ControlPQR) or `atencionalciudadano@aerocivil.gov.co`. Any follow-up should reference the radicado number.
+- **Reply (verbatim):** _substantive reply pending; case logged in SGDEA queue with radicado `2026140000074047`_
 
 ---
 
@@ -2562,21 +2598,21 @@ Each entry below has a sanctions / active-conflict exclusion rationale and a doc
 
 Microstates and small jurisdictions without a dedicated civil aviation register authority. These are not sanctions-affected; they simply do not maintain a separate aircraft register that can be ingested.
 
-| Country          | Prefix | Reason                                                                                                                             |
-| ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Andorra          | n/a    | Landlocked microstate; no civil aviation register; aviation activity falls under FR/ES airspace.                                   |
-| Eritrea          | n/a    | No public web presence found for Eritrea Civil Aviation Authority (aviation.gov.er unreachable). Revisit if web presence restored. |
-| Liechtenstein    | HB-    | No own register; civil aviation operates under Switzerland HB- prefix via FOCA/BAZL (already excluded as Personal-use).            |
-| Micronesia (FSM) | V6-    | No dedicated CAA web presence verified; likely under PASO arrangement.                                                             |
-| Monaco           | 3A-    | No own register; aviation under DGAC France 3A- (DGAC France already in flight).                                                   |
-| Nauru            | C2-    | No dedicated CAA; aircraft activity covered under PASO.                                                                            |
-| Niue             | E6-    | New Zealand-associated state; no separate register found.                                                                          |
-| Palau            | T8A-   | Aviation under Bureau of Aviation Palau / Ministry of Public Infrastructure; no separate public register found. PASO arrangement.  |
-| Samoa            | 5W-    | Ministry of Works, Transport and Infrastructure handles aviation but no separate register page found. PASO arrangement.            |
-| Timor-Leste      | n/a    | ANATL is air-navigation-service only; no separate civil aircraft register authority confirmed.                                     |
-| Tonga            | A3-    | No dedicated CAA web presence; PASO arrangement.                                                                                   |
-| Tuvalu           | T2-    | No dedicated CAA; PASO arrangement.                                                                                                |
-| Vatican          | HV-    | HV- prefix historic; no civil aviation activity.                                                                                   |
+| Country          | Prefix | Reason                                                                                                                                                                                      |
+| ---------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Andorra          | n/a    | Landlocked microstate; no civil aviation register; aviation activity falls under FR/ES airspace.                                                                                            |
+| Eritrea          | n/a    | No public web presence found for Eritrea Civil Aviation Authority (aviation.gov.er unreachable). Revisit if web presence restored.                                                          |
+| Liechtenstein    | HB-    | No own register; civil aviation operates under Switzerland HB- prefix via FOCA/BAZL (in scope as Open per bilateral grant 2026-05-22; HB- aircraft surface through the Switzerland source). |
+| Micronesia (FSM) | V6-    | No dedicated CAA web presence verified; likely under PASO arrangement.                                                                                                                      |
+| Monaco           | 3A-    | No own register; aviation under DGAC France 3A- (DGAC France already in flight).                                                                                                            |
+| Nauru            | C2-    | No dedicated CAA; aircraft activity covered under PASO.                                                                                                                                     |
+| Niue             | E6-    | New Zealand-associated state; no separate register found.                                                                                                                                   |
+| Palau            | T8A-   | Aviation under Bureau of Aviation Palau / Ministry of Public Infrastructure; no separate public register found. PASO arrangement.                                                           |
+| Samoa            | 5W-    | Ministry of Works, Transport and Infrastructure handles aviation but no separate register page found. PASO arrangement.                                                                     |
+| Timor-Leste      | n/a    | ANATL is air-navigation-service only; no separate civil aircraft register authority confirmed.                                                                                              |
+| Tonga            | A3-    | No dedicated CAA web presence; PASO arrangement.                                                                                                                                            |
+| Tuvalu           | T2-    | No dedicated CAA; PASO arrangement.                                                                                                                                                         |
+| Vatican          | HV-    | HV- prefix historic; no civil aviation activity.                                                                                                                                            |
 
 **Why excluded as a class:** No registrar = no register to ingest. For PASO-arrangement entries, the PASO permission request (sent 2026-05-11) explicitly asks for forwarding to any per-state CAA that does maintain a separate register.
 
