@@ -35,7 +35,7 @@ If I proceed, I commit to the following:
 Before publishing anything, I respectfully request your guidance on three points:
 
 1. Does {AGENCY_SHORT} permit redistribution of the published register, with attribution, for a non-commercial source-available project?
-2. If yes, is there a specific attribution text {AGENCY*SHORT} would like me to use? (For example: *"Source: {AGENCY*NAME} — {REGISTER_URL}"*.)
+2. If yes, is there a specific attribution text `{AGENCY_SHORT}` would like me to use? (For example: _"Source: `{AGENCY_NAME}` — `{REGISTER_URL}`"_.)
 3. Are there any restrictions, conditions, or formal procedures I should follow?
 
 If {AGENCY_SHORT} would prefer that the project not redistribute the data, I will respect that decision and exclude {COUNTRY} from the project.

@@ -94,7 +94,7 @@ const excelSerialYearOrNull = (value: string): string | null => {
   if (v.length === 0) return null;
   const serial = Number(v);
   if (!Number.isFinite(serial) || serial <= 0) return null;
-  const year = new Date(EXCEL_EPOCH_UTC + Math.round(serial) * MS_PER_DAY).getUTCFullYear();
+  const year = new Date(EXCEL_EPOCH_UTC + Math.trunc(serial) * MS_PER_DAY).getUTCFullYear();
   return year >= 1900 && year <= 2100 ? String(year) : null;
 };
 
