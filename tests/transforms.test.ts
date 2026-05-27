@@ -340,3 +340,24 @@ describe('applyCompound', () => {
       expect(applyCompound('casa_airframe', [])).toBeNull());
   });
 });
+
+describe('excel_serial_year_or_null', () => {
+  it('converts an Excel serial date to its 4-digit year', () =>
+    expect(applyScalar('excel_serial_year_or_null', '40833')).toBe('2011'));
+  it('handles a recent serial', () =>
+    expect(applyScalar('excel_serial_year_or_null', '45469')).toBe('2024'));
+  it('rounds a fractional serial before extracting the year', () =>
+    expect(applyScalar('excel_serial_year_or_null', '42146.99')).toBe('2015'));
+  it('returns null for a blank cell', () =>
+    expect(applyScalar('excel_serial_year_or_null', '   ')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('excel_serial_year_or_null', '')).toBeNull());
+  it('returns null for a non-numeric value', () =>
+    expect(applyScalar('excel_serial_year_or_null', 'B-18001')).toBeNull());
+  it('returns null for a non-positive serial', () => {
+    expect(applyScalar('excel_serial_year_or_null', '0')).toBeNull();
+    expect(applyScalar('excel_serial_year_or_null', '-10')).toBeNull();
+  });
+  it('returns null for a serial whose year falls below the 1900 floor', () =>
+    expect(applyScalar('excel_serial_year_or_null', '1')).toBeNull());
+});

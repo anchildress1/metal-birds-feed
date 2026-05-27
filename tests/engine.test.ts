@@ -1085,3 +1085,107 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     expect(records.has('999')).toBe(false);
   });
 });
+
+const TW_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'tw-caa');
+const TW_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'tw-caa.yaml');
+
+const twFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(TW_FIXTURES, 'input', filename));
+
+let twRecords: Map<string, Aircraft>;
+let twStats: EngineStats;
+
+beforeAll(async () => {
+  const config = loadSourceConfig(TW_CONFIG_PATH);
+  const files = new Map([['register', twFixtureBuffer('register.xls')]]);
+  const result = await translate(config, files);
+  twRecords = result.records;
+  twStats = result.stats;
+});
+
+describe('CAA Taiwan fixture translation (binary .xls)', () => {
+  it('translates 6 aircraft and skips the 6 subtotal/total rows', () => {
+    expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6 });
+    expect(twRecords.size).toBe(6);
+  });
+
+  describe('B-00101 — first aircraft, CAA-operated', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = twRecords.get('B-00101')!;
+    });
+    it('has correct identity', () => {
+      expect(r.source).toBe('tw-caa');
+      expect(r.source_id).toBe('B-00101');
+      expect(r.registration).toBe('B-00101');
+      expect(r.country).toBe('TW');
+    });
+    it('has status=valid (register is a current-fleet snapshot)', () =>
+      expect(r.status).toBe('valid'));
+    it('carries the full free-text model string', () => expect(r.model).toBe('HBC BEECH 350'));
+    it('leaves manufacturer null (not separable from model)', () =>
+      expect(r.manufacturer).toBeNull());
+    it('extracts year_manufactured from the Excel serial date', () =>
+      expect(r.year_manufactured).toBe(2011));
+    it('maps 航空公司 to operator with country=TW and leaves owner null', () => {
+      expect(r.operator.name).toBe('民航局');
+      expect(r.operator.country).toBe('TW');
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+    });
+  });
+
+  describe('B-18001 / B-18002 — China Airlines 777s', () => {
+    it('maps both to the same operator with their own manufacture years', () => {
+      expect(twRecords.get('B-18001')?.operator.name).toBe('中華航空');
+      expect(twRecords.get('B-18001')?.year_manufactured).toBe(2015);
+      expect(twRecords.get('B-18002')?.year_manufactured).toBe(2015);
+    });
+  });
+
+  describe('B-16701 — EVA Air 777', () => {
+    it('maps operator and year', () => {
+      expect(twRecords.get('B-16701')?.operator.name).toBe('長榮航空');
+      expect(twRecords.get('B-16701')?.year_manufactured).toBe(2012);
+    });
+  });
+
+  describe('B-58201 — aircraft with a blank manufacture date', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = twRecords.get('B-58201')!;
+    });
+    it('leaves year_manufactured null when 出廠日期 is blank', () =>
+      expect(r.year_manufactured).toBeNull());
+    it('still records operator and model', () => {
+      expect(r.operator.name).toBe('星宇航空');
+      expect(r.model).toBe('A321neo');
+    });
+  });
+
+  describe('B-94520 — recent balloon', () => {
+    it('extracts the manufacture year from the serial', () =>
+      expect(twRecords.get('B-94520')?.year_manufactured).toBe(2024));
+  });
+
+  it('does not leak subtotal (小計) or grand-total (總計) rows as records', () => {
+    expect(twRecords.has('小計')).toBe(false);
+    expect(twRecords.has('總計')).toBe(false);
+    expect(twRecords.has('')).toBe(false);
+  });
+
+  it('every Taiwan record carries country=TW, operator.country=TW, null owner, and no engine data', () => {
+    for (const r of twRecords.values()) {
+      expect(r.country).toBe('TW');
+      expect(r.operator.country).toBe('TW');
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.engine).toEqual({
+        manufacturer: null,
+        model: null,
+        type: null,
+        count: null,
+        horsepower: null,
+        thrust_lbs: null,
+      });
+    }
+  });
+});

@@ -1,7 +1,8 @@
 import { parse } from 'csv-parse';
 import { readOds } from 'hucre/ods';
 import { readXlsx } from 'hucre/xlsx';
-import type { CellValue, Sheet } from 'hucre';
+import type { Sheet } from 'hucre';
+import * as XLSX from 'xlsx';
 
 export type Row = Record<string, string>;
 
@@ -22,6 +23,13 @@ export interface ParseSpreadsheetOptions {
   // Number of leading rows to discard before parsing. When `columns` overrides the
   // header row, the file's own header row still appears at index 0 and would otherwise
   // be parsed as data; set `skip_rows: 1` to drop it. Defaults to 0.
+  skip_rows?: number;
+}
+
+export interface ParseXlsOptions {
+  trim: boolean;
+  columns?: string[];
+  sheet?: string | number;
   skip_rows?: number;
 }
 
@@ -75,13 +83,54 @@ export async function parseSpreadsheet(
   const sheet = pickSheet(wb.sheets, options.sheet);
   if (!sheet) return [];
 
-  const skipRows = options.skip_rows ?? 0;
-  const rawRows = sheet.rows.slice(skipRows).map((cells) => cells.map((c) => stringifyCell(c)));
-  const trimmed = options.trim ? rawRows.map((cells) => cells.map((c) => c.trim())) : rawRows;
+  const rawRows = sheet.rows.map((cells) => cells.map((c) => stringifyCell(c)));
+  return shapeRows(rawRows, {
+    trim: options.trim,
+    columns: options.columns,
+    skipRows: options.skip_rows ?? 0,
+  });
+}
 
+// Parses legacy binary .xls (BIFF8 / OLE2) via SheetJS — the only maintained reader for the
+// format. hucre handles modern .xlsx/.ods (OOXML/zip) but not the binary container, so this
+// is a separate path. Cells are read raw (numbers stay numeric serials; date interpretation
+// is deferred to per-source transforms) and funneled through the same row-shaping as the
+// hucre path so skip_rows / columns / trim behave identically across spreadsheet formats.
+export function parseXls(buf: Buffer, options: ParseXlsOptions): Row[] {
+  const wb = XLSX.read(buf, { type: 'buffer' });
+  const name = pickXlsSheet(wb.SheetNames, options.sheet);
+  if (name === undefined) return [];
+  const sheet = wb.Sheets[name];
+  if (!sheet) return [];
+
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    raw: true,
+    defval: '',
+    blankrows: false,
+  });
+  const rawRows = aoa.map((cells) => cells.map((c) => stringifyCell(c)));
+  return shapeRows(rawRows, {
+    trim: options.trim,
+    columns: options.columns,
+    skipRows: options.skip_rows ?? 0,
+  });
+}
+
+interface ShapeOptions {
+  trim: boolean;
+  columns?: string[];
+  skipRows: number;
+}
+
+// Shared row-shaping for every spreadsheet path: drop leading rows, optionally trim cells,
+// resolve headers (explicit columns or first non-empty row), and key cells by header.
+const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
+  const sliced = rawRows.slice(options.skipRows);
+  const trimmed = options.trim ? sliced.map((cells) => cells.map((c) => c.trim())) : sliced;
   const { headers, dataRows } = resolveHeadersAndData(trimmed, options.columns);
   return dataRows.map((cells) => headersToRow(headers, cells));
-}
+};
 
 const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet | undefined => {
   if (sheets.length === 0) return undefined;
@@ -90,12 +139,22 @@ const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Shee
   return sheets.find((s) => s.name === selector);
 };
 
-const stringifyCell = (cell: CellValue): string => {
-  if (cell === null) return '';
+const pickXlsSheet = (
+  names: string[],
+  selector: string | number | undefined
+): string | undefined => {
+  if (names.length === 0) return undefined;
+  if (selector === undefined) return names[0];
+  if (typeof selector === 'number') return names[selector];
+  return names.includes(selector) ? selector : undefined;
+};
+
+const stringifyCell = (cell: unknown): string => {
+  if (cell === null || cell === undefined) return '';
   if (typeof cell === 'string') return cell;
+  if (typeof cell === 'number' || typeof cell === 'boolean') return String(cell);
   if (cell instanceof Date) return cell.toISOString();
-  // CellValue is `string | number | boolean | Date | null` — only number/boolean remain.
-  return String(cell);
+  return '';
 };
 
 const isNonEmptyRow = (cells: string[]): boolean => cells.some((c) => c.length > 0);

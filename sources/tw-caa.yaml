@@ -1,0 +1,178 @@
+id: tw-caa
+label: CAA Taiwan National Aircraft Register
+country: TW
+encoding: utf8
+trim_all: true
+
+download:
+  # discover_url + discover_pattern do the real work. The monthly .xls file id rolls
+  # non-sequentially each month (Jan id=40268 … Apr id=40622) and the newest file is listed
+  # first on the year page, so the pattern captures the first match. `url` is only a
+  # schema-required fallback — it is never fetched while discover_* is set.
+  #
+  # ANNUAL BUMP: discover_url is pinned to the ROC-year-115 (2026) listing page. When ROC
+  # year 116 (2027) opens its own article id, bump discover_url to that page. This is
+  # inherent to the CAA site structure — each calendar year gets a fresh article page.
+  url: https://www.caa.gov.tw/article.aspx?a=4499&lang=1
+  format: file
+  discover_url: https://www.caa.gov.tw/article.aspx?a=4499&lang=1
+  discover_pattern: '(\.\./FileAtt\.ashx\?lang=1&id=\d+)'
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    register: register.xls
+
+primary: register
+delimiter: ','
+format: xls
+
+# The published .xls carries three preamble rows (title, cut-off date, Chinese header)
+# before the first aircraft row. Blank rows are dropped at parse, so the preamble is exactly
+# three rows; skip them and supply ASCII column names positionally (the file's own header is
+# Traditional Chinese). The data sheet "一覽表" is sheet 0, so no `sheet` selector is needed.
+skip_rows: 3
+columns:
+  register:
+    - seq
+    - operator
+    - registration
+    - model
+    - mfg_date
+    - age_years
+    - avg_age
+    - count
+
+# 機號 (the B- mark) is unique per aircraft and the canonical id. Per-operator subtotal
+# (小計) and grand-total (總計) rows carry no 機號, so they fall to the missing-source-id
+# path and are bounded below: `seq` holds 小計/總計 on exactly those rows. `max` is a
+# generous safety ceiling (one 小計 per operator + one 總計); the pattern is the real gate —
+# any other id-less row fails the run rather than being silently skipped.
+source_id: registration
+registration: registration
+
+allowed_missing_source_id_rows:
+  max: 80
+  field: seq
+  pattern: '^(小計|總計)$'
+
+mapping:
+  registration:
+    field: registration
+    transform: trim_or_null
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # The register is a current-fleet snapshot — cancelled/deregistered aircraft never appear,
+  # so every listed row is active. Same posture as CAA Latvia.
+  status:
+    constant: valid
+
+  country:
+    constant: TW
+
+  # 機型 combines manufacturer and model in one free-text column ("HBC BEECH 350",
+  # "B777-300ER", "Ultramagic-F45") with no reliable separator, so manufacturer stays null
+  # and model carries the full string — same honest posture as CAA Latvia's single Model
+  # column.
+  manufacturer:
+    constant: ~
+
+  model:
+    field: model
+    transform: trim_or_null
+
+  serial_number:
+    constant: ~
+
+  # 出廠日期 publishes the full manufacture date as an Excel serial; the canonical schema
+  # stores only the year, so extract it. Full-date fidelity would require a schema field that
+  # does not exist yet.
+  year_manufactured:
+    field: mfg_date
+    transform: excel_serial_year_or_null
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # The register publishes 航空公司 (the operating airline), not the registered owner, so it
+  # maps to operator.* and owner.* stays null. operator.country is TW (national register).
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: operator
+    transform: trim_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: TW
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~

@@ -9,6 +9,7 @@ export type ScalarTransformName =
   | 'date_yyyy_slash_or_null'
   | 'date_dd_slash_or_null'
   | 'iso_date_only_or_null'
+  | 'excel_serial_year_or_null'
   | 'mph_to_ktas_or_null'
   | 'binary_to_hex_or_null'
   | 'faa_n_number'
@@ -57,7 +58,7 @@ export interface AllowedMissingSourceIdRowsConfig {
   pattern: string;
 }
 
-export type SourceFormat = 'csv' | 'ods' | 'xlsx';
+export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls';
 
 export interface SourceConfig {
   id: string;

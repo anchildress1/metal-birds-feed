@@ -33,6 +33,7 @@
     "hucre": "^0.5.0",
     "js-yaml": "^4.1.1",
     "unzipper": "^0.12.3",
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz",
     "zod": "^4.4.2"
   }
 }
