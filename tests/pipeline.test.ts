@@ -6,6 +6,8 @@ const mockDownload = vi.hoisted(() => vi.fn());
 const mockTranslate = vi.hoisted(() => vi.fn());
 const mockR2Write = vi.hoisted(() => vi.fn());
 const mockR2Constructor = vi.hoisted(() => vi.fn());
+const mockReadState = vi.hoisted(() => vi.fn());
+const mockWriteState = vi.hoisted(() => vi.fn());
 const mockLog = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
@@ -19,6 +21,8 @@ vi.mock('../src/writer.js', () => ({
     }
 
     write = mockR2Write;
+    readState = mockReadState;
+    writeState = mockWriteState;
   },
 }));
 
@@ -56,6 +60,8 @@ beforeEach(() => {
   mockTranslate.mockReset();
   mockR2Write.mockReset();
   mockR2Constructor.mockReset();
+  mockReadState.mockReset();
+  mockWriteState.mockReset();
   mockLog.mockReset();
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
@@ -64,7 +70,15 @@ beforeEach(() => {
     records: new Map(),
     stats: { total: 1, ok: 1, failed: 0 },
   });
-  mockR2Write.mockResolvedValue({ put: 0, deleted: 0, skipped: 0 });
+  mockR2Write.mockResolvedValue({
+    put: 0,
+    deleted: 0,
+    skipped: 0,
+    changed: false,
+    record_count: 0,
+  });
+  mockReadState.mockResolvedValue(null);
+  mockWriteState.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -83,7 +97,7 @@ describe('run', () => {
     expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa');
   });
 
-  it('aborts before constructing the writer when any row fails translation', async () => {
+  it('aborts write when any row fails translation', async () => {
     mockTranslate.mockResolvedValueOnce({
       records: new Map(),
       stats: { total: 10, ok: 9, failed: 1 },
@@ -91,7 +105,35 @@ describe('run', () => {
 
     await expect(run('faa')).rejects.toThrow(/aborting write/i);
 
-    expect(mockR2Constructor).not.toHaveBeenCalled();
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('skips download and write when cadence check says not due', async () => {
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({
+      ...CONFIG,
+      cadence_days: 30,
+    });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(true);
+    expect(mockDownload).not.toHaveBeenCalled();
+    expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('proceeds with download when cadence state is null (first run)', async () => {
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce(null);
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledOnce();
+    expect(mockR2Write).toHaveBeenCalledOnce();
   });
 });

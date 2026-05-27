@@ -302,6 +302,49 @@ describe('R2DiffWriter — dry run', () => {
     consoleSpy.mockRestore();
   });
 
+  it('changed is true when at least one record is written', async () => {
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]);
+    const stats = await writer.write(records, 'faa');
+    expect(stats.changed).toBe(true);
+  });
+
+  it('changed is false when no records differ', async () => {
+    const r1 = makeAircraft('id001', 'N12345', 'a4e294');
+    mockSend.mockResolvedValueOnce(
+      manifestResponse({
+        id001: { hash: contentHash(r1), icao_hex: 'a4e294', registration: 'N12345' },
+      })
+    );
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const stats = await writer.write(new Map([['id001', r1]]), 'faa');
+    expect(stats.changed).toBe(false);
+  });
+
+  it('changed is true when a record is deleted', async () => {
+    const r1 = makeAircraft('id001', 'N12345', null);
+    mockSend.mockResolvedValueOnce(
+      manifestResponse({
+        id001: { hash: contentHash(r1), icao_hex: null, registration: 'N12345' },
+        id999: { hash: 'gone', icao_hex: null, registration: 'NGONE' },
+      })
+    );
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const stats = await writer.write(new Map([['id001', r1]]), 'faa');
+    expect(stats.changed).toBe(true);
+    expect(stats.deleted).toBe(1);
+  });
+
+  it('record_count equals number of records passed in', async () => {
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const records = new Map([
+      ['id001', makeAircraft('id001', 'N12345', null)],
+      ['id002', makeAircraft('id002', 'N67890', null)],
+    ]);
+    const stats = await writer.write(records, 'faa');
+    expect(stats.record_count).toBe(2);
+  });
+
   it('total of put + skipped equals record count', async () => {
     const r1 = makeAircraft('id001', 'N12345', 'a4e294');
     const r2 = makeAircraft('id002', 'N67890', null);
@@ -545,6 +588,77 @@ describe('R2DiffWriter — worker pool', () => {
 
     expect(stats.put).toBe(0);
     expect(stats.skipped).toBe(1);
+  });
+});
+
+describe('R2DiffWriter — state management', () => {
+  it('readState returns null for NoSuchKey', async () => {
+    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const state = await writer.readState('faa');
+    expect(state).toBeNull();
+  });
+
+  it('readState returns null for empty body', async () => {
+    mockSend.mockResolvedValueOnce({ Body: { transformToString: vi.fn().mockResolvedValue('') } });
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    expect(await writer.readState('faa')).toBeNull();
+  });
+
+  it('readState returns parsed state when key exists', async () => {
+    const stored = {
+      last_run: '2026-01-01T00:00:00.000Z',
+      last_content_change: '2026-01-01T00:00:00.000Z',
+      record_count: 500,
+    };
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: vi.fn().mockResolvedValue(JSON.stringify(stored)) },
+    });
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const state = await writer.readState('faa');
+    expect(state).toEqual(stored);
+  });
+
+  it('readState returns null for malformed state JSON', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: vi.fn().mockResolvedValue('{"bad":"schema"}') },
+    });
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    expect(await writer.readState('faa')).toBeNull();
+  });
+
+  it('readState rethrows non-NoSuchKey errors', async () => {
+    mockSend.mockRejectedValueOnce(new Error('AccessDenied'));
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    await expect(writer.readState('faa')).rejects.toThrow('AccessDenied');
+  });
+
+  it('writeState puts the state object at the correct key', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    const state = {
+      last_run: '2026-05-01T06:00:00.000Z',
+      last_content_change: '2026-04-01T06:00:00.000Z',
+      record_count: 999,
+    };
+    await writer.writeState('tw-caa', state);
+
+    const putCalls = mockSend.mock.calls
+      .map((c) => c[0] as { _type: string; a: { Key: string; Body?: string } })
+      .filter((c) => c._type === 'put');
+    const statePut = putCalls.find((c) => c.a.Key === 'aircraft/_state/tw-caa.json');
+    expect(statePut).toBeDefined();
+    expect(JSON.parse(statePut?.a.Body ?? '{}')).toEqual(state);
+  });
+
+  it('writeState is a no-op in dry-run mode', async () => {
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    await writer.writeState('faa', {
+      last_run: '2026-01-01T00:00:00.000Z',
+      last_content_change: '2026-01-01T00:00:00.000Z',
+    });
+    const putCalls = mockSend.mock.calls.filter((c) => (c[0] as { _type: string })._type === 'put');
+    expect(putCalls).toHaveLength(0);
   });
 });
 

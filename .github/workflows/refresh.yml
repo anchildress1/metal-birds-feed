@@ -2,7 +2,7 @@ name: Registry Refresh
 
 on:
   schedule:
-    - cron: '0 6 1 * *' # 1st of every month at 06:00 UTC
+    - cron: '0 6 * * *' # daily at 06:00 UTC; per-source cadence_days gates actual work
   workflow_dispatch:
     inputs:
       source:
@@ -50,6 +50,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      issues: write
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +82,8 @@ jobs:
           MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
           REFRESH_SOURCE: ${{ matrix.source }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: bun run dist/pipeline.js
 
       - name: Upload refresh logs

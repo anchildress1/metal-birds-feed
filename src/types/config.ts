@@ -78,5 +78,6 @@ export interface SourceConfig {
   source_id: string;
   source_id_transform?: ScalarTransformName;
   registration: string;
+  cadence_days?: number;
   mapping: Record<string, FieldMapping>;
 }
