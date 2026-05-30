@@ -39,6 +39,27 @@ Additional Terms
    "Based on original work by Ashley Childress —
    see https://github.com/anchildress1/metal-birds-feed."
 
+4. Upstream Data Compliance.
+   This project ingests data published by national civil aviation authorities
+   in multiple jurisdictions. Each such jurisdiction may impose data-use,
+   redistribution, privacy, or other legal obligations on downstream users.
+   The license research documented in DATA_LICENSES.md and
+   docs/license-matrix.md is provided in good faith as informational context
+   only. It does not constitute legal advice and carries no guarantee of
+   completeness, accuracy, or continued validity. You are solely responsible
+   for assessing and satisfying the data-use obligations of every jurisdiction
+   whose data you ingest.
+
+5. No Liability for Data Compliance.
+   To the maximum extent permitted by applicable law, Ashley Childress shall
+   not be liable for any claim, loss, damage, or legal consequence arising
+   from your failure to comply with: (a) upstream data-use terms imposed by
+   any civil aviation authority or data publisher; (b) national data-protection,
+   privacy, or aviation law; or (c) any third-party intellectual property rights
+   in upstream source data. This limitation applies regardless of whether such
+   liability is asserted in contract, tort, or any other legal theory, and
+   whether or not you were advised of the possibility of such loss or damage.
+
 ---
 
 No Warranty

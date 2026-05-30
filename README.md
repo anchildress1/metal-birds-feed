@@ -403,6 +403,16 @@ The material has been changed: FOCA aircraft records are normalized into metal-b
 
 ---
 
+## Legal Notice
+
+- **No liability transfer.** Using, forking, or deploying this repository does not transfer liability to the maintainer. Each operator is solely responsible for their own deployment and its consequences.
+- **Per-country compliance is the operator's responsibility.** This project ingests data from civil aviation authorities in multiple jurisdictions. Each imposes its own data-use, redistribution, and privacy obligations. Operators must independently assess and satisfy those obligations.
+- **Research is informational, not legal advice.** The license classifications and permissions in `DATA_LICENSES.md` and `docs/license-matrix.md` reflect good-faith research at a point in time. They are not legal advice and carry no guarantee of completeness, accuracy, or continued validity.
+- **Upstream terms change without notice.** Agencies amend terms, withdraw permissions, or restructure publication channels. Operators are responsible for monitoring those changes.
+- **No warranty.** The data pipeline, its output, and the license research are provided as-is. See the `No Warranty` section of the [LICENSE](LICENSE).
+
+---
+
 ## Adding a New Registry Source
 
 [AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
