@@ -397,7 +397,7 @@ The material has been changed: CAAT aircraft records are normalized into metal-b
 
 Source: Federal Office of Civil Aviation (FOCA) — [bazl.admin.ch](https://www.bazl.admin.ch). Register search app: https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search.
 
-Licensed under Open with attribution — per FOCA legal department, "registry is available for the public anyway" with no restrictions, conditions, or formal procedures. Attribution is provided as a courtesy (FOCA legal indicated "a notification of the source would be adequate"). Switzerland HB- includes Liechtenstein aircraft, which surface through this source.
+Licensed under Open — per FOCA legal department, "registry is available for the public anyway" with no restrictions, conditions, or formal procedures. Attribution is provided as a courtesy (FOCA legal indicated "a notification of the source would be adequate"). Switzerland HB- includes Liechtenstein aircraft, which surface through this source.
 
 The material has been changed: FOCA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by FOCA.
 
