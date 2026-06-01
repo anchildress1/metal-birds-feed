@@ -1092,18 +1092,17 @@ const TW_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'tw-caa.yam
 const twFixtureBuffer = (filename: string): Buffer =>
   readFileSync(resolve(TW_FIXTURES, 'input', filename));
 
-let twRecords: Map<string, Aircraft>;
-let twStats: EngineStats;
-
-beforeAll(async () => {
-  const config = loadSourceConfig(TW_CONFIG_PATH);
-  const files = new Map([['register', twFixtureBuffer('register.xls')]]);
-  const result = await translate(config, files);
-  twRecords = result.records;
-  twStats = result.stats;
-});
-
 describe('CAA Taiwan fixture translation (binary .xls)', () => {
+  let twRecords: Map<string, Aircraft>;
+  let twStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(TW_CONFIG_PATH);
+    const files = new Map([['register', twFixtureBuffer('register.xls')]]);
+    const result = await translate(config, files);
+    twRecords = result.records;
+    twStats = result.stats;
+  });
   it('translates 6 aircraft and skips the 6 subtotal/total rows', () => {
     expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6 });
     expect(twRecords.size).toBe(6);

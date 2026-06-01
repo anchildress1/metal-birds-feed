@@ -79,16 +79,16 @@ const isoDateOnlyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(head.slice(0, 4), head.slice(5, 7), head.slice(8, 10));
 };
 
-// Excel serial date epoch. Excel day 0 is 1899-12-30 (not 1899-12-31) because Excel
-// treats 1900 as a leap year; anchoring two days early makes every serial for a date
-// on/after 1900-03-01 resolve correctly, which covers all aircraft manufacture dates.
+// Excel day 0 is 1899-12-30 rather than 1899-12-31 to absorb the phantom leap day
+// (Excel serial 60 = Feb 29, 1900, which never existed). Anchoring two days before
+// 1900-01-01 makes all serials >= 61 (1900-03-01+) resolve correctly, which covers
+// all aircraft manufacture dates.
 const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
 const MS_PER_DAY = 86_400_000;
 
-// Converts an Excel serial date (as published in the CAA Taiwan .xls manufacture-date
-// column) to a 4-digit year. The canonical schema stores only year_manufactured, so the
-// day/month are intentionally not preserved. Returns null for blank/non-numeric cells or
-// years outside a sane 1900–2100 window.
+// Converts an Excel serial date to a 4-digit year. The canonical schema stores only
+// year_manufactured, so day/month are intentionally not preserved. Returns null for
+// blank/non-numeric cells or years outside the sane 1900–2100 window.
 const excelSerialYearOrNull = (value: string): string | null => {
   const v = value.trim();
   if (v.length === 0) return null;

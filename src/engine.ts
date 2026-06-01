@@ -8,7 +8,7 @@ import { log } from './logger.js';
 // Dispatches the primary-file parse based on `config.format`. CSV is the existing path;
 // `ods`/`xlsx` route to the hucre spreadsheet parser; legacy binary `xls` routes to the
 // SheetJS-backed parser. Joins always read CSV — sources that need spreadsheet joins do not
-// exist yet, and each parser is gated behind one call site so the extension stays localized.
+// exist yet.
 const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
   if (config.format === 'csv') {
     return parseCSV(buf, {
