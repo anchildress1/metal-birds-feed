@@ -51,6 +51,11 @@ FAA's first load doesn't fit GHA's 30-minute job cap, so it's run once locally �
 below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and don't
 need a local bootstrap.
 
+> [!NOTE]
+> **One-time billing.** Bootstrapping all live sources in one pass exceeds the 1 M Class A
+> operations included in Cloudflare's free tier — expect a one-time charge of roughly **~$5-10 USD**.
+> Steady-state monthly diffs stay well inside the free tier (~10k ops/source/month).
+
 ## Initial Load (Bootstrap)
 
 The first FAA load against an empty R2 bucket writes ~312k records × 3 index paths,
