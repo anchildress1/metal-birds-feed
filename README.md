@@ -420,14 +420,14 @@ The material has been changed: FOCA aircraft records are normalized into metal-b
 1. Classify the license under PRD CC.1 (Open / Personal-use / Restrictive / Unknown). Restrictive sources are excluded.
 2. For Personal-use or Unknown sources, send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)). The 30-day public-record fallback applies to Unknown only — Personal-use needs an affirmative reply (silence ≠ permission). Record outcome in `DATA_LICENSES.md`.
 3. New source onboarding touches **all five surfaces** or the source is incomplete:
-   - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
+   - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
    - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
    - `DATA_LICENSES.md` — classification, permitted uses, attribution wording, reply text (verbatim).
    - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
    - `docs/license-matrix.md` summary row — same alphabetical order.
 4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
 
-The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms).
+The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms).
 
 ## License
 

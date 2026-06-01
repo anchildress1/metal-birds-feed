@@ -53,7 +53,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 ## Engine extension points (use, don't reinvent)
 
-- Spreadsheet sources: `format: csv|ods|xlsx` in source YAML. `csv` → `csv-parse`; `ods`/`xlsx` → `hucre`.
+- Spreadsheet sources: `format: csv|ods|xlsx|xls` in source YAML. `csv` → `csv-parse`; `ods`/`xlsx` → `hucre`; `xls` → `xlsx`.
 - Filename rolling (date-stamped bulk URLs): `download.discover_url` + `download.discover_pattern` (regex, one capture group; captured URL resolved against `discover_url` as base).
 - Single-file (non-zip) download: `download.format: file` with exactly one `entries` alias.
 - Banner/metadata rows that aren't real records: `source_id_transform` returning `null` for non-records; pair with `allowed_missing_source_id_rows` to bound skip.
