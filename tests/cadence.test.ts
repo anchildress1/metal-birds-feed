@@ -52,6 +52,14 @@ describe('shouldSkip', () => {
     const state = makeState(0.5, 0.5);
     expect(shouldSkip(state, 1, new Date())).toBe(true);
   });
+
+  it('returns true when last_run is in the future (clock skew permanently suppresses until that date passes)', () => {
+    const state: SourceState = {
+      last_run: new Date(Date.now() + 10 * DAY_MS).toISOString(),
+      last_content_change: new Date().toISOString(),
+    };
+    expect(shouldSkip(state, 30, new Date())).toBe(true);
+  });
 });
 
 describe('isOverdue', () => {

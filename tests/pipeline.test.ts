@@ -163,6 +163,37 @@ describe('run', () => {
 });
 
 describe('main', () => {
+  it('opens a staleness issue when source is overdue and token is present', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const oldChange = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    const recentRun = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({ last_run: recentRun, last_content_change: oldChange });
+    mockR2Write.mockResolvedValueOnce({
+      put: 0,
+      deleted: 0,
+      skipped: 0,
+      changed: false,
+      record_count: 0,
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) }) // list open issues
+      .mockResolvedValueOnce({ ok: true }); // create issue
+    vi.stubGlobal('fetch', fetchMock);
+
+    await main();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+    const body = JSON.parse(createCall.body as string) as { title: string; labels: string[] };
+    expect(body.labels).toContain('data-staleness');
+    expect(body.title).toContain('[staleness] faa');
+  });
+
   it('does not mutate GitHub staleness issues during dry-run', async () => {
     const staleTimestamp = new Date(Date.now() - 60 * 86_400_000).toISOString();
     const fetchMock = vi.fn();

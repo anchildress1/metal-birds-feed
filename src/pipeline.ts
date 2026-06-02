@@ -156,10 +156,13 @@ const closeStalenessIssues = async (source: string, token: string, repo: string)
   const listRes = await fetch(`${apiBase}/issues?labels=data-staleness&state=open&per_page=100`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
   });
-  if (!listRes.ok) return;
+  if (!listRes.ok) {
+    log('error', 'staleness_close_list_failed', { source, status: listRes.status });
+    return;
+  }
   const issues = (await listRes.json()) as Array<{ number: number; title: string }>;
   const matching = issues.filter((i) => i.title.includes(`[staleness] ${source}`));
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     matching.map((i) =>
       fetch(`${apiBase}/issues/${i.number}`, {
         method: 'PATCH',
@@ -172,6 +175,15 @@ const closeStalenessIssues = async (source: string, token: string, repo: string)
       })
     )
   );
+  for (const r of results) {
+    if (r.status === 'rejected')
+      log('error', 'staleness_close_failed', {
+        source,
+        msg: r.reason instanceof Error ? r.reason.message : String(r.reason),
+      });
+    else if (!r.value.ok)
+      log('error', 'staleness_close_failed', { source, status: r.value.status });
+  }
 };
 
 export async function main(): Promise<void> {
@@ -204,7 +216,13 @@ export async function main(): Promise<void> {
       const repo = process.env['GITHUB_REPOSITORY'];
       if (!dryRun && !skipped && new_state && token && repo) {
         const changed = new_state.last_content_change === new_state.last_run;
-        if (changed) await closeStalenessIssues(source, token, repo).catch(() => undefined);
+        if (changed)
+          await closeStalenessIssues(source, token, repo).catch((err) =>
+            log('error', 'staleness_close_error', {
+              source,
+              msg: err instanceof Error ? err.message : String(err),
+            })
+          );
       }
     }
   }

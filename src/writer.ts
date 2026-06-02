@@ -384,6 +384,10 @@ export class R2DiffWriter {
       return parsed.success ? parsed.data : null;
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
+      log('error', 'state_load_failed', {
+        source,
+        msg: err instanceof Error ? err.message : String(err),
+      });
       throw err;
     }
   }

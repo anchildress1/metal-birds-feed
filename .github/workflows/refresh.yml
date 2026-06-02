@@ -16,6 +16,10 @@ on:
         type: choice
         options: ['false', 'true']
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   discover:
     runs-on: ubuntu-latest
