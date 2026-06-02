@@ -3,6 +3,7 @@ label: CAA Latvia Civil Aircraft Register
 country: LV
 encoding: utf8
 trim_all: true
+cadence_days: 30
 
 download:
   url: https://data.gov.lv/dati/dataset/3f67abc8-f8b7-4833-a2e2-9a304df06afd/resource/dbde00e6-8616-449a-8cac-ef748c6793f3/download/output.csv

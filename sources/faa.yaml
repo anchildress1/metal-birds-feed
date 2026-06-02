@@ -3,6 +3,7 @@ label: FAA U.S. Civil Aircraft Registry
 country: US
 encoding: latin1
 trim_all: true
+cadence_days: 30
 
 download:
   url: https://registry.faa.gov/database/ReleasableAircraft.zip

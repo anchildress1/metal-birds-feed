@@ -3,6 +3,9 @@ label: Netherlands ILT Civil Aircraft Register
 country: NL
 encoding: utf8
 trim_all: true
+# cadence_days intentionally absent: ILT publishes on an irregular schedule
+# (continuous-to-monthly, no fixed date). Running daily and letting the content-hash
+# diff detect actual changes is correct — guessing a cadence window would miss updates.
 format: ods
 sheet: 0
 # ILT's first sheet ships with annotated headers like
