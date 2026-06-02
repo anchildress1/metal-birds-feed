@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { translate } from '../src/engine.js';
+import { translate, contentHash } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceConfig } from '../src/types/config.js';
@@ -819,6 +819,78 @@ describe('engine — negative and edge cases', () => {
     ]);
     const { records: r } = await translate(modConfig, files);
     expect(r.get('00001001')?.operational_classes).toEqual(['V']);
+  });
+
+  it('throws when the primary file is absent from the files map', async () => {
+    const config = loadSourceConfig(CONFIG_PATH);
+    const files = new Map([
+      ['acftref', fixtureBuffer('ACFTREF.txt')],
+      ['engine', fixtureBuffer('ENGINE.txt')],
+    ]);
+    await expect(translate(config, files)).rejects.toThrow(
+      'Primary file "master" not found in downloaded files'
+    );
+  });
+
+  it('throws when a join file is absent from the files map', async () => {
+    const config = loadSourceConfig(CONFIG_PATH);
+    await expect(
+      translate(config, new Map([['master', fixtureBuffer('MASTER.txt')]]))
+    ).rejects.toThrow('Join file');
+  });
+
+  it('num() returns null when the constant value is not a number', async () => {
+    const config = loadSourceConfig(CONFIG_PATH);
+    const modConfig = {
+      ...config,
+      mapping: { ...config.mapping, year_manufactured: { constant: 'not-a-number' } },
+    };
+    const files = new Map([
+      ['master', fixtureBuffer('MASTER.txt')],
+      ['acftref', fixtureBuffer('ACFTREF.txt')],
+      ['engine', fixtureBuffer('ENGINE.txt')],
+    ]);
+    const { records: r, stats } = await translate(modConfig, files);
+    expect(stats.failed).toBe(0);
+    expect(r.get('00001001')?.year_manufactured).toBeNull();
+  });
+
+  it('resolveCompound applies lookup to the compound-transformed result', async () => {
+    const config = loadSourceConfig(TC_CONFIG_PATH);
+    // TC's airframe_type uses tc_airframe compound transform but no lookup.
+    // Adding a lookup exercises the resolveCompound → resolveLookup path (engine.ts line 206).
+    const modConfig = {
+      ...config,
+      mapping: {
+        ...config.mapping,
+        airframe_type: {
+          ...config.mapping['airframe_type'],
+          lookup: { 'fixed-wing-single-engine': 'fixed-wing' },
+        },
+      },
+    };
+    const files = new Map([
+      ['carscurr', tcFixtureBuffer('carscurr.txt')],
+      ['carsownr', tcFixtureBuffer('carsownr.txt')],
+    ]);
+    const { records: r } = await translate(modConfig, files);
+    // AAC: Aeroplane + 1 engine → tc_airframe → 'fixed-wing-single-engine' → lookup → 'fixed-wing'
+    expect(r.get('AAC')?.airframe_type).toBe('fixed-wing');
+  });
+});
+
+describe('contentHash', () => {
+  it('returns a 16-character lowercase hex string', () => {
+    expect(contentHash(records.get('00001001')!)).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('is deterministic for the same record content', () => {
+    const r = records.get('00001001')!;
+    expect(contentHash(r)).toBe(contentHash({ ...r }));
+  });
+
+  it('produces a different digest for distinct records', () => {
+    expect(contentHash(records.get('00001001')!)).not.toBe(contentHash(records.get('00002002')!));
   });
 });
 
