@@ -167,7 +167,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R2.5 NL field-coverage parity.** Document fields ILT does not provide. Null-rather-than-invent rule unchanged.
 
-**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`. Implementation uses a single library that handles both ODS and XLSX (SheetJS / `xlsx` package is the current candidate; final selection happens at code time per the standing "verify latest LTS recommendation before adding a dependency" rule). The engine's row-translation logic stays format-agnostic — only the parser dispatch is new.
+**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`; CAA Taiwan publishes legacy binary `.xls`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`, `xls`. Implementation uses `hucre` for ODS/XLSX and SheetJS for legacy XLS. The engine's row-translation logic stays format-agnostic — only the parser dispatch is new.
 
 **R2.7 Filename discovery (NL-specific).** ILT's bulk download URL embeds the file's publication date (e.g. `luchtvaartuigregister-ilt-datas2-2026-04-28.ods`), which changes every refresh. Downloader gains a small "discovery" step for sources that declare `download.discover_url:` — fetch the index page, regex out the latest data-file URL, then download. NL is the first source to use this; future sources with the same pattern reuse it.
 

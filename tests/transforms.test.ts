@@ -360,4 +360,8 @@ describe('excel_serial_year_or_null', () => {
   });
   it('returns null for a serial whose year falls below the 1900 floor', () =>
     expect(applyScalar('excel_serial_year_or_null', '1')).toBeNull());
+  it('resolves the phantom Excel leap day (serial 60) to year 1900', () =>
+    expect(applyScalar('excel_serial_year_or_null', '60')).toBe('1900'));
+  it('returns null for a serial whose year exceeds the 2100 ceiling', () =>
+    expect(applyScalar('excel_serial_year_or_null', '100000')).toBeNull());
 });

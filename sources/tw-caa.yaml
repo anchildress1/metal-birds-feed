@@ -11,8 +11,15 @@ download:
   # schema-required fallback — it is never fetched while discover_* is set.
   #
   # ANNUAL BUMP: discover_url is pinned to the ROC-year-115 (2026) listing page. When ROC
-  # year 116 (2027) opens its own article id, bump discover_url to that page. This is
-  # inherent to the CAA site structure — each calendar year gets a fresh article page.
+  # year 116 (2027) opens its own article id, bump both `url` and `discover_url` to that
+  # page — they must stay in sync. Inherent to the CAA site structure; each calendar year
+  # gets a fresh article page.
+  #
+  # NOTE: discover_pattern captures a relative `../FileAtt.ashx?...` URL. `new URL()` in
+  # downloader.ts resolves it against discover_url, which works because `..` from the
+  # `/article.aspx` path segment climbs to the root, landing on the correct endpoint.
+  # If CAA ever adds a path segment to the listing URL (e.g. /en/article.aspx), this
+  # resolution silently breaks — verify the resolved URL after any structure change.
   url: https://www.caa.gov.tw/article.aspx?a=4499&lang=1
   format: file
   discover_url: https://www.caa.gov.tw/article.aspx?a=4499&lang=1
@@ -68,7 +75,7 @@ mapping:
     constant: ~
 
   # The register is a current-fleet snapshot — cancelled/deregistered aircraft never appear,
-  # so every listed row is active. Same posture as CAA Latvia.
+  # so every listed row is active.
   status:
     constant: valid
 
@@ -77,8 +84,7 @@ mapping:
 
   # 機型 combines manufacturer and model in one free-text column ("HBC BEECH 350",
   # "B777-300ER", "Ultramagic-F45") with no reliable separator, so manufacturer stays null
-  # and model carries the full string — same honest posture as CAA Latvia's single Model
-  # column.
+  # and model carries the full string.
   manufacturer:
     constant: ~
 

@@ -13,10 +13,10 @@ export interface ParseOptions {
   columns?: string[];
 }
 
-export type SpreadsheetFormat = 'ods' | 'xlsx';
+// hucre handles modern .ods/.xlsx (OOXML/zip); xls routes to a separate SheetJS path.
+export type HucreFormat = 'ods' | 'xlsx';
 
-export interface ParseSpreadsheetOptions {
-  format: SpreadsheetFormat;
+interface BaseSpreadsheetOptions {
   trim: boolean;
   columns?: string[];
   sheet?: string | number;
@@ -26,12 +26,11 @@ export interface ParseSpreadsheetOptions {
   skip_rows?: number;
 }
 
-export interface ParseXlsOptions {
-  trim: boolean;
-  columns?: string[];
-  sheet?: string | number;
-  skip_rows?: number;
+export interface ParseSpreadsheetOptions extends BaseSpreadsheetOptions {
+  format: HucreFormat;
 }
+
+export type ParseXlsOptions = BaseSpreadsheetOptions;
 
 // Headers are normalized (trimmed) when inferred from the first row, because registry CSVs
 // (FAA, in particular) ship column names with trailing whitespace, which silently breaks every
@@ -91,17 +90,16 @@ export async function parseSpreadsheet(
   });
 }
 
-// Parses legacy binary .xls (BIFF8 / OLE2) via SheetJS — the only maintained reader for the
-// format. hucre handles modern .xlsx/.ods (OOXML/zip) but not the binary container, so this
-// is a separate path. Cells are read raw (numbers stay numeric serials; date interpretation
-// is deferred to per-source transforms) and funneled through the same row-shaping as the
-// hucre path so skip_rows / columns / trim behave identically across spreadsheet formats.
-export function parseXls(buf: Buffer, options: ParseXlsOptions): Row[] {
+// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS — the only maintained reader
+// for the format. hucre handles modern .xlsx/.ods (OOXML/zip) but not the binary container.
+// Cells are read raw (numbers stay numeric serials; date interpretation is deferred to
+// per-source transforms) and funneled through the same row-shaping as the hucre path so
+// skip_rows / columns / trim behave identically across spreadsheet formats.
+// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
+export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
   const wb = XLSX.read(buf, { type: 'buffer' });
   const name = pickXlsSheet(wb.SheetNames, options.sheet);
-  if (name === undefined) return [];
   const sheet = wb.Sheets[name];
-  if (!sheet) return [];
 
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
@@ -123,8 +121,7 @@ interface ShapeOptions {
   skipRows: number;
 }
 
-// Shared row-shaping for every spreadsheet path: drop leading rows, optionally trim cells,
-// resolve headers (explicit columns or first non-empty row), and key cells by header.
+// Shared row-shaping so hucre and SheetJS paths produce identical Row[] output.
 const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
   const sliced = rawRows.slice(options.skipRows);
   const trimmed = options.trim ? sliced.map((cells) => cells.map((c) => c.trim())) : sliced;
@@ -139,14 +136,19 @@ const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Shee
   return sheets.find((s) => s.name === selector);
 };
 
-const pickXlsSheet = (
-  names: string[],
-  selector: string | number | undefined
-): string | undefined => {
-  if (names.length === 0) return undefined;
+const pickXlsSheet = (names: string[], selector: string | number | undefined): string => {
+  if (names.length === 0) throw new Error('Workbook contains no sheets');
   if (selector === undefined) return names[0];
-  if (typeof selector === 'number') return names[selector];
-  return names.includes(selector) ? selector : undefined;
+  if (typeof selector === 'number') {
+    if (selector >= names.length)
+      throw new Error(
+        `Sheet index ${selector} out of range (workbook has ${names.length} sheet(s))`
+      );
+    return names[selector];
+  }
+  const match = names.find((n) => n === selector);
+  if (!match) throw new Error(`Sheet "${selector}" not found; available: ${names.join(', ')}`);
+  return match;
 };
 
 const stringifyCell = (cell: unknown): string => {
@@ -154,6 +156,11 @@ const stringifyCell = (cell: unknown): string => {
   if (typeof cell === 'string') return cell;
   if (typeof cell === 'number' || typeof cell === 'boolean') return String(cell);
   if (cell instanceof Date) return cell.toISOString();
+  // SheetJS error cells (e.g. #DIV/0!) surface as objects with a `w` formatted-value field.
+  if (typeof cell === 'object' && 'w' in cell) {
+    const { w } = cell as { w?: unknown };
+    return typeof w === 'string' ? w : '';
+  }
   return '';
 };
 

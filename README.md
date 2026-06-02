@@ -51,6 +51,11 @@ FAA's first load doesn't fit GHA's 30-minute job cap, so it's run once locally �
 below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and don't
 need a local bootstrap.
 
+> [!NOTE]
+> **One-time billing.** Bootstrapping all live sources in one pass exceeds the 1 M Class A
+> operations included in Cloudflare's free tier — expect a one-time charge of roughly **~$5-10 USD**.
+> Steady-state monthly diffs stay well inside the free tier (~10k ops/source/month).
+
 ## Initial Load (Bootstrap)
 
 The first FAA load against an empty R2 bucket writes ~312k records × 3 index paths,
@@ -147,7 +152,7 @@ to populate that source alone. Rows are ordered alphabetically by country.
 | DGAC Bolivia — `bo-dgac` _(future)_                            | Bolivia                          | Sent                                                                                  | [dgac.gob.bo/registro-publico-de-aeronaves](https://www.dgac.gob.bo/registro-publico-de-aeronaves/)                                                                                                                                   | Unknown — "público" framing leans Open                                                                                                                                                                                  |
 | BHDCA — `ba-bhdca` _(future)_                                  | Bosnia & Herzegovina             | Sent                                                                                  | [bhdca.gov.ba register](http://www.bhdca.gov.ba/index.php/hr/doc/registar-civilnih-zrakoplova)                                                                                                                                        | Unknown — "All rights reserved" boilerplate; site appears not actively maintained                                                                                                                                       |
 | CAAB — `bw-caab` _(future)_                                    | Botswana                         | Sent                                                                                  | [caab.co.bw](https://www.caab.co.bw/caab-content.php?cid=299)                                                                                                                                                                         | Unknown                                                                                                                                                                                                                 |
-| ANAC Brasil — `br-anac` _(future)_                             | Brazil                           | Sent                                                                                  | [sistemas.anac.gov.br](https://sistemas.anac.gov.br/aeronaves/cons_rab.asp)                                                                                                                                                           | Unknown                                                                                                                                                                                                                 |
+| ANAC Brasil — `br-anac` _(pending impl)_                       | Brazil                           | 🛠️ Cleared                                                                            | [dadosabertos RAB](https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/dados_aeronaves.csv)                                                                                                                                       | **Open with attribution** — confirmed by ANAC Brasil reply 2026-05-11; citation of source mandatory                                                                                                                     |
 | CAA Bulgaria — `bg-caa` _(future)_                             | Bulgaria                         | Sent                                                                                  | [Direct XLSX (April 2025)](https://www.caa.bg/sites/default/files/upload/documents/2025-05/Aircraft_Register_20250430.xlsx)                                                                                                           | Unknown — "All rights reserved" boilerplate footer; no explicit license; register absent from data.egov.bg                                                                                                              |
 | ANAC Burkina — `bf-anac` _(future)_                            | Burkina Faso                     | Sent                                                                                  | [anac.bf](https://anac.bf/)                                                                                                                                                                                                           | Unknown                                                                                                                                                                                                                 |
 | AAC Cabo Verde — `cv-aac` _(future)_                           | Cabo Verde                       | Sent — no bulk channel                                                                | [aac.cv/registo-aeronautico](https://www.aac.cv/artigos/registo-aeronautico)                                                                                                                                                          | Unknown — no public license declaration                                                                                                                                                                                 |
@@ -397,9 +402,19 @@ The material has been changed: CAAT aircraft records are normalized into metal-b
 
 Source: Federal Office of Civil Aviation (FOCA) — [bazl.admin.ch](https://www.bazl.admin.ch). Register search app: https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search.
 
-Licensed under Open with attribution — per FOCA legal department, "registry is available for the public anyway" with no restrictions, conditions, or formal procedures. Attribution is provided as a courtesy (FOCA legal indicated "a notification of the source would be adequate"). Switzerland HB- includes Liechtenstein aircraft, which surface through this source.
+Licensed under Open — per FOCA legal department, "registry is available for the public anyway" with no restrictions, conditions, or formal procedures. Attribution is provided as a courtesy (FOCA legal indicated "a notification of the source would be adequate"). Switzerland HB- includes Liechtenstein aircraft, which surface through this source.
 
 The material has been changed: FOCA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by FOCA.
+
+---
+
+## Legal Notice
+
+- **No liability transfer.** Using, forking, or deploying this repository does not transfer liability to the maintainer. Each operator is solely responsible for their own deployment and its consequences.
+- **Per-country compliance is the operator's responsibility.** This project ingests data from civil aviation authorities in multiple jurisdictions. Each imposes its own data-use, redistribution, and privacy obligations. Operators must independently assess and satisfy those obligations.
+- **Research is informational, not legal advice.** The license classifications and permissions in `DATA_LICENSES.md` and `docs/license-matrix.md` reflect good-faith research at a point in time. They are not legal advice and carry no guarantee of completeness, accuracy, or continued validity.
+- **Upstream terms change without notice.** Agencies amend terms, withdraw permissions, or restructure publication channels. Operators are responsible for monitoring those changes.
+- **No warranty.** The data pipeline, its output, and the license research are provided as-is. See the `No Warranty` section of the [LICENSE](LICENSE).
 
 ---
 
@@ -410,14 +425,14 @@ The material has been changed: FOCA aircraft records are normalized into metal-b
 1. Classify the license under PRD CC.1 (Open / Personal-use / Restrictive / Unknown). Restrictive sources are excluded.
 2. For Personal-use or Unknown sources, send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)). The 30-day public-record fallback applies to Unknown only — Personal-use needs an affirmative reply (silence ≠ permission). Record outcome in `DATA_LICENSES.md`.
 3. New source onboarding touches **all five surfaces** or the source is incomplete:
-   - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
+   - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
    - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
    - `DATA_LICENSES.md` — classification, permitted uses, attribution wording, reply text (verbatim).
    - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
    - `docs/license-matrix.md` summary row — same alphabetical order.
 4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
 
-The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms).
+The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms).
 
 ## License
 
