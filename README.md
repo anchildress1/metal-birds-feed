@@ -18,8 +18,9 @@ per-source license assessment. See [PRD.md](PRD.md) §Cross-Cutting for the full
 
 ## How It Works
 
-A GitHub Actions matrix runs on the 1st of every month — one runner per source under
-`sources/*.yaml`. Each runner:
+A GitHub Actions matrix runs daily — one runner per source under `sources/*.yaml`.
+Sources with `cadence_days` skip early until due; sources without it run every day.
+Each runner:
 
 1. Downloads the source's full bulk export (registries don't publish deltas)
 2. Translates every row into the canonical `Aircraft` schema via the source's YAML mapping
@@ -39,13 +40,13 @@ The delta lives entirely in the write step. This is by design: registries don't 
 incremental APIs, but R2 ops are the expensive part — so we pay for the cheap full-passes
 to avoid paying for the expensive redundant writes.
 
-### What a typical monthly run looks like
+### What a typical cadence run looks like
 
-| Phase     | Bootstrap (first run) | Steady state (monthly cron) |
-| --------- | --------------------- | --------------------------- |
-| Records   | ~312k all new         | ~3–6k changed (~1–2%)       |
-| R2 ops    | ~600k+                | ~10k                        |
-| Wall time | ~99 min               | ~2 min                      |
+| Phase     | Bootstrap (first run) | Steady state (cadence run) |
+| --------- | --------------------- | -------------------------- |
+| Records   | ~312k all new         | ~3–6k changed (~1–2%)      |
+| R2 ops    | ~600k+                | ~10k                       |
+| Wall time | ~99 min               | ~2 min                     |
 
 FAA's first load doesn't fit GHA's 30-minute job cap, so it's run once locally — see
 below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and don't
@@ -59,7 +60,7 @@ need a local bootstrap.
 ## Initial Load (Bootstrap)
 
 The first FAA load against an empty R2 bucket writes ~312k records × 3 index paths,
-which exceeds GHA's per-job timeout. Run it once locally; the monthly cron handles
+which exceeds GHA's per-job timeout. Run it once locally; cadence runs handle
 diffs forever after.
 
 ```bash
@@ -76,7 +77,7 @@ trigger the workflow directly:
 
 ```bash
 gh workflow run refresh.yml -f source=nl-ilt   # one-off, single-source
-gh workflow run refresh.yml                    # all sources (next monthly cron equivalent)
+gh workflow run refresh.yml                    # all sources, respecting per-source cadence
 ```
 
 ## R2 Key Structure
@@ -87,6 +88,7 @@ gh workflow run refresh.yml                    # all sources (next monthly cron 
 | `aircraft/by-icao-hex/<hex>.json`     | `{"refs": ["source:id", ...]}`       |
 | `aircraft/by-registration/<reg>.json` | `{"refs": ["source:id", ...]}`       |
 | `aircraft/_manifest/<source>.json`    | Content-hash manifest for diff-write |
+| `aircraft/_state/<source>.json`       | Last run/change state for cadence    |
 
 ## Setup
 

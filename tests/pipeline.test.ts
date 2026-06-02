@@ -26,7 +26,7 @@ vi.mock('../src/writer.js', () => ({
   },
 }));
 
-import { run } from '../src/pipeline.js';
+import { main, run } from '../src/pipeline.js';
 
 const CONFIG: SourceConfig = {
   id: 'faa',
@@ -87,6 +87,10 @@ afterEach(() => {
   delete process.env['MBF_R2_SECRET_ACCESS_KEY'];
   delete process.env['MBF_R2_BUCKET_NAME'];
   delete process.env['DRY_RUN'];
+  delete process.env['GITHUB_TOKEN'];
+  delete process.env['GITHUB_REPOSITORY'];
+  delete process.env['REFRESH_SOURCE'];
+  vi.unstubAllGlobals();
 });
 
 describe('run', () => {
@@ -109,6 +113,7 @@ describe('run', () => {
   });
 
   it('skips download and write when cadence check says not due', async () => {
+    process.env['DRY_RUN'] = 'false';
     const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
     mockLoadSourceConfig.mockReturnValueOnce({
       ...CONFIG,
@@ -126,6 +131,25 @@ describe('run', () => {
     expect(mockR2Write).not.toHaveBeenCalled();
   });
 
+  it('does not skip cadence-gated sources in dry-run mode', async () => {
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({
+      ...CONFIG,
+      cadence_days: 30,
+    });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledOnce();
+    expect(mockR2Write).toHaveBeenCalledOnce();
+    expect(mockWriteState).not.toHaveBeenCalled();
+  });
+
   it('proceeds with download when cadence state is null (first run)', async () => {
     mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
     mockReadState.mockResolvedValueOnce(null);
@@ -133,6 +157,31 @@ describe('run', () => {
     const result = await run('faa');
 
     expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledOnce();
+    expect(mockR2Write).toHaveBeenCalledOnce();
+  });
+});
+
+describe('main', () => {
+  it('does not mutate GitHub staleness issues during dry-run', async () => {
+    const staleTimestamp = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    process.env['REFRESH_SOURCE'] = 'faa';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    mockLoadSourceConfig.mockReturnValueOnce({
+      ...CONFIG,
+      cadence_days: 30,
+    });
+    mockReadState.mockResolvedValueOnce({
+      last_run: staleTimestamp,
+      last_content_change: staleTimestamp,
+    });
+
+    await main();
+
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(mockDownload).toHaveBeenCalledOnce();
     expect(mockR2Write).toHaveBeenCalledOnce();
   });

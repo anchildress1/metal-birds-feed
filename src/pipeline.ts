@@ -55,7 +55,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   let priorState: SourceState | null = null;
   if (config.cadence_days !== undefined) {
     priorState = await writer.readState(sourceId);
-    if (shouldSkip(priorState, config.cadence_days, new Date())) {
+    if (!dryRun && shouldSkip(priorState, config.cadence_days, new Date())) {
       log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
       return {
         source: sourceId,
@@ -82,7 +82,7 @@ export async function run(sourceId: string): Promise<RunResult> {
 
   const writeStats = await writer.write(records, sourceId);
 
-  let newState: SourceState | null = null;
+  let newState: SourceState | null = priorState;
   if (config.cadence_days !== undefined && !dryRun) {
     const now = new Date().toISOString();
     newState = {
@@ -187,6 +187,7 @@ export async function main(): Promise<void> {
   let anyFailed = false;
   const stalenessEntries: StalenessEntry[] = [];
   const now = new Date();
+  const dryRun = process.env['DRY_RUN'] === 'true';
 
   for (const [i, result] of results.entries()) {
     if (result.status === 'rejected') {
@@ -201,7 +202,7 @@ export async function main(): Promise<void> {
       // Close any open staleness issue when content has just changed.
       const token = process.env['GITHUB_TOKEN'];
       const repo = process.env['GITHUB_REPOSITORY'];
-      if (!skipped && new_state && token && repo) {
+      if (!dryRun && !skipped && new_state && token && repo) {
         const changed = new_state.last_content_change === new_state.last_run;
         if (changed) await closeStalenessIssues(source, token, repo).catch(() => undefined);
       }
@@ -217,7 +218,7 @@ export async function main(): Promise<void> {
 
     const token = process.env['GITHUB_TOKEN'];
     const repo = process.env['GITHUB_REPOSITORY'];
-    if (token && repo) {
+    if (!dryRun && token && repo) {
       await Promise.allSettled(
         stalenessEntries.filter((e) => e.overdue).map((e) => createStalenessIssue(e, token, repo))
       );
