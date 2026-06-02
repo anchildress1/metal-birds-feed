@@ -53,7 +53,7 @@ below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and
 need a local bootstrap.
 
 > [!NOTE]
-> **One-time billing.** Bootstrapping all live sources in one pass exceeds the 1 M Class A
+> One-time billing. Bootstrapping all live sources in one pass exceeds the 1 M Class A
 > operations included in Cloudflare's free tier — expect a one-time charge of roughly **~$5-10 USD**.
 > Steady-state monthly diffs stay well inside the free tier (~10k ops/source/month).
 
@@ -129,7 +129,7 @@ ID is the `sources/<id>.yaml` filename and the value to set in `.env`'s `REFRESH
 to populate that source alone. Rows are ordered alphabetically by country.
 
 > [!NOTE]
-> **Refresh cadence policy.** When an agency declares one publishing cadence and the observable file history shows another, the GHA refresh runs at the **more frequent** of the two. Both values are recorded per source in `DATA_LICENSES.md` under `Update cadence`. Source mappings use conditional fetch (`Last-Modified` / `ETag` / filename-change detection) so polling more frequently than the actual publishing rhythm stays cheap. See [`AGENTS.md`](AGENTS.md#github-actions) for the underlying rule.
+> Refresh cadence policy. When an agency declares one publishing cadence and the observable file history shows another, the GHA refresh runs at the **more frequent** of the two. Both values are recorded per source in `DATA_LICENSES.md` under `Update cadence`. Source mappings use conditional fetch (`Last-Modified` / `ETag` / filename-change detection) so polling more frequently than the actual publishing rhythm stays cheap. See [`AGENTS.md`](AGENTS.md#github-actions) for the underlying rule.
 
 | Source                                                         | Country                          | Status                                                                                | Bulk download                                                                                                                                                                                                                         | License (CC.1)                                                                                                                                                                                                          |
 | -------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
