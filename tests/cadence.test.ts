@@ -93,6 +93,14 @@ describe('isOverdue', () => {
     expect(isOverdue(state, 30, new Date())).toBe(false);
   });
 
+  it('returns false when last_content_change is in the future', () => {
+    const state: SourceState = {
+      last_run: new Date().toISOString(),
+      last_content_change: new Date(Date.now() + 10 * DAY_MS).toISOString(),
+    };
+    expect(isOverdue(state, 30, new Date())).toBe(false);
+  });
+
   it('returns true for an annual source silent for two years', () => {
     const state = makeState(30, 730);
     expect(isOverdue(state, 365, new Date())).toBe(true);
@@ -121,6 +129,16 @@ describe('buildStalenessEntry', () => {
     expect(entry.last_content_change).toBeNull();
     expect(entry.days_since_change).toBe(-1);
     expect(entry.overdue).toBe(false);
+  });
+
+  it('returns days_since_change: -1 when state has an invalid last_content_change date', () => {
+    const state: SourceState = {
+      last_run: new Date().toISOString(),
+      last_content_change: 'not-a-valid-date',
+    };
+    const entry = buildStalenessEntry('faa', 30, state, new Date());
+    expect(entry.days_since_change).toBe(-1);
+    expect(entry.last_content_change).toBe('not-a-valid-date');
   });
 });
 
@@ -172,5 +190,16 @@ describe('buildSummaryMarkdown', () => {
     const md = buildSummaryMarkdown(entries);
     expect(md).toContain('never');
     expect(md).toContain('unknown');
+  });
+
+  it('populates all five columns with correct values', () => {
+    const now = new Date('2026-06-01T00:00:00.000Z');
+    const state: SourceState = {
+      last_run: '2026-05-31T00:00:00.000Z',
+      last_content_change: '2026-05-16T00:00:00.000Z',
+    };
+    const entries = [buildStalenessEntry('faa', 30, state, now)];
+    const md = buildSummaryMarkdown(entries);
+    expect(md).toContain('| faa | 30 | 2026-05-16T00:00:00.000Z | 16 | ✅ ok |');
   });
 });
