@@ -9,6 +9,8 @@ import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import { contentHash } from './engine.js';
 import { log } from './logger.js';
+import { SourceStateSchema } from './cadence.js';
+import type { SourceState } from './cadence.js';
 
 const ManifestEntrySchema = z.object({
   hash: z.string(),
@@ -25,6 +27,8 @@ export interface WriteStats {
   put: number;
   deleted: number;
   skipped: number;
+  changed: boolean;
+  record_count: number;
 }
 
 export interface R2Config {
@@ -227,6 +231,8 @@ export class R2DiffWriter {
       put: diffs.toWrite.size,
       deleted: diffs.toDelete.size,
       skipped: records.size - diffs.toWrite.size,
+      changed: diffs.toWrite.size > 0 || diffs.toDelete.size > 0,
+      record_count: records.size,
     };
     log('info', 'write_complete', { source, dry_run: this.dryRun, ...stats });
     return stats;
@@ -364,5 +370,36 @@ export class R2DiffWriter {
     }
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
     this.completed++;
+  }
+
+  async readState(source: string): Promise<SourceState | null> {
+    try {
+      const res = await this.client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_state/${source}.json` })
+      );
+      const body = await res.Body?.transformToString();
+      if (!body) return null;
+      let json: unknown;
+      try {
+        json = JSON.parse(body);
+      } catch {
+        // Invalid JSON treated as absent — pipeline proceeds with a fresh run.
+        return null;
+      }
+      const parsed = SourceStateSchema.safeParse(json);
+      // Malformed schema treated as absent — pipeline proceeds with a fresh run.
+      return parsed.success ? parsed.data : null;
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      log('error', 'state_load_failed', {
+        source,
+        msg: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  }
+
+  async writeState(source: string, state: SourceState): Promise<void> {
+    await this.put(`aircraft/_state/${source}.json`, state);
   }
 }

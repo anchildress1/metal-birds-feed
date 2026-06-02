@@ -80,7 +80,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - `actions/*`: tagged major (e.g., `@v6`).
 - All other actions: commit SHA + version comment (e.g., `@abc123 # v4.1.0`).
 - `refresh.yml` discover step auto-enumerates `sources/*.yaml` — no workflow edits when adding a source.
-- **Refresh cadence rule:** when a source declares one cadence but the observed publishing rhythm differs, the GHA refresh must run at the **more frequent** of the two. Record both values in `DATA_LICENSES.md` under that source's `Update cadence` block. The current fleet-wide cron is monthly (`0 6 1 * *`), which already over-covers any source claiming quarterly, semi-annual, or annual cadence — no per-source schedule needed today. If a source ever claims a faster cadence than monthly, the global cron must be tightened (or that source split into its own workflow). Source mappings should use conditional fetch (`Last-Modified` / `ETag` / filename-change detection) so polling more frequently than the publishing rhythm stays cheap.
+- **Refresh cadence rule:** when a source declares one cadence but the observed publishing rhythm differs, the GHA refresh must run at the **more frequent** of the two. Record both values in `DATA_LICENSES.md` under that source's `Update cadence` block. The current fleet-wide cron is daily (`0 6 * * *`); per-source `cadence_days` in the source YAML controls how often each source actually runs — sources without `cadence_days` run every day the cron fires. Sources publishing faster than daily require their own workflow. Source mappings should use conditional fetch (`Last-Modified` / `ETag` / filename-change detection) so polling more frequently than the publishing rhythm stays cheap.
 
 ## Commits
 

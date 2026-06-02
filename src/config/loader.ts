@@ -116,6 +116,7 @@ const SourceConfigSchema = z.object({
   source_id: z.string().min(1),
   source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
   registration: z.string().min(1),
+  cadence_days: z.number().int().positive().optional(),
   mapping: z.record(z.string(), FieldMappingSchema),
 });
 

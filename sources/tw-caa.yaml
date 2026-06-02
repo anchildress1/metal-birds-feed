@@ -3,6 +3,7 @@ label: CAA Taiwan National Aircraft Register
 country: TW
 encoding: utf8
 trim_all: true
+cadence_days: 30
 
 download:
   # discover_url + discover_pattern do the real work. The monthly .xls file id rolls

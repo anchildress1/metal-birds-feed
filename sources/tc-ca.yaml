@@ -3,6 +3,7 @@ label: Transport Canada Civil Aircraft Register
 country: CA
 encoding: latin1
 trim_all: true
+cadence_days: 30
 
 download:
   url: https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip
