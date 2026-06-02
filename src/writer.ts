@@ -56,9 +56,15 @@ interface ManifestLoad {
 }
 
 // Per-bucket worker-pool size. Effective peak in-flight = S3_CONCURRENCY × (writeRecords +
-// deleteRecords + 2 updateIndex calls) when all four buckets have work. Sized conservatively
-// so initial-load fan-out doesn't trip R2 throttling or saturate the SDK's HTTP socket pool.
-const S3_CONCURRENCY = 16;
+// deleteRecords + 2 updateIndex calls) when all four buckets have work. R2 PUT round-trip is
+// the pipeline's wall (FAA: 312k records ≈ 624k ops); throughput scales linearly with this
+// until R2 starts 503ing, which adaptive retry absorbs.
+const S3_CONCURRENCY = 64;
+
+// HTTP socket pool ceiling. The SDK's default agent caps at 50 sockets, below the 4-pool peak
+// (S3_CONCURRENCY × 4) — so without this, extra workers queue on sockets and the concurrency
+// bump is silently capped at 50. Passed as a plain config object so the SDK builds the agent.
+const S3_MAX_SOCKETS = S3_CONCURRENCY * 4;
 
 // Bound SDK retries — adaptive mode backs off automatically on R2 throttling (HTTP 503).
 const S3_MAX_ATTEMPTS = 5;
@@ -175,6 +181,7 @@ export class R2DiffWriter {
       },
       maxAttempts: S3_MAX_ATTEMPTS,
       retryMode: 'adaptive',
+      requestHandler: { httpsAgent: { maxSockets: S3_MAX_SOCKETS } },
     });
   }
 
