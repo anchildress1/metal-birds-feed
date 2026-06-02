@@ -186,23 +186,51 @@ const closeStalenessIssues = async (source: string, token: string, repo: string)
   }
 };
 
-export async function main(): Promise<void> {
+interface GitHubCtx {
+  token: string | undefined;
+  repo: string | undefined;
+}
+
+const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
-  const sources = sourceEnv
+  return sourceEnv
     ? [sourceEnv]
     : readdirSync('sources')
         .filter((f) => f.endsWith('.yaml'))
         .map((f) => f.replace(/\.yaml$/, ''));
+};
 
-  const results = await Promise.allSettled(sources.map(run));
+// Content just changed when this run's write stamped last_content_change to last_run.
+const justChanged = (value: RunResult, dryRun: boolean): boolean =>
+  !dryRun &&
+  !value.skipped &&
+  value.new_state !== null &&
+  value.new_state.last_content_change === value.new_state.last_run;
 
+const closeWithLogging = (source: string, token: string, repo: string): Promise<void> =>
+  closeStalenessIssues(source, token, repo).catch((err) =>
+    log('error', 'staleness_close_error', {
+      source,
+      msg: err instanceof Error ? err.message : String(err),
+    })
+  );
+
+interface ProcessedResults {
+  anyFailed: boolean;
+  stalenessEntries: StalenessEntry[];
+  closePromises: Promise<void>[];
+}
+
+const processResults = (
+  results: PromiseSettledResult<RunResult>[],
+  sources: string[],
+  now: Date,
+  dryRun: boolean,
+  gh: GitHubCtx
+): ProcessedResults => {
+  const { token, repo } = gh;
   let anyFailed = false;
   const stalenessEntries: StalenessEntry[] = [];
-  const now = new Date();
-  const dryRun = process.env['DRY_RUN'] === 'true';
-
-  const token = process.env['GITHUB_TOKEN'];
-  const repo = process.env['GITHUB_REPOSITORY'];
   const closePromises: Promise<void>[] = [];
 
   for (const [i, result] of results.entries()) {
@@ -212,41 +240,52 @@ export async function main(): Promise<void> {
       anyFailed = true;
       continue;
     }
-    const { cadence_days, new_state, skipped, source } = result.value;
-    if (cadence_days !== undefined) {
-      stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
-      // Close any open staleness issue when content has just changed.
-      if (!dryRun && !skipped && new_state && token && repo) {
-        const changed = new_state.last_content_change === new_state.last_run;
-        if (changed)
-          closePromises.push(
-            closeStalenessIssues(source, token, repo).catch((err) =>
-              log('error', 'staleness_close_error', {
-                source,
-                msg: err instanceof Error ? err.message : String(err),
-              })
-            )
-          );
-      }
-    }
+    const { cadence_days, new_state, source } = result.value;
+    if (cadence_days === undefined) continue;
+    stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
+    if (token && repo && justChanged(result.value, dryRun))
+      closePromises.push(closeWithLogging(source, token, repo));
   }
+  return { anyFailed, stalenessEntries, closePromises };
+};
+
+const emitStaleness = async (
+  stalenessEntries: StalenessEntry[],
+  dryRun: boolean,
+  gh: GitHubCtx
+): Promise<void> => {
+  if (stalenessEntries.length === 0) return;
+
+  const markdown = buildSummaryMarkdown(stalenessEntries);
+  const summaryPath = process.env['GITHUB_STEP_SUMMARY'];
+  if (summaryPath) await writeFile(summaryPath, `\n${markdown}\n`, { flag: 'a' });
+
+  const { token, repo } = gh;
+  if (!dryRun && token && repo)
+    await Promise.allSettled(
+      stalenessEntries.filter((e) => e.overdue).map((e) => createStalenessIssue(e, token, repo))
+    );
+};
+
+export async function main(): Promise<void> {
+  const sources = resolveSources();
+  const results = await Promise.allSettled(sources.map(run));
+  const now = new Date();
+  const dryRun = process.env['DRY_RUN'] === 'true';
+  const gh: GitHubCtx = {
+    token: process.env['GITHUB_TOKEN'],
+    repo: process.env['GITHUB_REPOSITORY'],
+  };
+
+  const { anyFailed, stalenessEntries, closePromises } = processResults(
+    results,
+    sources,
+    now,
+    dryRun,
+    gh
+  );
   await Promise.allSettled(closePromises);
-
-  if (stalenessEntries.length > 0) {
-    const markdown = buildSummaryMarkdown(stalenessEntries);
-    const summaryPath = process.env['GITHUB_STEP_SUMMARY'];
-    if (summaryPath) {
-      await writeFile(summaryPath, `\n${markdown}\n`, { flag: 'a' });
-    }
-
-    const token = process.env['GITHUB_TOKEN'];
-    const repo = process.env['GITHUB_REPOSITORY'];
-    if (!dryRun && token && repo) {
-      await Promise.allSettled(
-        stalenessEntries.filter((e) => e.overdue).map((e) => createStalenessIssue(e, token, repo))
-      );
-    }
-  }
+  await emitStaleness(stalenessEntries, dryRun, gh);
 
   if (anyFailed) process.exit(1);
 }
