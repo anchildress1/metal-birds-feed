@@ -342,7 +342,7 @@ Aircraft register data published by ILT under [CC-0 1.0 Universal](https://creat
 
 Aircraft Registry data published by the FAA at [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/). US Government work in the public domain (17 U.S.C. § 105). Acknowledgment provided as a courtesy; not legally required.
 
-### Agencia Estatal de Seguridad Aérea (AESA, Spain)
+### Agencia Estatal de Seguridad Aérea (AESA, Spain) — pending implementation
 
 Source: AESA — Agencia Estatal de Seguridad Aérea — https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas
 
@@ -358,13 +358,13 @@ Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](http
 
 Aircraft register data published by Civilās aviācijas aģentūra (CAA Latvia) on [data.gov.lv](https://data.gov.lv/dati/lv/dataset/gaisa-kugu-registrs) under [CC0-1.0 (public domain)](https://creativecommons.org/publicdomain/zero/1.0/). Acknowledgment provided as a courtesy; not legally required under CC-0.
 
-### Civil Aviation Authority of Singapore (CAAS)
+### Civil Aviation Authority of Singapore (CAAS) — pending implementation
 
 Source: Civil Aviation Authority of Singapore (CAAS) — https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration
 
 Licensed under Open with attribution per CAAS — register is publicly accessible and free to be used, with attribution and link back to the register page. The material has been changed: CAAS aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAS.
 
-### Maldives Civil Aviation Authority (CAA Maldives)
+### Maldives Civil Aviation Authority (CAA Maldives) — pending implementation
 
 Source: Maldives Civil Aviation Authority — https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
 
@@ -374,7 +374,7 @@ Licensed under Open with attribution. Per CAA Maldives required notice (reproduc
 
 The material has been changed: CAA Maldives aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Maldives.
 
-### Estonian Transport Administration (Transpordiamet)
+### Estonian Transport Administration (Transpordiamet) — pending implementation
 
 Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register
 

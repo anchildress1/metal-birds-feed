@@ -201,6 +201,10 @@ export async function main(): Promise<void> {
   const now = new Date();
   const dryRun = process.env['DRY_RUN'] === 'true';
 
+  const token = process.env['GITHUB_TOKEN'];
+  const repo = process.env['GITHUB_REPOSITORY'];
+  const closePromises: Promise<void>[] = [];
+
   for (const [i, result] of results.entries()) {
     if (result.status === 'rejected') {
       const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
@@ -212,20 +216,21 @@ export async function main(): Promise<void> {
     if (cadence_days !== undefined) {
       stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
       // Close any open staleness issue when content has just changed.
-      const token = process.env['GITHUB_TOKEN'];
-      const repo = process.env['GITHUB_REPOSITORY'];
       if (!dryRun && !skipped && new_state && token && repo) {
         const changed = new_state.last_content_change === new_state.last_run;
         if (changed)
-          await closeStalenessIssues(source, token, repo).catch((err) =>
-            log('error', 'staleness_close_error', {
-              source,
-              msg: err instanceof Error ? err.message : String(err),
-            })
+          closePromises.push(
+            closeStalenessIssues(source, token, repo).catch((err) =>
+              log('error', 'staleness_close_error', {
+                source,
+                msg: err instanceof Error ? err.message : String(err),
+              })
+            )
           );
       }
     }
   }
+  await Promise.allSettled(closePromises);
 
   if (stalenessEntries.length > 0) {
     const markdown = buildSummaryMarkdown(stalenessEntries);

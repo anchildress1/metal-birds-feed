@@ -87,7 +87,7 @@ jobs:
           MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
           REFRESH_SOURCE: ${{ matrix.source }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: bun run dist/pipeline.js
 

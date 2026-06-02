@@ -627,6 +627,14 @@ describe('R2DiffWriter — state management', () => {
     expect(await writer.readState('faa')).toBeNull();
   });
 
+  it('readState returns null for invalid JSON (not a parse error rethrow)', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: vi.fn().mockResolvedValue('not valid json {{{') },
+    });
+    const writer = new R2DiffWriter(R2_CONFIG, false);
+    expect(await writer.readState('faa')).toBeNull();
+  });
+
   it('readState rethrows non-NoSuchKey errors', async () => {
     mockSend.mockRejectedValueOnce(new Error('AccessDenied'));
     const writer = new R2DiffWriter(R2_CONFIG, false);

@@ -379,8 +379,15 @@ export class R2DiffWriter {
       );
       const body = await res.Body?.transformToString();
       if (!body) return null;
-      const parsed = SourceStateSchema.safeParse(JSON.parse(body));
-      // Malformed state treated as absent — pipeline proceeds with a fresh run.
+      let json: unknown;
+      try {
+        json = JSON.parse(body);
+      } catch {
+        // Invalid JSON treated as absent — pipeline proceeds with a fresh run.
+        return null;
+      }
+      const parsed = SourceStateSchema.safeParse(json);
+      // Malformed schema treated as absent — pipeline proceeds with a fresh run.
       return parsed.success ? parsed.data : null;
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
