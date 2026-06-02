@@ -342,13 +342,13 @@ Aircraft register data published by ILT under [CC-0 1.0 Universal](https://creat
 
 Aircraft Registry data published by the FAA at [registry.faa.gov](https://registry.faa.gov/aircraftinquiry/). US Government work in the public domain (17 U.S.C. § 105). Acknowledgment provided as a courtesy; not legally required.
 
-### Agencia Estatal de Seguridad Aérea (AESA, Spain) _— pending implementation_
+### Agencia Estatal de Seguridad Aérea (AESA, Spain)
 
 Source: AESA — Agencia Estatal de Seguridad Aérea — https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas
 
 Reproduced with attribution per the [AESA portal Legal Notice](https://www.seguridadaerea.gob.es/en/politica-de-privacidad-y-aviso-legal) and Royal Decree 1495/2011 of October 24 (development of Law 37/2007 on the reuse of public sector information, for the public sector). The material has been changed: AESA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by AESA.
 
-### Finnish Transport and Communications Agency (Traficom, Finland) _— pending implementation_
+### Finnish Transport and Communications Agency (Traficom, Finland)
 
 Source: Traficom — Finnish Transport and Communications Agency — https://tieto.traficom.fi/en/open-data
 
@@ -358,13 +358,13 @@ Licensed under [Creative Commons Attribution 4.0 International (CC BY 4.0)](http
 
 Aircraft register data published by Civilās aviācijas aģentūra (CAA Latvia) on [data.gov.lv](https://data.gov.lv/dati/lv/dataset/gaisa-kugu-registrs) under [CC0-1.0 (public domain)](https://creativecommons.org/publicdomain/zero/1.0/). Acknowledgment provided as a courtesy; not legally required under CC-0.
 
-### Civil Aviation Authority of Singapore (CAAS) _— pending implementation_
+### Civil Aviation Authority of Singapore (CAAS)
 
 Source: Civil Aviation Authority of Singapore (CAAS) — https://www.caas.gov.sg/operations-safety/aircraft/certificate-of-registration
 
 Licensed under Open with attribution per CAAS — register is publicly accessible and free to be used, with attribution and link back to the register page. The material has been changed: CAAS aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAS.
 
-### Maldives Civil Aviation Authority (CAA Maldives) _— pending implementation_
+### Maldives Civil Aviation Authority (CAA Maldives)
 
 Source: Maldives Civil Aviation Authority — https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
 
@@ -374,7 +374,7 @@ Licensed under Open with attribution. Per CAA Maldives required notice (reproduc
 
 The material has been changed: CAA Maldives aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Maldives.
 
-### Estonian Transport Administration (Transpordiamet) _— pending implementation_
+### Estonian Transport Administration (Transpordiamet)
 
 Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register
 
@@ -392,7 +392,7 @@ Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](http://caa.g
 
 The material has been changed: CAA Taiwan aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Taiwan.
 
-### Civil Aviation Authority of Thailand (CAAT) _— pending implementation_
+### Civil Aviation Authority of Thailand (CAAT)
 
 Source: Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th. Register page: https://www.caat.or.th/certificates-licenses/aircraft/service-manual/aircraft-registration-application/.
 
@@ -400,7 +400,7 @@ Licensed under Personal-use with attribution — non-commercial reuse and redist
 
 The material has been changed: CAAT aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAT.
 
-### Federal Office of Civil Aviation (FOCA / BAZL, Switzerland) _— pending implementation_
+### Federal Office of Civil Aviation (FOCA / BAZL, Switzerland)
 
 Source: Federal Office of Civil Aviation (FOCA) — [bazl.admin.ch](https://www.bazl.admin.ch). Register search app: https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search.
 
