@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { writeOds } from 'hucre/ods';
 import { writeXlsx } from 'hucre/xlsx';
-import { parseCSV, parseSpreadsheet, type SpreadsheetFormat } from '../src/parser.js';
+import * as XLSX from 'xlsx';
+import { parseCSV, parseSpreadsheet, parseXls, type HucreFormat } from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
 const opts = (
@@ -127,7 +128,7 @@ interface SheetSpec {
   rows: string[][];
 }
 
-const sheetBuf = async (format: SpreadsheetFormat, sheets: SheetSpec[]): Promise<Buffer> => {
+const sheetBuf = async (format: HucreFormat, sheets: SheetSpec[]): Promise<Buffer> => {
   const wb = { sheets };
   const bytes = format === 'ods' ? await writeOds(wb) : await writeXlsx(wb);
   return Buffer.from(bytes);
@@ -135,14 +136,14 @@ const sheetBuf = async (format: SpreadsheetFormat, sheets: SheetSpec[]): Promise
 
 const ssOpts = (
   overrides: Partial<{
-    format: SpreadsheetFormat;
+    format: HucreFormat;
     trim: boolean;
     columns: string[];
     sheet: string | number;
     skip_rows: number;
   }> = {}
 ) => ({
-  format: 'ods' as SpreadsheetFormat,
+  format: 'ods' as HucreFormat,
   trim: false,
   ...overrides,
 });
@@ -450,5 +451,116 @@ describe('parseSpreadsheet — xlsx', () => {
     await expect(
       parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts({ format: 'xlsx' }))
     ).rejects.toThrow();
+  });
+});
+
+const xlsBuf = (sheets: { name: string; rows: unknown[][] }[]): Buffer => {
+  const wb = XLSX.utils.book_new();
+  for (const s of sheets) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s.rows), s.name);
+  }
+  // XLSX.write is typed `any`; narrow to Uint8Array (TS cannot infer it from the options).
+  const bytes = XLSX.write(wb, { type: 'array', bookType: 'biff8' }) as Uint8Array;
+  return Buffer.from(bytes);
+};
+
+const xlsOpts = (
+  overrides: Partial<{
+    trim: boolean;
+    columns: string[];
+    sheet: string | number;
+    skip_rows: number;
+  }> = {}
+) => ({ trim: false, ...overrides });
+
+describe('parseXls — legacy binary .xls (BIFF8)', () => {
+  it('parses a basic .xls with a header row', async () => {
+    const buf = xlsBuf([
+      {
+        name: 'Sheet1',
+        rows: [
+          ['CODE', 'MFR'],
+          ['001', 'CESSNA'],
+        ],
+      },
+    ]);
+    expect(await parseXls(buf, xlsOpts())).toEqual([{ CODE: '001', MFR: 'CESSNA' }]);
+  });
+
+  it('stringifies numeric cells (serials, ids) rather than dropping them', async () => {
+    const buf = xlsBuf([
+      {
+        name: 'S',
+        rows: [
+          ['id', 'serial'],
+          [1, 40833],
+        ],
+      },
+    ]);
+    expect(await parseXls(buf, xlsOpts())).toEqual([{ id: '1', serial: '40833' }]);
+  });
+
+  it('applies skip_rows + explicit columns (preamble and Chinese header discarded)', async () => {
+    const buf = xlsBuf([
+      {
+        name: '一覽表',
+        rows: [
+          ['', '', '民用航空器機齡一覽表'],
+          ['序號', '機號', '機型'],
+          [1, 'B-00101', 'HBC BEECH 350'],
+        ],
+      },
+    ]);
+    const rows = await parseXls(buf, xlsOpts({ skip_rows: 2, columns: ['seq', 'reg', 'model'] }));
+    expect(rows).toEqual([{ seq: '1', reg: 'B-00101', model: 'HBC BEECH 350' }]);
+  });
+
+  it('drops fully-blank rows between data rows', async () => {
+    const buf = xlsBuf([
+      {
+        name: 'S',
+        rows: [['A'], ['1'], ['', ''], ['2']],
+      },
+    ]);
+    expect(await parseXls(buf, xlsOpts())).toEqual([{ A: '1' }, { A: '2' }]);
+  });
+
+  it('trims cell values when trim is enabled', async () => {
+    const buf = xlsBuf([{ name: 'S', rows: [['A'], ['  hi  ']] }]);
+    expect(await parseXls(buf, xlsOpts({ trim: true }))).toEqual([{ A: 'hi' }]);
+  });
+
+  it('selects a sheet by name', async () => {
+    const buf = xlsBuf([
+      { name: 'first', rows: [['A'], ['x']] },
+      { name: 'second', rows: [['B'], ['y']] },
+    ]);
+    expect(await parseXls(buf, xlsOpts({ sheet: 'second' }))).toEqual([{ B: 'y' }]);
+  });
+
+  it('selects a sheet by zero-based index', async () => {
+    const buf = xlsBuf([
+      { name: 'first', rows: [['A'], ['x']] },
+      { name: 'second', rows: [['B'], ['y']] },
+    ]);
+    expect(await parseXls(buf, xlsOpts({ sheet: 1 }))).toEqual([{ B: 'y' }]);
+  });
+
+  it('defaults to the first sheet when no selector is given', async () => {
+    const buf = xlsBuf([
+      { name: 'first', rows: [['A'], ['x']] },
+      { name: 'second', rows: [['B'], ['y']] },
+    ]);
+    expect(await parseXls(buf, xlsOpts())).toEqual([{ A: 'x' }]);
+  });
+
+  it('throws when the named sheet does not exist', async () => {
+    const buf = xlsBuf([{ name: 'only', rows: [['A'], ['x']] }]);
+    await expect(parseXls(buf, xlsOpts({ sheet: 'missing' }))).rejects.toThrow('"missing"');
+  });
+
+  it('throws when the sheet index is out of range', async () => {
+    const buf = xlsBuf([{ name: 'only', rows: [['A'], ['x']] }]);
+    await expect(parseXls(buf, xlsOpts({ sheet: 9 }))).rejects.toThrow('out of range');
   });
 });

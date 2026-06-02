@@ -139,6 +139,27 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+### CAA Taiwan — Civil Aviation Administration, MOTC R.O.C.
+
+- **Status:** ✅ Live (`sources/tw-caa.yaml` + `fixtures/tw-caa/`)
+- **Classification:** Open — Open Government Data License v1.0
+- **Source URL:** https://www.caa.gov.tw/article.aspx?a=238&lang=1
+- **Bulk download URL:** Monthly `.xls` per ROC-year index page; `discover_url` + `discover_pattern` capture the newest file ID via regex (file ID rolls non-sequentially; new year-page opens each ROC year — see `sources/tw-caa.yaml` ANNUAL BUMP comment).
+- **License:** [Open Government Data License v1.0](https://data.gov.tw/license). Cleared 2026-05-15 by Nicholas Liaw (Flight Standards Division, CAA MOTC R.O.C.) via bilateral grant scoped to non-commercial source-available project. Attribution text provided verbatim. Three project commitments confirmed: (1) link back to the register page, (2) regular monthly refresh, (3) removal-on-request honored immediately.
+- **Attribution required:** Yes. See attribution block below.
+- **Update cadence:** Monthly.
+- **Field-coverage gaps (`null`):** `icao_hex`, `icao_type_code`, `serial_number`, `manufacturer`, `airframe_type`, `category`, `build_certification`, `airworthiness_class`, `operating_environment`, `operational_classes`, `engine.*`, `owner.*`, `idera_authorised_party`, `certification_date`, `airworthiness_date`, `expiration_date`, `last_action_date`, `cruise_speed_ktas`. Full manufacture date is reduced to `year_manufactured` (4-digit year via `excel_serial_year_or_null`).
+
+#### Required attribution
+
+> Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](http://caa.gov.tw/). Licensed under the Open Government Data License, v1.0.
+>
+> [OGDL v1.0 full text](https://data.gov.tw/license). Register page: https://www.caa.gov.tw/article.aspx?a=238&lang=1.
+>
+> The material has been changed: CAA Taiwan aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAA Taiwan.
+
+---
+
 ## Cleared — awaiting implementation
 
 ### AESA — Spanish State Aviation Safety Agency
@@ -265,6 +286,52 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
+### CAAT Thailand — Civil Aviation Authority of Thailand
+
+- **Status:** 🛠️ Cleared — implementation pending (PDF parser path needed)
+- **Classification:** Personal-use — non-commercial reuse and redistribution permitted with attribution
+- **Source URL:** https://www.caat.or.th/certificates-licenses/aircraft/service-manual/aircraft-registration-application/
+- **Bulk download URL:** PDF at date-stamped filename (`Aircraft-Registration-Information-DD-MMM-YYYY.pdf`); WordPress site.
+- **License:** Non-commercial bilateral grant. Cleared 2026-05-21 by Aircraft Registration Division (AR), Airworthiness and Aircraft Engineering Department (AIR), CAAT. CAAT permits the Thailand Aircraft Register data to be used and shared for non-commercial projects with CAAT credited as the data source. Structured bulk formats (CSV/XLSX/JSON) explicitly declined. Attribution required: credit CAAT and reference the official register URL. Register URL updated to new platform per CAAT reply.
+- **Format note:** PDF — ingest blocked on PDF parser path (shared with AESA Spain + CAA Maldives).
+- **Update cadence:** Twice per year (January and June); observed cadence roughly annual with mid-year drops — stated cadence inconsistent with publishing rhythm.
+- **Correspondence:** Sent 2026-05-10 to `inter_focalpoint@caat.or.th` cc `saraban@caat.or.th`; routed internally to `registration@caat.or.th` (Aircraft Registration Division, Airworthiness and Aircraft Engineering Department).
+
+#### Required attribution
+
+> Source: Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th. Register page: https://www.caat.or.th/certificates-licenses/aircraft/service-manual/aircraft-registration-application/.
+>
+> Licensed under Personal-use with attribution — non-commercial reuse and redistribution permitted. CAAT permits the Thailand Aircraft Register data to be used and shared for non-commercial projects with CAAT credited as the data source.
+>
+> The material has been changed: CAAT aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by CAAT.
+
+---
+
+### FOCA / BAZL — Swiss Federal Office of Civil Aviation
+
+- **Status:** 🛠️ Cleared — implementation pending (search-app CSV export path needs engineering verification)
+- **Classification:** Open — bilateral grant confirmed by FOCA legal department
+- **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search
+- **Bulk download URL:** Search app supports CSV export; direct bulk endpoint unverified.
+- **License:** Open via direct FOCA legal determination. Cleared 2026-05-22 by Jonas Goetz, Head of Swiss Aircraft Registry, Registry Officer, FOCA, citing legal department determination. FOCA confirmed the register is publicly available and that there are no restrictions, conditions, or formal procedures. The admin.ch site-wide prior-written-consent terms are overridden for this dataset by FOCA's direct legal determination.
+- **Attribution required:** Not contractually required; attribution is provided as a courtesy.
+- **Update cadence:** Not stated; refresh against the live search app.
+- **Correspondence:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`; first reply 2026-05-06 acknowledged legal review; substantive legal-department reply received 2026-05-22 from Jonas Goetz.
+
+#### Courtesy attribution
+
+> Source: Federal Office of Civil Aviation (FOCA) — [bazl.admin.ch](https://www.bazl.admin.ch). Register search app: https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search.
+>
+> Licensed under Open — per FOCA legal department, the registry is publicly available with no restrictions, conditions, or formal procedures. Attribution is provided as a courtesy.
+>
+> The material has been changed: FOCA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by FOCA.
+
+---
+
+## Conditional Open — awaiting substantive reply
+
+License is published but carries use-conduct conditions that require agency confirmation before slotting. Substantive reply not yet received; ingest not slotted.
+
 ### GACA — General Authority of Civil Aviation, Saudi Arabia
 
 - **Status:** Future — v3 dataset-publication request sent 2026-05-11, awaiting substantive reply
@@ -351,19 +418,6 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **License:** Personal-use only. Per the register page (verbatim French): _"Les données du registre ne sont communiquées sur internet qu'à titre de simple information. Pour toute utilisation officielle, il convient de demander au fonctionnaire chargé de la tenue du registre un extrait du registre dûment signé."_ (Translation: "The register data is communicated on the internet only for informational purposes. For any official use, you must request a duly signed extract of the register from the official in charge of the register.") Paid extract at https://redevances.aviation-civile.gouv.fr (€6/extract) is the channel for non-informational use.
 - **Update cadence:** Monthly (CSV regenerated on the 1st of each month).
 - **Permission email:** Sent 2026-05-05 to `immat@aviation-civile.gouv.fr`. The 30-day fallback does **not** apply.
-- **Reply:** _pending_
-
----
-
-### FOCA / BAZL — Swiss Federal Office of Civil Aviation
-
-- **Status:** Future — permission request sent, awaiting reply
-- **Classification:** Personal-use (verified 2026-05-10 from Swiss Federal Council site-wide Terms and Conditions)
-- **Source URL:** https://app02.bazl.admin.ch/web/bazl/en/#/lfr/search
-- **Bulk download URL:** Search app supports CSV export; direct bulk endpoint unverified.
-- **License:** Personal-use only. Per the [Swiss Federal Council Terms and Conditions](https://www.admin.ch/gov/en/start/terms-and-conditions.html) (site-wide policy covering all `*.admin.ch` domains, verbatim): _"Copyright and any other rights relating to texts, illustrations, photos or any other data available on the Federal authorities' websites are the exclusive property of the federal authorities or of any other expressly mentioned owners. Any reproduction requires the prior written consent of the copyright holder."_ BAZL deliberately publishes other datasets on `opendata.swiss` with explicit Open licenses while omitting the aircraft register — a deliberate choice.
-- **Update cadence:** Not stated; weakly monthly per search-result blurb.
-- **Permission email:** Sent 2026-05-05 to `aircraftregistry@bazl.admin.ch`. The 30-day fallback does **not** apply.
 - **Reply:** _pending_
 
 ---
@@ -466,18 +520,6 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
-### CAA Taiwan — Civil Aviation Administration, MOTC R.O.C.
-
-- **Status:** Future — awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://www.caa.gov.tw/article.aspx?a=238&lang=1
-- **Bulk download URL:** Monthly `.xls` files per ROC-year sub-page; access pattern via year-index page.
-- **Update cadence:** Monthly.
-- **Permission email:** Sent 2026-05-05 to `gencaa@mail.caa.gov.tw`.
-- **Reply:** _pending_
-
----
-
 ### DKPPU — Directorate of Airworthiness and Aircraft Operation, Indonesia
 
 - **Status:** Future — awaiting reply
@@ -551,19 +593,6 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 - **Source URL:** https://www.aacm.gov.mo/en/industry-page/RegisteredAircraft
 - **Bulk download URL:** None published. List view only; likely HTML scrape if bulk channel not granted.
 - **Permission email:** Sent 2026-05-10 to `aacm@aacm.gov.mo`.
-- **Reply:** _pending_
-
----
-
-### CAAT Thailand — Civil Aviation Authority of Thailand
-
-- **Status:** Future — awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://www.caat.or.th/en/certificates-licenses/aircraft/guidance-material/registration-of-an-aircraft/
-- **Bulk download URL:** Direct PDF (e.g. `Aircraft-Registration-Information-DD-MMM-YYYY.pdf`). WordPress site.
-- **Update cadence:** Stated twice per year (January and June); observed roughly annual with mid-year drops. Cadence inconsistent.
-- **Format note:** PDF — ingest blocked on PDF parser path.
-- **Permission email:** Sent 2026-05-10 to `inter_focalpoint@caat.or.th`.
 - **Reply:** _pending_
 
 ---

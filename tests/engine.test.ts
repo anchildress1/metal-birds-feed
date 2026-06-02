@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { translate } from '../src/engine.js';
+import { translate, contentHash } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceConfig } from '../src/types/config.js';
@@ -820,6 +820,78 @@ describe('engine — negative and edge cases', () => {
     const { records: r } = await translate(modConfig, files);
     expect(r.get('00001001')?.operational_classes).toEqual(['V']);
   });
+
+  it('throws when the primary file is absent from the files map', async () => {
+    const config = loadSourceConfig(CONFIG_PATH);
+    const files = new Map([
+      ['acftref', fixtureBuffer('ACFTREF.txt')],
+      ['engine', fixtureBuffer('ENGINE.txt')],
+    ]);
+    await expect(translate(config, files)).rejects.toThrow(
+      'Primary file "master" not found in downloaded files'
+    );
+  });
+
+  it('throws when a join file is absent from the files map', async () => {
+    const config = loadSourceConfig(CONFIG_PATH);
+    await expect(
+      translate(config, new Map([['master', fixtureBuffer('MASTER.txt')]]))
+    ).rejects.toThrow('Join file');
+  });
+
+  it('num() returns null when the constant value is not a number', async () => {
+    const config = loadSourceConfig(CONFIG_PATH);
+    const modConfig = {
+      ...config,
+      mapping: { ...config.mapping, year_manufactured: { constant: 'not-a-number' } },
+    };
+    const files = new Map([
+      ['master', fixtureBuffer('MASTER.txt')],
+      ['acftref', fixtureBuffer('ACFTREF.txt')],
+      ['engine', fixtureBuffer('ENGINE.txt')],
+    ]);
+    const { records: r, stats } = await translate(modConfig, files);
+    expect(stats.failed).toBe(0);
+    expect(r.get('00001001')?.year_manufactured).toBeNull();
+  });
+
+  it('resolveCompound applies lookup to the compound-transformed result', async () => {
+    const config = loadSourceConfig(TC_CONFIG_PATH);
+    // TC's airframe_type uses tc_airframe compound transform but no lookup.
+    // Adding a lookup exercises the resolveCompound → resolveLookup path (engine.ts line 206).
+    const modConfig = {
+      ...config,
+      mapping: {
+        ...config.mapping,
+        airframe_type: {
+          ...config.mapping['airframe_type'],
+          lookup: { 'fixed-wing-single-engine': 'fixed-wing' },
+        },
+      },
+    };
+    const files = new Map([
+      ['carscurr', tcFixtureBuffer('carscurr.txt')],
+      ['carsownr', tcFixtureBuffer('carsownr.txt')],
+    ]);
+    const { records: r } = await translate(modConfig, files);
+    // AAC: Aeroplane + 1 engine → tc_airframe → 'fixed-wing-single-engine' → lookup → 'fixed-wing'
+    expect(r.get('AAC')?.airframe_type).toBe('fixed-wing');
+  });
+});
+
+describe('contentHash', () => {
+  it('returns a 16-character lowercase hex string', () => {
+    expect(contentHash(records.get('00001001')!)).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('is deterministic for the same record content', () => {
+    const r = records.get('00001001')!;
+    expect(contentHash(r)).toBe(contentHash({ ...r }));
+  });
+
+  it('produces a different digest for distinct records', () => {
+    expect(contentHash(records.get('00001001')!)).not.toBe(contentHash(records.get('00002002')!));
+  });
 });
 
 describe('engine — spreadsheet dispatch (parsePrimary)', () => {
@@ -1083,5 +1155,108 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     expect(records.size).toBe(1);
     expect(records.get('200')?.registration).toBe('PH-OK');
     expect(records.has('999')).toBe(false);
+  });
+});
+
+const TW_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'tw-caa');
+const TW_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'tw-caa.yaml');
+
+const twFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(TW_FIXTURES, 'input', filename));
+
+describe('CAA Taiwan fixture translation (binary .xls)', () => {
+  let twRecords: Map<string, Aircraft>;
+  let twStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(TW_CONFIG_PATH);
+    const files = new Map([['register', twFixtureBuffer('register.xls')]]);
+    const result = await translate(config, files);
+    twRecords = result.records;
+    twStats = result.stats;
+  });
+  it('translates 6 aircraft and skips the 6 subtotal/total rows', () => {
+    expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6 });
+    expect(twRecords.size).toBe(6);
+  });
+
+  describe('B-00101 — first aircraft, CAA-operated', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = twRecords.get('B-00101')!;
+    });
+    it('has correct identity', () => {
+      expect(r.source).toBe('tw-caa');
+      expect(r.source_id).toBe('B-00101');
+      expect(r.registration).toBe('B-00101');
+      expect(r.country).toBe('TW');
+    });
+    it('has status=valid (register is a current-fleet snapshot)', () =>
+      expect(r.status).toBe('valid'));
+    it('carries the full free-text model string', () => expect(r.model).toBe('HBC BEECH 350'));
+    it('leaves manufacturer null (not separable from model)', () =>
+      expect(r.manufacturer).toBeNull());
+    it('extracts year_manufactured from the Excel serial date', () =>
+      expect(r.year_manufactured).toBe(2011));
+    it('maps 航空公司 to operator with country=TW and leaves owner null', () => {
+      expect(r.operator.name).toBe('民航局');
+      expect(r.operator.country).toBe('TW');
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+    });
+  });
+
+  describe('B-18001 / B-18002 — China Airlines 777s', () => {
+    it('maps both to the same operator with their own manufacture years', () => {
+      expect(twRecords.get('B-18001')?.operator.name).toBe('中華航空');
+      expect(twRecords.get('B-18001')?.year_manufactured).toBe(2015);
+      expect(twRecords.get('B-18002')?.year_manufactured).toBe(2015);
+    });
+  });
+
+  describe('B-16701 — EVA Air 777', () => {
+    it('maps operator and year', () => {
+      expect(twRecords.get('B-16701')?.operator.name).toBe('長榮航空');
+      expect(twRecords.get('B-16701')?.year_manufactured).toBe(2012);
+    });
+  });
+
+  describe('B-58201 — aircraft with a blank manufacture date', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = twRecords.get('B-58201')!;
+    });
+    it('leaves year_manufactured null when 出廠日期 is blank', () =>
+      expect(r.year_manufactured).toBeNull());
+    it('still records operator and model', () => {
+      expect(r.operator.name).toBe('星宇航空');
+      expect(r.model).toBe('A321neo');
+    });
+  });
+
+  describe('B-94520 — recent balloon', () => {
+    it('extracts the manufacture year from the serial', () =>
+      expect(twRecords.get('B-94520')?.year_manufactured).toBe(2024));
+  });
+
+  it('does not leak subtotal (小計) or grand-total (總計) rows as records', () => {
+    expect(twRecords.has('小計')).toBe(false);
+    expect(twRecords.has('總計')).toBe(false);
+    expect(twRecords.has('')).toBe(false);
+  });
+
+  it('every Taiwan record carries country=TW, operator.country=TW, null owner, and no engine data', () => {
+    for (const r of twRecords.values()) {
+      expect(r.country).toBe('TW');
+      expect(r.operator.country).toBe('TW');
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.engine).toEqual({
+        manufacturer: null,
+        model: null,
+        type: null,
+        count: null,
+        horsepower: null,
+        thrust_lbs: null,
+      });
+    }
   });
 });

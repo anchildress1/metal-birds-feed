@@ -1,14 +1,14 @@
 import { createHash } from 'node:crypto';
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
-import { parseCSV, parseSpreadsheet, type Row } from './parser.js';
+import { parseCSV, parseSpreadsheet, parseXls, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
 // Dispatches the primary-file parse based on `config.format`. CSV is the existing path;
-// `ods`/`xlsx` route to the spreadsheet parser. Joins always read CSV — sources that need
-// spreadsheet joins do not exist yet, and the parser is gated behind one call site so the
-// extension is localized when needed.
+// `ods`/`xlsx` route to the hucre spreadsheet parser; legacy binary `xls` routes to the
+// SheetJS-backed parser. Joins always read CSV — sources that need spreadsheet joins do not
+// exist yet.
 const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
   if (config.format === 'csv') {
     return parseCSV(buf, {
@@ -16,6 +16,14 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       delimiter: config.delimiter,
       trim: config.trim_all,
       columns: config.columns?.[config.primary],
+    });
+  }
+  if (config.format === 'xls') {
+    return parseXls(buf, {
+      trim: config.trim_all,
+      columns: config.columns?.[config.primary],
+      sheet: config.sheet,
+      skip_rows: config.skip_rows,
     });
   }
   return parseSpreadsheet(buf, {

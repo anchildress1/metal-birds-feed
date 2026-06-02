@@ -79,6 +79,25 @@ const isoDateOnlyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(head.slice(0, 4), head.slice(5, 7), head.slice(8, 10));
 };
 
+// Excel day 0 is 1899-12-30 rather than 1899-12-31 to absorb the phantom leap day
+// (Excel serial 60 = Feb 29, 1900, which never existed). Anchoring two days before
+// 1900-01-01 makes all serials >= 61 (1900-03-01+) resolve correctly, which covers
+// all aircraft manufacture dates.
+const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
+const MS_PER_DAY = 86_400_000;
+
+// Converts an Excel serial date to a 4-digit year. The canonical schema stores only
+// year_manufactured, so day/month are intentionally not preserved. Returns null for
+// blank/non-numeric cells or years outside the sane 1900–2100 window.
+const excelSerialYearOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length === 0) return null;
+  const serial = Number(v);
+  if (!Number.isFinite(serial) || serial <= 0) return null;
+  const year = new Date(EXCEL_EPOCH_UTC + Math.trunc(serial) * MS_PER_DAY).getUTCFullYear();
+  return year >= 1900 && year <= 2100 ? String(year) : null;
+};
+
 const mphToKtasOrNull = (value: string): string | null => {
   const v = value.trim();
   if (v.length === 0) return null;
@@ -159,6 +178,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
+  excel_serial_year_or_null: excelSerialYearOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,
   faa_n_number: faaNNumber,
