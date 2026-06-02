@@ -286,19 +286,6 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ---
 
-### GACA — General Authority of Civil Aviation, Saudi Arabia
-
-- **Status:** Future — v3 dataset-publication request sent 2026-05-11, awaiting substantive reply
-- **Classification:** Conditional Open (verified 2026-05-11 from live GACA Data Usage Policy)
-- **Source URL:** https://gaca.gov.sa/en/Open-Data (Open Data Library — airports traffic only; per-tail register **not yet published**)
-- **License surface:** https://gaca.gov.sa/en/open-data-policy
-- **License (verbatim from live policy, verified 2026-05-11):** _"Open data refers to a set of information available without technical, financial, or legal restrictions that individuals can benefit from and use as needed."_
-- **Terms of Reuse (verbatim):** Source attribution required (with link to gaca.gov.sa); no political, unlawful, criminal, racist, or incitement use; nothing contrary to KSA customs/traditions. **No non-commercial bar, no redistribution bar.**
-- **Implementation status:** Per-tail aircraft register not yet published on the Open Data Library. Email asks for dataset publication or confirmation that the policy extends to register data from other GACA public surfaces.
-- **Reply:** Non-substantive auto-acknowledgment received. Substantive reply pending.
-
----
-
 ### CAAT Thailand — Civil Aviation Authority of Thailand
 
 - **Status:** 🛠️ Cleared — implementation pending (PDF parser path needed)
@@ -338,6 +325,23 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 > Licensed under Open — per FOCA legal department, the registry is publicly available with no restrictions, conditions, or formal procedures. Attribution is provided as a courtesy.
 >
 > The material has been changed: FOCA aircraft records are normalized into metal-birds-feed's canonical schema. This attribution does not imply endorsement by FOCA.
+
+---
+
+## Conditional Open — awaiting substantive reply
+
+License is published but carries use-conduct conditions that require agency confirmation before slotting. Substantive reply not yet received; ingest not slotted.
+
+### GACA — General Authority of Civil Aviation, Saudi Arabia
+
+- **Status:** Future — v3 dataset-publication request sent 2026-05-11, awaiting substantive reply
+- **Classification:** Conditional Open (verified 2026-05-11 from live GACA Data Usage Policy)
+- **Source URL:** https://gaca.gov.sa/en/Open-Data (Open Data Library — airports traffic only; per-tail register **not yet published**)
+- **License surface:** https://gaca.gov.sa/en/open-data-policy
+- **License (verbatim from live policy, verified 2026-05-11):** _"Open data refers to a set of information available without technical, financial, or legal restrictions that individuals can benefit from and use as needed."_
+- **Terms of Reuse (verbatim):** Source attribution required (with link to gaca.gov.sa); no political, unlawful, criminal, racist, or incitement use; nothing contrary to KSA customs/traditions. **No non-commercial bar, no redistribution bar.**
+- **Implementation status:** Per-tail aircraft register not yet published on the Open Data Library. Email asks for dataset publication or confirmation that the policy extends to register data from other GACA public surfaces.
+- **Reply:** Non-substantive auto-acknowledgment received. Substantive reply pending.
 
 ---
 
