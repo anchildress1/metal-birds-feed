@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { readdirSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
@@ -175,7 +176,11 @@ const closeStalenessIssues = async (source: string, token: string, repo: string)
 
 export async function main(): Promise<void> {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
-  const sources = sourceEnv ? [sourceEnv] : ['faa', 'tc-ca', 'nl-ilt'];
+  const sources = sourceEnv
+    ? [sourceEnv]
+    : readdirSync('sources')
+        .filter((f) => f.endsWith('.yaml'))
+        .map((f) => f.replace(/\.yaml$/, ''));
 
   const results = await Promise.allSettled(sources.map(run));
 
