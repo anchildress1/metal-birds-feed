@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.5](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.4...v0.0.5) (2026-06-02)
+
+
+### Features
+
+* **cadence:** per-source cadence gating with daily cron and staleness alerts ([#28](https://github.com/anchildress1/metal-birds-feed/issues/28)) ([8aea69b](https://github.com/anchildress1/metal-birds-feed/commit/8aea69b1cfc68a4d04693e76ed05e02450aecbb4))
+* **tw-caa:** ship CAA Taiwan (OGDL v1.0) + docs cleanup ([#23](https://github.com/anchildress1/metal-birds-feed/issues/23)) ([7b48a9b](https://github.com/anchildress1/metal-birds-feed/commit/7b48a9bae2062cdbb57b5e219aa250f26cb19a1e))
+
 ## [0.0.4](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.3...v0.0.4) (2026-05-13)
 
 
