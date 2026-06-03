@@ -2,11 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Aircraft } from '../src/schema.js';
 
 const mockSend = vi.hoisted(() => vi.fn());
+const s3ClientConfig = vi.hoisted((): { value: unknown } => ({ value: undefined }));
 
 vi.mock('@aws-sdk/client-s3', () => ({
   /* eslint-disable @typescript-eslint/no-explicit-any */
   S3Client: class {
     send: any = mockSend;
+    constructor(config: unknown) {
+      s3ClientConfig.value = config;
+    }
   },
   /* eslint-enable @typescript-eslint/no-explicit-any */
   GetObjectCommand: class {
@@ -89,6 +93,20 @@ function refsResponse(refs: string[]): object {
 beforeEach(() => {
   mockSend.mockReset();
   mockSend.mockResolvedValue({ Body: { transformToString: vi.fn().mockResolvedValue('{}') } });
+});
+
+describe('R2DiffWriter — client config', () => {
+  // Regression guard: the SDK's default agent caps at 50 sockets, which throttled the
+  // FAA write fan-out. Without this assertion the requestHandler line can be silently
+  // dropped and every other test stays green while the 30-min timeout returns.
+  it('raises the S3 client socket ceiling above the SDK default and keeps connections alive', () => {
+    new R2DiffWriter(R2_CONFIG, true);
+    const cfg = s3ClientConfig.value as {
+      requestHandler?: { httpsAgent?: { maxSockets?: number; keepAlive?: boolean } };
+    };
+    expect(cfg.requestHandler?.httpsAgent?.maxSockets).toBeGreaterThan(50);
+    expect(cfg.requestHandler?.httpsAgent?.keepAlive).toBe(true);
+  });
 });
 
 describe('R2DiffWriter — dry run', () => {

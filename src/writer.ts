@@ -181,7 +181,7 @@ export class R2DiffWriter {
       },
       maxAttempts: S3_MAX_ATTEMPTS,
       retryMode: 'adaptive',
-      requestHandler: { httpsAgent: { maxSockets: S3_MAX_SOCKETS } },
+      requestHandler: { httpsAgent: { maxSockets: S3_MAX_SOCKETS, keepAlive: true } },
     });
   }
 
