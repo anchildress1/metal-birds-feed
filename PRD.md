@@ -189,7 +189,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 Each new registry is gated on CC.1 license classification + CC.2 permission protocol if needed. None of these are committed; they slot in incrementally if/when there is reason to.
 
-**R4.1 Australia (CASA).** Shipped 2026-05-08. `sources/au-casa.yaml` ingests the ~15k-aircraft VH-prefix monthly CSV at `https://services.casa.gov.au/CSV/acrftreg.csv`. License classification is **Open** under CC.1: the bulk and lookup register surfaces inherit CASA's site-wide CC BY 4.0. No CC.2 permission email is required. Translation also extended the canonical schema with `operator` and `idera_authorised_party` so CASA's distinct operator/owner and Cape Town Convention fields are preserved rather than dropped.
+**R4.1 Australia (CASA).** Shipped 2026-05-08. Open under CC.1 (register surfaces inherit CASA's site-wide CC BY 4.0); no CC.2 email. `sources/au-casa.yaml`.
 
 **R4.2 Ireland (IAA).** New file `sources/ie-iaa.yaml`. ~1.4k aircraft, EI-prefix, monthly XLSX. The XLSX parser path is shared with NL ILT (added in R2.6 during v3), so IAA's engine work is just config + fixtures. License classification pending (CC.1) and CC.2 permission email if needed.
 

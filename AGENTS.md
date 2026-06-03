@@ -39,7 +39,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Classify license per CC.1: Open / Personal-use / Restrictive / Unknown.
 - Personal-use + Unknown: send permission email via `docs/agency-permission-request.md`. 30-day public-record fallback applies to **Unknown only**; Personal-use needs affirmative reply (silence ≠ permission).
 - Restrictive: exclude. Document reason in `DATA_LICENSES.md`; do not email.
-- New source = 5 surfaces or incomplete: `sources/<id>.yaml` + `fixtures/<id>/` ground-truth + `DATA_LICENSES.md` entry + `README.md` sources row + `docs/license-matrix.md` summary row.
+- New source = 6 surfaces or incomplete: `sources/<id>.yaml` + `fixtures/<id>/` ground-truth + `DATA_LICENSES.md` entry + `README.md` sources row + `README.md` `## Attribution` block (required even for CC-0/public-domain: courtesy credit) + `docs/license-matrix.md` summary row.
 - README sources table + license-matrix summary table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append.
 - New scalar/compound transform = 3 places simultaneously or loader rejects: enum in `src/types/config.ts` (`ScalarTransformName`/`CompoundTransformName`) + handler in `src/transforms.ts` + allowlist in `src/config/loader.ts`.
 
@@ -47,7 +47,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 - **Exhaust all research options before sending the first contact email.** Hunt national open-data portals (CKAN/Aporta/data.gov.\* listings), register pages, ToS / disclaimer text, and any public license declarations. Only send the permission email once research is genuinely exhausted and classification is still Unknown or under-verified.
 - **Never send a follow-up or clarifier before the 30-day fallback window expires.** A second email asking the same question is a duplicate request — agencies treat it as noise and it does not earn a faster reply.
-- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (detail entry) + `README.md` (sources row) + `docs/license-matrix.md` (summary row + detail block if one exists) + `docs/source-onboarding-checklist.md` (in-flight row, including any register-specific contact surfaced for the eventual follow-up).
+- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (detail entry) + `README.md` (sources row) + `docs/license-matrix.md` (summary row) + `docs/source-onboarding-checklist.md` (in-flight row, including any register-specific contact surfaced for the eventual follow-up).
 - After recon on an already-emailed agency: update docs, move on to the next source. Wait until the original 30-day timeline expires before sending anything else to that agency.
 - Exception — surfacing a new fact materially changes the ask (not "please confirm what we already asked"). Rare. Default is no.
 
@@ -91,45 +91,28 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 ## Branch hygiene — scope creep prevention
 
-Real regression: AI agents pile unrelated work onto active branches via "while we're here" thinking. Stop it.
+Scope = branch name + first commit's diff shape. Nothing else.
 
-**Scope = branch name + first commit's diff shape.** Nothing else.
+- `feat/*`: `src/`, `tests/`, `sources/`, `fixtures/`, plus docs for that feature only.
+- `docs/*`: `README.md`, `DATA_LICENSES.md`, `docs/*` only. No code/sources/fixtures.
+- `fix/*`: bug + tests proving it. Nothing else.
+- `chore/*`: tooling, CI, deps. Nothing user-facing.
 
-- `feat/*`: `src/`, `tests/`, `sources/`, `fixtures/`, plus docs describing the feature being added.
-- `docs/*`: `README.md`, `DATA_LICENSES.md`, `docs/*` only. No code, sources, or fixtures.
-- `fix/*`: bug + tests proving the fix. Nothing else.
-- `chore/*`: tooling, CI, dep bumps. Nothing user-facing.
+Out-of-scope work → new branch. Do not append, even if small.
 
-Out-of-scope work = stop and propose a new branch. Do not append even if it feels small.
+New branch when: active `feat/*` and asked for license triage on other sources, or doc-only work not required by the feature; active `docs/*` and asked for any code change; commit log already shows two themes and a third is asked.
 
-Triggers — work belongs on a new branch when:
+Switch: commit/stash current work → state the mismatch in one line → branch from `main` (not the active branch, which would carry unwanted commits) → apply there → return when the feature resumes.
 
-- Active is `feat/*` and user asks for license triage on additional sources beyond the one shipping.
-- Active is `feat/*` and user asks for doc-only updates not directly required by the feature.
-- Active is `docs/*` and user asks for any code change.
-- Active branch's commit log already shows two distinct themes and user is asking to extend a third.
-
-Switch procedure:
-
-1. Commit in-progress work cleanly (or stash if mid-edit).
-2. Surface the scope mismatch in one sentence (e.g., "this is doc-only license triage, not part of the NL ILT feature — splitting to a new branch").
-3. Branch from `main`, not from the active feature branch (otherwise the new branch carries feature commits the user does not want bundled).
-4. Apply new work there.
-5. Return to original branch when user resumes feature work.
-
-Never:
-
-- Stack feature + unrelated docs on the same branch because user said commit + push.
-- Rationalize the mix as "related" when the only relation is "I worked on them sequentially in one conversation".
-- Discover at PR-open time that the branch is doing two things — user catches it and "I didn't push back when scope expanded" is the wrong answer.
-
-Heuristic: diff hard to describe in one PR title → two PRs.
+Never: stack feature + unrelated docs because "commit + push" was said; call a mix "related" when the only link is one conversation; let scope expand unflagged until PR-open. Diff hard to title in one line → two PRs.
 
 ## Documentation
 
+- Prose docs carry intent, rationale, and license/legal facts — never restate what `sources/*.yaml`, `src/schema.ts`, or other code already states. If a reader can get it from the source, link; don't transcribe. Per-source CSV mechanics, field mappings, and schema field lists belong in the YAML/schema, not in prose.
 - Don't create new top-level doc files unilaterally. If work seems to call for one, ask first; answer is usually "fold into an existing one". Exception: `sources/<id>.yaml`, `fixtures/<id>/`, other source-onboarding artifacts in the standard workflow.
 - Required updates (not optional) when underlying state changes:
   - `DATA_LICENSES.md` — when a source is added or its license posture changes.
-  - `README.md` sources table + `docs/license-matrix.md` summary table — alongside any new `sources/<id>.yaml`.
-  - `PRD.md` — when project goals, requirements, or constraints shift.
+  - `README.md` sources table + `README.md` `## Attribution` block + `docs/license-matrix.md` summary table — alongside any new `sources/<id>.yaml`.
+  - `PRD.md` — only when goals, requirements, or constraints shift. It is planning, not a shipped-implementation log; do not restate source YAML or schema here.
+- `docs/license-matrix.md`: the summary table is the surface (triage across all candidate registries). Per-agency `### detail` blocks are legacy — they duplicate `DATA_LICENSES.md`; do not add them for new sources.
 - Inline code comments: WHY only (per Hard prohibitions WHAT-vs-WHY rule).
