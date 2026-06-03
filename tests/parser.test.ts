@@ -6,7 +6,12 @@ import { parseCSV, parseSpreadsheet, parseXls, type HucreFormat } from '../src/p
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
 const opts = (
-  overrides: Partial<{ delimiter: string; trim: boolean; columns: string[] }> = {}
+  overrides: Partial<{
+    delimiter: string;
+    trim: boolean;
+    columns: string[];
+    skip_rows: number;
+  }> = {}
 ) => ({
   encoding: 'latin1' as const,
   delimiter: ',',
@@ -120,6 +125,22 @@ describe('parseCSV', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].MARK).toBe('AAC');
     expect(rows[1].COMMON_NAME).toBe('Dehavilland');
+  });
+
+  it('skip_rows discards leading banner lines before the header (ANAC quirk)', async () => {
+    const rows = await parseCSV(
+      buf('Atualizado em: 2026-06-03\nA;B\n1;2\n3;4\n'),
+      opts({ delimiter: ';', skip_rows: 1 })
+    );
+    expect(rows).toEqual([
+      { A: '1', B: '2' },
+      { A: '3', B: '4' },
+    ]);
+  });
+
+  it('skip_rows of 0 leaves the header on the first line', async () => {
+    const rows = await parseCSV(buf('A,B\n1,2\n'), opts({ skip_rows: 0 }));
+    expect(rows).toEqual([{ A: '1', B: '2' }]);
   });
 });
 

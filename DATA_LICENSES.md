@@ -181,12 +181,14 @@ The 30-day fallback does **not** apply to **Personal-use** sources, where the ag
 
 ### ANAC Brasil — Brazilian National Civil Aviation Agency
 
-- **Status:** 🛠️ Cleared — implementation pending (native CSV; zero parser work needed)
+- **Status:** ✅ Live (`sources/br-anac.yaml` + `fixtures/br-anac/`)
 - **Classification:** Open with attribution (confirmed 2026-05-11 by ANAC Brasil — Brazilian Aeronautical Registry Technical Branch, Department of Airworthiness)
 - **Source URL:** https://sistemas.anac.gov.br/aeronaves/cons_rab.asp
 - **Bulk download URL:** https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/dados_aeronaves.csv (native CSV, ~22.7 MB, updated daily)
 - **License:** Open data. Per ANAC Brasil reply (2026-05-11): _"this is open data, and no prior authorization is required for its use. However, proper citation of the source is mandatory."_
-- **Update cadence:** Daily.
+- **Attribution required:** Yes — source citation mandatory (see below).
+- **Update cadence:** Daily (`cadence_days: 1`).
+- **PII:** ANAC embeds owner/operator tax ids (CPF pre-masked upstream, e.g. `587XXXXXX00`). The id is dropped; only `owner.kind`/`operator.kind` are derived from its length.
 
 #### Required attribution
 

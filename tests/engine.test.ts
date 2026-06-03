@@ -1260,3 +1260,172 @@ describe('CAA Taiwan fixture translation (binary .xls)', () => {
     }
   });
 });
+
+const BR_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'br-anac');
+const BR_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'br-anac.yaml');
+
+function brBuffer(filename: string): Buffer {
+  return readFileSync(resolve(BR_FIXTURES, 'input', filename));
+}
+
+let brRecords: Map<string, Aircraft>;
+let brStats: EngineStats;
+
+beforeAll(async () => {
+  const config = loadSourceConfig(BR_CONFIG_PATH);
+  const files = new Map([['aircraft', brBuffer('dados_aeronaves.csv')]]);
+  const result = await translate(config, files);
+  brRecords = result.records;
+  brStats = result.stats;
+});
+
+describe('BR-ANAC fixture translation', () => {
+  it('translates all 9 fixture rows with no failures (banner row skipped)', () => {
+    expect(brStats).toEqual({ total: 9, ok: 9, failed: 0, skipped: 0 });
+    expect(brRecords.size).toBe(9);
+  });
+
+  describe('PPJPG — single-engine piston, individual owner, valid', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPJPG')!;
+    });
+    it('hyphenates the registration mark', () => expect(r.registration).toBe('PP-JPG'));
+    it('uses the bare mark as source_id', () => expect(r.source_id).toBe('PPJPG'));
+    it('is valid (no cancellation date)', () => expect(r.status).toBe('valid'));
+    it('classifies a landplane single as fixed-wing-single-engine', () =>
+      expect(r.airframe_type).toBe('fixed-wing-single-engine'));
+    it('maps MOTOR CONVENCIONAL to reciprocating', () =>
+      expect(r.engine.type).toBe('reciprocating'));
+    it('derives individual from a masked CPF', () => {
+      expect(r.owner.kind).toBe('individual');
+      expect(r.owner.name).toBe('JONAS GONCALVES');
+      expect(r.owner.state).toBe('MT');
+      expect(r.owner.country).toBe('BR');
+    });
+    it('parses the DT_MATRICULA ISO datetime to a plain date', () =>
+      expect(r.certification_date).toBe('2012-03-29'));
+    it('parses the DDMMYYYY airworthiness validity into expiration_date', () =>
+      expect(r.expiration_date).toBe('2026-08-18'));
+  });
+
+  describe('PPACP — twin turbofan, corporate owner, transport category', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPACP')!;
+    });
+    it('classifies a twin landplane as fixed-wing-multi-engine', () =>
+      expect(r.airframe_type).toBe('fixed-wing-multi-engine'));
+    it('maps MOTOR JATO/TURBOFAN to turbo-fan', () => expect(r.engine.type).toBe('turbo-fan'));
+    it('maps TRANSPORTE to the standard category', () => expect(r.category).toBe('standard'));
+    it('derives corporation from a 14-digit CNPJ', () => expect(r.owner.kind).toBe('corporation'));
+  });
+
+  describe('PPADZ — cancelled registration', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPADZ')!;
+    });
+    it('is cancelled when DT_CANC is present', () => expect(r.status).toBe('cancelled'));
+    it('records the cancellation date as last_action_date', () =>
+      expect(r.last_action_date).toBe('2025-11-19'));
+    it('captures weight and capacity into the extended schema fields', () => {
+      expect(r.max_takeoff_weight_kg).toBe(46992);
+      expect(r.seats).toBe(20);
+      expect(r.max_passengers).toBe(16);
+      expect(r.min_crew).toBe(2);
+    });
+    it('preserves cancellation reason, lien status, and CVA review date', () => {
+      expect(r.cancellation_reason).toBe('AERONAVE EXPORTADA');
+      expect(r.lien_status).toBe('MATRICULA CANCELADA');
+      expect(r.airworthiness_review_date).toBe('2026-02-18');
+    });
+  });
+
+  describe('PPJCR — three-way co-ownership', () => {
+    it('flags the owner kind as co-owner', () =>
+      expect(brRecords.get('PPJCR')?.owner.kind).toBe('co-owner'));
+    it('keeps the primary owner name', () =>
+      expect(brRecords.get('PPJCR')?.owner.name).toBe('SERGIO MURILO LEANDRO COSTA'));
+  });
+
+  describe('PPAPA — helicopter, undisclosed operator', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPAPA')!;
+    });
+    it('classifies a helicopter class as rotorcraft', () =>
+      expect(r.airframe_type).toBe('rotorcraft'));
+    it('maps MOTOR TURBOEIXO to turbo-shaft', () => expect(r.engine.type).toBe('turbo-shaft'));
+    it('records the owner but nulls the Indisponível operator entirely', () => {
+      expect(r.owner.name).toBe('HBR AVIACAO S.A');
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: 'BR' });
+    });
+    it('leaves dates and unpublished capacity fields null', () => {
+      expect(r.certification_date).toBeNull();
+      expect(r.expiration_date).toBeNull();
+      expect(r.seats).toBeNull();
+      expect(r.min_crew).toBeNull();
+    });
+  });
+
+  describe('PPFAL — unpowered (glider), cancelled', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPFAL')!;
+    });
+    it('classifies an unpowered landplane (L00) as glider', () =>
+      expect(r.airframe_type).toBe('glider'));
+    it('maps SEM MOTOR to engine type none', () => expect(r.engine.type).toBe('none'));
+    it('rejects the malformed 6-digit validity date', () => expect(r.expiration_date).toBeNull());
+    it('distinguishes owner from operator', () => {
+      expect(r.owner.name).toBe('GOVERNO FEDERAL ANAC');
+      expect(r.operator.name).toBe('AEROCLUBE DE RIBEIRAO PRETO');
+    });
+  });
+
+  describe('PRAFV — drone (RPA)', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PRAFV')!;
+    });
+    it('leaves airframe_type null (no canonical UAV enum)', () =>
+      expect(r.airframe_type).toBeNull());
+    it('maps DRONE to engine type other', () => expect(r.engine.type).toBe('other'));
+  });
+
+  describe('PPASW — single turboprop, restricted category', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPASW')!;
+    });
+    it('maps MOTOR TURBOHELICE to turbo-prop', () => expect(r.engine.type).toBe('turbo-prop'));
+    it('maps RESTRITA to the limited category', () => expect(r.category).toBe('limited'));
+  });
+
+  describe('PPACK — UTF-8 accented owner name round-trip', () => {
+    it('preserves Brazilian Portuguese diacritics', () =>
+      expect(brRecords.get('PPACK')?.owner.name).toBe('HANGAR ONE SERVIÇOS AERONÁUTICOS LTDA.'));
+  });
+
+  describe('PPACK — interdiction code is preserved, never folded into status', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = brRecords.get('PPACK')!;
+    });
+    it('preserves the raw interdiction code verbatim', () =>
+      expect(r.interdiction_code).toBe('C8'));
+    it('keeps status valid: an interdiction code on a lien-free active aircraft is not restricted', () => {
+      expect(r.lien_status).toBe('NENHUM GRAVAME REGISTRADO');
+      expect(r.status).toBe('valid');
+    });
+  });
+
+  it('every Brazil record carries country=BR and no Mode-S hex', () => {
+    for (const r of brRecords.values()) {
+      expect(r.country).toBe('BR');
+      expect(r.owner.country).toBe('BR');
+      expect(r.icao_hex).toBeNull();
+    }
+  });
+});

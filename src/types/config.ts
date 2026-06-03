@@ -8,6 +8,7 @@ export type ScalarTransformName =
   | 'date_yyyymmdd_or_null'
   | 'date_yyyy_slash_or_null'
   | 'date_dd_slash_or_null'
+  | 'date_ddmmyyyy_or_null'
   | 'iso_date_only_or_null'
   | 'excel_serial_year_or_null'
   | 'mph_to_ktas_or_null'
@@ -17,7 +18,13 @@ export type ScalarTransformName =
   | 'tc_full_registration'
   | 'nl_ilt_registration_or_null'
   | 'casa_full_registration'
-  | 'casa_engine_detail_or_null';
+  | 'casa_engine_detail_or_null'
+  | 'br_registration'
+  | 'br_airframe'
+  | 'br_status'
+  | 'br_party_name'
+  | 'br_party_state'
+  | 'br_party_kind';
 
 export type ArrayTransformName = 'faa_cert_ops';
 
