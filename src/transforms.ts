@@ -192,6 +192,7 @@ const brAirframe = (value: string): string | null => {
   if (kind === 'B') return 'balloon';
   if (kind === 'L' || kind === 'A' || kind === 'S') {
     const digit = v[1];
+    if (!/^\d$/.test(digit)) return null;
     if (digit === '0') return 'glider';
     return digit === '1' ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
   }

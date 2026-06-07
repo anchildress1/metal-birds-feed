@@ -413,6 +413,8 @@ describe('br_airframe', () => {
     expect(applyScalar('br_airframe', 'RPA')).toBeNull());
   it('returns null for an unknown class code', () =>
     expect(applyScalar('br_airframe', 'X9Z')).toBeNull());
+  it('returns null for a non-digit engine-count character (e.g. LXP)', () =>
+    expect(applyScalar('br_airframe', 'LXP')).toBeNull());
   it('returns null for an empty string', () => expect(applyScalar('br_airframe', '')).toBeNull());
 });
 
