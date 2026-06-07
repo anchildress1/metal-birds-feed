@@ -20,7 +20,7 @@
 1. **FAA registry, fully translated, in R2.** Every field FAA exposes in MASTER + ACFTREF + ENGINE, normalized into the canonical schema. ~300k US-registered aircraft queryable by registration ID or ICAO hex. _(v1)_
 2. **Transport Canada registry, same shape.** ~37k Canadian aircraft, same canonical schema, no consumer-side code changes. Proves the engine generalizes — the second source is a config file, not a code change. _(v2)_
 3. **Third-registry milestone — two parallel sources.** _(v3)_
-   - **Netherlands ILT** (PH-prefix, ~7k aircraft). CC-0 (public domain) per data.overheid.nl. **No CC.2 permission email needed** — ships independently of any agency reply. Published as OpenDocument Spreadsheet (.ods), filename includes a date stamp that requires a small discovery step. Adds the spreadsheet parser path to the engine (R2.6), which also unblocks IAA Ireland later.
+   - **Netherlands ILT** (PH-prefix, ~3k aircraft). CC-0 (public domain) per data.overheid.nl. **No CC.2 permission email needed** — ships independently of any agency reply. Published as OpenDocument Spreadsheet (.ods), filename includes a date stamp that requires a small discovery step. Adds the spreadsheet parser path to the engine (R2.6), which also unblocks IAA Ireland later.
    - **CAA NZ** (ZK-prefix, ~5k aircraft). CSV at a stable URL. License is "personal use" (CC.1 Personal-use) — operator-private R2 only, CC.3 applies. CC.2 permission email gates slotting; ships when reply lands or 30-day timeout passes.
 
    v3 is "complete" when both ship. NL is the no-gate path that drives the parser-extension work; NZ is the email-gated path that runs in parallel. This milestone tests the engine against two independent schema dialects, two file formats, and the cross-cutting permission protocol in one phase.
@@ -40,7 +40,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 1. **Aircraft photos.** No registry provides them, scraping the ones that do (JetPhotos, PlaneSpotters) violates their terms. Schema has no `photo_url` field in v1. Hook reserved for future.
 2. **Live flight data.** This is a static enrichment layer, not an ADS-B feed. `metal-birds-watch` stays the source of live position data; `metal-birds-feed` only answers "what is N12345 / hex A1B2C3?"
 3. **Owner mailing addresses.** FAA publishes full street/city/ZIP for ~300k registrants in their bulk dump. Republishing trivially-queryable PII at scale creates GDPR exposure, doxxing risk, and Cloudflare TOS issues. Schema keeps owner name, kind, state, and registrant country only. (See Open Questions if this changes.)
-4. **A queryable API or search.** R2 is object storage. Lookups are by exact key (`/aircraft/by-id/faa:N12345.json`). No full-text search, no filtering, no list endpoints. If a consumer needs that, they build it.
+4. **A queryable API or search.** R2 is object storage. Lookups are by exact key (`aircraft/by-id/faa/<UNIQUE_ID>.json`). No full-text search, no filtering, no list endpoints. If a consumer needs that, they build it.
 5. **Real-time refresh.** FAA publishes monthly. Transport Canada publishes monthly. National EU registries vary. The pipeline syncs at registry cadence, not on demand.
 6. **Account-management airframes (corporate jet ownership tracing across LLC shells).** Out of scope; this is a registry mirror, not an investigative tool.
 7. **Schema versioning / migration tooling.** v1 is a snapshot. If the schema changes, R2 gets rewritten from source on the next refresh. Acceptable because there is no `raw` blob to migrate independently.
@@ -106,21 +106,23 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 **R0.5 R2 writer.** Writes:
 
-- `aircraft/by-id/faa/<UNIQUE_ID>.json` — canonical record
-- `aircraft/by-icao-hex/<HEX>.json` — `{"refs": ["faa:<UNIQUE_ID>", ...]}` lookup
-- `aircraft/by-registration/<REG>.json` — `{"refs": ["faa:<UNIQUE_ID>", ...]}` lookup
+- `aircraft/by-id/<source>/<UNIQUE_ID>.json` — canonical record
+- `aircraft/by-icao-hex/<HEX>.json` — `{"refs": ["<source>:<UNIQUE_ID>", ...]}` lookup
+- `aircraft/by-registration/<REG>.json` — `{"refs": ["<source>:<UNIQUE_ID>", ...]}` lookup
+- `aircraft/_manifest/<source>.json` — content-hash manifest for diff-write
+- `aircraft/_state/<source>.json` — last-run/change state for cadence gating
 
 Lookup objects are arrays because the same hex / registration can legitimately point to multiple historical records over time. Consumers filter by `status === "valid"` for current.
 
-**R0.6 Refresh orchestration.** GitHub Actions scheduled workflow fires monthly (1st of the month, ~6:00 UTC). Workflow downloads, translates, diffs, writes to R2 via Cloudflare API token stored in GHA secrets. On failure, leaves the previous R2 state untouched and logs the error. Manual `workflow_dispatch` trigger also available for ad-hoc runs.
+**R0.6 Refresh orchestration.** GitHub Actions scheduled workflow fires daily (~6:00 UTC); per-source `cadence_days` gates whether each source does actual work on a given run. Workflow downloads, translates, diffs, writes to R2 via S3-compatible API keys (`MBF_R2_ACCESS_KEY_ID` / `MBF_R2_SECRET_ACCESS_KEY`) stored in GHA secrets. On failure, leaves the previous R2 state untouched and logs the error. Manual `workflow_dispatch` trigger also available for ad-hoc runs.
 
 Why GHA over Workers Cron Triggers: the FAA refresh needs ~5 minutes of CPU and a few hundred MB of RAM to download, parse, join, and translate. Workers free-tier crons cap at 10ms CPU per invocation; running this in Workers requires the $5/month paid plan. GHA gives a full Linux runner (2 vCPU, 7 GB RAM, 6-hour timeout) for free on public repos, well under quota on private. Egress to R2 is free either way.
 
 GHA disables scheduled workflows after 60 days of repo inactivity. Mitigated by Dependabot PR activity (see R0.9), and operator will manually re-enable + refresh if it ever lapses.
 
-**R0.7 Diff-write strategy.** Refresh job computes the diff between the new translated batch and the existing R2 state before writing. Only objects with changed content get PUT; unchanged objects are skipped. Stale objects (records that disappeared from the source) get DELETE'd. Rationale: a full FAA refresh produces ~900k R2 Class A ops (300k records × 3 index paths), within free tier but tight. Real monthly delta is <5%, so diffed writes are ~45k ops — comfortable headroom for adding Canada, NZ, and additional registries without paying for ops.
+**R0.7 Diff-write strategy.** Refresh job computes the diff between the new translated batch and the existing R2 state before writing. Only objects with changed content get PUT; unchanged objects are skipped. Stale objects (records that disappeared from the source) get DELETE'd. Rationale: a full FAA refresh produces ~600k+ R2 Class A ops (~312k records × 2–3 index paths depending on icao_hex population), within free tier but tight. Real monthly delta is <5%, so diffed writes are ~10k ops — comfortable headroom for adding Canada, NZ, and additional registries without paying for ops.
 
-Implementation: list current `aircraft/by-id/<source>/` objects, fetch each (or maintain a manifest object listing content hashes per record), compare to newly translated records, emit only changes. A manifest file (`aircraft/_manifest/<source>.json` mapping `source_id → content_hash`) is the cheap option — one read, one write, instead of N reads.
+Implementation: list current `aircraft/by-id/<source>/` objects, fetch each (or maintain a manifest object listing content hashes per record), compare to newly translated records, emit only changes. A manifest file (`aircraft/_manifest/<source>.json` mapping `source_id → {hash, icao_hex, registration}`) is the cheap option — one read, one write, instead of N reads. The extra index fields support dirty-tracking for the icao_hex and registration index objects.
 
 **R0.8 Dependabot configuration.** `.github/dependabot.yml` enabled for npm + GHA dependencies on a weekly cadence. Serves two purposes: (1) keep dependencies current without manual triage, (2) generate enough repo activity to prevent GHA from auto-disabling scheduled workflows. Auto-merge enabled for patch-level updates that pass CI; manual review for minor/major.
 
@@ -163,7 +165,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 #### Netherlands ILT track (no-email path)
 
-**R2.4 NL ILT source config.** New file `sources/nl-ilt.yaml`. Single national registry, PH-prefix, ~7k aircraft. ILT publishes the full register as an OpenDocument Spreadsheet (.ods) at a date-stamped URL on `ilent.nl`. Same canonical schema. License: **CC-0 (public domain)** per data.overheid.nl, classified Open under CC.1 — no CC.2 permission email needed.
+**R2.4 NL ILT source config.** New file `sources/nl-ilt.yaml`. Single national registry, PH-prefix, ~3k aircraft. ILT publishes the full register as an OpenDocument Spreadsheet (.ods) at a date-stamped URL on `ilent.nl`. Same canonical schema. License: **CC-0 (public domain)** per data.overheid.nl, classified Open under CC.1 — no CC.2 permission email needed.
 
 **R2.5 NL field-coverage parity.** Document fields ILT does not provide. Null-rather-than-invent rule unchanged.
 
@@ -253,7 +255,7 @@ Suggested phasing:
 - **v2 — Transport Canada:** delta from v1 is small (one config file, one downloader, fixtures). Start when v1 has run cleanly through at least one monthly refresh.
 - **v3 — Third-registry milestone (NL ILT + CAA NZ):** start when v2 is stable. Two parallel tracks: NL ILT (no email, ships first; the spreadsheet parser path is the new engine work) and CAA NZ (CC.2 email gates slot, 30-day clock starts on send). NL ships independently of any agency reply; NZ ships when its email resolves or times out. v3 closes when both are in R2.
 - **v4 — Georgia (GCAA):** start when v3 is stable. Begins with R3.1 research milestone before any code. Schedule slips if data isn't accessible — that's the deal you accept by sentimental-prioritizing this over EU member states with known data sources.
-- **Current live set** — FAA, Transport Canada, Netherlands ILT, and Australia CASA.
+- **Current live set** — FAA, Transport Canada, Netherlands ILT, Australia CASA, Latvia CAA, and Taiwan CAA.
 - **Future** — Ireland (IAA), EU member states, photo-URL hook, schema migration tooling, NTSB sibling project. No commitment, added when motivated. Each new registry begins with CC.1 + CC.2 when applicable.
 
 Dependencies:

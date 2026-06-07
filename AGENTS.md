@@ -68,6 +68,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
   - `aircraft/by-icao-hex/<hex>.json` — `{"refs":["<source>:<id>",...]}`
   - `aircraft/by-registration/<reg>.json` — `{"refs":["<source>:<id>",...]}`
   - `aircraft/_manifest/<source>.json` — content-hash manifest for diff-write
+  - `aircraft/_state/<source>.json` — last-run/change state for cadence gating
 - FAA `UNIQUE ID` = `source_id`, never N-number. N-numbers are reissued; UNIQUE ID is permanent.
 
 ## Distribution model
