@@ -1,0 +1,215 @@
+id: br-anac
+label: ANAC Brasil — Brazilian Aircraft Registry (RAB)
+country: BR
+encoding: utf8
+trim_all: true
+cadence_days: 1
+
+download:
+  url: https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/dados_aeronaves.csv
+  format: file
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    aircraft: dados_aeronaves.csv
+
+primary: aircraft
+delimiter: ';'
+format: csv
+
+# Line 1 is an "Atualizado em: <date>" banner; skip it so the real header is parsed.
+skip_rows: 1
+
+# MARCAS is the permanent registration mark and ANAC's stable per-aircraft key.
+source_id: MARCAS
+registration: MARCAS
+
+mapping:
+  registration:
+    field: MARCAS
+    transform: br_registration
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    field: CD_TIPO_ICAO
+    transform: trim_or_null
+
+  status:
+    field: DT_CANC
+    transform: br_status
+
+  country:
+    constant: BR
+
+  manufacturer:
+    field: NM_FABRICANTE
+    transform: trim_or_null
+
+  model:
+    field: DS_MODELO
+    transform: trim_or_null
+
+  serial_number:
+    field: NR_SERIE
+    transform: trim_or_null
+
+  year_manufactured:
+    field: NR_ANO_FABRICACAO
+    transform: int_or_null
+
+  airframe_type:
+    field: CD_CLS
+    transform: br_airframe
+
+  category:
+    field: DS_CATEGORIA_HOMOLOGACAO
+    transform: trim_or_null
+    lookup:
+      NORMAL: standard
+      TRANSPORTE: standard
+      UTILIDADE: standard
+      ACROBATICA: standard
+      PRIMARIA: standard
+      'NORMAL/UTILIDADE': standard
+      'NORMAL/ACROBATICA': standard
+      'TRANSP.REGIONAL': standard
+      'TRANSPORTE A/B': standard
+      'TRANSPORTE B': standard
+      RESTRITA: limited
+      EXPERIMENTAL: experimental
+      PROVISORIA: provisional
+    default: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    field: TP_CA
+    transform: trim_or_null
+
+  operating_environment:
+    field: TP_POUSO
+    transform: trim_or_null
+    lookup:
+      'POUSO CONVENCIONAL': land
+      'POUSO EM TERRA': land
+      'POUSO NA AGUA': sea
+      ANFIBIO: amphibian
+    default: ~
+
+  operational_classes:
+    field: TP_OPERACAO
+    transform: trim_or_null
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    field: TP_MOTOR
+    transform: trim_or_null
+    lookup:
+      'MOTOR CONVENCIONAL': reciprocating
+      'MOTOR A PISTÃO': reciprocating
+      'MOTOR JATO/TURBOFAN': turbo-fan
+      'MOTOR TURBOHELICE': turbo-prop
+      'MOTOR TURBOEIXO': turbo-shaft
+      'MOTOR ELETRICO': electric
+      'SEM MOTOR': none
+      DRONE: other
+    default: ~
+
+  engine.count:
+    field: QT_MOTOR
+    transform: int_or_null
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: PROPRIETARIOS
+    transform: br_party_name
+
+  owner.kind:
+    field: PROPRIETARIOS
+    transform: br_party_kind
+
+  owner.state:
+    field: PROPRIETARIOS
+    transform: br_party_state
+
+  owner.country:
+    constant: BR
+
+  operator.name:
+    field: OPERADORES
+    transform: br_party_name
+
+  operator.kind:
+    field: OPERADORES
+    transform: br_party_kind
+
+  operator.state:
+    field: OPERADORES
+    transform: br_party_state
+
+  operator.country:
+    constant: BR
+
+  certification_date:
+    field: DT_MATRICULA
+    transform: iso_date_only_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    field: DT_VALIDADE_CA
+    transform: date_ddmmyyyy_or_null
+
+  last_action_date:
+    field: DT_CANC
+    transform: date_dd_slash_or_null
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: NR_PMD
+    transform: float_or_null
+
+  seats:
+    field: NR_ASSENTOS
+    transform: int_or_null
+
+  max_passengers:
+    field: NR_PASSAGEIROS_MAX
+    transform: int_or_null
+
+  min_crew:
+    field: NR_TRIPULACAO_MIN
+    transform: int_or_null
+
+  airworthiness_review_date:
+    field: DT_VALIDADE_CVA
+    transform: date_ddmmyyyy_or_null
+
+  cancellation_reason:
+    field: DS_MOTIVO_CANC
+    transform: trim_or_null
+
+  lien_status:
+    field: DS_GRAVAME
+    transform: trim_or_null
+
+  interdiction_code:
+    field: CD_INTERDICAO
+    transform: trim_or_null

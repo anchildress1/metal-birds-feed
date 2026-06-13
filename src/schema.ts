@@ -118,5 +118,15 @@ export const AircraftSchema = z.object({
   expiration_date: z.string().nullable(),
   last_action_date: z.string().nullable(),
   cruise_speed_ktas: z.number().nullable(),
+  max_takeoff_weight_kg: z.number().nullable(),
+  seats: z.number().int().nullable(),
+  max_passengers: z.number().int().nullable(),
+  min_crew: z.number().int().nullable(),
+  airworthiness_review_date: z.string().nullable(),
+  cancellation_reason: z.string().nullable(),
+  lien_status: z.string().nullable(),
+  // Authoritative restriction code, preserved verbatim — its legend is registry-specific and
+  // not published in machine-readable form, so consumers decode it against their own table.
+  interdiction_code: z.string().nullable(),
 });
 export type Aircraft = z.infer<typeof AircraftSchema>;

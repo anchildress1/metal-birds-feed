@@ -11,6 +11,8 @@ export interface ParseOptions {
   delimiter: string;
   trim: boolean;
   columns?: string[];
+  // Preamble rows dropped before the header line (not data rows after it).
+  skip_rows?: number;
 }
 
 // hucre handles modern .ods/.xlsx (OOXML/zip); xls routes to a separate SheetJS path.
@@ -45,12 +47,15 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
   const text = new TextDecoder(options.encoding).decode(buf);
   const cast = options.trim ? (value: string): string => value.trim() : undefined;
   const columns = options.columns ?? ((header: string[]) => header.map((h) => h.trim()));
+  // from_line is 1-based and counts the header, so the header sits at skip_rows + 1.
+  const fromLine = (options.skip_rows ?? 0) + 1;
   return new Promise((resolve, reject) => {
     parse(
       text,
       {
         delimiter: options.delimiter,
         columns,
+        from_line: fromLine,
         skip_empty_lines: true,
         relax_column_count: true,
         relax_quotes: true,

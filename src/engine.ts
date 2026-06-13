@@ -16,6 +16,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       delimiter: config.delimiter,
       trim: config.trim_all,
       columns: config.columns?.[config.primary],
+      skip_rows: config.skip_rows,
     });
   }
   if (config.format === 'xls') {
@@ -301,6 +302,14 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     expiration_date: scalar('expiration_date'),
     last_action_date: scalar('last_action_date'),
     cruise_speed_ktas: num('cruise_speed_ktas'),
+    max_takeoff_weight_kg: num('max_takeoff_weight_kg'),
+    seats: num('seats'),
+    max_passengers: num('max_passengers'),
+    min_crew: num('min_crew'),
+    airworthiness_review_date: scalar('airworthiness_review_date'),
+    cancellation_reason: scalar('cancellation_reason'),
+    lien_status: scalar('lien_status'),
+    interdiction_code: scalar('interdiction_code'),
   };
 }
 

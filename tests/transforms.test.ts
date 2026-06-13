@@ -365,3 +365,125 @@ describe('excel_serial_year_or_null', () => {
   it('returns null for a serial whose year exceeds the 2100 ceiling', () =>
     expect(applyScalar('excel_serial_year_or_null', '100000')).toBeNull());
 });
+
+describe('date_ddmmyyyy_or_null', () => {
+  it('parses an 8-digit DDMMYYYY date', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', '23092026')).toBe('2026-09-23'));
+  it('parses a single-digit-day date padded to two digits', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', '03072011')).toBe('2011-07-03'));
+  it('trims surrounding whitespace', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', ' 18082026 ')).toBe('2026-08-18'));
+  it('returns null for ANAC legacy 6-digit stubs', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', '300996')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', '')).toBeNull());
+  it('returns null for a non-numeric value', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', '23/09/2026')).toBeNull());
+  it('returns null for an impossible calendar date', () =>
+    expect(applyScalar('date_ddmmyyyy_or_null', '32012026')).toBeNull());
+});
+
+describe('br_registration', () => {
+  it('inserts the hyphen after the two-letter prefix', () =>
+    expect(applyScalar('br_registration', 'PPACK')).toBe('PP-ACK'));
+  it('handles a PR-prefixed mark', () =>
+    expect(applyScalar('br_registration', 'PRAFV')).toBe('PR-AFV'));
+  it('uppercases and trims before formatting', () =>
+    expect(applyScalar('br_registration', '  ppjpg ')).toBe('PP-JPG'));
+  it('returns null for a malformed mark (wrong length)', () =>
+    expect(applyScalar('br_registration', 'PPAC')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('br_registration', '')).toBeNull());
+});
+
+describe('br_airframe', () => {
+  it('maps a single-engine landplane (L1P) to fixed-wing-single-engine', () =>
+    expect(applyScalar('br_airframe', 'L1P')).toBe('fixed-wing-single-engine'));
+  it('maps a twin landplane (L2J) to fixed-wing-multi-engine', () =>
+    expect(applyScalar('br_airframe', 'L2J')).toBe('fixed-wing-multi-engine'));
+  it('maps an unpowered landplane (L00) to glider', () =>
+    expect(applyScalar('br_airframe', 'L00')).toBe('glider'));
+  it('maps a helicopter class (H1T) to rotorcraft', () =>
+    expect(applyScalar('br_airframe', 'H1T')).toBe('rotorcraft'));
+  it('maps an amphibian (A1P) to a fixed-wing type', () =>
+    expect(applyScalar('br_airframe', 'A1P')).toBe('fixed-wing-single-engine'));
+  it('maps a gyroplane class (G1P) to gyroplane', () =>
+    expect(applyScalar('br_airframe', 'G1P')).toBe('gyroplane'));
+  it('returns null for RPA (drones not in canonical UAV enum)', () =>
+    expect(applyScalar('br_airframe', 'RPA')).toBeNull());
+  it('returns null for an unknown class code', () =>
+    expect(applyScalar('br_airframe', 'X9Z')).toBeNull());
+  it('returns null for a non-digit engine-count character (e.g. LXP)', () =>
+    expect(applyScalar('br_airframe', 'LXP')).toBeNull());
+  it('returns null for an empty string', () => expect(applyScalar('br_airframe', '')).toBeNull());
+});
+
+describe('br_status', () => {
+  it('returns cancelled when a cancellation date is present', () =>
+    expect(applyScalar('br_status', '19/11/2025')).toBe('cancelled'));
+  it('returns valid for an empty cancellation date', () =>
+    expect(applyScalar('br_status', '')).toBe('valid'));
+  it('returns valid for a whitespace-only cancellation date', () =>
+    expect(applyScalar('br_status', '   ')).toBe('valid'));
+});
+
+describe('br_party_name', () => {
+  const owner = '[{"NOME":"GRANO LTDA","DOCUMENTO":"52511458000109","UF":"SP"}]';
+  it('extracts the first party name from the JSON array', () =>
+    expect(applyScalar('br_party_name', owner)).toBe('GRANO LTDA'));
+  it('returns the primary name for a co-owned aircraft', () =>
+    expect(
+      applyScalar(
+        'br_party_name',
+        '[{"NOME":"FIRST OWNER","UF":"TO"},{"NOME":"SECOND OWNER","UF":"SP"}]'
+      )
+    ).toBe('FIRST OWNER'));
+  it('collapses the Indisponível sentinel to null', () =>
+    expect(
+      applyScalar('br_party_name', '[{"NOME":"Indisponível","UF":"Indisponível"}]')
+    ).toBeNull());
+  it('returns null for an empty cell', () => expect(applyScalar('br_party_name', '')).toBeNull());
+  it('returns null for an empty JSON array', () =>
+    expect(applyScalar('br_party_name', '[]')).toBeNull());
+  it('returns null for malformed JSON', () =>
+    expect(applyScalar('br_party_name', '[{not json')).toBeNull());
+});
+
+describe('br_party_state', () => {
+  it('extracts the first party UF', () =>
+    expect(applyScalar('br_party_state', '[{"NOME":"X","UF":"MG"}]')).toBe('MG'));
+  it('returns null when UF is absent', () =>
+    expect(applyScalar('br_party_state', '[{"NOME":"X"}]')).toBeNull());
+  it('collapses the Indisponível sentinel to null', () =>
+    expect(applyScalar('br_party_state', '[{"NOME":"X","UF":"Indisponível"}]')).toBeNull());
+  it('returns null for an empty cell', () => expect(applyScalar('br_party_state', '')).toBeNull());
+});
+
+describe('br_party_kind', () => {
+  it('derives individual from an 11-char (masked CPF) document', () =>
+    expect(applyScalar('br_party_kind', '[{"NOME":"X","DOCUMENTO":"587XXXXXX00"}]')).toBe(
+      'individual'
+    ));
+  it('derives corporation from a 14-digit CNPJ', () =>
+    expect(applyScalar('br_party_kind', '[{"NOME":"X","DOCUMENTO":"52511458000109"}]')).toBe(
+      'corporation'
+    ));
+  it('returns co-owner when more than one party is present', () =>
+    expect(
+      applyScalar(
+        'br_party_kind',
+        '[{"NOME":"A","DOCUMENTO":"11122233300"},{"NOME":"B","DOCUMENTO":"44455566600"}]'
+      )
+    ).toBe('co-owner'));
+  it('returns other for a non-CPF/CNPJ document length', () =>
+    expect(applyScalar('br_party_kind', '[{"NOME":"X","DOCUMENTO":"123456789012"}]')).toBe(
+      'other'
+    ));
+  it('returns null for an empty document', () =>
+    expect(applyScalar('br_party_kind', '[{"NOME":"X","DOCUMENTO":""}]')).toBeNull());
+  it('returns null for the Indisponível sentinel party', () =>
+    expect(
+      applyScalar('br_party_kind', '[{"NOME":"Indisponível","DOCUMENTO":"Indisponível"}]')
+    ).toBeNull());
+  it('returns null for an empty cell', () => expect(applyScalar('br_party_kind', '')).toBeNull());
+});

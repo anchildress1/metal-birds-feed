@@ -66,6 +66,13 @@ const dateDdSlashOrNull = (value: string): string | null => {
   return validateAndFormatYMD(v.slice(6, 10), v.slice(3, 5), v.slice(0, 2));
 };
 
+// 8-digit DDMMYYYY — distinct from date_yyyymmdd_or_null, which reads the same digits as YYYYMMDD.
+const dateDdmmyyyyOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (!/^\d{8}$/.test(v)) return null;
+  return validateAndFormatYMD(v.slice(4, 8), v.slice(2, 4), v.slice(0, 2));
+};
+
 // Accepts an ISO 8601 date or datetime string and returns just the YYYY-MM-DD date
 // portion. Anything malformed returns null. NL ILT publishes dates as full ISO datetimes
 // in TZ-shifted form (e.g., "2016-02-09T05:00:00.000Z" for a 2016-02-09 record); this
@@ -167,6 +174,73 @@ const casaEngineDetailOrNull = (value: string): string | null => {
   return v;
 };
 
+// Restores the hyphen in a dash-stripped mark (PPACK -> PP-ACK); null if not the 2+3 shape.
+const brRegistration = (value: string): string | null => {
+  const v = value.trim().toUpperCase();
+  if (!/^[A-Z]{2}[A-Z0-9]{3}$/.test(v)) return null;
+  return `${v.slice(0, 2)}-${v.slice(2)}`;
+};
+
+// Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
+// unpowered (glider); RPA/unknown -> null (no canonical UAV enum).
+const brAirframe = (value: string): string | null => {
+  const v = value.trim().toUpperCase();
+  if (v.length < 2 || v === 'RPA') return null;
+  const kind = v[0];
+  if (kind === 'H') return 'rotorcraft';
+  if (kind === 'G') return 'gyroplane';
+  if (kind === 'B') return 'balloon';
+  if (kind === 'L' || kind === 'A' || kind === 'S') {
+    const digit = v[1];
+    if (!/^\d$/.test(digit)) return null;
+    if (digit === '0') return 'glider';
+    return digit === '1' ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
+  }
+  return null;
+};
+
+// No status column upstream; a populated cancellation date is the cancellation signal.
+const brStatus = (value: string): string => (value.trim().length > 0 ? 'cancelled' : 'valid');
+
+// owner/operator are JSON arrays packed into one CSV cell, sharing the {NOME, DOCUMENTO, UF}
+// shape — so these transforms serve both columns.
+const parseBrParties = (value: string): Record<string, string>[] | null => {
+  const v = value.trim();
+  if (v.length === 0) return null;
+  try {
+    const parsed: unknown = JSON.parse(v);
+    return Array.isArray(parsed) ? (parsed as Record<string, string>[]) : null;
+  } catch {
+    return null;
+  }
+};
+
+// "Indisponível" is the undisclosed-party sentinel -> null.
+const brPartyName = (value: string): string | null => {
+  const name = parseBrParties(value)?.[0]?.NOME?.trim();
+  return name && name !== 'Indisponível' ? name : null;
+};
+
+const brPartyState = (value: string): string | null => {
+  const uf = parseBrParties(value)?.[0]?.UF?.trim();
+  return uf && uf.length > 0 && uf !== 'Indisponível' ? uf : null;
+};
+
+// kind from DOCUMENTO length, not digits: CPFs arrive pre-masked (e.g. "587XXXXXX00"), so 11 =
+// CPF (individual), 14 = CNPJ (corporation), >1 party = co-owner. The id is read for length
+// only, never stored (PII).
+const brPartyKind = (value: string): string | null => {
+  const parties = parseBrParties(value);
+  if (!parties || parties.length === 0) return null;
+  if (parties.length > 1) return 'co-owner';
+  if (parties[0]?.NOME?.trim() === 'Indisponível') return null;
+  const doc = String(parties[0]?.DOCUMENTO ?? '').trim();
+  if (doc.length === 0) return null;
+  if (doc.length === 14) return 'corporation';
+  if (doc.length === 11) return 'individual';
+  return 'other';
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -177,6 +251,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,
+  date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
   excel_serial_year_or_null: excelSerialYearOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
@@ -187,6 +262,12 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   nl_ilt_registration_or_null: nlIltRegistrationOrNull,
   casa_full_registration: casaFullRegistration,
   casa_engine_detail_or_null: casaEngineDetailOrNull,
+  br_registration: brRegistration,
+  br_airframe: brAirframe,
+  br_status: brStatus,
+  br_party_name: brPartyName,
+  br_party_state: brPartyState,
+  br_party_kind: brPartyKind,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
