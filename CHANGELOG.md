@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.6](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.5...v0.0.6) (2026-06-13)
+
+
+### Features
+
+* **br-anac:** ship ANAC Brasil registry (RAB) ([#33](https://github.com/anchildress1/metal-birds-feed/issues/33)) ([6330ddc](https://github.com/anchildress1/metal-birds-feed/commit/6330ddcf8660ef7bb183fe3c1ed66b3b0f0e192c))
+
+
+### Bug Fixes
+
+* **writer:** raise r2 write concurrency and socket ceiling ([#29](https://github.com/anchildress1/metal-birds-feed/issues/29)) ([30794e0](https://github.com/anchildress1/metal-birds-feed/commit/30794e0b733c901dc834daf9a0006db03108e7d7))
+
 ## [0.0.5](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.4...v0.0.5) (2026-06-02)
 
 
