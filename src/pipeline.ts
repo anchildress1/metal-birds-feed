@@ -261,7 +261,7 @@ const emitFailures = async (failures: Failure[]): Promise<void> => {
   const summaryPath = process.env['GITHUB_STEP_SUMMARY'];
   if (failures.length === 0 || !summaryPath) return;
   const rows = failures.map(
-    (f) => `| ${f.source} | ${f.msg.replaceAll('|', '\\|').replaceAll('\n', ' ')} |`
+    (f) => `| ${f.source} | ${f.msg.replaceAll('|', String.raw`\|`).replaceAll('\n', ' ')} |`
   );
   const markdown = [
     '## ❌ Refresh failures',
