@@ -1,3 +1,5 @@
+import { randomInt } from 'node:crypto';
+
 export interface RetryOptions {
   attempts?: number;
   baseDelayMs?: number;
@@ -12,9 +14,12 @@ const DEFAULT_BASE_DELAY_MS = 500;
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+// Full jitter over [half, full] of the exponential delay. randomInt (CSPRNG) over Math.random:
+// the value is timing-only, but a non-weak RNG keeps Sonar S2245 quiet without suppression.
 const backoffMs = (base: number, attempt: number): number => {
-  const exponential = base * 2 ** (attempt - 1);
-  return Math.round(exponential * (0.5 + Math.random() * 0.5));
+  const full = base * 2 ** (attempt - 1);
+  const half = Math.floor(full / 2);
+  return half + (half > 0 ? randomInt(half + 1) : 0);
 };
 
 // Retries `fn` with exponential backoff + full jitter while `isRetryable` allows it

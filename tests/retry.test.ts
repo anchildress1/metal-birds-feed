@@ -53,4 +53,20 @@ describe('retry', () => {
     await expect(retry(fn, FAST)).resolves.toBe('ok');
     expect(fn).toHaveBeenCalledTimes(3);
   });
+
+  it('sleeps a jittered backoff within [half, full] of the exponential delay', async () => {
+    const delays: number[] = [];
+    const sleep = (ms: number): Promise<void> => {
+      delays.push(ms);
+      return Promise.resolve();
+    };
+    const fn = vi.fn().mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce('ok');
+
+    await retry(fn, { baseDelayMs: 100, attempts: 2, sleep });
+
+    // attempt 1: full = 100, so jitter lands in [50, 100].
+    expect(delays).toHaveLength(1);
+    expect(delays[0]).toBeGreaterThanOrEqual(50);
+    expect(delays[0]).toBeLessThanOrEqual(100);
+  });
 });
