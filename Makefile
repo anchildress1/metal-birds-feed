@@ -24,8 +24,10 @@ format-check:
 lint:
 	$(BUNX) eslint .
 
+# tsconfig.eslint.json widens the include to tests + *.config.ts; the default tsconfig.json is
+# src-only, so type errors in tests would otherwise never gate CI.
 typecheck:
-	$(BUNX) tsc --noEmit
+	$(BUNX) tsc --noEmit -p tsconfig.eslint.json
 
 test:
 	$(BUNX) vitest run --coverage
