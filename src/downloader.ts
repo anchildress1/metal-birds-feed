@@ -1,16 +1,79 @@
 import { Open } from 'unzipper';
 import type { DownloadConfig } from './types/config.js';
 import { log } from './logger.js';
+import { retry, type RetryOptions } from './retry.js';
 
-export async function download(config: DownloadConfig): Promise<Map<string, Buffer>> {
+export type { RetryOptions };
+
+// 4xx (e.g. 404 moved file) are permanent — retrying wastes the daily run. Only transient
+// transport failures earn a retry.
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+// Retryable status surfaced after attempts are exhausted; carries the real status/statusText so
+// the caller's final error reflects it instead of a synthetic message.
+class RetryableResponse extends Error {
+  constructor(readonly response: Response) {
+    super(`retryable status ${response.status}`);
+  }
+}
+
+// Permanent HTTP status (404/403/…). Carries the final user-facing message and is excluded from
+// retry so a dead URL fails fast.
+class TerminalHttpError extends Error {}
+
+// Retries the FULL request — headers AND body read. A connection that drops mid-stream after a
+// 200 (most likely on the large registry files this pipeline pulls) is retried, not just the
+// initial handshake. Composes any caller-provided onRetry rather than clobbering it.
+const readWithRetry = async <T>(
+  url: string,
+  init: RequestInit,
+  label: string,
+  read: (res: Response) => Promise<T>,
+  opts: RetryOptions
+): Promise<T> => {
+  try {
+    return await retry(
+      async () => {
+        const res = await fetch(url, init);
+        if (!res.ok) {
+          if (RETRYABLE_STATUS.has(res.status)) throw new RetryableResponse(res);
+          throw new TerminalHttpError(`${label}: ${res.status} ${res.statusText}`);
+        }
+        return await read(res);
+      },
+      {
+        ...opts,
+        isRetryable: (err) => !(err instanceof TerminalHttpError),
+        onRetry: (attempt, err) => {
+          opts.onRetry?.(attempt, err);
+          log('warn', 'download_retry', { url, attempt, reason: String(err) });
+        },
+      }
+    );
+  } catch (err) {
+    if (err instanceof RetryableResponse)
+      throw new Error(`${label}: ${err.response.status} ${err.response.statusText}`, {
+        cause: err,
+      });
+    throw err;
+  }
+};
+
+export async function download(
+  config: DownloadConfig,
+  opts: RetryOptions = {}
+): Promise<Map<string, Buffer>> {
   const start = Date.now();
-  const url = await resolveDownloadUrl(config);
+  const url = await resolveDownloadUrl(config, opts);
   log('info', 'download_start', { url });
 
-  const res = await fetch(url, { headers: config.headers });
-  if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
-
-  const buf = Buffer.from(await res.arrayBuffer());
+  const buf = await readWithRetry(
+    url,
+    { headers: config.headers },
+    'Download failed',
+    async (res) => Buffer.from(await res.arrayBuffer()),
+    opts
+  );
   log('info', 'download_complete', {
     url,
     bytes: buf.byteLength,
@@ -28,14 +91,16 @@ export async function download(config: DownloadConfig): Promise<Map<string, Buff
 // each refresh), fetch the index page, regex-match the first capture group, and return that
 // URL — resolved against the index URL as the base for relative links. Otherwise, return
 // `config.url` unchanged.
-const resolveDownloadUrl = async (config: DownloadConfig): Promise<string> => {
+const resolveDownloadUrl = async (config: DownloadConfig, opts: RetryOptions): Promise<string> => {
   if (!config.discover_url || !config.discover_pattern) return config.url;
   log('info', 'discover_start', { discover_url: config.discover_url });
-  const res = await fetch(config.discover_url, { headers: config.headers });
-  if (!res.ok) {
-    throw new Error(`Discovery fetch failed: ${res.status} ${res.statusText}`);
-  }
-  const html = await res.text();
+  const html = await readWithRetry(
+    config.discover_url,
+    { headers: config.headers },
+    'Discovery fetch failed',
+    (res) => res.text(),
+    opts
+  );
   // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
   // Loader validates it as a syntactically valid regex before reaching this point.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp

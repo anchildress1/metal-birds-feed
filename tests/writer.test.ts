@@ -33,9 +33,20 @@ vi.mock('@aws-sdk/client-s3', () => ({
   },
 }));
 
-import { R2DiffWriter } from '../src/writer.js';
+import { R2DiffWriter, isTransientS3Error } from '../src/writer.js';
 import { contentHash } from '../src/engine.js';
 import { NoSuchKey } from '@aws-sdk/client-s3';
+
+// Real AWS SDK errors carry $metadata.httpStatusCode; bare Errors don't. Permanent failures
+// (auth/validation) surface as 4xx and must not be retried.
+const s3Error = (message: string, httpStatusCode: number): Error =>
+  Object.assign(new Error(message), { $metadata: { httpStatusCode } });
+
+const noSuchKey = (): NoSuchKey =>
+  new NoSuchKey({ message: 'The specified key does not exist.', $metadata: {} });
+
+// A 500 "internal error" is the transient R2 failure the daily job hit in production.
+const s3TransientError = (): Error => s3Error('We encountered an internal error.', 500);
 
 const R2_CONFIG = {
   accountId: 'test-account',
@@ -72,11 +83,21 @@ function makeAircraft(id: string, reg: string, hex: string | null = null): Aircr
       thrust_lbs: null,
     },
     owner: { name: 'JOHN DOE', kind: 'individual', state: 'KS', country: 'US' },
+    operator: { name: null, kind: null, state: null, country: null },
+    idera_authorised_party: null,
     certification_date: '1979-06-20',
     airworthiness_date: null,
     expiration_date: '2026-10-31',
     last_action_date: '2023-10-15',
     cruise_speed_ktas: 106,
+    max_takeoff_weight_kg: null,
+    seats: null,
+    max_passengers: null,
+    min_crew: null,
+    airworthiness_review_date: null,
+    cancellation_reason: null,
+    lien_status: null,
+    interdiction_code: null,
   };
 }
 
@@ -212,7 +233,7 @@ describe('R2DiffWriter — dry run', () => {
   });
 
   it('treats NoSuchKey manifest error as empty (first-write scenario)', async () => {
-    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockRejectedValueOnce(noSuchKey());
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const records = new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]);
@@ -223,7 +244,7 @@ describe('R2DiffWriter — dry run', () => {
   });
 
   it('rethrows non-NoSuchKey manifest errors', async () => {
-    mockSend.mockRejectedValueOnce(new Error('AccessDenied'));
+    mockSend.mockRejectedValueOnce(s3Error('AccessDenied', 403));
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const records = new Map([['id001', makeAircraft('id001', 'N12345')]]);
@@ -284,7 +305,7 @@ describe('R2DiffWriter — dry run', () => {
   });
 
   it('skips empty-string registration from the index (parallel to null icao_hex)', async () => {
-    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockRejectedValueOnce(noSuchKey());
     mockSend.mockResolvedValue({});
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -304,7 +325,7 @@ describe('R2DiffWriter — dry run', () => {
   });
 
   it('still indexes records that DO have a registration', async () => {
-    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockRejectedValueOnce(noSuchKey());
     mockSend.mockResolvedValue({});
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
@@ -483,7 +504,7 @@ describe('R2DiffWriter — live mode', () => {
               id001: { hash: 'stale-hash', icao_hex: 'a4e294', registration: 'N12345' },
             })
           );
-        return Promise.reject(new NoSuchKey());
+        return Promise.reject(noSuchKey());
       }
       return Promise.resolve({});
     });
@@ -521,7 +542,7 @@ describe('R2DiffWriter — fresh bucket fast path', () => {
   it('skips ref-index GETs when manifest object does not exist', async () => {
     mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
       if (cmd._type === 'get' && cmd.a.Key === 'aircraft/_manifest/faa.json') {
-        return Promise.reject(new NoSuchKey());
+        return Promise.reject(noSuchKey());
       }
       return Promise.resolve({});
     });
@@ -538,7 +559,7 @@ describe('R2DiffWriter — fresh bucket fast path', () => {
   it('writes source-only refs (no merge) on fresh bucket', async () => {
     mockSend.mockImplementation((cmd: { _type: string; a: { Key: string } }) => {
       if (cmd._type === 'get' && cmd.a.Key === 'aircraft/_manifest/faa.json') {
-        return Promise.reject(new NoSuchKey());
+        return Promise.reject(noSuchKey());
       }
       return Promise.resolve({});
     });
@@ -611,7 +632,7 @@ describe('R2DiffWriter — worker pool', () => {
 
 describe('R2DiffWriter — state management', () => {
   it('readState returns null for NoSuchKey', async () => {
-    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockRejectedValueOnce(noSuchKey());
     const writer = new R2DiffWriter(R2_CONFIG, false);
     const state = await writer.readState('faa');
     expect(state).toBeNull();
@@ -654,7 +675,7 @@ describe('R2DiffWriter — state management', () => {
   });
 
   it('readState rethrows non-NoSuchKey errors', async () => {
-    mockSend.mockRejectedValueOnce(new Error('AccessDenied'));
+    mockSend.mockRejectedValueOnce(s3Error('AccessDenied', 403));
     const writer = new R2DiffWriter(R2_CONFIG, false);
     await expect(writer.readState('faa')).rejects.toThrow('AccessDenied');
   });
@@ -690,7 +711,7 @@ describe('R2DiffWriter — state management', () => {
 
 describe('R2DiffWriter — observability', () => {
   it('emits write_plan log with op counts and fresh_bucket flag', async () => {
-    mockSend.mockRejectedValueOnce(new NoSuchKey());
+    mockSend.mockRejectedValueOnce(noSuchKey());
     mockSend.mockResolvedValue({});
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -713,7 +734,7 @@ describe('R2DiffWriter — observability', () => {
   });
 
   it('clears the progress ticker even when write fails', async () => {
-    mockSend.mockRejectedValueOnce(new Error('Boom'));
+    mockSend.mockRejectedValueOnce(s3Error('Boom', 403));
     const clearSpy = vi.spyOn(global, 'clearInterval');
     const writer = new R2DiffWriter(R2_CONFIG, false);
     await expect(
@@ -757,5 +778,48 @@ describe('R2DiffWriter — observability', () => {
       intervalSpy.mockRestore();
       consoleSpy.mockRestore();
     }
+  });
+});
+
+describe('isTransientS3Error', () => {
+  it('treats a 500 internal error as transient', () => {
+    expect(isTransientS3Error(s3TransientError())).toBe(true);
+  });
+
+  it('treats 503 and 429 as transient', () => {
+    expect(isTransientS3Error(s3Error('ServiceUnavailable', 503))).toBe(true);
+    expect(isTransientS3Error(s3Error('SlowDown', 429))).toBe(true);
+  });
+
+  it('treats a transport error with no HTTP status as transient', () => {
+    expect(isTransientS3Error(new Error('ECONNRESET'))).toBe(true);
+  });
+
+  it('does not retry NoSuchKey', () => {
+    expect(isTransientS3Error(noSuchKey())).toBe(false);
+  });
+
+  it('does not retry 4xx (auth/validation)', () => {
+    expect(isTransientS3Error(s3Error('AccessDenied', 403))).toBe(false);
+    expect(isTransientS3Error(s3Error('InvalidRequest', 400))).toBe(false);
+  });
+});
+
+describe('R2DiffWriter — transient retry', () => {
+  it('retries a transient manifest GET then completes the write', async () => {
+    mockSend.mockReset();
+    mockSend.mockRejectedValueOnce(s3TransientError());
+    mockSend.mockResolvedValue({ Body: { transformToString: vi.fn().mockResolvedValue('{}') } });
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const stats = await writer.write(new Map([['id001', makeAircraft('id001', 'N12345')]]), 'faa');
+
+    expect(stats.put).toBe(1);
+    // First manifest GET failed transiently; the retry re-issued the same key, so the manifest
+    // was fetched exactly twice while the write still completed.
+    const manifestGets = mockSend.mock.calls.filter(
+      (c) => (c[0] as { a: { Key: string } }).a.Key === 'aircraft/_manifest/faa.json'
+    );
+    expect(manifestGets).toHaveLength(2);
   });
 });

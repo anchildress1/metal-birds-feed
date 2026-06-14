@@ -215,8 +215,13 @@ const closeWithLogging = (source: string, token: string, repo: string): Promise<
     })
   );
 
+interface Failure {
+  source: string;
+  msg: string;
+}
+
 interface ProcessedResults {
-  anyFailed: boolean;
+  failures: Failure[];
   stalenessEntries: StalenessEntry[];
   closePromises: Promise<void>[];
 }
@@ -229,7 +234,7 @@ const processResults = (
   gh: GitHubCtx
 ): ProcessedResults => {
   const { token, repo } = gh;
-  let anyFailed = false;
+  const failures: Failure[] = [];
   const stalenessEntries: StalenessEntry[] = [];
   const closePromises: Promise<void>[] = [];
 
@@ -237,7 +242,7 @@ const processResults = (
     if (result.status === 'rejected') {
       const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
       log('error', 'pipeline_failed', { source: sources[i], msg });
-      anyFailed = true;
+      failures.push({ source: sources[i] ?? 'unknown', msg });
       continue;
     }
     const { cadence_days, new_state, source } = result.value;
@@ -246,7 +251,28 @@ const processResults = (
     if (token && repo && justChanged(result.value, dryRun))
       closePromises.push(closeWithLogging(source, token, repo));
   }
-  return { anyFailed, stalenessEntries, closePromises };
+  return { failures, stalenessEntries, closePromises };
+};
+
+const ESCAPED_PIPE = String.raw`\|`;
+
+// Pipe-escape + newline-flatten keeps a multi-line error from breaking the Markdown table row.
+const escapeCell = (msg: string): string => msg.replaceAll('|', ESCAPED_PIPE).replaceAll('\n', ' ');
+
+// Surface failures in the GitHub Actions run summary so a red run names the source and reason
+// without digging through per-job logs.
+const emitFailures = async (failures: Failure[]): Promise<void> => {
+  const summaryPath = process.env['GITHUB_STEP_SUMMARY'];
+  if (failures.length === 0 || !summaryPath) return;
+  const rows = failures.map((f) => `| ${f.source} | ${escapeCell(f.msg)} |`);
+  const markdown = [
+    '## ❌ Refresh failures',
+    '',
+    '| Source | Error |',
+    '| --- | --- |',
+    ...rows,
+  ].join('\n');
+  await writeFile(summaryPath, `\n${markdown}\n`, { flag: 'a' });
 };
 
 const emitStaleness = async (
@@ -277,7 +303,7 @@ export async function main(): Promise<void> {
     repo: process.env['GITHUB_REPOSITORY'],
   };
 
-  const { anyFailed, stalenessEntries, closePromises } = processResults(
+  const { failures, stalenessEntries, closePromises } = processResults(
     results,
     sources,
     now,
@@ -286,8 +312,9 @@ export async function main(): Promise<void> {
   );
   await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
+  await emitFailures(failures);
 
-  if (anyFailed) process.exit(1);
+  if (failures.length > 0) process.exit(1);
 }
 
 const isCliEntryPoint = (): boolean =>
