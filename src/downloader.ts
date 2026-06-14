@@ -9,35 +9,55 @@ export type { RetryOptions };
 // transport failures earn a retry.
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-// Carries the final retryable response back out of retry() so callers still see the real
-// status/statusText instead of a synthetic error.
+// Retryable status surfaced after attempts are exhausted; carries the real status/statusText so
+// the caller's final error reflects it instead of a synthetic message.
 class RetryableResponse extends Error {
   constructor(readonly response: Response) {
     super(`retryable status ${response.status}`);
   }
 }
 
-export const fetchWithRetry = (
+// Permanent HTTP status (404/403/…). Carries the final user-facing message and is excluded from
+// retry so a dead URL fails fast.
+class TerminalHttpError extends Error {}
+
+// Retries the FULL request — headers AND body read. A connection that drops mid-stream after a
+// 200 (most likely on the large registry files this pipeline pulls) is retried, not just the
+// initial handshake. Composes any caller-provided onRetry rather than clobbering it.
+const readWithRetry = async <T>(
   url: string,
   init: RequestInit,
-  opts: RetryOptions = {}
-): Promise<Response> =>
-  retry(
-    async () => {
-      const res = await fetch(url, init);
-      // Non-retryable statuses (incl. 404) return normally; only retryable ones throw to loop.
-      if (!res.ok && RETRYABLE_STATUS.has(res.status)) throw new RetryableResponse(res);
-      return res;
-    },
-    {
-      ...opts,
-      onRetry: (attempt, err) =>
-        log('warn', 'download_retry', { url, attempt, reason: String(err) }),
-    }
-  ).catch((err: unknown) => {
-    if (err instanceof RetryableResponse) return err.response;
+  label: string,
+  read: (res: Response) => Promise<T>,
+  opts: RetryOptions
+): Promise<T> => {
+  try {
+    return await retry(
+      async () => {
+        const res = await fetch(url, init);
+        if (!res.ok) {
+          if (RETRYABLE_STATUS.has(res.status)) throw new RetryableResponse(res);
+          throw new TerminalHttpError(`${label}: ${res.status} ${res.statusText}`);
+        }
+        return await read(res);
+      },
+      {
+        ...opts,
+        isRetryable: (err) => !(err instanceof TerminalHttpError),
+        onRetry: (attempt, err) => {
+          opts.onRetry?.(attempt, err);
+          log('warn', 'download_retry', { url, attempt, reason: String(err) });
+        },
+      }
+    );
+  } catch (err) {
+    if (err instanceof RetryableResponse)
+      throw new Error(`${label}: ${err.response.status} ${err.response.statusText}`, {
+        cause: err,
+      });
     throw err;
-  });
+  }
+};
 
 export async function download(
   config: DownloadConfig,
@@ -47,10 +67,13 @@ export async function download(
   const url = await resolveDownloadUrl(config, opts);
   log('info', 'download_start', { url });
 
-  const res = await fetchWithRetry(url, { headers: config.headers }, opts);
-  if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
-
-  const buf = Buffer.from(await res.arrayBuffer());
+  const buf = await readWithRetry(
+    url,
+    { headers: config.headers },
+    'Download failed',
+    async (res) => Buffer.from(await res.arrayBuffer()),
+    opts
+  );
   log('info', 'download_complete', {
     url,
     bytes: buf.byteLength,
@@ -71,11 +94,13 @@ export async function download(
 const resolveDownloadUrl = async (config: DownloadConfig, opts: RetryOptions): Promise<string> => {
   if (!config.discover_url || !config.discover_pattern) return config.url;
   log('info', 'discover_start', { discover_url: config.discover_url });
-  const res = await fetchWithRetry(config.discover_url, { headers: config.headers }, opts);
-  if (!res.ok) {
-    throw new Error(`Discovery fetch failed: ${res.status} ${res.statusText}`);
-  }
-  const html = await res.text();
+  const html = await readWithRetry(
+    config.discover_url,
+    { headers: config.headers },
+    'Discovery fetch failed',
+    (res) => res.text(),
+    opts
+  );
   // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
   // Loader validates it as a syntactically valid regex before reaching this point.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
