@@ -9,8 +9,27 @@ import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import { contentHash } from './engine.js';
 import { log } from './logger.js';
+import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema } from './cadence.js';
 import type { SourceState } from './cadence.js';
+
+// R2 intermittently returns 500 "We encountered an internal error. Please try again." under
+// load. The SDK's adaptive retry rate-limiter drains its token bucket during a blip and then
+// fast-fails the rest of a high-concurrency batch — so an app-level retry sits outside it,
+// absorbing the residual transient errors that escape. NoSuchKey is a real "absent" signal the
+// callers handle, never a transport failure — exclude it. 4xx (auth/validation) are permanent.
+export const isTransientS3Error = (err: unknown): boolean => {
+  if (err instanceof NoSuchKey) return false;
+  const status = (err as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata
+    ?.httpStatusCode;
+  return status === undefined || status >= 500 || status === 429;
+};
+
+const S3_RETRY: RetryOptions = {
+  isRetryable: isTransientS3Error,
+  onRetry: (attempt, err) =>
+    log('warn', 's3_retry', { attempt, msg: err instanceof Error ? err.message : String(err) }),
+};
 
 const ManifestEntrySchema = z.object({
   hash: z.string(),
@@ -303,8 +322,12 @@ export class R2DiffWriter {
 
   private async loadManifest(source: string): Promise<ManifestLoad> {
     try {
-      const res = await this.client.send(
-        new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_manifest/${source}.json` })
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_manifest/${source}.json` })
+          ),
+        S3_RETRY
       );
       const body = await res.Body?.transformToString();
       if (!body) return { manifest: {}, exists: true };
@@ -336,7 +359,10 @@ export class R2DiffWriter {
 
   private async loadRefs(key: string): Promise<string[]> {
     try {
-      const res = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const res = await retry(
+        () => this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key })),
+        S3_RETRY
+      );
       const body = await res.Body?.transformToString();
       if (!body) return [];
       const parsed = RefIndexSchema.safeParse(JSON.parse(body));
@@ -358,13 +384,17 @@ export class R2DiffWriter {
       this.completed++;
       return;
     }
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-        Body: JSON.stringify(body),
-        ContentType: 'application/json',
-      })
+    await retry(
+      () =>
+        this.client.send(
+          new PutObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+            Body: JSON.stringify(body),
+            ContentType: 'application/json',
+          })
+        ),
+      S3_RETRY
     );
     this.completed++;
   }
@@ -375,14 +405,21 @@ export class R2DiffWriter {
       this.completed++;
       return;
     }
-    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    await retry(
+      () => this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key })),
+      S3_RETRY
+    );
     this.completed++;
   }
 
   async readState(source: string): Promise<SourceState | null> {
     try {
-      const res = await this.client.send(
-        new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_state/${source}.json` })
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_state/${source}.json` })
+          ),
+        S3_RETRY
       );
       const body = await res.Body?.transformToString();
       if (!body) return null;

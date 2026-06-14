@@ -1,59 +1,53 @@
 import { Open } from 'unzipper';
 import type { DownloadConfig } from './types/config.js';
 import { log } from './logger.js';
+import { retry, type RetryOptions } from './retry.js';
 
-export interface RetryOptions {
-  attempts?: number;
-  baseDelayMs?: number;
-  sleep?: (ms: number) => Promise<void>;
-}
+export type { RetryOptions };
 
-const DEFAULT_ATTEMPTS = 4;
-const DEFAULT_BASE_DELAY_MS = 500;
 // 4xx (e.g. 404 moved file) are permanent — retrying wastes the daily run. Only transient
 // transport failures earn a retry.
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-const defaultSleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+// Carries the final retryable response back out of retry() so callers still see the real
+// status/statusText instead of a synthetic error.
+class RetryableResponse extends Error {
+  constructor(readonly response: Response) {
+    super(`retryable status ${response.status}`);
+  }
+}
 
-const backoffMs = (base: number, attempt: number): number => {
-  const exponential = base * 2 ** (attempt - 1);
-  return Math.round(exponential * (0.5 + Math.random() * 0.5));
-};
-
-export const fetchWithRetry = async (
+export const fetchWithRetry = (
   url: string,
   init: RequestInit,
-  retry: RetryOptions = {},
-  attempt = 1
-): Promise<Response> => {
-  const attempts = retry.attempts ?? DEFAULT_ATTEMPTS;
-  const sleep = retry.sleep ?? defaultSleep;
-  const last = attempt >= attempts;
-
-  try {
-    const res = await fetch(url, init);
-    if (res.ok || !RETRYABLE_STATUS.has(res.status) || last) return res;
-    log('warn', 'download_retry', { url, status: res.status, attempt, attempts });
-  } catch (err) {
-    if (last) throw err;
-    log('warn', 'download_retry', { url, error: String(err), attempt, attempts });
-  }
-
-  await sleep(backoffMs(retry.baseDelayMs ?? DEFAULT_BASE_DELAY_MS, attempt));
-  return fetchWithRetry(url, init, retry, attempt + 1);
-};
+  opts: RetryOptions = {}
+): Promise<Response> =>
+  retry(
+    async () => {
+      const res = await fetch(url, init);
+      // Non-retryable statuses (incl. 404) return normally; only retryable ones throw to loop.
+      if (!res.ok && RETRYABLE_STATUS.has(res.status)) throw new RetryableResponse(res);
+      return res;
+    },
+    {
+      ...opts,
+      onRetry: (attempt, err) =>
+        log('warn', 'download_retry', { url, attempt, reason: String(err) }),
+    }
+  ).catch((err: unknown) => {
+    if (err instanceof RetryableResponse) return err.response;
+    throw err;
+  });
 
 export async function download(
   config: DownloadConfig,
-  retry: RetryOptions = {}
+  opts: RetryOptions = {}
 ): Promise<Map<string, Buffer>> {
   const start = Date.now();
-  const url = await resolveDownloadUrl(config, retry);
+  const url = await resolveDownloadUrl(config, opts);
   log('info', 'download_start', { url });
 
-  const res = await fetchWithRetry(url, { headers: config.headers }, retry);
+  const res = await fetchWithRetry(url, { headers: config.headers }, opts);
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
 
   const buf = Buffer.from(await res.arrayBuffer());
@@ -74,10 +68,10 @@ export async function download(
 // each refresh), fetch the index page, regex-match the first capture group, and return that
 // URL — resolved against the index URL as the base for relative links. Otherwise, return
 // `config.url` unchanged.
-const resolveDownloadUrl = async (config: DownloadConfig, retry: RetryOptions): Promise<string> => {
+const resolveDownloadUrl = async (config: DownloadConfig, opts: RetryOptions): Promise<string> => {
   if (!config.discover_url || !config.discover_pattern) return config.url;
   log('info', 'discover_start', { discover_url: config.discover_url });
-  const res = await fetchWithRetry(config.discover_url, { headers: config.headers }, retry);
+  const res = await fetchWithRetry(config.discover_url, { headers: config.headers }, opts);
   if (!res.ok) {
     throw new Error(`Discovery fetch failed: ${res.status} ${res.statusText}`);
   }
