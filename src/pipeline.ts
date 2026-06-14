@@ -254,15 +254,17 @@ const processResults = (
   return { failures, stalenessEntries, closePromises };
 };
 
+const ESCAPED_PIPE = String.raw`\|`;
+
+// Pipe-escape + newline-flatten keeps a multi-line error from breaking the Markdown table row.
+const escapeCell = (msg: string): string => msg.replaceAll('|', ESCAPED_PIPE).replaceAll('\n', ' ');
+
 // Surface failures in the GitHub Actions run summary so a red run names the source and reason
-// without digging through per-job logs. Pipe-escape keeps a multi-line error from breaking the
-// table.
+// without digging through per-job logs.
 const emitFailures = async (failures: Failure[]): Promise<void> => {
   const summaryPath = process.env['GITHUB_STEP_SUMMARY'];
   if (failures.length === 0 || !summaryPath) return;
-  const rows = failures.map(
-    (f) => `| ${f.source} | ${f.msg.replaceAll('|', String.raw`\|`).replaceAll('\n', ' ')} |`
-  );
+  const rows = failures.map((f) => `| ${f.source} | ${escapeCell(f.msg)} |`);
   const markdown = [
     '## ❌ Refresh failures',
     '',
