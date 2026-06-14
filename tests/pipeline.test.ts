@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 
 const mockLoadSourceConfig = vi.hoisted(() => vi.fn());
@@ -319,6 +322,28 @@ describe('main', () => {
       expect.objectContaining({ msg: 'network timeout' })
     );
     exitSpy.mockRestore();
+  });
+
+  it('writes a failure table to the job summary when a source fails', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const summaryPath = join(tmpdir(), `mbf-summary-${Date.now()}.md`);
+    process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
+    mockDownload.mockRejectedValueOnce(new Error('We encountered an internal error.'));
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+
+      const summary = readFileSync(summaryPath, 'utf8');
+      expect(summary).toContain('## ❌ Refresh failures');
+      expect(summary).toContain('| faa | We encountered an internal error. |');
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      exitSpy.mockRestore();
+      rmSync(summaryPath, { force: true });
+      delete process.env['GITHUB_STEP_SUMMARY'];
+    }
   });
 
   it('does not attempt PATCH when closeStalenessIssues list fetch returns an error status', async () => {

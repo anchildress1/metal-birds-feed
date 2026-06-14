@@ -1,10 +1,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { download } from '../src/downloader.js';
+import { download, type RetryOptions } from '../src/downloader.js';
 import type { DownloadConfig } from '../src/types/config.js';
 
+// No-op sleep keeps backoff out of the test clock; assertions cover attempt counts, not timing.
+const FAST_RETRY: RetryOptions = { baseDelayMs: 0, sleep: async () => {} };
+
 const FIXTURE_ZIP = resolve(import.meta.dirname, '..', 'fixtures', 'faa', 'ReleasableAircraft.zip');
+
+const zipArrayBuffer = (): ArrayBuffer => {
+  const z = readFileSync(FIXTURE_ZIP);
+  return z.buffer.slice(z.byteOffset, z.byteOffset + z.byteLength);
+};
+
+const okZipResponse = () => ({
+  ok: true,
+  status: 200,
+  statusText: 'OK',
+  arrayBuffer: () => Promise.resolve(zipArrayBuffer()),
+});
+
+const httpErrResponse = (status: number) => ({ ok: false, status, statusText: 'err' });
 
 const FAA_DOWNLOAD_CONFIG: DownloadConfig = {
   url: 'https://registry.faa.gov/database/ReleasableAircraft.zip',
@@ -180,10 +197,20 @@ describe('download — discover_url + discover_pattern', () => {
     expect(files.get('register')!.toString('utf8')).toBe('ods-bytes');
   });
 
-  it('throws when the discovery fetch fails', async () => {
-    mockFetchSequence([{ ok: false, status: 503, statusText: 'Service Unavailable', body: '' }]);
+  it('throws when the discovery fetch fails after exhausting retries', async () => {
+    const fetchFn = mockFetchSequence(
+      Array.from({ length: 4 }, () => ({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        body: '',
+      }))
+    );
 
-    await expect(download(DISCOVER_CONFIG)).rejects.toThrow(/discovery fetch failed.*503/i);
+    await expect(download(DISCOVER_CONFIG, FAST_RETRY)).rejects.toThrow(
+      /discovery fetch failed.*503/i
+    );
+    expect(fetchFn).toHaveBeenCalledTimes(4);
   });
 
   it('throws when the pattern matches no URL on the index page', async () => {
@@ -239,5 +266,94 @@ describe('download — discover_url + discover_pattern', () => {
 
     // First match in INDEX_HTML is the April 2026 file (declared first).
     expect(fetchFn.mock.calls[1]?.[0]).toContain('2026-04-28');
+  });
+});
+
+describe('download — retry', () => {
+  it('retries a transient 5xx then extracts the ZIP', async () => {
+    const fn = vi
+      .fn()
+      .mockResolvedValueOnce(httpErrResponse(503))
+      .mockResolvedValueOnce(okZipResponse());
+    vi.stubGlobal('fetch', fn);
+
+    const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
+
+    expect(files.has('master')).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a thrown network error then extracts the ZIP', async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockResolvedValueOnce(okZipResponse());
+    vi.stubGlobal('fetch', fn);
+
+    const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
+
+    expect(files.has('master')).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a body read that drops mid-stream after a 200', async () => {
+    // The connection delivers 200 headers, then the body stream fails — the failure this PR's
+    // reviewer flagged. The whole request (headers + body) must be retried.
+    const fn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        arrayBuffer: () => Promise.reject(new Error('terminated')),
+      })
+      .mockResolvedValueOnce(okZipResponse());
+    vi.stubGlobal('fetch', fn);
+
+    const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
+
+    expect(files.has('master')).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('invokes a caller-provided onRetry instead of clobbering it', async () => {
+    const onRetry = vi.fn();
+    const fn = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('ECONNRESET'))
+      .mockResolvedValueOnce(okZipResponse());
+    vi.stubGlobal('fetch', fn);
+
+    await download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, onRetry });
+
+    expect(onRetry).toHaveBeenCalledWith(1, expect.any(Error));
+  });
+
+  it('fails fast on a permanent 404 without retrying', async () => {
+    const fn = vi.fn().mockResolvedValue(httpErrResponse(404));
+    vi.stubGlobal('fetch', fn);
+
+    await expect(download(FAA_DOWNLOAD_CONFIG, FAST_RETRY)).rejects.toThrow(/Download failed: 404/);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws after exhausting retries on a persistent 5xx', async () => {
+    const fn = vi.fn().mockResolvedValue(httpErrResponse(503));
+    vi.stubGlobal('fetch', fn);
+
+    await expect(download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, attempts: 3 })).rejects.toThrow(
+      /Download failed: 503/
+    );
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it('rethrows a network error after exhausting attempts', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('ETIMEDOUT'));
+    vi.stubGlobal('fetch', fn);
+
+    await expect(download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, attempts: 2 })).rejects.toThrow(
+      /ETIMEDOUT/
+    );
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 });
