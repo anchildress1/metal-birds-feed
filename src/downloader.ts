@@ -2,12 +2,58 @@ import { Open } from 'unzipper';
 import type { DownloadConfig } from './types/config.js';
 import { log } from './logger.js';
 
-export async function download(config: DownloadConfig): Promise<Map<string, Buffer>> {
+export interface RetryOptions {
+  attempts?: number;
+  baseDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+const DEFAULT_ATTEMPTS = 4;
+const DEFAULT_BASE_DELAY_MS = 500;
+// 4xx (e.g. 404 moved file) are permanent — retrying wastes the daily run. Only transient
+// transport failures earn a retry.
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+const backoffMs = (base: number, attempt: number): number => {
+  const exponential = base * 2 ** (attempt - 1);
+  return Math.round(exponential * (0.5 + Math.random() * 0.5));
+};
+
+export const fetchWithRetry = async (
+  url: string,
+  init: RequestInit,
+  retry: RetryOptions = {},
+  attempt = 1
+): Promise<Response> => {
+  const attempts = retry.attempts ?? DEFAULT_ATTEMPTS;
+  const sleep = retry.sleep ?? defaultSleep;
+  const last = attempt >= attempts;
+
+  try {
+    const res = await fetch(url, init);
+    if (res.ok || !RETRYABLE_STATUS.has(res.status) || last) return res;
+    log('warn', 'download_retry', { url, status: res.status, attempt, attempts });
+  } catch (err) {
+    if (last) throw err;
+    log('warn', 'download_retry', { url, error: String(err), attempt, attempts });
+  }
+
+  await sleep(backoffMs(retry.baseDelayMs ?? DEFAULT_BASE_DELAY_MS, attempt));
+  return fetchWithRetry(url, init, retry, attempt + 1);
+};
+
+export async function download(
+  config: DownloadConfig,
+  retry: RetryOptions = {}
+): Promise<Map<string, Buffer>> {
   const start = Date.now();
-  const url = await resolveDownloadUrl(config);
+  const url = await resolveDownloadUrl(config, retry);
   log('info', 'download_start', { url });
 
-  const res = await fetch(url, { headers: config.headers });
+  const res = await fetchWithRetry(url, { headers: config.headers }, retry);
   if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
 
   const buf = Buffer.from(await res.arrayBuffer());
@@ -28,10 +74,10 @@ export async function download(config: DownloadConfig): Promise<Map<string, Buff
 // each refresh), fetch the index page, regex-match the first capture group, and return that
 // URL — resolved against the index URL as the base for relative links. Otherwise, return
 // `config.url` unchanged.
-const resolveDownloadUrl = async (config: DownloadConfig): Promise<string> => {
+const resolveDownloadUrl = async (config: DownloadConfig, retry: RetryOptions): Promise<string> => {
   if (!config.discover_url || !config.discover_pattern) return config.url;
   log('info', 'discover_start', { discover_url: config.discover_url });
-  const res = await fetch(config.discover_url, { headers: config.headers });
+  const res = await fetchWithRetry(config.discover_url, { headers: config.headers }, retry);
   if (!res.ok) {
     throw new Error(`Discovery fetch failed: ${res.status} ${res.statusText}`);
   }
