@@ -395,6 +395,57 @@ License is published but carries use-conduct conditions that require agency conf
 
 ---
 
+### Austro Control — Austria
+
+- **Status:** ❌ Excluded by explicit agency request (2026-06-09 after legal review)
+- **Classification:** Excluded — Austro Control denied redistribution authorization
+- **Source URL:** https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/overview__supplement
+- **Reply (verbatim):** Received 2026-06-09 from Nina Schraml, Aviation Agency / Section Airworthiness AIR / Aircraft Register, Austro Control GmbH:
+
+  > Dear Ms. Chldress,
+  > after consultation with our legal department, we would like to inform you that Austro Control GmbH does not authorize the redistribution of the published aircraft register.
+  > Kind regards,
+  > NINA SCHRAML
+  > Aviation Agency
+  > Section Airworthiness / AIR
+  > Aircraft Register
+  > Austro Control GmbH
+
+- **Action commitment:** The Austrian civil aircraft register will not be ingested, normalized, or redistributed by metal-birds-feed.
+- **Operator note:** Forks of metal-birds-feed must also honor this exclusion. Austro Control's denial is not project-specific.
+- **Revisit condition:** Affirmative reply from Austro Control reversing this decision, or Austro Control publishes the register under an explicit open license at a future date.
+
+---
+
+### DCA Mauritius — Department of Civil Aviation
+
+- **Status:** ❌ Excluded by explicit agency reply (2026-06-08 — "for viewing only")
+- **Classification:** Excluded — DCA Mauritius confirmed the register is publicly viewable but not redistributable
+- **Source URL:** https://civil-aviation.govmu.org/
+- **Reply (verbatim):** Received 2026-06-08 from S Rambricho, Ag. Director of Civil Aviation, Department of Civil Aviation, SSR International Airport, Republic of Mauritius (Ref: CAV/GEN/1/1):
+
+  > Dear Sir,
+  >
+  > We refer to your email dated 11 May 2026 regarding the above-mentioned subject.
+  >
+  > We wish to inform you that the document is accessible for viewing only with respect to the aircraft registration, date of registration and name of owner only.
+  >
+  > However, other pertinent information cannot be disclosed due to the provisions of the Data Protection Act.
+  >
+  > S RAMBRICHH
+  > Ag. Director of Civil Aviation
+  > Department of Civil Aviation
+  > SSR International Airport
+  > Plaine - Magnien
+  > REPUBLIC OF MAURITIUS
+
+- **Interpretation:** "Accessible for viewing only" is an implicit denial of redistribution; the disclosed fields are view-scoped, the rest protected under the Mauritius Data Protection Act.
+- **Action commitment:** The Mauritian civil aircraft register will not be ingested, normalized, or redistributed by metal-birds-feed.
+- **Operator note:** Forks of metal-birds-feed must also honor this exclusion. DCA Mauritius's view-only posture is not project-specific.
+- **Revisit condition:** Affirmative reply from DCA Mauritius granting redistribution rights, or the Department publishes the register under an explicit open license at a future date.
+
+---
+
 ## Personal-use — awaiting reply
 
 ### CAA NZ — Civil Aviation Authority of New Zealand
@@ -495,18 +546,6 @@ License is published but carries use-conduct conditions that require agency conf
 - **Source URL:** https://www.gob.mx/afac
 - **Bulk download URL:** None published. `portal-de-servicios.afac.gob.mx` is login-walled; Registro Aeronáutico Mexicano not on `datos.gob.mx`. Third-party sources suggest per-record fees (~$10 USD/search); if confirmed, moves to Excluded.
 - **Permission email:** Sent 2026-05-05 to `tramites@afac.gob.mx`.
-- **Reply:** _pending_
-
----
-
-### Austro Control — Austria
-
-- **Status:** Future — awaiting reply; engineering-ready if license clears (XLSX, engine-native)
-- **Classification:** Unknown
-- **Source URL:** https://www.austrocontrol.at/en/aviation_agency/aircraft/aircraft_register/overview__supplement
-- **Bulk download URL:** Annual XLSX dump ("Total December 31, 2025 file") plus monthly PDF supplements.
-- **License:** Pending verification. Not on `data.gv.at`; Austro Control publishes some open data but withholds the register specifically.
-- **Permission email:** Sent 2026-05-05 to `register@austrocontrol.at`.
 - **Reply:** _pending_
 
 ---
@@ -1263,16 +1302,6 @@ License is published but carries use-conduct conditions that require agency conf
 - **Source URL:** http://www.acm.mg/
 - **Note:** SSL cert chain at acm.mg is broken — operator-side fix required before ingest pipeline can fetch over HTTPS.
 - **Permission email:** Sent 2026-05-11 to `acm@acm.mg`.
-- **Reply:** _pending_
-
----
-
-### DCA Mauritius — Department of Civil Aviation
-
-- **Status:** Future — awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://civil-aviation.govmu.org/
-- **Permission email:** Sent 2026-05-11 to `civil-aviation@govmu.org`.
 - **Reply:** _pending_
 
 ---
