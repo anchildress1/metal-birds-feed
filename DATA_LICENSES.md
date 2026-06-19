@@ -446,6 +446,34 @@ License is published but carries use-conduct conditions that require agency conf
 
 ---
 
+### UAEAC Colombia — Unidad Administrativa Especial de Aeronáutica Civil
+
+- **Status:** ❌ Excluded by formal administrative reply (2026-06-17 — Radicado 2026240060041283 Id 2605417; no appeal available under Ley 1755 de 2015)
+- **Classification:** Excluded — UAEAC denied both redistribution authorization and bulk-download channel
+- **Source URL:** https://www.aerocivil.gov.co/autoridad_aeronautica/publicaciones/3704/registro-de-aeronaves/
+- **Reply (verbatim, Spanish — operative paragraphs from the official radicado):** Received 2026-06-17 from Hugo Moreno Cano, Coordinador Grupo Registro Aeronáutico, Unidad Administrativa Especial de Aeronáutica Civil. Authored by José Andrés Galeano Higgins, Técnico Aeronáutico:
+
+  > Respecto a la solicitud de acceso a un canal de descarga masiva (bulk download), es pertinente indicar que la Aeronáutica Civil no suministra ni habilita mecanismos de extracción masiva o automatizada de la información, en la medida en que ello puede comprometer el adecuado uso de la información pública y el cumplimiento de las disposiciones legales en materia de protección de datos.
+  >
+  > En consecuencia, si bien la información se encuentra disponible para consulta pública, no es posible acceder favorablemente a la solicitud de redistribución o provisión de mecanismos de descarga masiva.
+  >
+  > La presente respuesta se emite en los términos de la Ley 1755 de 2015 y contra la misma no procede recurso alguno, sin perjuicio del derecho que le asiste de presentar nuevas solicitudes o acudir a las instancias correspondientes.
+
+- **Translation (operative paragraphs):**
+
+  > Regarding the request for access to a bulk download channel, it is pertinent to indicate that Aeronáutica Civil does not supply or enable mechanisms for mass or automated extraction of the information, insofar as this could compromise the proper use of public information and compliance with legal data-protection provisions.
+  >
+  > Consequently, although the information is available for public consultation, it is not possible to favorably grant the request for redistribution or for provision of mass-download mechanisms.
+  >
+  > This response is issued under the terms of Law 1755 of 2015 and no appeal proceeds against it, without prejudice to the right to file new requests or to approach the corresponding instances.
+
+- **Interpretation:** Formal administrative denial. Two specific elements were refused: (1) redistribution authorization and (2) provision of a bulk-download channel. Public consultation remains available in-person at the Oficina de Registro Aeronáutico Nacional, under the Habeas Data protections of Articles 15 and 21 of the Colombian Constitution and the data-protection framework of Ley 1581 de 2012 and Ley 1712 de 2014.
+- **Action commitment:** The Colombian civil aircraft register will not be ingested, normalized, or redistributed by metal-birds-feed.
+- **Operator note:** Forks of metal-birds-feed must also honor this exclusion. UAEAC's denial is not project-specific and applies to any bulk redistribution attempt.
+- **Revisit condition:** UAEAC publishes the register under explicit reuse terms (e.g., via datos.gov.co or a future open-data declaration), or grants redistribution rights through a future administrative resolution.
+
+---
+
 ## Personal-use — awaiting reply
 
 ### CAA NZ — Civil Aviation Authority of New Zealand
@@ -807,17 +835,6 @@ License is published but carries use-conduct conditions that require agency conf
 - **Source URL:** https://gov.uz/en/mintrans
 - **Bulk download URL:** TBD.
 - **Permission email:** Sent 2026-05-11 to `info@mintrans.uz` (routed via parent Ministry of Transport with forward request to UZCAA).
-- **Reply:** _pending_
-
----
-
-### UAEAC Colombia — Unidad Administrativa Especial de Aeronáutica Civil
-
-- **Status:** Future — awaiting reply
-- **Classification:** Unknown
-- **Source URL:** https://www.aerocivil.gov.co/autoridad_aeronautica/publicaciones/3704/registro-de-aeronaves/
-- **Bulk download URL:** None published. Consultation portal only.
-- **Permission email:** Sent 2026-05-10 to `atencionalciudadano@aerocivil.gov.co`.
 - **Reply:** _pending_
 
 ---
