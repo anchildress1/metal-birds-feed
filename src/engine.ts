@@ -189,9 +189,8 @@ function resolveLookup(
   defaultValue: string | null | undefined,
   field: string
 ): string | null {
-  // hasOwn, not `lookup[value] !== undefined`: the lookup is a plain object built from YAML, so a
-  // cell value matching an inherited Object.prototype member ("constructor", "valueOf", "__proto__")
-  // would otherwise return that inherited function instead of falling through to default/throw.
+  // hasOwn, not `!== undefined`: a cell equal to an inherited member ("valueOf", "__proto__")
+  // must not return the prototype function.
   if (Object.hasOwn(lookup, value)) return lookup[value];
   if (defaultValue !== undefined) return defaultValue;
   if (value === '') return null;

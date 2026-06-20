@@ -94,11 +94,9 @@ export async function parseSpreadsheet(
   });
 }
 
-// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS — the only maintained reader
-// for the format. hucre handles modern .xlsx/.ods (OOXML/zip) but not the binary container.
-// Cells are read raw (numbers stay numeric serials; date interpretation is deferred to
-// per-source transforms) and funneled through the same row-shaping as the hucre path so
-// skip_rows / columns / trim behave identically across spreadsheet formats.
+// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS. Cells read raw (numeric serials
+// kept; dates deferred to transforms). blankrows:false strips blank rows before skip_rows, so the
+// xls path counts non-blank rows — unlike the hucre path (tw-caa's skip_rows relies on this).
 // eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
 export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
   const wb = XLSX.read(buf, { type: 'buffer' });
@@ -133,9 +131,8 @@ const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
   return dataRows.map((cells) => headersToRow(headers, cells));
 };
 
-// Mirrors pickXlsSheet: a missing named sheet or out-of-range index is a misconfiguration
-// (typo in YAML, upstream renamed the tab) that must fail loudly. Returning an empty result
-// silently would let the engine see zero rows and the diff writer delete the whole source.
+// Fail loud on a missing/out-of-range sheet; a silent empty result would let the writer delete
+// the whole source. Mirrors pickXlsSheet.
 const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet => {
   if (sheets.length === 0) throw new Error('Workbook contains no sheets');
   if (selector === undefined) return sheets[0];

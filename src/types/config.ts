@@ -1,7 +1,5 @@
-// Single source of truth for transform names. The union types derive from these arrays, the
-// loader builds its Zod enums from the same arrays, and transforms.ts keys its handler maps on
-// the derived unions — so adding a name here is a compile error until a handler exists, and an
-// unknown name in a source YAML is rejected at load. No hand-synced second list to drift.
+// Single source of truth: the unions derive from these arrays and the loader enums + transform
+// handler maps key off them, so a new name won't compile without a handler.
 export const SCALAR_TRANSFORMS = [
   'trim',
   'trim_or_null',

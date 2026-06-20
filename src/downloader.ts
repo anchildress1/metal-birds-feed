@@ -104,8 +104,7 @@ const resolveDownloadUrl = async (config: DownloadConfig, opts: RetryOptions): P
   // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
   // Loader validates it as a syntactically valid regex before reaching this point.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  // Two distinct failures, two messages: the pattern not matching the page (wrong regex, markup
-  // changed) is a different fix from matching but capturing nothing (missing capture group).
+  // Distinguish no-match (wrong pattern) from matched-but-no-capture (missing group).
   const match = new RegExp(config.discover_pattern).exec(html);
   if (!match) {
     throw new Error(`Discovery pattern found no match on ${config.discover_url}`);

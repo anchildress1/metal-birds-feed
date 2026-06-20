@@ -109,9 +109,7 @@ const runWorkerPool = async <T>(
   await Promise.all(workers);
 };
 
-// Defense in depth: AircraftSchema already rejects '/', '\' and '..' in source_id/registration/
-// icao_hex, but assert again at the R2 boundary so no key-construction path can emit a segment
-// that escapes the strict key scheme.
+// Defense in depth behind the schema denylist: no key-construction path emits an escaping segment.
 const assertSafeSegment = (segment: string): string => {
   if (/[/\\]/.test(segment) || segment.includes('..'))
     throw new Error(`Unsafe R2 key segment: "${segment}"`);
@@ -216,10 +214,8 @@ export class R2DiffWriter {
   async write(records: Map<string, Aircraft>, source: string): Promise<WriteStats> {
     const { manifest: oldManifest, exists: manifestExists } = await this.loadManifest(source);
 
-    // A source that previously held records now yielding zero is upstream corruption (truncated
-    // download, renamed/missing sheet, format change), not a legitimate empty dataset — the diff
-    // writer would otherwise delete the entire prior dataset from R2. Refuse. Fresh seeding
-    // (no prior manifest) with zero records stays allowed.
+    // Zero records against a non-empty prior is upstream corruption; refusing keeps the diff
+    // writer from deleting the whole dataset. Fresh seeding (no prior) stays allowed.
     const priorCount = Object.keys(oldManifest).length;
     if (records.size === 0 && priorCount > 0) {
       throw new Error(

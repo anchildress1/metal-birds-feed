@@ -102,9 +102,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   };
 }
 
-// Producer and matcher share this exact prefix so a source name that is a prefix of another
-// (`faa` vs `faa-uas`) can't collide: startsWith on `[staleness] faa has not updated in ` does
-// not match `[staleness] faa-uas has not updated in …`.
+// Shared prefix so the matcher's startsWith can't let a prefix source name (`faa` vs `faa-uas`) collide.
 const stalenessTitlePrefix = (source: string): string =>
   `[staleness] ${source} has not updated in `;
 

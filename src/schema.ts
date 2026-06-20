@@ -81,21 +81,14 @@ export type Owner = z.infer<typeof OwnerSchema>;
 
 export const OperatorSchema = OwnerSchema;
 
-// source_id, registration, and icao_hex become R2 key path segments
-// (aircraft/by-id/<source>/<source_id>.json, aircraft/by-icao-hex/<icao_hex>.json,
-// aircraft/by-registration/<registration>.json). Registry data is an external boundary — a value
-// carrying a path separator or '..' would escape the strict key scheme, so reject it here and let
-// the engine drop the row rather than write an out-of-scheme object. Denylist, not allowlist:
-// legitimate international marks use characters an allowlist can't fully enumerate, but none use
-// '/', '\', or '..'.
+// These become R2 key path segments; reject path separators and '..' so a registry value can't
+// escape the key scheme. Denylist, not allowlist — international marks use unpredictable chars.
 const r2KeySafe = (field: string) =>
   z.string().refine((v) => !/[/\\]/.test(v) && !v.includes('..'), {
     message: `${field} must not contain '/', '\\', or '..'`,
   });
 
-// Every date-producing transform emits YYYY-MM-DD or null. Constrain the schema to match so a
-// mapping that points a date field at an untransformed column is rejected at the boundary
-// instead of writing a non-date string downstream.
+// Date transforms emit YYYY-MM-DD or null; constrain the schema to match.
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'must be an ISO YYYY-MM-DD date')
