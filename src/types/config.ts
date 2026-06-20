@@ -1,34 +1,45 @@
-export type ScalarTransformName =
-  | 'trim'
-  | 'trim_or_null'
-  | 'lowercase'
-  | 'uppercase'
-  | 'int_or_null'
-  | 'float_or_null'
-  | 'date_yyyymmdd_or_null'
-  | 'date_yyyy_slash_or_null'
-  | 'date_dd_slash_or_null'
-  | 'date_ddmmyyyy_or_null'
-  | 'iso_date_only_or_null'
-  | 'excel_serial_year_or_null'
-  | 'mph_to_ktas_or_null'
-  | 'binary_to_hex_or_null'
-  | 'faa_n_number'
-  | 'faa_cert_class'
-  | 'tc_full_registration'
-  | 'nl_ilt_registration_or_null'
-  | 'casa_full_registration'
-  | 'casa_engine_detail_or_null'
-  | 'br_registration'
-  | 'br_airframe'
-  | 'br_status'
-  | 'br_party_name'
-  | 'br_party_state'
-  | 'br_party_kind';
+// Single source of truth for transform names. The union types derive from these arrays, the
+// loader builds its Zod enums from the same arrays, and transforms.ts keys its handler maps on
+// the derived unions — so adding a name here is a compile error until a handler exists, and an
+// unknown name in a source YAML is rejected at load. No hand-synced second list to drift.
+export const SCALAR_TRANSFORMS = [
+  'trim',
+  'trim_or_null',
+  'lowercase',
+  'uppercase',
+  'int_or_null',
+  'float_or_null',
+  'date_yyyymmdd_or_null',
+  'date_yyyy_slash_or_null',
+  'date_dd_slash_or_null',
+  'date_ddmmyyyy_or_null',
+  'iso_date_only_or_null',
+  'excel_serial_year_or_null',
+  'mph_to_ktas_or_null',
+  'binary_to_hex_or_null',
+  'faa_n_number',
+  'faa_cert_class',
+  'tc_full_registration',
+  'nl_ilt_registration_or_null',
+  'casa_full_registration',
+  'casa_engine_detail_or_null',
+  'br_registration',
+  'br_airframe',
+  'br_status',
+  'br_party_name',
+  'br_party_state',
+  'br_party_kind',
+] as const;
 
-export type ArrayTransformName = 'faa_cert_ops';
+export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
-export type CompoundTransformName = 'tc_airframe' | 'nl_ilt_airframe' | 'casa_airframe';
+export const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe', 'casa_airframe'] as const;
+
+export type ScalarTransformName = (typeof SCALAR_TRANSFORMS)[number];
+
+export type ArrayTransformName = (typeof ARRAY_TRANSFORMS)[number];
+
+export type CompoundTransformName = (typeof COMPOUND_TRANSFORMS)[number];
 
 export interface FieldMapping {
   field?: string;
