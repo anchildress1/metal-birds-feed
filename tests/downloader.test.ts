@@ -213,12 +213,21 @@ describe('download — discover_url + discover_pattern', () => {
     expect(fetchFn).toHaveBeenCalledTimes(4);
   });
 
-  it('throws when the pattern matches no URL on the index page', async () => {
+  it('throws a no-match error when the pattern does not match the index page', async () => {
     mockFetchSequence([
       { ok: true, status: 200, statusText: 'OK', body: '<html><body>nothing here</body></html>' },
     ]);
 
-    await expect(download(DISCOVER_CONFIG)).rejects.toThrow(/discovery pattern matched no url/i);
+    await expect(download(DISCOVER_CONFIG)).rejects.toThrow(/found no match/i);
+  });
+
+  it('throws a no-capture error when the pattern matches but has no capture group', async () => {
+    mockFetchSequence([
+      { ok: true, status: 200, statusText: 'OK', body: '<a href="latest.ods">latest</a>' },
+    ]);
+
+    const cfg: DownloadConfig = { ...DISCOVER_CONFIG, discover_pattern: 'href="[^"]+\\.ods"' };
+    await expect(download(cfg)).rejects.toThrow(/captured no URL/i);
   });
 
   it('resolves a relative URL against the discover_url base', async () => {
