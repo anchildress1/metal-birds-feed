@@ -189,8 +189,10 @@ function resolveLookup(
   defaultValue: string | null | undefined,
   field: string
 ): string | null {
-  const mapped = lookup[value];
-  if (mapped !== undefined) return mapped;
+  // hasOwn, not `lookup[value] !== undefined`: the lookup is a plain object built from YAML, so a
+  // cell value matching an inherited Object.prototype member ("constructor", "valueOf", "__proto__")
+  // would otherwise return that inherited function instead of falling through to default/throw.
+  if (Object.hasOwn(lookup, value)) return lookup[value];
   if (defaultValue !== undefined) return defaultValue;
   if (value === '') return null;
   throw new Error(`Unknown lookup value "${value}" for field "${field}"`);

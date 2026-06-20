@@ -877,6 +877,33 @@ describe('engine — negative and edge cases', () => {
     // AAC: Aeroplane + 1 engine → tc_airframe → 'fixed-wing-single-engine' → lookup → 'fixed-wing'
     expect(r.get('AAC')?.airframe_type).toBe('fixed-wing');
   });
+
+  it('resolveLookup falls through to default for a value matching an Object.prototype key', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-lookup',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        'owner.kind': { field: 'KIND', lookup: { individual: 'individual' }, default: null },
+      },
+    };
+    // 'valueOf' is an inherited Object.prototype member; without hasOwn the lookup returns that
+    // function, owner.kind becomes a Function, and the row fails schema validation.
+    const files = new Map([['primary', Buffer.from('ID,REG,KIND\n1,N1,valueOf\n', 'utf8')]]);
+    const { records: r, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(r.get('1')?.owner.kind).toBeNull();
+  });
 });
 
 describe('contentHash', () => {
