@@ -102,13 +102,22 @@ export async function run(sourceId: string): Promise<RunResult> {
   };
 }
 
+// Producer and matcher share this exact prefix so a source name that is a prefix of another
+// (`faa` vs `faa-uas`) can't collide: startsWith on `[staleness] faa has not updated in ` does
+// not match `[staleness] faa-uas has not updated in …`.
+const stalenessTitlePrefix = (source: string): string =>
+  `[staleness] ${source} has not updated in `;
+
+const isStalenessIssueFor = (issueTitle: string, source: string): boolean =>
+  issueTitle.startsWith(stalenessTitlePrefix(source));
+
 const createStalenessIssue = async (
   entry: StalenessEntry,
   token: string,
   repo: string
 ): Promise<void> => {
   const apiBase = `https://api.github.com/repos/${repo}`;
-  const title = `[staleness] ${entry.source} has not updated in ${entry.days_since_change} days`;
+  const title = `${stalenessTitlePrefix(entry.source)}${entry.days_since_change} days`;
 
   const listRes = await fetch(`${apiBase}/issues?labels=data-staleness&state=open&per_page=100`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
@@ -118,7 +127,7 @@ const createStalenessIssue = async (
     return;
   }
   const existing = (await listRes.json()) as Array<{ title: string }>;
-  if (existing.some((i) => i.title.includes(`[staleness] ${entry.source}`))) return;
+  if (existing.some((i) => isStalenessIssueFor(i.title, entry.source))) return;
 
   const threshold = Math.round(entry.cadence_days * STALENESS_MULTIPLIER);
   const body = [
@@ -161,7 +170,7 @@ const closeStalenessIssues = async (source: string, token: string, repo: string)
     return;
   }
   const issues = (await listRes.json()) as Array<{ number: number; title: string }>;
-  const matching = issues.filter((i) => i.title.includes(`[staleness] ${source}`));
+  const matching = issues.filter((i) => isStalenessIssueFor(i.title, source));
   const results = await Promise.allSettled(
     matching.map((i) =>
       fetch(`${apiBase}/issues/${i.number}`, {

@@ -283,7 +283,8 @@ describe('main', () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([{ number: 7, title: '[staleness] faa went silent' }]),
+        json: () =>
+          Promise.resolve([{ number: 7, title: '[staleness] faa has not updated in 40 days' }]),
       })
       .mockResolvedValueOnce({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
@@ -292,6 +293,38 @@ describe('main', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1][0])).toContain('/issues/7');
+  });
+
+  it('does not close a sibling source whose name shares this source as a prefix', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const pastTimestamp = new Date(Date.now() - 35 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: pastTimestamp,
+      last_content_change: pastTimestamp,
+    });
+    mockR2Write.mockResolvedValueOnce({
+      put: 1,
+      deleted: 0,
+      skipped: 0,
+      changed: true,
+      record_count: 1,
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      // Only a sibling source's issue is open; `faa` must not match `faa-uas`.
+      json: () =>
+        Promise.resolve([{ number: 9, title: '[staleness] faa-uas has not updated in 40 days' }]),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await main();
+
+    // List call only — no PATCH to close the sibling's issue.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('makes no fetch calls when source has no cadence_days', async () => {
