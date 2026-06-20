@@ -58,6 +58,25 @@ describe('AircraftSchema — R2 key-segment safety', () => {
     expect(AircraftSchema.safeParse({ ...base, icao_hex: null }).success).toBe(true);
   });
 
+  for (const field of [
+    'certification_date',
+    'airworthiness_date',
+    'expiration_date',
+    'last_action_date',
+    'airworthiness_review_date',
+  ] as const) {
+    it(`accepts a null and an ISO date for ${field}`, () => {
+      expect(AircraftSchema.safeParse({ ...base, [field]: null }).success).toBe(true);
+      expect(AircraftSchema.safeParse({ ...base, [field]: '2026-01-31' }).success).toBe(true);
+    });
+
+    for (const bad of ['2026', '01/31/2026', '2026-1-3', 'not-a-date']) {
+      it(`rejects ${field} value ${JSON.stringify(bad)}`, () => {
+        expect(AircraftSchema.safeParse({ ...base, [field]: bad }).success).toBe(false);
+      });
+    }
+  }
+
   for (const field of ['source_id', 'registration', 'icao_hex'] as const) {
     for (const bad of ['../evil', 'a/b', 'a\\b', '..']) {
       it(`rejects ${field} containing ${JSON.stringify(bad)}`, () => {
