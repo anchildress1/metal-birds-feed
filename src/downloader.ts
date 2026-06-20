@@ -158,8 +158,13 @@ async function extractZip(
       )
   );
 
-  for (const alias of Object.keys(entries)) {
-    if (!result.has(alias)) throw new Error(`ZIP entry not found for alias "${alias}"`);
+  // Name the expected path and what the archive actually holds — the misconfiguration is almost
+  // always the path (upstream renamed the file), not the alias.
+  for (const [alias, path] of Object.entries(entries)) {
+    if (!result.has(alias))
+      throw new Error(
+        `ZIP entry not found: alias "${alias}" expected "${path}"; archive has: ${dir.files.map((f) => f.path).join(', ')}`
+      );
   }
 
   log('info', 'extract_complete', { files: result.size });

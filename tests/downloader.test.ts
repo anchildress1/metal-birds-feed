@@ -135,7 +135,7 @@ describe('download', () => {
       entries: { ...FAA_DOWNLOAD_CONFIG.entries, missing: 'NOTEXIST.txt' },
     };
 
-    await expect(download(badConfig)).rejects.toThrow(/not found/i);
+    await expect(download(badConfig)).rejects.toThrow(/not found.*NOTEXIST\.txt.*archive has/i);
   });
 });
 
