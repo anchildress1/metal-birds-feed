@@ -251,6 +251,15 @@ describe('R2DiffWriter — dry run', () => {
     await expect(writer.write(records, 'faa')).rejects.toThrow('AccessDenied');
   });
 
+  it('refuses to build an R2 key from a traversal-bearing segment (defense in depth)', async () => {
+    mockSend.mockRejectedValueOnce(noSuchKey());
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    // Bypasses AircraftSchema (already guards this) to prove the writer's own boundary check.
+    const records = new Map([['../evil', makeAircraft('../evil', 'N12345', 'a4e294')]]);
+    await expect(writer.write(records, 'faa')).rejects.toThrow(/Unsafe R2 key segment/);
+  });
+
   it('marks changed record as put when ICAO hex changes', async () => {
     const r1 = makeAircraft('id001', 'N12345', 'new-hex');
     const records = new Map([['id001', r1]]);

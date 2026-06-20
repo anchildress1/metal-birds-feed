@@ -109,6 +109,15 @@ const runWorkerPool = async <T>(
   await Promise.all(workers);
 };
 
+// Defense in depth: AircraftSchema already rejects '/', '\' and '..' in source_id/registration/
+// icao_hex, but assert again at the R2 boundary so no key-construction path can emit a segment
+// that escapes the strict key scheme.
+const assertSafeSegment = (segment: string): string => {
+  if (/[/\\]/.test(segment) || segment.includes('..'))
+    throw new Error(`Unsafe R2 key segment: "${segment}"`);
+  return segment;
+};
+
 const buildManifest = (records: Map<string, Aircraft>): Manifest => {
   const manifest: Manifest = {};
   for (const [id, record] of records) {
@@ -284,7 +293,7 @@ export class R2DiffWriter {
       async (id) => {
         const rec = records.get(id);
         /* v8 ignore next 2 — toWrite IDs are always present in records */
-        if (rec) await this.put(`aircraft/by-id/${source}/${id}.json`, rec);
+        if (rec) await this.put(`aircraft/by-id/${source}/${assertSafeSegment(id)}.json`, rec);
       },
       S3_CONCURRENCY
     );
@@ -293,7 +302,7 @@ export class R2DiffWriter {
   private async deleteRecords(toDelete: Set<string>, source: string): Promise<void> {
     await runWorkerPool(
       [...toDelete],
-      (id) => this.del(`aircraft/by-id/${source}/${id}.json`),
+      (id) => this.del(`aircraft/by-id/${source}/${assertSafeSegment(id)}.json`),
       S3_CONCURRENCY
     );
   }
@@ -308,7 +317,7 @@ export class R2DiffWriter {
     await runWorkerPool(
       [...dirty],
       async (key) => {
-        const objectKey = `aircraft/${prefix}/${key}.json`;
+        const objectKey = `aircraft/${prefix}/${assertSafeSegment(key)}.json`;
         const sourceRefs = (keyToIds.get(key) ?? []).map((id) => `${source}:${id}`);
         const refs = freshBucket
           ? sourceRefs

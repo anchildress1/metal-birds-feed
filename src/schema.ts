@@ -81,6 +81,18 @@ export type Owner = z.infer<typeof OwnerSchema>;
 
 export const OperatorSchema = OwnerSchema;
 
+// source_id, registration, and icao_hex become R2 key path segments
+// (aircraft/by-id/<source>/<source_id>.json, aircraft/by-icao-hex/<icao_hex>.json,
+// aircraft/by-registration/<registration>.json). Registry data is an external boundary — a value
+// carrying a path separator or '..' would escape the strict key scheme, so reject it here and let
+// the engine drop the row rather than write an out-of-scheme object. Denylist, not allowlist:
+// legitimate international marks use characters an allowlist can't fully enumerate, but none use
+// '/', '\', or '..'.
+const r2KeySafe = (field: string) =>
+  z.string().refine((v) => !/[/\\]/.test(v) && !v.includes('..'), {
+    message: `${field} must not contain '/', '\\', or '..'`,
+  });
+
 export const EngineSchema = z.object({
   manufacturer: z.string().nullable(),
   model: z.string().nullable(),
@@ -93,9 +105,9 @@ export type Engine = z.infer<typeof EngineSchema>;
 
 export const AircraftSchema = z.object({
   source: z.string(),
-  source_id: z.string(),
-  registration: z.string(),
-  icao_hex: z.string().nullable(),
+  source_id: r2KeySafe('source_id'),
+  registration: r2KeySafe('registration'),
+  icao_hex: r2KeySafe('icao_hex').nullable(),
   icao_type_code: z.string().nullable(),
   status: AircraftStatusSchema,
   country: z.string(),

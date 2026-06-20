@@ -1,0 +1,72 @@
+import { describe, it, expect } from 'vitest';
+import { AircraftSchema, type Aircraft } from '../src/schema.js';
+
+const base: Aircraft = {
+  source: 'faa',
+  source_id: '00001001',
+  registration: 'N12345',
+  icao_hex: 'a4e294',
+  icao_type_code: null,
+  status: 'valid',
+  country: 'US',
+  manufacturer: 'CESSNA',
+  model: '172',
+  serial_number: '12345',
+  year_manufactured: 1979,
+  airframe_type: 'fixed-wing-single-engine',
+  category: 'standard',
+  build_certification: 'type-certificated',
+  airworthiness_class: '1',
+  operating_environment: 'land',
+  operational_classes: ['4'],
+  engine: {
+    manufacturer: null,
+    model: null,
+    type: null,
+    count: null,
+    horsepower: null,
+    thrust_lbs: null,
+  },
+  owner: { name: null, kind: null, state: null, country: null },
+  operator: { name: null, kind: null, state: null, country: null },
+  idera_authorised_party: null,
+  certification_date: '1979-06-20',
+  airworthiness_date: null,
+  expiration_date: null,
+  last_action_date: null,
+  cruise_speed_ktas: null,
+  max_takeoff_weight_kg: null,
+  seats: null,
+  max_passengers: null,
+  min_crew: null,
+  airworthiness_review_date: null,
+  cancellation_reason: null,
+  lien_status: null,
+  interdiction_code: null,
+};
+
+describe('AircraftSchema — R2 key-segment safety', () => {
+  it('accepts a clean record', () => {
+    expect(AircraftSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('accepts a hyphenated international registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: 'VH-ABC' }).success).toBe(true);
+  });
+
+  it('accepts a null icao_hex', () => {
+    expect(AircraftSchema.safeParse({ ...base, icao_hex: null }).success).toBe(true);
+  });
+
+  for (const field of ['source_id', 'registration', 'icao_hex'] as const) {
+    for (const bad of ['../evil', 'a/b', 'a\\b', '..']) {
+      it(`rejects ${field} containing ${JSON.stringify(bad)}`, () => {
+        const result = AircraftSchema.safeParse({ ...base, [field]: bad });
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.issues.some((i) => i.message.includes(field))).toBe(true);
+        }
+      });
+    }
+  }
+});
