@@ -232,6 +232,28 @@ describe('R2DiffWriter — dry run', () => {
     expect(stats.skipped).toBe(1);
   });
 
+  it('refuses to write zero records when prior data exists (mass-delete guard)', async () => {
+    mockSend.mockResolvedValueOnce(
+      manifestResponse({
+        id001: { hash: 'h1', icao_hex: 'a4e294', registration: 'N12345' },
+        id999: { hash: 'h2', icao_hex: 'dead00', registration: 'NOLD' },
+      })
+    );
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    await expect(writer.write(new Map(), 'faa')).rejects.toThrow(/Refusing to write 0 records/);
+  });
+
+  it('allows zero records on a fresh bucket (no prior manifest)', async () => {
+    mockSend.mockRejectedValueOnce(noSuchKey());
+
+    const writer = new R2DiffWriter(R2_CONFIG, true);
+    const stats = await writer.write(new Map(), 'faa');
+
+    expect(stats.record_count).toBe(0);
+    expect(stats.deleted).toBe(0);
+  });
+
   it('treats NoSuchKey manifest error as empty (first-write scenario)', async () => {
     mockSend.mockRejectedValueOnce(noSuchKey());
 

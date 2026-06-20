@@ -85,7 +85,6 @@ export async function parseSpreadsheet(
 ): Promise<Row[]> {
   const wb = options.format === 'ods' ? await readOds(buf) : await readXlsx(buf);
   const sheet = pickSheet(wb.sheets, options.sheet);
-  if (!sheet) return [];
 
   const rawRows = sheet.rows.map((cells) => cells.map((c) => stringifyCell(c)));
   return shapeRows(rawRows, {
@@ -134,11 +133,25 @@ const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
   return dataRows.map((cells) => headersToRow(headers, cells));
 };
 
-const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet | undefined => {
-  if (sheets.length === 0) return undefined;
+// Mirrors pickXlsSheet: a missing named sheet or out-of-range index is a misconfiguration
+// (typo in YAML, upstream renamed the tab) that must fail loudly. Returning an empty result
+// silently would let the engine see zero rows and the diff writer delete the whole source.
+const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet => {
+  if (sheets.length === 0) throw new Error('Workbook contains no sheets');
   if (selector === undefined) return sheets[0];
-  if (typeof selector === 'number') return sheets[selector];
-  return sheets.find((s) => s.name === selector);
+  if (typeof selector === 'number') {
+    if (selector >= sheets.length)
+      throw new Error(
+        `Sheet index ${selector} out of range (workbook has ${sheets.length} sheet(s))`
+      );
+    return sheets[selector];
+  }
+  const match = sheets.find((s) => s.name === selector);
+  if (!match)
+    throw new Error(
+      `Sheet "${selector}" not found; available: ${sheets.map((s) => s.name).join(', ')}`
+    );
+  return match;
 };
 
 const pickXlsSheet = (names: string[], selector: string | number | undefined): string => {

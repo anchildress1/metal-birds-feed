@@ -215,6 +215,18 @@ export class R2DiffWriter {
 
   async write(records: Map<string, Aircraft>, source: string): Promise<WriteStats> {
     const { manifest: oldManifest, exists: manifestExists } = await this.loadManifest(source);
+
+    // A source that previously held records now yielding zero is upstream corruption (truncated
+    // download, renamed/missing sheet, format change), not a legitimate empty dataset — the diff
+    // writer would otherwise delete the entire prior dataset from R2. Refuse. Fresh seeding
+    // (no prior manifest) with zero records stays allowed.
+    const priorCount = Object.keys(oldManifest).length;
+    if (records.size === 0 && priorCount > 0) {
+      throw new Error(
+        `Refusing to write 0 records for "${source}": prior dataset has ${priorCount} (suspected upstream data loss)`
+      );
+    }
+
     const newManifest = buildManifest(records);
     const diffs = computeDiffs(oldManifest, newManifest);
     const inverse = buildInverseMaps(newManifest);
