@@ -193,12 +193,11 @@ describe('R2ArtifactWriter — write', () => {
     );
   });
 
-  it('allows zero records on a fresh source (no prior records)', async () => {
-    mockSend.mockResolvedValue({});
+  it('refuses zero records even on a fresh source with no prior state', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const stats = await writer.write(new Map(), 'faa', null);
-    expect(stats.changed).toBe(true);
-    expect(stats.record_count).toBe(0);
+    await expect(writer.write(new Map(), 'faa', null)).rejects.toThrow(
+      /Refusing to write 0 records/
+    );
   });
 
   it('does not call S3 in dry-run mode', async () => {

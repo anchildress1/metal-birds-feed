@@ -68,13 +68,12 @@ export class R2ArtifactWriter {
   ): Promise<WriteStats> {
     const content_hash = hashRecords(records);
 
-    // A previously-populated source now yielding zero records is upstream corruption (truncated
-    // download, format change), not a legitimate empty dataset — overwriting would wipe the
-    // artifact. Refuse. Fresh seeding (no prior records) stays allowed.
-    if (records.size === 0 && (priorState?.record_count ?? 0) > 0) {
-      throw new Error(
-        `Refusing to write 0 records for "${source}": prior dataset has ${priorState?.record_count} (suspected upstream data loss)`
-      );
+    // Zero records is upstream data loss for an aircraft registry, never a legitimate dataset —
+    // refuse rather than publish an empty artifact. Unconditional (not gated on prior
+    // record_count): a source on its first migration run has no prior _state, so a count check
+    // alone would let a fresh source publish empty.
+    if (records.size === 0) {
+      throw new Error(`Refusing to write 0 records for "${source}" (suspected upstream data loss)`);
     }
 
     if (priorState?.content_hash === content_hash) {
