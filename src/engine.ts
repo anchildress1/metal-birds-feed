@@ -105,6 +105,13 @@ export async function translate(
         failed++;
         continue;
       }
+      // source_id is the source's permanent unique key; a duplicate means the id assumption is
+      // wrong (e.g. a non-unique mark used as id) and last-wins would silently drop a record.
+      if (records.has(rawId)) {
+        log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
+        failed++;
+        continue;
+      }
       records.set(rawId, parsed.data);
     } catch (err) {
       log('error', 'translate_error', {

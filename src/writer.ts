@@ -25,6 +25,12 @@ const S3_RETRY: RetryOptions = {
 
 const S3_MAX_ATTEMPTS = 5;
 
+// A run yielding under this fraction of the prior record count is treated as a truncated/partial
+// upstream (an HTTP-success-but-short download that parses cleanly), not a real shrinkage —
+// aircraft registries don't lose half their fleet in a refresh. Refuse rather than overwrite the
+// good artifact with a partial one.
+const MIN_RETAIN_RATIO = 0.5;
+
 export interface WriteStats {
   changed: boolean;
   record_count: number;
@@ -76,6 +82,19 @@ export class R2ArtifactWriter {
       throw new Error(`Refusing to write 0 records for "${source}" (suspected upstream data loss)`);
     }
 
+    const priorCount = priorState?.record_count;
+    if (
+      priorCount !== undefined &&
+      priorCount > 0 &&
+      records.size / priorCount < MIN_RETAIN_RATIO
+    ) {
+      throw new Error(
+        `Refusing to write ${records.size} records for "${source}": ${Math.round((1 - records.size / priorCount) * 100)}% drop from prior ${priorCount} (suspected truncated upstream). Delete aircraft/_state/${source}.json to override.`
+      );
+    }
+
+    // A prior hash that is absent (legacy/first-run state) never equals the current one, so the
+    // artifact is rewritten — exactly what a format migration needs.
     if (priorState?.content_hash === content_hash) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return { changed: false, record_count: records.size, content_hash };
@@ -107,12 +126,20 @@ export class R2ArtifactWriter {
       try {
         json = JSON.parse(body);
       } catch {
-        // Invalid JSON treated as absent — pipeline proceeds with a fresh run.
+        // Present-but-corrupt state is worse than absent — log it. Run proceeds fresh (re-PUT).
+        log('error', 'state_parse_failed', { source, reason: 'invalid_json' });
         return null;
       }
       const parsed = SourceStateSchema.safeParse(json);
-      // Malformed schema treated as absent — pipeline proceeds with a fresh run.
-      return parsed.success ? parsed.data : null;
+      if (!parsed.success) {
+        log('error', 'state_parse_failed', {
+          source,
+          reason: 'schema_invalid',
+          msg: parsed.error.message,
+        });
+        return null;
+      }
+      return parsed.data;
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
       log('error', 'state_load_failed', {

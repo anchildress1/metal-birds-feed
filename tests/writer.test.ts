@@ -48,6 +48,8 @@ const R2_CONFIG = {
   bucketName: 'test-bucket',
 };
 
+const HASH64 = 'a'.repeat(64);
+
 function makeAircraft(id: string, reg: string, hex: string | null = null): Aircraft {
   return {
     source: 'faa',
@@ -200,6 +202,27 @@ describe('R2ArtifactWriter — write', () => {
     );
   });
 
+  it('refuses a drop below half the prior record count (truncated-upstream guard)', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 100 };
+    // 1 record vs prior 100 = 99% drop → suspected truncation.
+    await expect(
+      writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior)
+    ).rejects.toThrow(/drop from prior 100/);
+  });
+
+  it('retries a transient error on the artifact PUT', async () => {
+    mockSend.mockRejectedValueOnce(s3Error('internal', 500)).mockResolvedValueOnce({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const stats = await writer.write(
+      new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]),
+      'faa',
+      null
+    );
+    expect(stats.changed).toBe(true);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+
   it('does not call S3 in dry-run mode', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, true);
     const stats = await writer.write(
@@ -236,7 +259,7 @@ describe('R2ArtifactWriter — state', () => {
       last_run: 'r',
       last_content_change: 'c',
       record_count: 9,
-      content_hash: 'h',
+      content_hash: HASH64,
     };
     mockSend.mockResolvedValueOnce(stateResponse(state));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -295,5 +318,7 @@ describe('isTransientS3Error', () => {
     expect(isTransientS3Error(new Error('socket'))).toBe(true);
     expect(isTransientS3Error(s3Error('e', 403))).toBe(false);
     expect(isTransientS3Error(noSuchKey())).toBe(false);
+    expect(isTransientS3Error(null)).toBe(true);
+    expect(isTransientS3Error(undefined)).toBe(true);
   });
 });

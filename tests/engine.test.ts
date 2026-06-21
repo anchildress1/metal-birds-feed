@@ -905,6 +905,29 @@ describe('engine — negative and edge cases', () => {
     expect(stats.failed).toBe(0);
     expect(r.get('1')?.owner.kind).toBeNull();
   });
+
+  it('counts a duplicate source_id as a failed row instead of silently overwriting', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1'); // first occurrence wins
+  });
 });
 
 describe('engine — spreadsheet dispatch (parsePrimary)', () => {
