@@ -55,6 +55,7 @@ const CONFIG: SourceConfig = {
   registration: 'N-NUMBER',
   mapping: {},
 };
+const HASH64 = '0'.repeat(64);
 
 beforeEach(() => {
   process.env['MBF_R2_ACCOUNT_ID'] = 'account';
@@ -128,6 +129,7 @@ describe('run', () => {
     mockReadState.mockResolvedValueOnce({
       last_run: recentTimestamp,
       last_content_change: recentTimestamp,
+      content_hash: HASH64,
     });
 
     const result = await run('faa');
@@ -135,6 +137,26 @@ describe('run', () => {
     expect(result.skipped).toBe(true);
     expect(mockDownload).not.toHaveBeenCalled();
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('does not skip cadence-gated sources when prior state has no content hash', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({
+      ...CONFIG,
+      cadence_days: 30,
+    });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+    expect(mockWriteState).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip cadence-gated sources in dry-run mode', async () => {

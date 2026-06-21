@@ -55,8 +55,10 @@ export async function run(sourceId: string): Promise<RunResult> {
   // State is read for every source: cadence sources gate on last_run, all sources gate the artifact
   // PUT on content_hash (skip-if-unchanged).
   const priorState = await writer.readState(sourceId);
+  const hasCurrentArtifactState = priorState?.content_hash !== undefined;
   if (
     config.cadence_days !== undefined &&
+    hasCurrentArtifactState &&
     !dryRun &&
     shouldSkip(priorState, config.cadence_days, new Date())
   ) {
