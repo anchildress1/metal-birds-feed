@@ -24,6 +24,9 @@ export const hashRecords = (records: Map<string, Aircraft>): string => {
 export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
   const db = new Database(':memory:');
   try {
+    // Schema revision for the external consumer — bump when the table shape or canonical record
+    // contract changes, so a reader can detect an artifact built by an older/newer producer.
+    db.run('PRAGMA user_version = 1');
     db.run(
       'CREATE TABLE aircraft (source_id TEXT PRIMARY KEY, icao_hex TEXT, registration TEXT, record TEXT NOT NULL) STRICT'
     );

@@ -190,9 +190,6 @@ describe('run', () => {
     mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
     mockReadState.mockResolvedValueOnce(null);
     mockR2Write.mockResolvedValueOnce({
-      put: 3,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 3,
       content_hash: 'h',
@@ -217,9 +214,6 @@ describe('run', () => {
       last_content_change: priorChange,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 0,
-      deleted: 0,
-      skipped: 5,
       changed: false,
       record_count: 5,
       content_hash: 'h',
@@ -247,9 +241,6 @@ describe('main', () => {
     mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
     mockReadState.mockResolvedValueOnce({ last_run: recentRun, last_content_change: oldChange });
     mockR2Write.mockResolvedValueOnce({
-      put: 0,
-      deleted: 0,
-      skipped: 0,
       changed: false,
       record_count: 0,
       content_hash: 'h',
@@ -280,9 +271,6 @@ describe('main', () => {
       last_content_change: pastTimestamp,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 1,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 1,
       content_hash: 'h',
@@ -314,9 +302,6 @@ describe('main', () => {
       last_content_change: pastTimestamp,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 1,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 1,
       content_hash: 'h',
@@ -399,9 +384,6 @@ describe('main', () => {
       last_content_change: pastTimestamp,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 1,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 1,
       content_hash: 'h',
