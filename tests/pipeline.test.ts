@@ -23,7 +23,7 @@ void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
 void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
 void mock.module('../src/logger.js', () => ({ log: mockLog }));
 void mock.module('../src/writer.js', () => ({
-  R2DiffWriter: class {
+  R2ArtifactWriter: class {
     constructor(...args: unknown[]) {
       mockR2Constructor(...args);
     }
@@ -79,11 +79,9 @@ beforeEach(() => {
     stats: { total: 1, ok: 1, failed: 0 },
   });
   mockR2Write.mockResolvedValue({
-    put: 0,
-    deleted: 0,
-    skipped: 0,
     changed: false,
     record_count: 0,
+    content_hash: 'h0',
   });
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
@@ -106,7 +104,7 @@ describe('run', () => {
     await run('faa');
 
     expect(mockR2Constructor).toHaveBeenCalledTimes(1);
-    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa');
+    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null);
   });
 
   it('aborts write when any row fails translation', async () => {
@@ -169,18 +167,20 @@ describe('run', () => {
     expect(mockR2Write).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call readState or writeState when cadence_days is not configured', async () => {
+  it('reads and writes state even without cadence_days (for content-hash skip)', async () => {
     process.env['DRY_RUN'] = 'false';
 
     await run('faa');
 
-    expect(mockReadState).not.toHaveBeenCalled();
-    expect(mockWriteState).not.toHaveBeenCalled();
+    expect(mockReadState).toHaveBeenCalledTimes(1);
+    expect(mockWriteState).toHaveBeenCalledTimes(1);
+    const [, state] = mockWriteState.mock.calls[0] as [string, { content_hash: string }];
+    expect(state.content_hash).toBe('h0');
   });
 
   it.each(['../etc/passwd', 'faa/../secret', 'dir/faa'])(
     'rejects source ID containing path traversal or separator: %s',
-    async (id) => {
+    async (id: string) => {
       await expect(run(id)).rejects.toThrow(/path traversal/i);
     }
   );

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
-import { R2DiffWriter } from './writer.js';
+import { R2ArtifactWriter } from './writer.js';
 import { log } from './logger.js';
 import {
   shouldSkip,
@@ -42,7 +42,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   const config = loadSourceConfig(configPath);
 
   const dryRun = process.env['DRY_RUN'] === 'true';
-  const writer = new R2DiffWriter(
+  const writer = new R2ArtifactWriter(
     {
       accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
       accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
@@ -52,18 +52,21 @@ export async function run(sourceId: string): Promise<RunResult> {
     dryRun
   );
 
-  let priorState: SourceState | null = null;
-  if (config.cadence_days !== undefined) {
-    priorState = await writer.readState(sourceId);
-    if (!dryRun && shouldSkip(priorState, config.cadence_days, new Date())) {
-      log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
-      return {
-        source: sourceId,
-        skipped: true,
-        cadence_days: config.cadence_days,
-        new_state: priorState,
-      };
-    }
+  // State is read for every source: cadence sources gate on last_run, all sources gate the artifact
+  // PUT on content_hash (skip-if-unchanged).
+  const priorState = await writer.readState(sourceId);
+  if (
+    config.cadence_days !== undefined &&
+    !dryRun &&
+    shouldSkip(priorState, config.cadence_days, new Date())
+  ) {
+    log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
+    return {
+      source: sourceId,
+      skipped: true,
+      cadence_days: config.cadence_days,
+      new_state: priorState,
+    };
   }
 
   const files = await download(config.download);
@@ -80,15 +83,16 @@ export async function run(sourceId: string): Promise<RunResult> {
     log('info', 'dry_run_mode', { source: sourceId, records: records.size });
   }
 
-  const writeStats = await writer.write(records, sourceId);
+  const writeStats = await writer.write(records, sourceId, priorState);
 
   let newState: SourceState | null = priorState;
-  if (config.cadence_days !== undefined && !dryRun) {
+  if (!dryRun) {
     const now = new Date().toISOString();
     newState = {
       last_run: now,
       last_content_change: writeStats.changed ? now : (priorState?.last_content_change ?? now),
       record_count: writeStats.record_count,
+      content_hash: writeStats.content_hash,
     };
     await writer.writeState(sourceId, newState);
   }

@@ -45,7 +45,7 @@ const base: Aircraft = {
   interdiction_code: null,
 };
 
-describe('AircraftSchema — R2 key-segment safety', () => {
+describe('AircraftSchema', () => {
   it('accepts a clean record', () => {
     expect(AircraftSchema.safeParse(base).success).toBe(true);
   });
@@ -77,15 +77,7 @@ describe('AircraftSchema — R2 key-segment safety', () => {
     }
   }
 
-  for (const field of ['source_id', 'registration', 'icao_hex'] as const) {
-    for (const bad of ['../evil', 'a/b', 'a\\b', '..']) {
-      it(`rejects ${field} containing ${JSON.stringify(bad)}`, () => {
-        const result = AircraftSchema.safeParse({ ...base, [field]: bad });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues.some((i) => i.message.includes(field))).toBe(true);
-        }
-      });
-    }
-  }
+  it('accepts a registration containing a slash (no longer an R2 key segment)', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: 'A/B' }).success).toBe(true);
+  });
 });

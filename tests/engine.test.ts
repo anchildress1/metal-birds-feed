@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { translate, contentHash } from '../src/engine.js';
+import { translate } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceConfig } from '../src/types/config.js';
@@ -904,21 +904,6 @@ describe('engine — negative and edge cases', () => {
     const { records: r, stats } = await translate(config, files);
     expect(stats.failed).toBe(0);
     expect(r.get('1')?.owner.kind).toBeNull();
-  });
-});
-
-describe('contentHash', () => {
-  it('returns a 16-character lowercase hex string', () => {
-    expect(contentHash(records.get('00001001')!)).toMatch(/^[0-9a-f]{16}$/);
-  });
-
-  it('is deterministic for the same record content', () => {
-    const r = records.get('00001001')!;
-    expect(contentHash(r)).toBe(contentHash({ ...r }));
-  });
-
-  it('produces a different digest for distinct records', () => {
-    expect(contentHash(records.get('00001001')!)).not.toBe(contentHash(records.get('00002002')!));
   });
 });
 

@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import { parseCSV, parseSpreadsheet, parseXls, type Row } from './parser.js';
@@ -312,8 +311,4 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     lien_status: scalar('lien_status'),
     interdiction_code: scalar('interdiction_code'),
   };
-}
-
-export function contentHash(record: Aircraft): string {
-  return createHash('sha256').update(JSON.stringify(record)).digest('hex').slice(0, 16);
 }

@@ -5,6 +5,8 @@ export const SourceStateSchema = z.object({
   last_content_change: z.string(),
   last_etag: z.string().optional(),
   record_count: z.number().int().nonnegative().optional(),
+  // sha256 of the source's record set; gates skip-if-unchanged in the artifact writer.
+  content_hash: z.string().optional(),
 });
 export type SourceState = z.infer<typeof SourceStateSchema>;
 

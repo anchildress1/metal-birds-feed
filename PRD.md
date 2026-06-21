@@ -40,7 +40,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 1. **Aircraft photos.** No registry provides them, scraping the ones that do (JetPhotos, PlaneSpotters) violates their terms. Schema has no `photo_url` field in v1. Hook reserved for future.
 2. **Live flight data.** This is a static enrichment layer, not an ADS-B feed. `metal-birds-watch` stays the source of live position data; `metal-birds-feed` only answers "what is N12345 / hex A1B2C3?"
 3. **Owner mailing addresses.** FAA publishes full street/city/ZIP for ~300k registrants in their bulk dump. Republishing trivially-queryable PII at scale creates GDPR exposure, doxxing risk, and Cloudflare TOS issues. Schema keeps owner name, kind, state, and registrant country only. (See Open Questions if this changes.)
-4. **A queryable API or search.** R2 is object storage. Lookups are by exact key (`aircraft/by-id/faa/<UNIQUE_ID>.json`). No full-text search, no filtering, no list endpoints. If a consumer needs that, they build it.
+4. **A hosted query API or search.** metal-birds-feed ships a per-source SQLite artifact (point lookups by `icao_hex` / `registration`) but hosts no endpoint — no full-text search, no filtering service, no list API. Consumers query the artifact themselves (R2 binding, HTTP range reads, or a local copy).
 5. **Real-time refresh.** FAA publishes monthly. Transport Canada publishes monthly. National EU registries vary. The pipeline syncs at registry cadence, not on demand.
 6. **Account-management airframes (corporate jet ownership tracing across LLC shells).** Out of scope; this is a registry mirror, not an investigative tool.
 7. **Schema versioning / migration tooling.** v1 is a snapshot. If the schema changes, R2 gets rewritten from source on the next refresh. Acceptable because there is no `raw` blob to migrate independently.
@@ -104,25 +104,20 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 **R0.4 Translation engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
 
-**R0.5 R2 writer.** Writes:
+**R0.5 R2 writer.** Writes one SQLite artifact per source plus a small state object:
 
-- `aircraft/by-id/<source>/<UNIQUE_ID>.json` — canonical record
-- `aircraft/by-icao-hex/<HEX>.json` — `{"refs": ["<source>:<UNIQUE_ID>", ...]}` lookup
-- `aircraft/by-registration/<REG>.json` — `{"refs": ["<source>:<UNIQUE_ID>", ...]}` lookup
-- `aircraft/_manifest/<source>.json` — content-hash manifest for diff-write
-- `aircraft/_state/<source>.json` — last-run/change state for cadence gating
+- `aircraft/<source>.sqlite` — every record for the source in an `aircraft` table (`source_id` primary key, indexed `icao_hex` + `registration`, full canonical record as a JSON `record` column). Built in memory via `bun:sqlite` and PUT whole.
+- `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` for cadence gating and skip-if-unchanged.
 
-Lookup objects are arrays because the same hex / registration can legitimately point to multiple historical records over time. Consumers filter by `status === "valid"` for current.
+The same hex / registration can point to multiple historical records over time; consumers query the artifact (point lookup by the indexed columns) and filter by `status = 'valid'` for current. Replaces the prior object-per-record + by-hex / by-registration index scheme.
 
-**R0.6 Refresh orchestration.** GitHub Actions scheduled workflow fires daily (~6:00 UTC); per-source `cadence_days` gates whether each source does actual work on a given run. Workflow downloads, translates, diffs, writes to R2 via S3-compatible API keys (`MBF_R2_ACCESS_KEY_ID` / `MBF_R2_SECRET_ACCESS_KEY`) stored in GHA secrets. On failure, leaves the previous R2 state untouched and logs the error. Manual `workflow_dispatch` trigger also available for ad-hoc runs.
+**R0.6 Refresh orchestration.** GitHub Actions scheduled workflow fires daily (~6:00 UTC); per-source `cadence_days` gates whether each source does actual work on a given run. Workflow downloads, translates, builds the SQLite artifact, writes to R2 via S3-compatible API keys (`MBF_R2_ACCESS_KEY_ID` / `MBF_R2_SECRET_ACCESS_KEY`) stored in GHA secrets. On failure, leaves the previous R2 state untouched and logs the error. Manual `workflow_dispatch` trigger also available for ad-hoc runs.
 
 Why GHA over Workers Cron Triggers: the FAA refresh needs ~5 minutes of CPU and a few hundred MB of RAM to download, parse, join, and translate. Workers free-tier crons cap at 10ms CPU per invocation; running this in Workers requires the $5/month paid plan. GHA gives a full Linux runner (2 vCPU, 7 GB RAM, 6-hour timeout) for free on public repos, well under quota on private. Egress to R2 is free either way.
 
 GHA disables scheduled workflows after 60 days of repo inactivity. Mitigated by Dependabot PR activity (see R0.9), and operator will manually re-enable + refresh if it ever lapses.
 
-**R0.7 Diff-write strategy.** Refresh job computes the diff between the new translated batch and the existing R2 state before writing. Only objects with changed content get PUT; unchanged objects are skipped. Stale objects (records that disappeared from the source) get DELETE'd. Rationale: a full FAA refresh produces ~600k+ R2 Class A ops (~312k records × 2–3 index paths depending on icao_hex population), within free tier but tight. Real monthly delta is <5%, so diffed writes are ~10k ops — comfortable headroom for adding Canada, NZ, and additional registries without paying for ops.
-
-Implementation: list current `aircraft/by-id/<source>/` objects, fetch each (or maintain a manifest object listing content hashes per record), compare to newly translated records, emit only changes. A manifest file (`aircraft/_manifest/<source>.json` mapping `source_id → {hash, icao_hex, registration}`) is the cheap option — one read, one write, instead of N reads. The extra index fields support dirty-tracking for the icao_hex and registration index objects.
+**R0.7 Content-hash skip.** The artifact is rebuilt every run but only PUT when its content hash (sha256 over the sorted record set, recorded in `_state`) differs from the prior run's. One PUT (tens of MB) on a real change, zero on an unchanged refresh — versus the object-per-record scheme's ~600k Class A ops per FAA refresh. No per-record diffing or stale-object deletion: the single artifact is replaced wholesale. A run that yields zero records when prior state held records is refused (suspected upstream data loss) rather than wiping the artifact.
 
 **R0.8 Dependabot configuration.** `.github/dependabot.yml` enabled for npm + GHA dependencies on a weekly cadence. Serves two purposes: (1) keep dependencies current without manual triage, (2) generate enough repo activity to prevent GHA from auto-disabling scheduled workflows. Auto-merge enabled for patch-level updates that pass CI; manual review for minor/major.
 
@@ -136,10 +131,9 @@ This is the deliberate trade: operator's costs stay $0 regardless of external in
 
 - Given a fresh R2 bucket and the latest FAA monthly dump
 - When the GHA refresh workflow runs to completion
-- Then `aircraft/by-id/faa/*.json` count is within 1% of the FAA MASTER row count (allowing for parse failures, which are logged)
-- And every record validates against the TypeScript schema at runtime
-- And `aircraft/by-icao-hex/*` exists for every record where `icao_hex !== null`
-- And `aircraft/by-registration/*` exists for every record
+- Then `aircraft/faa.sqlite` exists and its `aircraft` table row count is within 1% of the FAA MASTER row count (allowing for parse failures, which are logged)
+- And every record validates against the TypeScript schema at runtime before insertion
+- And every row with a non-null `icao_hex` is reachable through the `idx_icao_hex` index
 
 ### Should-Have (P1) — Transport Canada, v2
 

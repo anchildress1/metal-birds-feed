@@ -81,13 +81,12 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 
 ## R2 Key Structure
 
-| Path                                  | Contents                             |
-| ------------------------------------- | ------------------------------------ |
-| `aircraft/by-id/<source>/<id>.json`   | Canonical aircraft record            |
-| `aircraft/by-icao-hex/<hex>.json`     | `{"refs": ["source:id", ...]}`       |
-| `aircraft/by-registration/<reg>.json` | `{"refs": ["source:id", ...]}`       |
-| `aircraft/_manifest/<source>.json`    | Content-hash manifest for diff-write |
-| `aircraft/_state/<source>.json`       | Last run/change state for cadence    |
+| Path                            | Contents                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: `source_id` PK, indexed `icao_hex`/`registration`, record JSON |
+| `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                        |
+
+One queryable artifact per source — point lookup by `icao_hex` or `registration`, full canonical record in the `record` column. Rebuilt and re-uploaded only when the record set's content hash changes.
 
 ## Setup
 

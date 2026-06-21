@@ -81,13 +81,6 @@ export type Owner = z.infer<typeof OwnerSchema>;
 
 export const OperatorSchema = OwnerSchema;
 
-// These become R2 key path segments; reject path separators and '..' so a registry value can't
-// escape the key scheme. Denylist, not allowlist — international marks use unpredictable chars.
-const r2KeySafe = (field: string) =>
-  z.string().refine((v) => !/[/\\]/.test(v) && !v.includes('..'), {
-    message: `${field} must not contain '/', '\\', or '..'`,
-  });
-
 // Date transforms emit YYYY-MM-DD or null; constrain the schema to match.
 const isoDate = z
   .string()
@@ -106,9 +99,9 @@ export type Engine = z.infer<typeof EngineSchema>;
 
 export const AircraftSchema = z.object({
   source: z.string(),
-  source_id: r2KeySafe('source_id'),
-  registration: r2KeySafe('registration'),
-  icao_hex: r2KeySafe('icao_hex').nullable(),
+  source_id: z.string(),
+  registration: z.string(),
+  icao_hex: z.string().nullable(),
   icao_type_code: z.string().nullable(),
   status: AircraftStatusSchema,
   country: z.string(),
