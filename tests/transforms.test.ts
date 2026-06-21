@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { applyScalar, applyArray, applyCompound } from '../src/transforms.js';
 
 describe('applyScalar', () => {

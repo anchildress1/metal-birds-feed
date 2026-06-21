@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import { parseCSV, parseSpreadsheet, parseXls, type Row } from './parser.js';
@@ -67,60 +66,90 @@ export async function translate(
   let skipped = 0;
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const merged = mergeJoins(row, config, joinMaps);
-
-    const rawId = resolveScalar(merged, {
-      field: config.source_id,
-      transform: config.source_id_transform ?? 'trim_or_null',
-    });
-    if (!rawId) {
-      if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
-        log('warn', 'translate_skip', {
-          source: config.id,
-          row: i + 2,
-          reason: 'allowed missing source_id',
-        });
-        skipped++;
-      } else {
-        log('error', 'translate_invalid', {
-          source: config.id,
-          row: i + 2,
-          reason: 'missing source_id',
-        });
-        failed++;
-      }
-      continue;
-    }
-
-    try {
-      const record = buildRecord(config, merged, rawId);
-      const parsed = AircraftSchema.safeParse(record);
-      if (!parsed.success) {
-        log('error', 'translate_invalid', {
-          source: config.id,
-          row: i + 2,
-          source_id: rawId,
-          msg: parsed.error.issues.map((e) => e.message).join('; '),
-        });
-        failed++;
-        continue;
-      }
-      records.set(rawId, parsed.data);
-    } catch (err) {
-      log('error', 'translate_error', {
-        source: config.id,
-        row: i + 2,
-        source_id: rawId,
-        msg: err instanceof Error ? err.message : String(err),
-      });
-      failed++;
-    }
+    const outcome = translateRow(
+      rows[i],
+      i,
+      config,
+      joinMaps,
+      missingSourceIdPolicy,
+      skipped,
+      records
+    );
+    if (outcome.status === 'skipped') skipped++;
+    else if (outcome.status === 'failed') failed++;
+    else records.set(outcome.id, outcome.record);
   }
 
   const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
+}
+
+type RowOutcome =
+  | { status: 'ok'; id: string; record: Aircraft }
+  | { status: 'skipped' }
+  | { status: 'failed' };
+
+// Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
+// owns the counters and the insert. `skipped` is the running skip count, for the missing-id bound.
+function translateRow(
+  row: Row,
+  i: number,
+  config: SourceConfig,
+  joinMaps: Map<string, Map<string, Row>>,
+  missingSourceIdPolicy: MissingSourceIdPolicy | null,
+  skipped: number,
+  records: Map<string, Aircraft>
+): RowOutcome {
+  const merged = mergeJoins(row, config, joinMaps);
+  const rawId = resolveScalar(merged, {
+    field: config.source_id,
+    transform: config.source_id_transform ?? 'trim_or_null',
+  });
+  if (!rawId) {
+    if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
+      log('warn', 'translate_skip', {
+        source: config.id,
+        row: i + 2,
+        reason: 'allowed missing source_id',
+      });
+      return { status: 'skipped' };
+    }
+    log('error', 'translate_invalid', {
+      source: config.id,
+      row: i + 2,
+      reason: 'missing source_id',
+    });
+    return { status: 'failed' };
+  }
+
+  try {
+    const parsed = AircraftSchema.safeParse(buildRecord(config, merged, rawId));
+    if (!parsed.success) {
+      log('error', 'translate_invalid', {
+        source: config.id,
+        row: i + 2,
+        source_id: rawId,
+        msg: parsed.error.issues.map((e) => e.message).join('; '),
+      });
+      return { status: 'failed' };
+    }
+    // source_id is the source's permanent unique key; a duplicate means the id assumption is wrong
+    // (e.g. a non-unique mark used as id) and last-wins would silently drop a record.
+    if (records.has(rawId)) {
+      log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
+      return { status: 'failed' };
+    }
+    return { status: 'ok', id: rawId, record: parsed.data };
+  } catch (err) {
+    log('error', 'translate_error', {
+      source: config.id,
+      row: i + 2,
+      source_id: rawId,
+      msg: err instanceof Error ? err.message : String(err),
+    });
+    return { status: 'failed' };
+  }
 }
 
 async function buildJoinMaps(
@@ -189,8 +218,9 @@ function resolveLookup(
   defaultValue: string | null | undefined,
   field: string
 ): string | null {
-  const mapped = lookup[value];
-  if (mapped !== undefined) return mapped;
+  // hasOwn, not `!== undefined`: a cell equal to an inherited member ("valueOf", "__proto__")
+  // must not return the prototype function.
+  if (Object.hasOwn(lookup, value)) return lookup[value];
   if (defaultValue !== undefined) return defaultValue;
   if (value === '') return null;
   throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
@@ -311,8 +341,4 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     lien_status: scalar('lien_status'),
     interdiction_code: scalar('interdiction_code'),
   };
-}
-
-export function contentHash(record: Aircraft): string {
-  return createHash('sha256').update(JSON.stringify(record)).digest('hex').slice(0, 16);
 }

@@ -103,12 +103,16 @@ const resolveDownloadUrl = async (config: DownloadConfig, opts: RetryOptions): P
   );
   // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
   // Loader validates it as a syntactically valid regex before reaching this point.
+  // Distinguish no-match (wrong pattern) from matched-but-no-capture (missing group).
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const match = new RegExp(config.discover_pattern).exec(html);
-  const captured = match?.[1];
+  if (!match) {
+    throw new Error(`Discovery pattern found no match on ${config.discover_url}`);
+  }
+  const captured = match[1];
   if (!captured) {
     throw new Error(
-      `Discovery pattern matched no URL on ${config.discover_url} (pattern needs a capture group)`
+      `Discovery pattern matched on ${config.discover_url} but captured no URL (pattern needs a capture group)`
     );
   }
   const resolved = new URL(captured, config.discover_url).toString();
@@ -154,8 +158,13 @@ async function extractZip(
       )
   );
 
-  for (const alias of Object.keys(entries)) {
-    if (!result.has(alias)) throw new Error(`ZIP entry not found for alias "${alias}"`);
+  // Name the expected path and what the archive actually holds — the misconfiguration is almost
+  // always the path (upstream renamed the file), not the alias.
+  for (const [alias, path] of Object.entries(entries)) {
+    if (!result.has(alias))
+      throw new Error(
+        `ZIP entry not found: alias "${alias}" expected "${path}"; archive has: ${dir.files.map((f) => f.path).join(', ')}`
+      );
   }
 
   log('info', 'extract_complete', { files: result.size });

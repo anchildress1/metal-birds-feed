@@ -1,0 +1,8 @@
+[test]
+# Coverage thresholds. Keys are plural (lines/functions/statements) — bun silently ignores the
+# singular forms, leaving the gate unenforced. Bun cannot threshold branch coverage, so the prior
+# branches>=80 gate is no longer enforced — see AGENTS.md.
+coverageThreshold = { lines = 0.85, functions = 0.85, statements = 0.85 }
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["src/pipeline.ts"]
+coverageReporter = ["text", "lcov"]

@@ -1,24 +1,29 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from 'bun:test';
 import { readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 
-const mockLoadSourceConfig = vi.hoisted(() => vi.fn());
-const mockDownload = vi.hoisted(() => vi.fn());
-const mockTranslate = vi.hoisted(() => vi.fn());
-const mockR2Write = vi.hoisted(() => vi.fn());
-const mockR2Constructor = vi.hoisted(() => vi.fn());
-const mockReadState = vi.hoisted(() => vi.fn());
-const mockWriteState = vi.hoisted(() => vi.fn());
-const mockLog = vi.hoisted(() => vi.fn());
+const REAL_FETCH = globalThis.fetch;
+const setFetch = (fn: unknown): void => {
+  globalThis.fetch = fn as typeof globalThis.fetch;
+};
 
-vi.mock('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
-vi.mock('../src/downloader.js', () => ({ download: mockDownload }));
-vi.mock('../src/engine.js', () => ({ translate: mockTranslate }));
-vi.mock('../src/logger.js', () => ({ log: mockLog }));
-vi.mock('../src/writer.js', () => ({
-  R2DiffWriter: class {
+const mockLoadSourceConfig = mock();
+const mockDownload = mock();
+const mockTranslate = mock();
+const mockR2Write = mock();
+const mockR2Constructor = mock();
+const mockReadState = mock();
+const mockWriteState = mock();
+const mockLog = mock();
+
+void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
+void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
+void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
+void mock.module('../src/logger.js', () => ({ log: mockLog }));
+void mock.module('../src/writer.js', () => ({
+  R2ArtifactWriter: class {
     constructor(...args: unknown[]) {
       mockR2Constructor(...args);
     }
@@ -29,7 +34,7 @@ vi.mock('../src/writer.js', () => ({
   },
 }));
 
-import { main, run } from '../src/pipeline.js';
+const { main, run } = await import('../src/pipeline.js');
 
 const CONFIG: SourceConfig = {
   id: 'faa',
@@ -50,6 +55,7 @@ const CONFIG: SourceConfig = {
   registration: 'N-NUMBER',
   mapping: {},
 };
+const HASH64 = '0'.repeat(64);
 
 beforeEach(() => {
   process.env['MBF_R2_ACCOUNT_ID'] = 'account';
@@ -74,11 +80,9 @@ beforeEach(() => {
     stats: { total: 1, ok: 1, failed: 0 },
   });
   mockR2Write.mockResolvedValue({
-    put: 0,
-    deleted: 0,
-    skipped: 0,
     changed: false,
     record_count: 0,
+    content_hash: 'h0',
   });
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
@@ -93,15 +97,15 @@ afterEach(() => {
   delete process.env['GITHUB_TOKEN'];
   delete process.env['GITHUB_REPOSITORY'];
   delete process.env['REFRESH_SOURCE'];
-  vi.unstubAllGlobals();
+  globalThis.fetch = REAL_FETCH;
 });
 
 describe('run', () => {
   it('writes translated records when every row succeeds', async () => {
     await run('faa');
 
-    expect(mockR2Constructor).toHaveBeenCalledOnce();
-    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa');
+    expect(mockR2Constructor).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null);
   });
 
   it('aborts write when any row fails translation', async () => {
@@ -125,6 +129,7 @@ describe('run', () => {
     mockReadState.mockResolvedValueOnce({
       last_run: recentTimestamp,
       last_content_change: recentTimestamp,
+      content_hash: HASH64,
     });
 
     const result = await run('faa');
@@ -132,6 +137,26 @@ describe('run', () => {
     expect(result.skipped).toBe(true);
     expect(mockDownload).not.toHaveBeenCalled();
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('does not skip cadence-gated sources when prior state has no content hash', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({
+      ...CONFIG,
+      cadence_days: 30,
+    });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+    expect(mockWriteState).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip cadence-gated sources in dry-run mode', async () => {
@@ -148,8 +173,8 @@ describe('run', () => {
     const result = await run('faa');
 
     expect(result.skipped).toBe(false);
-    expect(mockDownload).toHaveBeenCalledOnce();
-    expect(mockR2Write).toHaveBeenCalledOnce();
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
     expect(mockWriteState).not.toHaveBeenCalled();
   });
 
@@ -160,22 +185,24 @@ describe('run', () => {
     const result = await run('faa');
 
     expect(result.skipped).toBe(false);
-    expect(mockDownload).toHaveBeenCalledOnce();
-    expect(mockR2Write).toHaveBeenCalledOnce();
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call readState or writeState when cadence_days is not configured', async () => {
+  it('reads and writes state even without cadence_days (for content-hash skip)', async () => {
     process.env['DRY_RUN'] = 'false';
 
     await run('faa');
 
-    expect(mockReadState).not.toHaveBeenCalled();
-    expect(mockWriteState).not.toHaveBeenCalled();
+    expect(mockReadState).toHaveBeenCalledTimes(1);
+    expect(mockWriteState).toHaveBeenCalledTimes(1);
+    const [, state] = mockWriteState.mock.calls[0] as [string, { content_hash: string }];
+    expect(state.content_hash).toBe('h0');
   });
 
   it.each(['../etc/passwd', 'faa/../secret', 'dir/faa'])(
     'rejects source ID containing path traversal or separator: %s',
-    async (id) => {
+    async (id: string) => {
       await expect(run(id)).rejects.toThrow(/path traversal/i);
     }
   );
@@ -185,16 +212,14 @@ describe('run', () => {
     mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
     mockReadState.mockResolvedValueOnce(null);
     mockR2Write.mockResolvedValueOnce({
-      put: 3,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 3,
+      content_hash: 'h',
     });
 
     await run('faa');
 
-    expect(mockWriteState).toHaveBeenCalledOnce();
+    expect(mockWriteState).toHaveBeenCalledTimes(1);
     const [, state] = mockWriteState.mock.calls[0] as [
       string,
       { last_run: string; last_content_change: string },
@@ -211,11 +236,9 @@ describe('run', () => {
       last_content_change: priorChange,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 0,
-      deleted: 0,
-      skipped: 5,
       changed: false,
       record_count: 5,
+      content_hash: 'h',
     });
 
     await run('faa');
@@ -240,17 +263,14 @@ describe('main', () => {
     mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
     mockReadState.mockResolvedValueOnce({ last_run: recentRun, last_content_change: oldChange });
     mockR2Write.mockResolvedValueOnce({
-      put: 0,
-      deleted: 0,
-      skipped: 0,
       changed: false,
       record_count: 0,
+      content_hash: 'h',
     });
-    const fetchMock = vi
-      .fn()
+    const fetchMock = mock()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) }) // list open issues
       .mockResolvedValueOnce({ ok: true }); // create issue
-    vi.stubGlobal('fetch', fetchMock);
+    setFetch(fetchMock);
 
     await main();
 
@@ -273,20 +293,18 @@ describe('main', () => {
       last_content_change: pastTimestamp,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 1,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 1,
+      content_hash: 'h',
     });
-    const fetchMock = vi
-      .fn()
+    const fetchMock = mock()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([{ number: 7, title: '[staleness] faa went silent' }]),
+        json: () =>
+          Promise.resolve([{ number: 7, title: '[staleness] faa has not updated in 40 days' }]),
       })
       .mockResolvedValueOnce({ ok: true });
-    vi.stubGlobal('fetch', fetchMock);
+    setFetch(fetchMock);
 
     await main();
 
@@ -294,13 +312,43 @@ describe('main', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('/issues/7');
   });
 
+  it('does not close a sibling source whose name shares this source as a prefix', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const pastTimestamp = new Date(Date.now() - 35 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: pastTimestamp,
+      last_content_change: pastTimestamp,
+    });
+    mockR2Write.mockResolvedValueOnce({
+      changed: true,
+      record_count: 1,
+      content_hash: 'h',
+    });
+    const fetchMock = mock().mockResolvedValueOnce({
+      ok: true,
+      // Only a sibling source's issue is open; `faa` must not match `faa-uas`.
+      json: () =>
+        Promise.resolve([{ number: 9, title: '[staleness] faa-uas has not updated in 40 days' }]),
+    });
+    setFetch(fetchMock);
+
+    await main();
+
+    // List call only — no PATCH to close the sibling's issue.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('makes no fetch calls when source has no cadence_days', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
     process.env['REFRESH_SOURCE'] = 'faa';
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = mock();
+    setFetch(fetchMock);
 
     await main();
 
@@ -311,7 +359,7 @@ describe('main', () => {
     process.env['DRY_RUN'] = 'false';
     process.env['REFRESH_SOURCE'] = 'faa';
     mockDownload.mockRejectedValueOnce(new Error('network timeout'));
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
     await main();
 
@@ -330,7 +378,7 @@ describe('main', () => {
     const summaryPath = join(tmpdir(), `mbf-summary-${Date.now()}.md`);
     process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
     mockDownload.mockRejectedValueOnce(new Error('We encountered an internal error.'));
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
     try {
       await main();
@@ -358,14 +406,12 @@ describe('main', () => {
       last_content_change: pastTimestamp,
     });
     mockR2Write.mockResolvedValueOnce({
-      put: 1,
-      deleted: 0,
-      skipped: 0,
       changed: true,
       record_count: 1,
+      content_hash: 'h',
     });
-    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false, status: 403 });
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = mock().mockResolvedValueOnce({ ok: false, status: 403 });
+    setFetch(fetchMock);
 
     await main();
 
@@ -379,8 +425,8 @@ describe('main', () => {
 
   it('does not mutate GitHub staleness issues during dry-run', async () => {
     const staleTimestamp = new Date(Date.now() - 60 * 86_400_000).toISOString();
-    const fetchMock = vi.fn();
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = mock();
+    setFetch(fetchMock);
     process.env['REFRESH_SOURCE'] = 'faa';
     process.env['GITHUB_TOKEN'] = 'token';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
@@ -396,7 +442,7 @@ describe('main', () => {
     await main();
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(mockDownload).toHaveBeenCalledOnce();
-    expect(mockR2Write).toHaveBeenCalledOnce();
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
   });
 });

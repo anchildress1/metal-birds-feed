@@ -3,8 +3,13 @@ import { z } from 'zod';
 export const SourceStateSchema = z.object({
   last_run: z.string(),
   last_content_change: z.string(),
-  last_etag: z.string().optional(),
   record_count: z.number().int().nonnegative().optional(),
+  // sha256 hex of the source's record set; gates skip-if-unchanged. Optional so legacy/first-run
+  // state (written before this field existed) still parses — an absent hash forces one rewrite.
+  content_hash: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .optional(),
 });
 export type SourceState = z.infer<typeof SourceStateSchema>;
 

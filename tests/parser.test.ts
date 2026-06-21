@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { writeOds } from 'hucre/ods';
 import { writeXlsx } from 'hucre/xlsx';
 import * as XLSX from 'xlsx';
@@ -327,16 +327,16 @@ describe('parseSpreadsheet — ods', () => {
     expect(rows).toEqual([{ A: '1' }]);
   });
 
-  it('returns an empty array when the named sheet does not exist', async () => {
+  it('throws when the named sheet does not exist', async () => {
     const buf = await sheetBuf('ods', [{ name: 'Real', rows: [['A'], ['1']] }]);
-    const rows = await parseSpreadsheet(buf, ssOpts({ sheet: 'Nope' }));
-    expect(rows).toEqual([]);
+    await expect(parseSpreadsheet(buf, ssOpts({ sheet: 'Nope' }))).rejects.toThrow(
+      /"Nope" not found/
+    );
   });
 
-  it('returns an empty array when the index is out of range', async () => {
+  it('throws when the index is out of range', async () => {
     const buf = await sheetBuf('ods', [{ name: 'Only', rows: [['A'], ['1']] }]);
-    const rows = await parseSpreadsheet(buf, ssOpts({ sheet: 5 }));
-    expect(rows).toEqual([]);
+    await expect(parseSpreadsheet(buf, ssOpts({ sheet: 5 }))).rejects.toThrow(/out of range/);
   });
 
   it('skips empty header columns rather than emitting empty-key fields', async () => {

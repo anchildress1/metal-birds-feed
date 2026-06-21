@@ -83,9 +83,8 @@ def extract_table_countries(path: Path, marker: str, col: int) -> list[tuple[int
 
 
 def _sort_key(country: str) -> str:
-    # NFD-decompose then drop combining diacritical marks so accented chars
-    # (e.g. Côte d'Ivoire) collate with their ASCII base letter (C), not
-    # after all ASCII chars as raw Unicode code-point comparison would place them.
+    # Drop combining diacritical marks so accented chars (Côte d'Ivoire) collate with their
+    # ASCII base. Atomic Latin letters (ø, ł, æ) don't decompose and still sort by code point.
     return "".join(
         c for c in unicodedata.normalize("NFD", country)
         if unicodedata.category(c) != "Mn"

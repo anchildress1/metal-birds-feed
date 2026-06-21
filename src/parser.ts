@@ -1,3 +1,4 @@
+import { TextDecoder } from 'node:util';
 import { parse } from 'csv-parse';
 import { readOds } from 'hucre/ods';
 import { readXlsx } from 'hucre/xlsx';
@@ -85,7 +86,6 @@ export async function parseSpreadsheet(
 ): Promise<Row[]> {
   const wb = options.format === 'ods' ? await readOds(buf) : await readXlsx(buf);
   const sheet = pickSheet(wb.sheets, options.sheet);
-  if (!sheet) return [];
 
   const rawRows = sheet.rows.map((cells) => cells.map((c) => stringifyCell(c)));
   return shapeRows(rawRows, {
@@ -95,11 +95,9 @@ export async function parseSpreadsheet(
   });
 }
 
-// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS — the only maintained reader
-// for the format. hucre handles modern .xlsx/.ods (OOXML/zip) but not the binary container.
-// Cells are read raw (numbers stay numeric serials; date interpretation is deferred to
-// per-source transforms) and funneled through the same row-shaping as the hucre path so
-// skip_rows / columns / trim behave identically across spreadsheet formats.
+// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS. Cells read raw (numeric serials
+// kept; dates deferred to transforms). blankrows:false strips blank rows before skip_rows, so the
+// xls path counts non-blank rows — unlike the hucre path (tw-caa's skip_rows relies on this).
 // eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
 export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
   const wb = XLSX.read(buf, { type: 'buffer' });
@@ -134,11 +132,24 @@ const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
   return dataRows.map((cells) => headersToRow(headers, cells));
 };
 
-const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet | undefined => {
-  if (sheets.length === 0) return undefined;
+// Fail loud on a missing/out-of-range sheet; a silent empty result would let the writer delete
+// the whole source. Mirrors pickXlsSheet.
+const pickSheet = (sheets: Sheet[], selector: string | number | undefined): Sheet => {
+  if (sheets.length === 0) throw new Error('Workbook contains no sheets');
   if (selector === undefined) return sheets[0];
-  if (typeof selector === 'number') return sheets[selector];
-  return sheets.find((s) => s.name === selector);
+  if (typeof selector === 'number') {
+    if (selector >= sheets.length)
+      throw new Error(
+        `Sheet index ${selector} out of range (workbook has ${sheets.length} sheet(s))`
+      );
+    return sheets[selector];
+  }
+  const match = sheets.find((s) => s.name === selector);
+  if (!match)
+    throw new Error(
+      `Sheet "${selector}" not found; available: ${sheets.map((s) => s.name).join(', ')}`
+    );
+  return match;
 };
 
 const pickXlsSheet = (names: string[], selector: string | number | undefined): string => {

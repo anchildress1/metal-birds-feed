@@ -18,5 +18,13 @@ export default defineConfig(
   {
     files: ['**/*.js', '*.js'],
     extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    // bun-types types expect().rejects/.resolves as sync Matchers returning void, so the
+    // runtime-required await on async assertions reads as await-of-non-thenable. Scoped off here.
+    files: ['tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/await-thenable': 'off',
+    },
   }
 );

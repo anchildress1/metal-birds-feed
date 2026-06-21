@@ -2,40 +2,12 @@ import { readFileSync } from 'node:fs';
 import { resolve, isAbsolute, relative } from 'node:path';
 import yaml from 'js-yaml';
 import { z } from 'zod';
-import type { SourceConfig } from '../types/config.js';
-
-const SCALAR_TRANSFORMS = [
-  'trim',
-  'trim_or_null',
-  'lowercase',
-  'uppercase',
-  'int_or_null',
-  'float_or_null',
-  'date_yyyymmdd_or_null',
-  'date_yyyy_slash_or_null',
-  'date_dd_slash_or_null',
-  'date_ddmmyyyy_or_null',
-  'iso_date_only_or_null',
-  'excel_serial_year_or_null',
-  'mph_to_ktas_or_null',
-  'binary_to_hex_or_null',
-  'faa_n_number',
-  'faa_cert_class',
-  'tc_full_registration',
-  'nl_ilt_registration_or_null',
-  'casa_full_registration',
-  'casa_engine_detail_or_null',
-  'br_registration',
-  'br_airframe',
-  'br_status',
-  'br_party_name',
-  'br_party_state',
-  'br_party_kind',
-] as const;
-
-const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
-
-const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe', 'casa_airframe'] as const;
+import {
+  SCALAR_TRANSFORMS,
+  ARRAY_TRANSFORMS,
+  COMPOUND_TRANSFORMS,
+  type SourceConfig,
+} from '../types/config.js';
 
 const isValidRegex = (pattern: string): boolean => {
   try {

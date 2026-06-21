@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { translate, contentHash } from '../src/engine.js';
+import { translate } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceConfig } from '../src/types/config.js';
@@ -877,20 +878,55 @@ describe('engine — negative and edge cases', () => {
     // AAC: Aeroplane + 1 engine → tc_airframe → 'fixed-wing-single-engine' → lookup → 'fixed-wing'
     expect(r.get('AAC')?.airframe_type).toBe('fixed-wing');
   });
-});
 
-describe('contentHash', () => {
-  it('returns a 16-character lowercase hex string', () => {
-    expect(contentHash(records.get('00001001')!)).toMatch(/^[0-9a-f]{16}$/);
+  it('resolveLookup falls through to default for a value matching an Object.prototype key', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-lookup',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        'owner.kind': { field: 'KIND', lookup: { individual: 'individual' }, default: null },
+      },
+    };
+    // 'valueOf' is an inherited Object.prototype member; without hasOwn the lookup returns that
+    // function, owner.kind becomes a Function, and the row fails schema validation.
+    const files = new Map([['primary', Buffer.from('ID,REG,KIND\n1,N1,valueOf\n', 'utf8')]]);
+    const { records: r, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(r.get('1')?.owner.kind).toBeNull();
   });
 
-  it('is deterministic for the same record content', () => {
-    const r = records.get('00001001')!;
-    expect(contentHash(r)).toBe(contentHash({ ...r }));
-  });
-
-  it('produces a different digest for distinct records', () => {
-    expect(contentHash(records.get('00001001')!)).not.toBe(contentHash(records.get('00002002')!));
+  it('counts a duplicate source_id as a failed row instead of silently overwriting', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1'); // first occurrence wins
   });
 });
 

@@ -28,7 +28,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Tests
 
 - Live in `tests/` mirroring `src/`. Never colocate.
-- Coverage thresholds (`vitest.config.ts`): 85% lines/functions/statements, 80% branches. Do not lower.
+- Runner is `bun test --isolate` (vitest removed). `--isolate` is required: `mock.module` is process-global and leaks across files without it.
+- Coverage thresholds (`bunfig.toml`): 85% lines/functions/statements. Do not lower. Branch coverage is not enforced — `bun test` cannot threshold branches (line/function/statement only).
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground-truth. Change only with schema or config change.
 - `src/pipeline.ts` excluded from coverage (untestable entry point).
@@ -61,14 +62,13 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 ## Architecture invariants
 
-- `src/schema.ts` = canonical Zod schema. All engine output + R2 objects validate against it.
+- `src/schema.ts` = canonical Zod schema. All engine output validates against it before going into the artifact.
 - `src/engine.ts` = source-agnostic. New registry = new YAML + (when needed) new transform/parser path. Never edit engine row-translation logic for a single source.
+- `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()` bytes, no filesystem). Table `aircraft`: `source_id` PK, indexed `icao_hex` + `registration`, full canonical record as a JSON `record` column. Point lookups by hex/registration.
 - R2 keys (strict):
-  - `aircraft/by-id/<source>/<unique-id>.json` — canonical record
-  - `aircraft/by-icao-hex/<hex>.json` — `{"refs":["<source>:<id>",...]}`
-  - `aircraft/by-registration/<reg>.json` — `{"refs":["<source>:<id>",...]}`
-  - `aircraft/_manifest/<source>.json` — content-hash manifest for diff-write
-  - `aircraft/_state/<source>.json` — last-run/change state for cadence gating
+  - `aircraft/<source>.sqlite` — the per-source artifact (replaces the prior object-per-record + by-hex/by-registration index + manifest scheme).
+  - `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` for cadence gating and skip-if-unchanged.
+- The artifact PUT is gated on `content_hash` (sha256 over the sorted record set, in `db.ts`): unchanged set → no PUT. Registry data (`source_id`/`registration`/`icao_hex`) lives inside the SQLite, never in an R2 key — so it carries no key-escaping constraint.
 - FAA `UNIQUE ID` = `source_id`, never N-number. N-numbers are reissued; UNIQUE ID is permanent.
 
 ## Distribution model

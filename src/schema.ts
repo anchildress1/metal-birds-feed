@@ -81,6 +81,12 @@ export type Owner = z.infer<typeof OwnerSchema>;
 
 export const OperatorSchema = OwnerSchema;
 
+// Date transforms emit YYYY-MM-DD or null; constrain the schema to match.
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'must be an ISO YYYY-MM-DD date')
+  .nullable();
+
 export const EngineSchema = z.object({
   manufacturer: z.string().nullable(),
   model: z.string().nullable(),
@@ -113,16 +119,16 @@ export const AircraftSchema = z.object({
   owner: OwnerSchema,
   operator: OperatorSchema,
   idera_authorised_party: z.string().nullable(),
-  certification_date: z.string().nullable(),
-  airworthiness_date: z.string().nullable(),
-  expiration_date: z.string().nullable(),
-  last_action_date: z.string().nullable(),
+  certification_date: isoDate,
+  airworthiness_date: isoDate,
+  expiration_date: isoDate,
+  last_action_date: isoDate,
   cruise_speed_ktas: z.number().nullable(),
   max_takeoff_weight_kg: z.number().nullable(),
   seats: z.number().int().nullable(),
   max_passengers: z.number().int().nullable(),
   min_crew: z.number().int().nullable(),
-  airworthiness_review_date: z.string().nullable(),
+  airworthiness_review_date: isoDate,
   cancellation_reason: z.string().nullable(),
   lien_status: z.string().nullable(),
   // Authoritative restriction code, preserved verbatim — its legend is registry-specific and
