@@ -3,6 +3,7 @@
 export const SCALAR_TRANSFORMS = [
   'trim',
   'trim_or_null',
+  'na_or_null',
   'lowercase',
   'uppercase',
   'int_or_null',
@@ -27,6 +28,16 @@ export const SCALAR_TRANSFORMS = [
   'br_party_name',
   'br_party_state',
   'br_party_kind',
+  'foca_hex_or_null',
+  'foca_date_array_or_null',
+  'foca_owner_name',
+  'foca_owner_state',
+  'foca_owner_kind',
+  'foca_owner_country',
+  'foca_operator_name',
+  'foca_operator_state',
+  'foca_operator_kind',
+  'foca_operator_country',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
@@ -59,9 +70,16 @@ export interface JoinConfig {
 
 export type DownloadFormat = 'zip' | 'file';
 
+export type DownloadMethod = 'GET' | 'POST';
+
 export interface DownloadConfig {
   url: string;
   format: DownloadFormat;
+  // Defaults to GET in the loader; absent on hand-built literals means GET.
+  method?: DownloadMethod;
+  // JSON request body, sent only when method is POST (e.g. the FOCA register's search endpoint
+  // returns the full register for an empty-query POST). Serialized verbatim with JSON.stringify.
+  body?: unknown;
   entries: Record<string, string>;
   headers?: Record<string, string>;
   discover_url?: string;
@@ -74,7 +92,7 @@ export interface AllowedMissingSourceIdRowsConfig {
   pattern: string;
 }
 
-export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls';
+export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json';
 
 export interface SourceConfig {
   id: string;
@@ -86,6 +104,9 @@ export interface SourceConfig {
   delimiter: string;
   trim_all: boolean;
   format: SourceFormat;
+  // Dot-path to the record array within a JSON response (e.g. "data.items"). Empty/omitted means
+  // the response is itself the array. Only used when format is "json".
+  record_path?: string;
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;

@@ -164,7 +164,7 @@ Compact source status record. Update this when an agency is contacted, replies, 
 | CAA Sudan | Sudan | none | n/a | none | excluded: conflict |
 | CASAS | Suriname | casasinfo@casas.sr | 2026-05-05 | pending | sent |
 | Transportstyrelsen | Sweden | none | n/a | denied | excluded: denied |
-| FOCA / BAZL | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | cleared: no dataset |
+| FOCA / BAZL | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | SyCAA | Syria | none | n/a | none | excluded: sanctions |
 | CAA Taiwan | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
 | Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | info@caa.tj | 2026-05-11 | open | live |

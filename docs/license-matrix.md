@@ -157,7 +157,7 @@ Compact agency correspondence matrix. Rows are ordered alphabetically by country
 | Sudan | CAA Sudan | none | n/a | none | excluded: conflict |
 | Suriname | CASAS | casasinfo@casas.sr | 2026-05-05 | pending | sent |
 | Sweden | Transportstyrelsen | none | n/a | denied | excluded: denied |
-| Switzerland | FOCA / BAZL | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | cleared: no dataset |
+| Switzerland | FOCA / BAZL | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | Syria | SyCAA | none | n/a | none | excluded: sanctions |
 | Taiwan | CAA Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
 | Tajikistan | Civil Aviation Agency (under Government of the Republic of Tajikistan) | info@caa.tj | 2026-05-11 | open | live |

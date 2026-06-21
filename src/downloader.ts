@@ -69,7 +69,7 @@ export async function download(
 
   const buf = await readWithRetry(
     url,
-    { headers: config.headers },
+    buildRequestInit(config),
     'Download failed',
     async (res) => Buffer.from(await res.arrayBuffer()),
     opts
@@ -85,6 +85,18 @@ export async function download(
   }
   return extractZip(buf, config.entries);
 }
+
+// GET unless the source declares POST (e.g. a search-API register that returns the full set for an
+// empty-query POST). For POST, the JSON body is serialized and Content-Type defaults to
+// application/json unless the source overrides it.
+const buildRequestInit = (config: DownloadConfig): RequestInit => {
+  if (config.method !== 'POST') return { headers: config.headers };
+  return {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...config.headers },
+    body: JSON.stringify(config.body ?? {}),
+  };
+};
 
 // Resolves the actual download URL. If `discover_url` + `discover_pattern` are configured
 // (e.g., NL ILT, where the bulk-download filename embeds the publication date and rolls

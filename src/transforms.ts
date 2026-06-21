@@ -14,6 +14,13 @@ const trimOrNull = (value: string): string | null => {
   return v.length > 0 ? v : null;
 };
 
+// Trims and collapses the "N/A" placeholder (and blanks) to null. Several registers — FOCA among
+// them — write "N/A" into optional text cells instead of leaving them empty.
+const naOrNull = (value: string): string | null => {
+  const v = value.trim();
+  return v.length > 0 && v !== 'N/A' ? v : null;
+};
+
 const lowercase = (value: string): string => value.trim().toLowerCase();
 
 const uppercase = (value: string): string => value.trim().toUpperCase();
@@ -241,9 +248,142 @@ const brPartyKind = (value: string): string | null => {
   return 'other';
 };
 
+// FOCA's register API returns hex as a lowercase 24-bit Mode-S code, or "N/A" when none is
+// assigned (e.g. reservations). Normalize and drop anything that is not a real 6-digit hex.
+const focaHexOrNull = (value: string): string | null => {
+  const v = value.trim().toLowerCase();
+  return /^[0-9a-f]{6}$/.test(v) ? v : null;
+};
+
+// FOCA publishes dates as a [year, month, day] JSON array (serialized to a string by the JSON
+// flattener). Reformat to canonical YYYY-MM-DD; null on anything malformed or empty.
+const focaDateArrayOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length === 0) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(v);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed) || parsed.length !== 3) return null;
+  const ymd = parsed as unknown[];
+  const y = ymd[0];
+  const m = ymd[1];
+  const d = ymd[2];
+  if (typeof y !== 'number' || typeof m !== 'number' || typeof d !== 'number') return null;
+  return validateAndFormatYMD(String(y), String(m).padStart(2, '0'), String(d).padStart(2, '0'));
+};
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+const SWISS_CANTONS = new Set([
+  'ZH',
+  'BE',
+  'LU',
+  'UR',
+  'SZ',
+  'OW',
+  'NW',
+  'GL',
+  'ZG',
+  'FR',
+  'SO',
+  'BS',
+  'BL',
+  'SH',
+  'AR',
+  'AI',
+  'SG',
+  'GR',
+  'AG',
+  'TG',
+  'TI',
+  'VD',
+  'VS',
+  'NE',
+  'GE',
+  'JU',
+]);
+
+interface FocaParty {
+  role: string;
+  name: string;
+  state: string;
+  country: string;
+}
+
+// `ownerOperators` is the per-aircraft party array (Main/Part Owner + Main/Part Operator), packed
+// into one cell as a JSON string by the flattener. Address street/city/postal are deliberately not
+// read — only name, canton, and country survive (PII rule). extraLine is a free-text "additional
+// line" that sometimes holds the canton and sometimes a care-of name, so state keeps it only when
+// it is a real Swiss canton abbreviation, never the care-of text.
+const parseFocaParties = (value: string): FocaParty[] => {
+  const v = value.trim();
+  if (v.length === 0) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(v);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((entry) => {
+    const o = asRecord(entry);
+    const en = asRecord(asRecord(o.holderCategory).categoryNames).en;
+    const addr = asRecord(o.address);
+    const extraLine = typeof addr.extraLine === 'string' ? addr.extraLine.trim() : '';
+    return {
+      role: typeof en === 'string' ? en : '',
+      name: typeof o.ownerOperator === 'string' ? o.ownerOperator.trim() : '',
+      state: SWISS_CANTONS.has(extraLine) ? extraLine : '',
+      country: typeof addr.country === 'string' ? addr.country.trim() : '',
+    };
+  });
+};
+
+const focaMainParty = (value: string, role: string): FocaParty | null =>
+  parseFocaParties(value).find((p) => p.role === role) ?? null;
+
+// Multiple owners/operators (a Main plus one or more Part parties) collapse to a single canonical
+// owner/operator; co-owner records the multiplicity the schema cannot otherwise represent. Entity
+// type (individual/corporation) is not published, so a single party yields null rather than a guess.
+const focaPartyKind = (value: string, mainRole: string, partRole: string): string | null => {
+  const count = parseFocaParties(value).filter(
+    (p) => p.role === mainRole || p.role === partRole
+  ).length;
+  return count > 1 ? 'co-owner' : null;
+};
+
+const focaOwnerName = (value: string): string | null =>
+  focaMainParty(value, 'Main Owner')?.name || null;
+
+const focaOwnerState = (value: string): string | null =>
+  focaMainParty(value, 'Main Owner')?.state || null;
+
+const focaOwnerCountry = (value: string): string | null =>
+  focaMainParty(value, 'Main Owner')?.country || null;
+
+const focaOwnerKind = (value: string): string | null =>
+  focaPartyKind(value, 'Main Owner', 'Part Owner');
+
+const focaOperatorName = (value: string): string | null =>
+  focaMainParty(value, 'Main Operator')?.name || null;
+
+const focaOperatorState = (value: string): string | null =>
+  focaMainParty(value, 'Main Operator')?.state || null;
+
+const focaOperatorCountry = (value: string): string | null =>
+  focaMainParty(value, 'Main Operator')?.country || null;
+
+const focaOperatorKind = (value: string): string | null =>
+  focaPartyKind(value, 'Main Operator', 'Part Operator');
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
+  na_or_null: naOrNull,
   lowercase,
   uppercase,
   int_or_null: intOrNull,
@@ -268,6 +408,16 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   br_party_name: brPartyName,
   br_party_state: brPartyState,
   br_party_kind: brPartyKind,
+  foca_hex_or_null: focaHexOrNull,
+  foca_date_array_or_null: focaDateArrayOrNull,
+  foca_owner_name: focaOwnerName,
+  foca_owner_state: focaOwnerState,
+  foca_owner_kind: focaOwnerKind,
+  foca_owner_country: focaOwnerCountry,
+  foca_operator_name: focaOperatorName,
+  foca_operator_state: focaOperatorState,
+  foca_operator_kind: focaOperatorKind,
+  foca_operator_country: focaOperatorCountry,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

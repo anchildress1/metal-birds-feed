@@ -277,7 +277,7 @@ Rows are ordered alphabetically by country. Source IDs remain in backticks where
 | CAA Sudan | Sudan | none | n/a | none | excluded: conflict |
 | CASAS | Suriname | casasinfo@casas.sr | 2026-05-05 | pending | sent |
 | Transportstyrelsen | Sweden | none | n/a | denied | excluded: denied |
-| FOCA | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | cleared: no dataset |
+| FOCA / BAZL — ch-foca | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | SyCAA | Syria | none | n/a | none | excluded: sanctions |
 | CAA Taiwan — tw-caa | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
 | Tajikistan CAA | Tajikistan | info@caa.tj | 2026-05-11 | open | live |
@@ -318,6 +318,7 @@ Required upstream notices, kept short:
 - Transport Canada: Reproduced and distributed with the permission of the Government of Canada.
 - Transport Canada value-added notice: This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.
 - CASA Australia: source data from the Civil Aviation Safety Authority, licensed under CC BY 4.0; normalized into this project schema without implying endorsement.
+- FOCA / BAZL Switzerland: source data from the Federal Office of Civil Aviation — [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/); redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.
 - Public-domain / CC0 sources: credited as courtesy in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
@@ -347,7 +348,7 @@ Required upstream notices, kept short:
    - `docs/license-matrix.md` summary row — same alphabetical order.
 4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
 
-The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms).
+The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms).
 
 ## License
 

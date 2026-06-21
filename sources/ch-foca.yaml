@@ -1,0 +1,208 @@
+id: ch-foca
+label: FOCA / BAZL — Swiss Aircraft Register (HB-)
+country: CH
+encoding: utf8
+trim_all: false
+cadence_days: 1
+
+# The register has no bulk file and is not on opendata.swiss; the Angular search app's backend
+# returns the full register for an empty-query POST. aircraftStatus "registered" excludes
+# reservations/deregistrations. HB- also covers Liechtenstein (no separate register).
+download:
+  url: https://app02.bazl.admin.ch/web/bazl-backend/lfr
+  format: file
+  method: POST
+  body:
+    page_result_limit: 100000
+    current_page_number: 1
+    sort_list: registration
+    language: en
+    queryProperties:
+      registration: ''
+      icaoCode: ''
+      aircraftStatus:
+        - registered
+  entries:
+    aircraft: lfr.json
+
+primary: aircraft
+format: json
+# Response is the record array itself.
+record_path: ''
+delimiter: ','
+
+# lfrId is FOCA's permanent per-aircraft key; registration marks can be reissued.
+source_id: lfrId
+registration: registration
+
+mapping:
+  registration:
+    field: registration
+    transform: trim
+    default: ''
+
+  icao_hex:
+    field: details.aircraftAddresses.hex
+    transform: foca_hex_or_null
+
+  icao_type_code:
+    field: icaoCode
+    transform: na_or_null
+
+  status:
+    field: status
+    lookup:
+      Registered: valid
+    default: other
+
+  country:
+    constant: CH
+
+  manufacturer:
+    field: manufacturer
+    transform: na_or_null
+
+  model:
+    field: aircraftModelType
+    transform: na_or_null
+
+  serial_number:
+    field: details.serialNumber
+    transform: na_or_null
+
+  year_manufactured:
+    field: details.yearOfManufacture
+    transform: int_or_null
+
+  airframe_type:
+    field: aircraftCategories.catId
+    lookup:
+      '400002': fixed-wing
+      '400003': rotorcraft
+      '400004': glider
+      '400005': glider
+      '400006': balloon
+      '400000': balloon
+      '400007': fixed-wing
+      '11130000001': weight-shift
+      '11130000002': blimp
+      '11130000003': fixed-wing
+      '11130000004': rotorcraft
+      '11130000005': gyroplane
+      '11130000007': fixed-wing
+      '11130000008': gyroplane
+      '11130000009': glider
+    default: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: ownerOperators
+    transform: foca_owner_name
+
+  owner.kind:
+    field: ownerOperators
+    transform: foca_owner_kind
+
+  owner.state:
+    field: ownerOperators
+    transform: foca_owner_state
+
+  owner.country:
+    field: ownerOperators
+    transform: foca_owner_country
+
+  operator.name:
+    field: ownerOperators
+    transform: foca_operator_name
+
+  operator.kind:
+    field: ownerOperators
+    transform: foca_operator_kind
+
+  operator.state:
+    field: ownerOperators
+    transform: foca_operator_state
+
+  operator.country:
+    field: ownerOperators
+    transform: foca_operator_country
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: details.regDate
+    transform: foca_date_array_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: details.mtom
+    transform: float_or_null
+
+  seats:
+    constant: ~
+
+  # numCrewPax is FOCA's MOPSC (max operational passenger seating config), e.g. 36 for HB-RSC.
+  max_passengers:
+    field: details.numCrewPax
+    transform: int_or_null
+
+  min_crew:
+    field: details.minCrew
+    transform: int_or_null
+
+  airworthiness_review_date:
+    field: airworthinessExpiry
+    transform: foca_date_array_or_null
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

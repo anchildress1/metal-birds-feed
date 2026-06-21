@@ -48,6 +48,8 @@ const SourceConfigSchema = z.object({
     .object({
       url: z.url(),
       format: z.enum(['zip', 'file']).default('zip'),
+      method: z.enum(['GET', 'POST']).default('GET'),
+      body: z.unknown().optional(),
       entries: z.record(z.string(), z.string()),
       headers: z.record(z.string(), z.string()).optional(),
       discover_url: z.url().optional(),
@@ -65,11 +67,15 @@ const SourceConfigSchema = z.object({
     })
     .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
       message: 'download.discover_url and download.discover_pattern must be set together',
+    })
+    .refine((d) => d.method === 'POST' || d.body === undefined, {
+      message: 'download.body is only valid with method POST',
     }),
   primary: z.string().min(1),
   delimiter: z.string().min(1),
   trim_all: z.boolean().default(false),
-  format: z.enum(['csv', 'ods', 'xlsx', 'xls']).default('csv'),
+  format: z.enum(['csv', 'ods', 'xlsx', 'xls', 'json']).default('csv'),
+  record_path: z.string().optional(),
   sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
   skip_rows: z.number().int().nonnegative().optional(),
   columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),

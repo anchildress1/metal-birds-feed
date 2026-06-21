@@ -369,3 +369,62 @@ describe('download — retry', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('download — method: POST', () => {
+  const POST_CONFIG: DownloadConfig = {
+    url: 'https://api.example.test/register',
+    format: 'file',
+    method: 'POST',
+    body: { query: { status: ['registered'] } },
+    entries: { aircraft: '.' },
+  };
+
+  it('sends a POST with JSON body and default Content-Type', async () => {
+    mockFetch(Buffer.from('[{"r":"HB-1"}]'));
+
+    const files = await download(POST_CONFIG);
+
+    const call = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(call[1].method).toBe('POST');
+    expect((call[1].headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect(call[1].body).toBe('{"query":{"status":["registered"]}}');
+    expect(files.get('aircraft')!.toString('utf8')).toBe('[{"r":"HB-1"}]');
+  });
+
+  it('lets a config header override the default Content-Type', async () => {
+    mockFetch(Buffer.from('[]'));
+
+    await download({
+      ...POST_CONFIG,
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
+
+    const call = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect((call[1].headers as Record<string, string>)['Content-Type']).toBe(
+      'application/json; charset=utf-8'
+    );
+  });
+
+  it('serializes an empty object body when none is configured', async () => {
+    mockFetch(Buffer.from('[]'));
+
+    await download({
+      url: POST_CONFIG.url,
+      format: 'file',
+      method: 'POST',
+      entries: { aircraft: '.' },
+    });
+
+    const call = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(call[1].body).toBe('{}');
+  });
+});

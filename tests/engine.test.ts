@@ -1465,3 +1465,168 @@ describe('BR-ANAC fixture translation', () => {
     }
   });
 });
+
+const CH_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ch-foca');
+const CH_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ch-foca.yaml');
+
+describe('CH-FOCA fixture translation', () => {
+  let chRecords: Map<string, Aircraft>;
+  let chStats: EngineStats;
+
+  beforeAll(async () => {
+    const config: SourceConfig = loadSourceConfig(CH_CONFIG_PATH);
+    const buf = readFileSync(resolve(CH_FIXTURES, 'input', 'lfr.json'));
+    const result = await translate(config, new Map([['aircraft', buf]]));
+    chRecords = result.records;
+    chStats = result.stats;
+  });
+
+  it('translates every fixture record', () => {
+    expect(chStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0 });
+  });
+
+  describe('HB-1000 — glider, individual, Swiss canton', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000001')!;
+    });
+
+    it('keys on the permanent lfrId, not the registration', () => {
+      expect(r.source).toBe('ch-foca');
+      expect(r.source_id).toBe('1000001');
+      expect(r.registration).toBe('HB-1000');
+    });
+
+    it('reads the Mode-S hex and ICAO type code', () => {
+      expect(r.icao_hex).toBe('4b488f');
+      expect(r.icao_type_code).toBe('GLID');
+    });
+
+    it('maps glider airframe and valid status', () => {
+      expect(r.airframe_type).toBe('glider');
+      expect(r.status).toBe('valid');
+      expect(r.country).toBe('CH');
+    });
+
+    it('preserves UTF-8 model and dates from [y,m,d] arrays', () => {
+      expect(r.model).toBe('L 33 SÓLO');
+      expect(r.certification_date).toBe('2025-08-15');
+      expect(r.airworthiness_review_date).toBe('2027-04-23');
+    });
+
+    it('maps owner with canton state and no street/PII', () => {
+      expect(r.owner).toEqual({
+        name: 'Beispiel, Anna',
+        kind: null,
+        state: 'SO',
+        country: 'Switzerland',
+      });
+      expect(r).not.toHaveProperty('street');
+      expect(r).not.toHaveProperty('city');
+    });
+
+    it('reads MTOM in kilograms, minimum crew, and MOPSC passenger capacity', () => {
+      expect(r.max_takeoff_weight_kg).toBe(340);
+      expect(r.min_crew).toBe(1);
+      expect(r.max_passengers).toBe(0);
+    });
+  });
+
+  describe('HB-HEL — helicopter with distinct owner and operator', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000003')!;
+    });
+
+    it('maps rotorcraft', () => expect(r.airframe_type).toBe('rotorcraft'));
+    it('nulls max_passengers when MOPSC is absent', () => expect(r.max_passengers).toBeNull());
+    it('separates owner from operator', () => {
+      expect(r.owner.name).toBe('Helikopter GmbH');
+      expect(r.owner.state).toBe('GR');
+      expect(r.operator.name).toBe('Lufttransport AG');
+      expect(r.operator.state).toBe('BE');
+    });
+  });
+
+  describe('HB-BAL — balloon with N/A sentinels', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000004')!;
+    });
+
+    it('maps balloon', () => expect(r.airframe_type).toBe('balloon'));
+    it('nulls the N/A serial number', () => expect(r.serial_number).toBeNull());
+    it('nulls a null airworthiness expiry', () => expect(r.airworthiness_review_date).toBeNull());
+    it('nulls the non-canton (N/A) owner state', () => expect(r.owner.state).toBeNull());
+  });
+
+  describe('HB-PGL — powered glider, care-of address line', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000005')!;
+    });
+
+    it('maps powered glider to glider', () => expect(r.airframe_type).toBe('glider'));
+    it('drops a care-of extraLine instead of leaking it as state', () =>
+      expect(r.owner.state).toBeNull());
+  });
+
+  describe('HB-EXP — homebuilt aeroplane, co-owned', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000006')!;
+    });
+
+    it('maps homebuilt airplane to fixed-wing', () => expect(r.airframe_type).toBe('fixed-wing'));
+    it('flags co-owner when a Part Owner is present', () => expect(r.owner.kind).toBe('co-owner'));
+    it('keeps a single operator as null kind', () => expect(r.operator.kind).toBeNull());
+  });
+
+  describe('HB-GYR — gyrocopter, foreign owner', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000008')!;
+    });
+
+    it('maps ultralight gyrocopter to gyroplane', () => expect(r.airframe_type).toBe('gyroplane'));
+    it('reads the foreign owner country verbatim with null canton', () => {
+      expect(r.owner.country).toBe('Germany');
+      expect(r.owner.state).toBeNull();
+    });
+  });
+
+  describe('HB-TRK — trike, no Mode-S or ICAO type', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000009')!;
+    });
+
+    it('maps trike to weight-shift', () => expect(r.airframe_type).toBe('weight-shift'));
+    it('nulls the N/A hex and ICAO code', () => {
+      expect(r.icao_hex).toBeNull();
+      expect(r.icao_type_code).toBeNull();
+    });
+  });
+
+  describe('HB-CO2 — aeroplane with multiple operators (co-owner kind)', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = chRecords.get('1000010')!;
+    });
+
+    it('flags co-owner kind on the operator when a Part Operator exists', () =>
+      expect(r.operator.kind).toBe('co-owner'));
+    it('keeps a single owner as null kind', () => expect(r.owner.kind).toBeNull());
+    it('maps MOPSC to max_passengers', () => expect(r.max_passengers).toBe(150));
+  });
+
+  describe('HB-SHP — airship maps to blimp', () => {
+    it('maps hot-air airship to blimp', () =>
+      expect(chRecords.get('1000007')!.airframe_type).toBe('blimp'));
+  });
+
+  describe('HB-UNK — unknown category', () => {
+    it('leaves airframe_type null for an unmapped category id', () =>
+      expect(chRecords.get('1000011')!.airframe_type).toBeNull());
+  });
+});

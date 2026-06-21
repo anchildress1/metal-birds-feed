@@ -1,13 +1,13 @@
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
-import { parseCSV, parseSpreadsheet, parseXls, type Row } from './parser.js';
+import { parseCSV, parseSpreadsheet, parseXls, parseJson, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
 // Dispatches the primary-file parse based on `config.format`. CSV is the existing path;
 // `ods`/`xlsx` route to the hucre spreadsheet parser; legacy binary `xls` routes to the
-// SheetJS-backed parser. Joins always read CSV — sources that need spreadsheet joins do not
-// exist yet.
+// SheetJS-backed parser; `json` flattens an API response into rows. Joins always read CSV —
+// sources that need spreadsheet joins do not exist yet.
 const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
   if (config.format === 'csv') {
     return parseCSV(buf, {
@@ -25,6 +25,9 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       sheet: config.sheet,
       skip_rows: config.skip_rows,
     });
+  }
+  if (config.format === 'json') {
+    return parseJson(buf, { encoding: config.encoding, record_path: config.record_path });
   }
   return parseSpreadsheet(buf, {
     format: config.format,
