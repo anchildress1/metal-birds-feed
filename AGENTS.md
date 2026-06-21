@@ -28,7 +28,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Tests
 
 - Live in `tests/` mirroring `src/`. Never colocate.
-- Coverage thresholds (`vitest.config.ts`): 85% lines/functions/statements, 80% branches. Do not lower.
+- Runner is `bun test --isolate` (vitest removed). `--isolate` is required: `mock.module` is process-global and leaks across files without it.
+- Coverage thresholds (`bunfig.toml`): 85% lines/functions/statements. Do not lower. Branch coverage is not enforced — `bun test` cannot threshold branches (line/function/statement only).
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground-truth. Change only with schema or config change.
 - `src/pipeline.ts` excluded from coverage (untestable entry point).

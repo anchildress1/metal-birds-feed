@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { download, type RetryOptions } from '../src/downloader.js';
@@ -6,6 +6,11 @@ import type { DownloadConfig } from '../src/types/config.js';
 
 // No-op sleep keeps backoff out of the test clock; assertions cover attempt counts, not timing.
 const FAST_RETRY: RetryOptions = { baseDelayMs: 0, sleep: async () => {} };
+
+const REAL_FETCH = globalThis.fetch;
+const setFetch = (fn: unknown): void => {
+  globalThis.fetch = fn as typeof globalThis.fetch;
+};
 
 const FIXTURE_ZIP = resolve(import.meta.dirname, '..', 'fixtures', 'faa', 'ReleasableAircraft.zip');
 
@@ -34,9 +39,8 @@ const FAA_DOWNLOAD_CONFIG: DownloadConfig = {
 };
 
 function mockFetch(buf: Buffer, ok = true, status = 200): void {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({
+  setFetch(
+    mock().mockResolvedValue({
       ok,
       status,
       statusText: ok ? 'OK' : 'Not Found',
@@ -53,8 +57,8 @@ interface MockResponse {
   body: Buffer | string;
 }
 
-const mockFetchSequence = (responses: MockResponse[]): ReturnType<typeof vi.fn> => {
-  const fn = vi.fn();
+const mockFetchSequence = (responses: MockResponse[]): ReturnType<typeof mock> => {
+  const fn = mock();
   for (const r of responses) {
     fn.mockResolvedValueOnce({
       ok: r.ok,
@@ -67,12 +71,12 @@ const mockFetchSequence = (responses: MockResponse[]): ReturnType<typeof vi.fn> 
       text: () => Promise.resolve(typeof r.body === 'string' ? r.body : r.body.toString('utf8')),
     });
   }
-  vi.stubGlobal('fetch', fn);
+  setFetch(fn);
   return fn;
 };
 
 afterEach(() => {
-  vi.unstubAllGlobals();
+  globalThis.fetch = REAL_FETCH;
 });
 
 describe('download', () => {
@@ -122,7 +126,10 @@ describe('download', () => {
 
     await download({ ...FAA_DOWNLOAD_CONFIG, headers: { 'User-Agent': 'test-bot/1.0' } });
 
-    const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    const call = (globalThis.fetch as unknown as ReturnType<typeof mock>).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
     expect(call[1]).toMatchObject({ headers: { 'User-Agent': 'test-bot/1.0' } });
   });
 
@@ -280,11 +287,10 @@ describe('download — discover_url + discover_pattern', () => {
 
 describe('download — retry', () => {
   it('retries a transient 5xx then extracts the ZIP', async () => {
-    const fn = vi
-      .fn()
+    const fn = mock()
       .mockResolvedValueOnce(httpErrResponse(503))
       .mockResolvedValueOnce(okZipResponse());
-    vi.stubGlobal('fetch', fn);
+    setFetch(fn);
 
     const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
 
@@ -293,11 +299,10 @@ describe('download — retry', () => {
   });
 
   it('retries a thrown network error then extracts the ZIP', async () => {
-    const fn = vi
-      .fn()
+    const fn = mock()
       .mockRejectedValueOnce(new Error('ECONNRESET'))
       .mockResolvedValueOnce(okZipResponse());
-    vi.stubGlobal('fetch', fn);
+    setFetch(fn);
 
     const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
 
@@ -308,8 +313,7 @@ describe('download — retry', () => {
   it('retries a body read that drops mid-stream after a 200', async () => {
     // The connection delivers 200 headers, then the body stream fails — the failure this PR's
     // reviewer flagged. The whole request (headers + body) must be retried.
-    const fn = vi
-      .fn()
+    const fn = mock()
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -317,7 +321,7 @@ describe('download — retry', () => {
         arrayBuffer: () => Promise.reject(new Error('terminated')),
       })
       .mockResolvedValueOnce(okZipResponse());
-    vi.stubGlobal('fetch', fn);
+    setFetch(fn);
 
     const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
 
@@ -326,12 +330,11 @@ describe('download — retry', () => {
   });
 
   it('invokes a caller-provided onRetry instead of clobbering it', async () => {
-    const onRetry = vi.fn();
-    const fn = vi
-      .fn()
+    const onRetry = mock();
+    const fn = mock()
       .mockRejectedValueOnce(new Error('ECONNRESET'))
       .mockResolvedValueOnce(okZipResponse());
-    vi.stubGlobal('fetch', fn);
+    setFetch(fn);
 
     await download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, onRetry });
 
@@ -339,16 +342,16 @@ describe('download — retry', () => {
   });
 
   it('fails fast on a permanent 404 without retrying', async () => {
-    const fn = vi.fn().mockResolvedValue(httpErrResponse(404));
-    vi.stubGlobal('fetch', fn);
+    const fn = mock().mockResolvedValue(httpErrResponse(404));
+    setFetch(fn);
 
     await expect(download(FAA_DOWNLOAD_CONFIG, FAST_RETRY)).rejects.toThrow(/Download failed: 404/);
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
   it('throws after exhausting retries on a persistent 5xx', async () => {
-    const fn = vi.fn().mockResolvedValue(httpErrResponse(503));
-    vi.stubGlobal('fetch', fn);
+    const fn = mock().mockResolvedValue(httpErrResponse(503));
+    setFetch(fn);
 
     await expect(download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, attempts: 3 })).rejects.toThrow(
       /Download failed: 503/
@@ -357,8 +360,8 @@ describe('download — retry', () => {
   });
 
   it('rethrows a network error after exhausting attempts', async () => {
-    const fn = vi.fn().mockRejectedValue(new Error('ETIMEDOUT'));
-    vi.stubGlobal('fetch', fn);
+    const fn = mock().mockRejectedValue(new Error('ETIMEDOUT'));
+    setFetch(fn);
 
     await expect(download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, attempts: 2 })).rejects.toThrow(
       /ETIMEDOUT/

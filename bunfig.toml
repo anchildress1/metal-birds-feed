@@ -1,0 +1,7 @@
+[test]
+# Coverage thresholds. Bun cannot threshold branch coverage (line/function/statement only),
+# so the prior branches>=80 gate is no longer enforced — see AGENTS.md.
+coverageThreshold = { line = 0.85, function = 0.85, statement = 0.85 }
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = ["src/pipeline.ts"]
+coverageReporter = ["text", "lcov"]

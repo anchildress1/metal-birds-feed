@@ -33,6 +33,6 @@ pre-push:
   parallel: true
   commands:
     typecheck:
-      run: bun x tsc --noEmit
+      run: bun x tsc --noEmit -p tsconfig.eslint.json
     unit-tests:
-      run: bun x vitest run --coverage
+      run: bun test --isolate --coverage

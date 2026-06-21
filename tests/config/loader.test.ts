@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { resolve } from 'node:path';
 import { writeFileSync, unlinkSync } from 'node:fs';
 import { loadSourceConfig } from '../../src/config/loader.js';

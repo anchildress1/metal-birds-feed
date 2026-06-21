@@ -30,7 +30,7 @@ typecheck:
 	$(BUNX) tsc --noEmit -p tsconfig.eslint.json
 
 test:
-	$(BUNX) vitest run --coverage
+	bun test --isolate --coverage
 
 build:
 	$(BUNX) tsc

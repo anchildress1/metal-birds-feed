@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { writeOds } from 'hucre/ods';
 import { writeXlsx } from 'hucre/xlsx';
 import * as XLSX from 'xlsx';

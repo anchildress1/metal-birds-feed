@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, mock, spyOn, beforeEach } from 'bun:test';
 import type { Aircraft } from '../src/schema.js';
 
-const mockSend = vi.hoisted(() => vi.fn());
-const s3ClientConfig = vi.hoisted((): { value: unknown } => ({ value: undefined }));
+const mockSend = mock();
+const s3ClientConfig: { value: unknown } = { value: undefined };
 
-vi.mock('@aws-sdk/client-s3', () => ({
+void mock.module('@aws-sdk/client-s3', () => ({
   /* eslint-disable @typescript-eslint/no-explicit-any */
   S3Client: class {
     send: any = mockSend;
@@ -33,16 +33,16 @@ vi.mock('@aws-sdk/client-s3', () => ({
   },
 }));
 
-import { R2DiffWriter, isTransientS3Error } from '../src/writer.js';
-import { contentHash } from '../src/engine.js';
-import { NoSuchKey } from '@aws-sdk/client-s3';
+const { R2DiffWriter, isTransientS3Error } = await import('../src/writer.js');
+const { contentHash } = await import('../src/engine.js');
+const { NoSuchKey } = await import('@aws-sdk/client-s3');
 
 // Real AWS SDK errors carry $metadata.httpStatusCode; bare Errors don't. Permanent failures
 // (auth/validation) surface as 4xx and must not be retried.
 const s3Error = (message: string, httpStatusCode: number): Error =>
   Object.assign(new Error(message), { $metadata: { httpStatusCode } });
 
-const noSuchKey = (): NoSuchKey =>
+const noSuchKey = (): Error =>
   new NoSuchKey({ message: 'The specified key does not exist.', $metadata: {} });
 
 // A 500 "internal error" is the transient R2 failure the daily job hit in production.
@@ -104,16 +104,16 @@ function makeAircraft(id: string, reg: string, hex: string | null = null): Aircr
 function manifestResponse(
   entries: Record<string, { hash: string; icao_hex: string | null; registration: string }>
 ): object {
-  return { Body: { transformToString: vi.fn().mockResolvedValue(JSON.stringify(entries)) } };
+  return { Body: { transformToString: mock().mockResolvedValue(JSON.stringify(entries)) } };
 }
 
 function refsResponse(refs: string[]): object {
-  return { Body: { transformToString: vi.fn().mockResolvedValue(JSON.stringify({ refs })) } };
+  return { Body: { transformToString: mock().mockResolvedValue(JSON.stringify({ refs })) } };
 }
 
 beforeEach(() => {
   mockSend.mockReset();
-  mockSend.mockResolvedValue({ Body: { transformToString: vi.fn().mockResolvedValue('{}') } });
+  mockSend.mockResolvedValue({ Body: { transformToString: mock().mockResolvedValue('{}') } });
 });
 
 describe('R2DiffWriter — client config', () => {
@@ -317,7 +317,7 @@ describe('R2DiffWriter — dry run', () => {
   it('rethrows invalid manifest content as an error', async () => {
     mockSend.mockResolvedValueOnce({
       Body: {
-        transformToString: vi.fn().mockResolvedValue('{"id001":"not-a-manifest-entry"}'),
+        transformToString: mock().mockResolvedValue('{"id001":"not-a-manifest-entry"}'),
       },
     });
 
@@ -338,7 +338,7 @@ describe('R2DiffWriter — dry run', () => {
   it('skips empty-string registration from the index (parallel to null icao_hex)', async () => {
     mockSend.mockRejectedValueOnce(noSuchKey());
     mockSend.mockResolvedValue({});
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const records = new Map([
@@ -358,7 +358,7 @@ describe('R2DiffWriter — dry run', () => {
   it('still indexes records that DO have a registration', async () => {
     mockSend.mockRejectedValueOnce(noSuchKey());
     mockSend.mockResolvedValue({});
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const records = new Map([
@@ -558,7 +558,7 @@ describe('R2DiffWriter — live mode', () => {
             })
           );
         return Promise.resolve({
-          Body: { transformToString: vi.fn().mockResolvedValue('{"refs":123}') },
+          Body: { transformToString: mock().mockResolvedValue('{"refs":123}') },
         });
       }
       return Promise.resolve({});
@@ -612,7 +612,7 @@ describe('R2DiffWriter — fresh bucket fast path', () => {
   it('still calls loadRefs when manifest exists but is empty', async () => {
     // Empty-but-present manifest may indicate a partial prior write — must merge to be safe.
     mockSend.mockResolvedValue({
-      Body: { transformToString: vi.fn().mockResolvedValue('{}') },
+      Body: { transformToString: mock().mockResolvedValue('{}') },
     });
 
     const writer = new R2DiffWriter(R2_CONFIG, false);
@@ -628,7 +628,7 @@ describe('R2DiffWriter — fresh bucket fast path', () => {
 describe('R2DiffWriter — worker pool', () => {
   it('drains all items without dropping any (large set)', async () => {
     mockSend.mockResolvedValue({
-      Body: { transformToString: vi.fn().mockResolvedValue('{}') },
+      Body: { transformToString: mock().mockResolvedValue('{}') },
     });
 
     const records = new Map<string, Aircraft>();
@@ -670,7 +670,7 @@ describe('R2DiffWriter — state management', () => {
   });
 
   it('readState returns null for empty body', async () => {
-    mockSend.mockResolvedValueOnce({ Body: { transformToString: vi.fn().mockResolvedValue('') } });
+    mockSend.mockResolvedValueOnce({ Body: { transformToString: mock().mockResolvedValue('') } });
     const writer = new R2DiffWriter(R2_CONFIG, false);
     expect(await writer.readState('faa')).toBeNull();
   });
@@ -682,7 +682,7 @@ describe('R2DiffWriter — state management', () => {
       record_count: 500,
     };
     mockSend.mockResolvedValueOnce({
-      Body: { transformToString: vi.fn().mockResolvedValue(JSON.stringify(stored)) },
+      Body: { transformToString: mock().mockResolvedValue(JSON.stringify(stored)) },
     });
     const writer = new R2DiffWriter(R2_CONFIG, false);
     const state = await writer.readState('faa');
@@ -691,7 +691,7 @@ describe('R2DiffWriter — state management', () => {
 
   it('readState returns null for malformed state JSON', async () => {
     mockSend.mockResolvedValueOnce({
-      Body: { transformToString: vi.fn().mockResolvedValue('{"bad":"schema"}') },
+      Body: { transformToString: mock().mockResolvedValue('{"bad":"schema"}') },
     });
     const writer = new R2DiffWriter(R2_CONFIG, false);
     expect(await writer.readState('faa')).toBeNull();
@@ -699,7 +699,7 @@ describe('R2DiffWriter — state management', () => {
 
   it('readState returns null for invalid JSON (not a parse error rethrow)', async () => {
     mockSend.mockResolvedValueOnce({
-      Body: { transformToString: vi.fn().mockResolvedValue('not valid json {{{') },
+      Body: { transformToString: mock().mockResolvedValue('not valid json {{{') },
     });
     const writer = new R2DiffWriter(R2_CONFIG, false);
     expect(await writer.readState('faa')).toBeNull();
@@ -745,7 +745,7 @@ describe('R2DiffWriter — observability', () => {
     mockSend.mockRejectedValueOnce(noSuchKey());
     mockSend.mockResolvedValue({});
 
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
     const writer = new R2DiffWriter(R2_CONFIG, false);
     await writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa');
 
@@ -757,7 +757,7 @@ describe('R2DiffWriter — observability', () => {
   });
 
   it('clears the progress ticker after write completes (success)', async () => {
-    const clearSpy = vi.spyOn(global, 'clearInterval');
+    const clearSpy = spyOn(global, 'clearInterval');
     const writer = new R2DiffWriter(R2_CONFIG, true);
     await writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa');
     expect(clearSpy).toHaveBeenCalled();
@@ -766,7 +766,7 @@ describe('R2DiffWriter — observability', () => {
 
   it('clears the progress ticker even when write fails', async () => {
     mockSend.mockRejectedValueOnce(s3Error('Boom', 403));
-    const clearSpy = vi.spyOn(global, 'clearInterval');
+    const clearSpy = spyOn(global, 'clearInterval');
     const writer = new R2DiffWriter(R2_CONFIG, false);
     await expect(
       writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa')
@@ -777,7 +777,7 @@ describe('R2DiffWriter — observability', () => {
   });
 
   it('schedules a progress ticker on the 5s interval', async () => {
-    const intervalSpy = vi.spyOn(global, 'setInterval');
+    const intervalSpy = spyOn(global, 'setInterval');
     const writer = new R2DiffWriter(R2_CONFIG, true);
     await writer.write(new Map([['id001', makeAircraft('id001', 'N12345', 'a4e294')]]), 'faa');
 
@@ -787,8 +787,8 @@ describe('R2DiffWriter — observability', () => {
   });
 
   it('progress ticker callback emits write_progress log', () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const intervalSpy = vi.spyOn(global, 'setInterval');
+    const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
+    const intervalSpy = spyOn(global, 'setInterval');
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     // Invoke private ticker setup directly, then fire its callback.
@@ -840,7 +840,7 @@ describe('R2DiffWriter — transient retry', () => {
   it('retries a transient manifest GET then completes the write', async () => {
     mockSend.mockReset();
     mockSend.mockRejectedValueOnce(s3TransientError());
-    mockSend.mockResolvedValue({ Body: { transformToString: vi.fn().mockResolvedValue('{}') } });
+    mockSend.mockResolvedValue({ Body: { transformToString: mock().mockResolvedValue('{}') } });
 
     const writer = new R2DiffWriter(R2_CONFIG, true);
     const stats = await writer.write(new Map([['id001', makeAircraft('id001', 'N12345')]]), 'faa');

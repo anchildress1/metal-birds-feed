@@ -1,3 +1,4 @@
+import { TextDecoder } from 'node:util';
 import { parse } from 'csv-parse';
 import { readOds } from 'hucre/ods';
 import { readXlsx } from 'hucre/xlsx';
