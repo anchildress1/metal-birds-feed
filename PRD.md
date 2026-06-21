@@ -141,7 +141,7 @@ This is the deliberate trade: operator's costs stay $0 regardless of external in
 
 **R1.2 TC field-coverage parity.** Document any canonical fields TC does not provide (likely cruise speed, possibly engine details). Those fields stay null. No fallback or invented values.
 
-**Acceptance for v2:** A consumer querying `aircraft/by-id/tc-ca/<id>.json` gets a record with the same TypeScript shape as FAA, with appropriate nulls.
+**Acceptance for v2:** A consumer point-querying `aircraft/tc-ca.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA, with appropriate nulls.
 
 ### Could-Have (P2) — Third-registry milestone, v3
 
@@ -155,7 +155,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R2.3 NZ permission protocol.** Per CC.2, send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz before slotting. Reply preserved verbatim in `DATA_LICENSES.md`. If no reply within 30 calendar days, source proceeds on the public-record argument. CAA NZ classifies as **Personal-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
 
-**Acceptance (NZ CAA track):** A consumer querying `aircraft/by-id/nz-caa/<id>.json` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
+**Acceptance (NZ CAA track):** A consumer point-querying `aircraft/nz-caa.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
 
 #### Netherlands ILT track (no-email path)
 
@@ -167,7 +167,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R2.7 Filename discovery (NL-specific).** ILT's bulk download URL embeds the file's publication date (e.g. `luchtvaartuigregister-ilt-datas2-2026-04-28.ods`), which changes every refresh. Downloader gains a small "discovery" step for sources that declare `download.discover_url:` — fetch the index page, regex out the latest data-file URL, then download. NL is the first source to use this; future sources with the same pattern reuse it.
 
-**Acceptance (NL ILT track):** A consumer querying `aircraft/by-id/nl-ilt/<id>.json` gets a record with the same TypeScript shape as FAA, TC, and CAA NZ. The spreadsheet parser path round-trips an ILT fixture without changes to `src/engine.ts`'s translation logic.
+**Acceptance (NL ILT track):** A consumer point-querying `aircraft/nl-ilt.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA, TC, and CAA NZ. The spreadsheet parser path round-trips an ILT fixture without changes to `src/engine.ts`'s translation logic.
 
 ### Could-Have (P3) — Georgia (GCAA), v4
 
@@ -177,7 +177,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R3.3 Cyrillic / Georgian script handling.** GCAA records may include owner names in Mkhedruli (Georgian script) or Cyrillic. Schema is already Unicode-clean (TypeScript `string`), but verify R2 stores and serves UTF-8 cleanly end-to-end with non-Latin owner names. Add a fixture record covering this.
 
-**Acceptance for v4:** A consumer querying `aircraft/by-id/ge-gcaa/<id>.json` gets a valid record. Owner names in Georgian script round-trip through R2 storage and the operator R2-binding read path without mojibake.
+**Acceptance for v4:** A consumer point-querying `aircraft/ge-gcaa.sqlite` by `source_id` gets a valid record. Owner names in Georgian script round-trip through R2 storage and the operator R2-binding read path without mojibake.
 
 ### Future Considerations (post-v4)
 
