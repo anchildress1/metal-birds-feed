@@ -195,6 +195,7 @@ describe('run', () => {
       skipped: 0,
       changed: true,
       record_count: 3,
+      content_hash: 'h',
     });
 
     await run('faa');
@@ -221,6 +222,7 @@ describe('run', () => {
       skipped: 5,
       changed: false,
       record_count: 5,
+      content_hash: 'h',
     });
 
     await run('faa');
@@ -250,6 +252,7 @@ describe('main', () => {
       skipped: 0,
       changed: false,
       record_count: 0,
+      content_hash: 'h',
     });
     const fetchMock = mock()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) }) // list open issues
@@ -282,6 +285,7 @@ describe('main', () => {
       skipped: 0,
       changed: true,
       record_count: 1,
+      content_hash: 'h',
     });
     const fetchMock = mock()
       .mockResolvedValueOnce({
@@ -315,6 +319,7 @@ describe('main', () => {
       skipped: 0,
       changed: true,
       record_count: 1,
+      content_hash: 'h',
     });
     const fetchMock = mock().mockResolvedValueOnce({
       ok: true,
@@ -399,6 +404,7 @@ describe('main', () => {
       skipped: 0,
       changed: true,
       record_count: 1,
+      content_hash: 'h',
     });
     const fetchMock = mock().mockResolvedValueOnce({ ok: false, status: 403 });
     setFetch(fetchMock);

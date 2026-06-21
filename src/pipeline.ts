@@ -106,12 +106,10 @@ export async function run(sourceId: string): Promise<RunResult> {
   };
 }
 
-// Shared prefix so the matcher's startsWith can't let a prefix source name (`faa` vs `faa-uas`) collide.
-const stalenessTitlePrefix = (source: string): string =>
-  `[staleness] ${source} has not updated in `;
-
+// Match on `[staleness] <source> ` (trailing space) — avoids the `faa` vs `faa-uas` prefix
+// collision while staying robust to the human-readable title wording changing over time.
 const isStalenessIssueFor = (issueTitle: string, source: string): boolean =>
-  issueTitle.startsWith(stalenessTitlePrefix(source));
+  issueTitle.startsWith(`[staleness] ${source} `);
 
 const createStalenessIssue = async (
   entry: StalenessEntry,
@@ -119,7 +117,7 @@ const createStalenessIssue = async (
   repo: string
 ): Promise<void> => {
   const apiBase = `https://api.github.com/repos/${repo}`;
-  const title = `${stalenessTitlePrefix(entry.source)}${entry.days_since_change} days`;
+  const title = `[staleness] ${entry.source} has not updated in ${entry.days_since_change} days`;
 
   const listRes = await fetch(`${apiBase}/issues?labels=data-staleness&state=open&per_page=100`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },

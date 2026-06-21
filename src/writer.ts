@@ -77,7 +77,7 @@ export class R2ArtifactWriter {
       );
     }
 
-    if (records.size > 0 && priorState?.content_hash === content_hash) {
+    if (priorState?.content_hash === content_hash) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return { changed: false, record_count: records.size, content_hash };
     }
