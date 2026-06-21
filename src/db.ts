@@ -2,8 +2,11 @@ import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import type { Aircraft } from './schema.js';
 
-const bySourceId = (a: Aircraft, b: Aircraft): number =>
-  a.source_id < b.source_id ? -1 : a.source_id > b.source_id ? 1 : 0;
+const bySourceId = (a: Aircraft, b: Aircraft): number => {
+  if (a.source_id < b.source_id) return -1;
+  if (a.source_id > b.source_id) return 1;
+  return 0;
+};
 
 // Content fingerprint over the sorted records, independent of SQLite's byte layout (which is not
 // guaranteed stable run to run). Drives skip-if-unchanged.
