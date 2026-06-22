@@ -47,7 +47,8 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   interdiction_code: null,
 });
 
-// A fully populated record to verify every column maps, including nested objects and the array.
+// Every field set to a DISTINCT non-null sentinel so a column/value mis-map (e.g. owner_country
+// bound to operator.country) fails — same-typed columns would otherwise pass an undetected swap.
 const populated: Aircraft = {
   source: 'ch-foca',
   source_id: '1367606',
@@ -65,31 +66,31 @@ const populated: Aircraft = {
   build_certification: 'type-certificated',
   airworthiness_class: 'Utility',
   operating_environment: 'land',
-  operational_classes: ['day', 'vfr'],
+  operational_classes: ['day', 'vfr', 'night'],
   engine: {
     manufacturer: 'ROTAX',
     model: '912',
     type: 'reciprocating',
     count: 1,
     horsepower: 80,
-    thrust_lbs: null,
+    thrust_lbs: 5000,
   },
   owner: { name: 'Beispiel, Anna', kind: 'co-owner', state: 'SO', country: 'Switzerland' },
-  operator: { name: 'Betrieb AG', kind: null, state: 'BE', country: 'Switzerland' },
-  idera_authorised_party: null,
+  operator: { name: 'Betrieb AG', kind: 'corporation', state: 'BE', country: 'Germany' },
+  idera_authorised_party: 'IDERA Bank AG',
   certification_date: '2025-08-15',
-  airworthiness_date: null,
-  expiration_date: null,
-  last_action_date: null,
+  airworthiness_date: '2024-01-02',
+  expiration_date: '2030-06-30',
+  last_action_date: '2023-11-11',
   cruise_speed_ktas: 95.5,
   max_takeoff_weight_kg: 340,
-  seats: 1,
-  max_passengers: 0,
-  min_crew: 1,
+  seats: 4,
+  max_passengers: 9,
+  min_crew: 2,
   airworthiness_review_date: '2027-04-23',
-  cancellation_reason: null,
-  lien_status: null,
-  interdiction_code: null,
+  cancellation_reason: 'owner request',
+  lien_status: 'none',
+  interdiction_code: 'INT-9',
 };
 
 const records = new Map([
@@ -99,6 +100,10 @@ const records = new Map([
 ]);
 
 const onePopulated = (): Map<string, Aircraft> => new Map([[populated.source_id, populated]]);
+const populatedRow = (): Record<string, unknown> =>
+  Database.deserialize(buildSqlite(onePopulated()))
+    .query('SELECT * FROM aircraft WHERE source_id = ?')
+    .get('1367606') as Record<string, unknown>;
 
 describe('buildSqlite', () => {
   it('supports point lookups by hex, registration, and source_id', () => {
@@ -124,75 +129,98 @@ describe('buildSqlite', () => {
     expect(count.n).toBe(3);
   });
 
-  it('stores every canonical scalar field as its own column', () => {
-    const db = Database.deserialize(buildSqlite(onePopulated()));
-    const row = db.query('SELECT * FROM aircraft WHERE source_id = ?').get('1367606') as Record<
-      string,
-      unknown
-    >;
-
-    expect(row.source).toBe('ch-foca');
-    expect(row.registration).toBe('HB-1000');
-    expect(row.icao_hex).toBe('4b488f');
-    expect(row.icao_type_code).toBe('GLID');
-    expect(row.status).toBe('valid');
-    expect(row.airframe_type).toBe('glider');
-    expect(row.manufacturer).toBe('LET, A.S.');
-    expect(row.model).toBe('L 33 SÓLO');
-    expect(row.serial_number).toBe('960404');
-    expect(row.certification_date).toBe('2025-08-15');
-    expect(row.airworthiness_review_date).toBe('2027-04-23');
-  });
-
-  it('flattens nested owner / operator / engine objects into columns', () => {
-    const db = Database.deserialize(buildSqlite(onePopulated()));
-    const row = db.query('SELECT * FROM aircraft WHERE source_id = ?').get('1367606') as Record<
-      string,
-      unknown
-    >;
-
-    expect(row.owner_name).toBe('Beispiel, Anna');
-    expect(row.owner_kind).toBe('co-owner');
-    expect(row.owner_state).toBe('SO');
-    expect(row.owner_country).toBe('Switzerland');
-    expect(row.operator_name).toBe('Betrieb AG');
-    expect(row.operator_kind).toBeNull();
-    expect(row.engine_manufacturer).toBe('ROTAX');
-    expect(row.engine_count).toBe(1);
-    expect(row.engine_thrust_lbs).toBeNull();
+  it('maps every canonical field to its own column with the right value', () => {
+    const row = populatedRow();
+    // Distinct sentinels above mean any column/value swap surfaces as a failure here.
+    expect(row).toMatchObject({
+      source: 'ch-foca',
+      source_id: '1367606',
+      registration: 'HB-1000',
+      icao_hex: '4b488f',
+      icao_type_code: 'GLID',
+      status: 'valid',
+      country: 'CH',
+      manufacturer: 'LET, A.S.',
+      model: 'L 33 SÓLO',
+      serial_number: '960404',
+      year_manufactured: 1996,
+      airframe_type: 'glider',
+      category: 'standard',
+      build_certification: 'type-certificated',
+      airworthiness_class: 'Utility',
+      operating_environment: 'land',
+      engine_manufacturer: 'ROTAX',
+      engine_model: '912',
+      engine_type: 'reciprocating',
+      engine_count: 1,
+      engine_horsepower: 80,
+      engine_thrust_lbs: 5000,
+      owner_name: 'Beispiel, Anna',
+      owner_kind: 'co-owner',
+      owner_state: 'SO',
+      owner_country: 'Switzerland',
+      operator_name: 'Betrieb AG',
+      operator_kind: 'corporation',
+      operator_state: 'BE',
+      operator_country: 'Germany',
+      idera_authorised_party: 'IDERA Bank AG',
+      certification_date: '2025-08-15',
+      airworthiness_date: '2024-01-02',
+      expiration_date: '2030-06-30',
+      last_action_date: '2023-11-11',
+      cruise_speed_ktas: 95.5,
+      max_takeoff_weight_kg: 340,
+      seats: 4,
+      max_passengers: 9,
+      min_crew: 2,
+      airworthiness_review_date: '2027-04-23',
+      cancellation_reason: 'owner request',
+      lien_status: 'none',
+      interdiction_code: 'INT-9',
+    });
   });
 
   it('stores numeric columns as numbers, not strings', () => {
-    const db = Database.deserialize(buildSqlite(onePopulated()));
-    const row = db
-      .query(
-        'SELECT year_manufactured, seats, min_crew, max_passengers, cruise_speed_ktas, max_takeoff_weight_kg FROM aircraft WHERE source_id = ?'
-      )
-      .get('1367606') as Record<string, unknown>;
-
-    expect(row.year_manufactured).toBe(1996);
-    expect(row.seats).toBe(1);
-    expect(row.min_crew).toBe(1);
-    expect(row.max_passengers).toBe(0);
-    expect(row.cruise_speed_ktas).toBe(95.5);
-    expect(row.max_takeoff_weight_kg).toBe(340);
-    expect(typeof row.year_manufactured).toBe('number');
+    const row = populatedRow();
+    for (const col of [
+      'year_manufactured',
+      'engine_count',
+      'engine_horsepower',
+      'engine_thrust_lbs',
+      'cruise_speed_ktas',
+      'max_takeoff_weight_kg',
+      'seats',
+      'max_passengers',
+      'min_crew',
+    ]) {
+      expect(typeof row[col]).toBe('number');
+    }
   });
 
   it('round-trips operational_classes as a JSON array column', () => {
-    const db = Database.deserialize(buildSqlite(onePopulated()));
-    const row = db
-      .query('SELECT operational_classes FROM aircraft WHERE source_id = ?')
-      .get('1367606') as { operational_classes: string };
-    expect(JSON.parse(row.operational_classes)).toEqual(['day', 'vfr']);
+    const row = populatedRow();
+    expect(JSON.parse(row.operational_classes as string)).toEqual(['day', 'vfr', 'night']);
   });
 
-  it('preserves a null icao_hex', () => {
+  it('preserves null optional fields', () => {
     const db = Database.deserialize(buildSqlite(records));
-    const row = db.query('SELECT icao_hex FROM aircraft WHERE source_id = ?').get('00003') as {
-      icao_hex: string | null;
-    };
+    const row = db
+      .query(
+        'SELECT icao_hex, manufacturer, owner_name, engine_count FROM aircraft WHERE source_id = ?'
+      )
+      .get('00003') as Record<string, unknown>;
     expect(row.icao_hex).toBeNull();
+    expect(row.owner_name).toBeNull();
+    expect(row.engine_count).toBeNull();
+    expect(row.manufacturer).toBe('CESSNA');
+  });
+
+  it('builds a valid empty artifact for a zero-record source', () => {
+    const db = Database.deserialize(buildSqlite(new Map()));
+    const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
+    expect(count.n).toBe(0);
+    const version = db.query('PRAGMA user_version').get() as { user_version: number };
+    expect(version.user_version).toBe(2);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {

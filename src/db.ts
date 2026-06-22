@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
-import type { Aircraft } from './schema.js';
+import type { Aircraft, Engine, Owner } from './schema.js';
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
@@ -18,10 +18,72 @@ export const hashRecords = (records: Map<string, Aircraft>): string => {
   return hash.digest('hex');
 };
 
-// The canonical schema is fixed and known, so the artifact stores every field as a real column
-// rather than an opaque JSON blob — consumers can filter/sort on any field (status, airframe_type,
-// owner_country, year, …), not just the three former index keys. Nested objects flatten to
-// `owner_*`/`operator_*`/`engine_*`; the one array (`operational_classes`) is a JSON string column.
+type Bind = string | number | null;
+
+// Every column the artifact exposes, derived from the canonical schema: scalar fields keep their
+// name; nested objects flatten to `owner_*`/`operator_*`/`engine_*`. `toColumns` is typed against
+// this, so adding a field to `Aircraft`/`Owner`/`Engine` without mapping it here is a compile error
+// (guards the AGENTS "no silent loss of upstream information" rule).
+type FlatColumn =
+  | Exclude<keyof Aircraft, 'engine' | 'owner' | 'operator'>
+  | `engine_${keyof Engine}`
+  | `owner_${keyof Owner}`
+  | `operator_${keyof Owner}`;
+
+// Single source of truth for column name → bound value. The INSERT column list and the bound
+// values both derive from this one object, so they cannot drift in order or membership. The lone
+// array (`operational_classes`) is serialized to a JSON string.
+const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
+  source: r.source,
+  source_id: r.source_id,
+  registration: r.registration,
+  icao_hex: r.icao_hex,
+  icao_type_code: r.icao_type_code,
+  status: r.status,
+  country: r.country,
+  manufacturer: r.manufacturer,
+  model: r.model,
+  serial_number: r.serial_number,
+  year_manufactured: r.year_manufactured,
+  airframe_type: r.airframe_type,
+  category: r.category,
+  build_certification: r.build_certification,
+  airworthiness_class: r.airworthiness_class,
+  operating_environment: r.operating_environment,
+  operational_classes: JSON.stringify(r.operational_classes),
+  engine_manufacturer: r.engine.manufacturer,
+  engine_model: r.engine.model,
+  engine_type: r.engine.type,
+  engine_count: r.engine.count,
+  engine_horsepower: r.engine.horsepower,
+  engine_thrust_lbs: r.engine.thrust_lbs,
+  owner_name: r.owner.name,
+  owner_kind: r.owner.kind,
+  owner_state: r.owner.state,
+  owner_country: r.owner.country,
+  operator_name: r.operator.name,
+  operator_kind: r.operator.kind,
+  operator_state: r.operator.state,
+  operator_country: r.operator.country,
+  idera_authorised_party: r.idera_authorised_party,
+  certification_date: r.certification_date,
+  airworthiness_date: r.airworthiness_date,
+  expiration_date: r.expiration_date,
+  last_action_date: r.last_action_date,
+  cruise_speed_ktas: r.cruise_speed_ktas,
+  max_takeoff_weight_kg: r.max_takeoff_weight_kg,
+  seats: r.seats,
+  max_passengers: r.max_passengers,
+  min_crew: r.min_crew,
+  airworthiness_review_date: r.airworthiness_review_date,
+  cancellation_reason: r.cancellation_reason,
+  lien_status: r.lien_status,
+  interdiction_code: r.interdiction_code,
+});
+
+// Column SQL types. STRICT enforces them at insert; `INTEGER` columns back `z.number().int()`
+// fields, `REAL` columns back plain `z.number()`, the rest are `TEXT`. NOT NULL mirrors the
+// non-nullable schema fields (`operational_classes` serializes to "[]", never null).
 const DDL = `CREATE TABLE aircraft (
   source TEXT NOT NULL,
   source_id TEXT PRIMARY KEY,
@@ -70,56 +132,6 @@ const DDL = `CREATE TABLE aircraft (
   interdiction_code TEXT
 ) STRICT`;
 
-// Insertion order; `rowValues` returns values in this exact order. Column names also appear in DDL
-// (SQLite maps the INSERT column list by name, so DDL order is independent).
-const COLUMNS = [
-  'source',
-  'source_id',
-  'registration',
-  'icao_hex',
-  'icao_type_code',
-  'status',
-  'country',
-  'manufacturer',
-  'model',
-  'serial_number',
-  'year_manufactured',
-  'airframe_type',
-  'category',
-  'build_certification',
-  'airworthiness_class',
-  'operating_environment',
-  'operational_classes',
-  'engine_manufacturer',
-  'engine_model',
-  'engine_type',
-  'engine_count',
-  'engine_horsepower',
-  'engine_thrust_lbs',
-  'owner_name',
-  'owner_kind',
-  'owner_state',
-  'owner_country',
-  'operator_name',
-  'operator_kind',
-  'operator_state',
-  'operator_country',
-  'idera_authorised_party',
-  'certification_date',
-  'airworthiness_date',
-  'expiration_date',
-  'last_action_date',
-  'cruise_speed_ktas',
-  'max_takeoff_weight_kg',
-  'seats',
-  'max_passengers',
-  'min_crew',
-  'airworthiness_review_date',
-  'cancellation_reason',
-  'lien_status',
-  'interdiction_code',
-] as const;
-
 // Indexed for the common consumer filters; `source_id` is already the PK.
 const INDEXES = [
   'CREATE INDEX idx_icao_hex ON aircraft (icao_hex)',
@@ -127,56 +139,6 @@ const INDEXES = [
   'CREATE INDEX idx_status ON aircraft (status)',
   'CREATE INDEX idx_airframe_type ON aircraft (airframe_type)',
   'CREATE INDEX idx_owner_country ON aircraft (owner_country)',
-];
-
-type Bind = string | number | null;
-
-const rowValues = (r: Aircraft): Bind[] => [
-  r.source,
-  r.source_id,
-  r.registration,
-  r.icao_hex,
-  r.icao_type_code,
-  r.status,
-  r.country,
-  r.manufacturer,
-  r.model,
-  r.serial_number,
-  r.year_manufactured,
-  r.airframe_type,
-  r.category,
-  r.build_certification,
-  r.airworthiness_class,
-  r.operating_environment,
-  JSON.stringify(r.operational_classes),
-  r.engine.manufacturer,
-  r.engine.model,
-  r.engine.type,
-  r.engine.count,
-  r.engine.horsepower,
-  r.engine.thrust_lbs,
-  r.owner.name,
-  r.owner.kind,
-  r.owner.state,
-  r.owner.country,
-  r.operator.name,
-  r.operator.kind,
-  r.operator.state,
-  r.operator.country,
-  r.idera_authorised_party,
-  r.certification_date,
-  r.airworthiness_date,
-  r.expiration_date,
-  r.last_action_date,
-  r.cruise_speed_ktas,
-  r.max_takeoff_weight_kg,
-  r.seats,
-  r.max_passengers,
-  r.min_crew,
-  r.airworthiness_review_date,
-  r.cancellation_reason,
-  r.lien_status,
-  r.interdiction_code,
 ];
 
 // One SQLite database per source: a row per aircraft with every canonical field as a typed column.
@@ -188,14 +150,19 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     db.run('PRAGMA user_version = 2');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
-    const placeholders = COLUMNS.map(() => '?').join(', ');
-    const insert = db.prepare(
-      `INSERT INTO aircraft (${COLUMNS.join(', ')}) VALUES (${placeholders})`
-    );
-    const insertAll = db.transaction((rows: Aircraft[]) => {
-      for (const r of rows) insert.run(...rowValues(r));
-    });
-    insertAll([...records.values()].sort(bySourceId));
+
+    const rows = [...records.values()].sort(bySourceId);
+    if (rows.length > 0) {
+      const cols = Object.keys(toColumns(rows[0]));
+      const placeholders = cols.map(() => '?').join(', ');
+      const insert = db.prepare(
+        `INSERT INTO aircraft (${cols.join(', ')}) VALUES (${placeholders})`
+      );
+      const insertAll = db.transaction((rs: Aircraft[]) => {
+        for (const r of rs) insert.run(...Object.values(toColumns(r)));
+      });
+      insertAll(rows);
+    }
     return db.serialize();
   } finally {
     db.close();
