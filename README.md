@@ -23,29 +23,28 @@ Each runner:
 
 1. Downloads the source's full bulk export (registries don't publish deltas)
 2. Translates every row into the canonical `Aircraft` schema via the source's YAML mapping
-3. Computes a content-hash diff against the per-source manifest in R2
-4. Writes only what actually changed; lookups stay as static JSON objects in R2
+3. Computes a content hash over the full record set and compares it to the prior run's hash in `_state`
+4. Rebuilds the per-source SQLite artifact and PUTs it whole — only when that hash changed
 
-### What's full vs delta
+### What's full vs skipped
 
-| Step        | Pass type | Notes                                                                        |
-| ----------- | --------- | ---------------------------------------------------------------------------- |
-| Download    | Full      | All sources ship full snapshots; no `If-Modified-Since` semantics            |
-| Translate   | Full      | All rows re-parsed and transformed every run (~10s for FAA's 312k records)   |
-| Hash + diff | Full O(n) | Every record's `sha256` content hash is compared against the stored manifest |
-| R2 writes   | **Delta** | Only changed records get PUT; removed records get DELETE; unchanged skipped  |
+| Step      | Pass type      | Notes                                                                                   |
+| --------- | -------------- | --------------------------------------------------------------------------------------- |
+| Download  | Full           | All sources ship full snapshots; no `If-Modified-Since` semantics                       |
+| Translate | Full           | All rows re-parsed and transformed every run (~10s for FAA's 312k records)              |
+| Hash      | Full O(n)      | One `sha256` over the sorted record set, compared to the prior run's hash in `_state`   |
+| R2 write  | All-or-nothing | The whole SQLite artifact is PUT when the hash changed; skipped entirely when unchanged |
 
-The delta lives entirely in the write step. This is by design: registries don't expose
-incremental APIs, but R2 ops are the expensive part — so we pay for the cheap full-passes
-to avoid paying for the expensive redundant writes.
+The write is wholesale, not incremental — no per-record diffing, no manifest, no DELETEs.
+Registries don't expose deltas, and R2 ops are the expensive part, so an unchanged refresh
+costs zero PUTs and a changed one costs a single (tens-of-MB) PUT.
 
 ### What a typical cadence run looks like
 
-| Phase     | Bootstrap (first run) | Steady state (cadence run) |
-| --------- | --------------------- | -------------------------- |
-| Records   | ~312k all new         | ~3–6k changed (~1–2%)      |
-| R2 ops    | ~600k+                | ~10k                       |
-| Wall time | ~99 min               | ~2 min                     |
+| Phase     | Bootstrap (first run) | Steady state (cadence run)       |
+| --------- | --------------------- | -------------------------------- |
+| Records   | ~312k all new         | ~3–6k changed (~1–2%)            |
+| R2 writes | 1 PUT (full artifact) | 0 (unchanged) or 1 PUT (changed) |
 
 FAA's first load doesn't fit GHA's 30-minute job cap, so it's run once locally — see
 below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and don't
@@ -81,12 +80,12 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 
 ## R2 Key Structure
 
-| Path                            | Contents                                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: `source_id` PK, indexed `icao_hex`/`registration`, record JSON |
-| `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                        |
+| Path                            | Contents                                                                                                                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
+| `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                        |
 
-One queryable artifact per source — point lookup by `icao_hex` or `registration`, full canonical record in the `record` column. Rebuilt and re-uploaded only when the record set's content hash changes.
+One queryable artifact per source — filter or point-lookup on any column (every canonical field is its own typed column). Rebuilt and re-uploaded whole only when the record set's content hash changes.
 
 ## Setup
 
