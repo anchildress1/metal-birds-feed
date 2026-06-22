@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.7](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.6...v0.0.7) (2026-06-22)
+
+
+### Features
+
+* add Switzerland (FOCA/BAZL) register via JSON-over-POST path ([#41](https://github.com/anchildress1/metal-birds-feed/issues/41)) ([8a8b77f](https://github.com/anchildress1/metal-birds-feed/commit/8a8b77ff38d0d23ce1ae7765c2587f65e03686df))
+
+
+### Bug Fixes
+
+* make the daily refresh resilient to transient R2 errors ([#36](https://github.com/anchildress1/metal-birds-feed/issues/36)) ([bec1f8e](https://github.com/anchildress1/metal-birds-feed/commit/bec1f8eb7d27d1fdb20de46cfd4a41f16d13b116))
+
 ## [0.0.6](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.5...v0.0.6) (2026-06-13)
 
 
