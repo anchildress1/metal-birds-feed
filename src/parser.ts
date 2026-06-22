@@ -81,6 +81,13 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
 // unchanged: nested objects become dot-path keys ("details.aircraftAddresses.hex"), and arrays are
 // serialized back to a JSON string at their key so a source-specific transform can unpack them
 // (mirrors how the Brazilian register packs owner/operator JSON into a single CSV cell).
+// Human-readable JSON type for error messages — distinguishes null and array from plain 'object'.
+const jsonType = (value: unknown): string => {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+};
+
 // eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so a parse throw becomes a rejection, matching the other parsers
 export async function parseJson(buf: Buffer, options: ParseJsonOptions): Promise<Row[]> {
   const text = new TextDecoder(options.encoding).decode(buf);
@@ -90,9 +97,7 @@ export async function parseJson(buf: Buffer, options: ParseJsonOptions): Promise
     // Fail fast at the boundary: a non-object record (number/string/array) would flatten to an
     // empty-key row and later surface as a vague "missing source_id" instead of the real cause.
     if (record === null || typeof record !== 'object' || Array.isArray(record)) {
-      throw new Error(
-        `JSON record at index ${i} is not an object (got ${record === null ? 'null' : Array.isArray(record) ? 'array' : typeof record})`
-      );
+      throw new TypeError(`JSON record at index ${i} is not an object (got ${jsonType(record)})`);
     }
     return flattenRecord(record);
   });
@@ -103,14 +108,14 @@ const navigateToArray = (root: unknown, path: string | undefined): unknown[] => 
   if (path) {
     for (const key of path.split('.')) {
       if (node === null || typeof node !== 'object') {
-        throw new Error(`JSON record_path "${path}" does not resolve to an object at "${key}"`);
+        throw new TypeError(`JSON record_path "${path}" does not resolve to an object at "${key}"`);
       }
       node = (node as Record<string, unknown>)[key];
     }
   }
   if (!Array.isArray(node)) {
-    throw new Error(
-      `JSON record_path "${path ?? ''}" did not resolve to an array (got ${node === null ? 'null' : typeof node})`
+    throw new TypeError(
+      `JSON record_path "${path ?? ''}" did not resolve to an array (got ${jsonType(node)})`
     );
   }
   return node;
