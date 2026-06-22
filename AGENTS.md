@@ -64,7 +64,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 - `src/schema.ts` = canonical Zod schema. All engine output validates against it before going into the artifact.
 - `src/engine.ts` = source-agnostic. New registry = new YAML + (when needed) new transform/parser path. Never edit engine row-translation logic for a single source.
-- `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()` bytes, no filesystem). Table `aircraft`: `source_id` PK, indexed `icao_hex` + `registration`, full canonical record as a JSON `record` column. Point lookups by hex/registration.
+- `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()` bytes, no filesystem). Table `aircraft`: every canonical field is its own typed column (`source_id` PK; nested `owner`/`operator`/`engine` flattened to `owner_*`/`operator_*`/`engine_*`; the lone array `operational_classes` as a JSON-string column). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` — consumers filter/sort on any field, not just point lookups. `PRAGMA user_version` is the producer shape marker; bump on any column/contract change.
 - R2 keys (strict):
   - `aircraft/<source>.sqlite` — the per-source artifact (replaces the prior object-per-record + by-hex/by-registration index + manifest scheme).
   - `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` for cadence gating and skip-if-unchanged.

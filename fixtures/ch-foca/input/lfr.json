@@ -1,0 +1,372 @@
+[
+  {
+    "lfrId": "1000001",
+    "status": "Registered",
+    "registration": "HB-1000",
+    "aircraftModelType": "L 33 SÓLO",
+    "icaoCode": "GLID",
+    "manufacturer": "LET, A.S.",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Beispiel, Anna",
+        "address": {
+          "street": "Musterweg",
+          "streetNo": "1",
+          "zipCode": "4600",
+          "city": "Olten",
+          "extraLine": "SO",
+          "country": "Switzerland"
+        }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Beispiel, Anna",
+        "address": {
+          "street": "Musterweg",
+          "streetNo": "1",
+          "zipCode": "4600",
+          "city": "Olten",
+          "extraLine": "SO",
+          "country": "Switzerland"
+        }
+      }
+    ],
+    "details": {
+      "serialNumber": "960404",
+      "yearOfManufacture": "1996",
+      "mtom": "340",
+      "minCrew": "1",
+      "numCrewPax": "0",
+      "regDate": [2025, 8, 15],
+      "aircraftAddresses": { "hex": "4b488f", "dec": "4933775" }
+    },
+    "aircraftCategories": { "catId": "400004" },
+    "airworthinessExpiry": [2027, 4, 23]
+  },
+  {
+    "lfrId": "1000002",
+    "status": "Registered",
+    "registration": "HB-AAA",
+    "aircraftModelType": "172",
+    "icaoCode": "C172",
+    "manufacturer": "CESSNA",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Muster AG",
+        "address": {
+          "street": "Flugplatzstrasse",
+          "streetNo": "10",
+          "zipCode": "8001",
+          "city": "Zürich",
+          "extraLine": "ZH",
+          "country": "Switzerland"
+        }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Muster AG",
+        "address": {
+          "street": "Flugplatzstrasse",
+          "streetNo": "10",
+          "zipCode": "8001",
+          "city": "Zürich",
+          "extraLine": "ZH",
+          "country": "Switzerland"
+        }
+      }
+    ],
+    "details": {
+      "serialNumber": "17282099",
+      "yearOfManufacture": "1979",
+      "mtom": "1157",
+      "minCrew": "1",
+      "regDate": [1979, 6, 20],
+      "aircraftAddresses": { "hex": "4b1234" }
+    },
+    "aircraftCategories": { "catId": "400002" },
+    "airworthinessExpiry": [2026, 10, 31]
+  },
+  {
+    "lfrId": "1000003",
+    "status": "Registered",
+    "registration": "HB-HEL",
+    "aircraftModelType": "EC130",
+    "icaoCode": "EC30",
+    "manufacturer": "AIRBUS HELICOPTERS",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Helikopter GmbH",
+        "address": { "extraLine": "GR", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Lufttransport AG",
+        "address": { "extraLine": "BE", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "8123",
+      "yearOfManufacture": "2010",
+      "mtom": "2427",
+      "minCrew": "1",
+      "regDate": [2010, 3, 1],
+      "aircraftAddresses": { "hex": "4b5678" }
+    },
+    "aircraftCategories": { "catId": "400003" },
+    "airworthinessExpiry": [2026, 5, 16]
+  },
+  {
+    "lfrId": "1000004",
+    "status": "Registered",
+    "registration": "HB-BAL",
+    "aircraftModelType": "Z-150",
+    "icaoCode": "BALL",
+    "manufacturer": "CAMERON BALLOONS",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Ballon Club",
+        "address": { "extraLine": "N/A", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Ballon Club",
+        "address": { "extraLine": "N/A", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "N/A",
+      "yearOfManufacture": "2000",
+      "mtom": "0",
+      "minCrew": "1",
+      "regDate": [2000, 1, 1],
+      "aircraftAddresses": { "hex": "4b9999" }
+    },
+    "aircraftCategories": { "catId": "400006" },
+    "airworthinessExpiry": null
+  },
+  {
+    "lfrId": "1000005",
+    "status": "Registered",
+    "registration": "HB-PGL",
+    "aircraftModelType": "DIMONA",
+    "icaoCode": "DIMO",
+    "manufacturer": "DIAMOND",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Segelflug, Hans",
+        "address": { "extraLine": "c/o Vereinslokal", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Segelflug, Hans",
+        "address": { "extraLine": "c/o Vereinslokal", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "3601",
+      "yearOfManufacture": "1985",
+      "mtom": "770",
+      "minCrew": "1",
+      "regDate": [1985, 7, 1],
+      "aircraftAddresses": { "hex": "4b4321" }
+    },
+    "aircraftCategories": { "catId": "400005" },
+    "airworthinessExpiry": [2027, 1, 31]
+  },
+  {
+    "lfrId": "1000006",
+    "status": "Registered",
+    "registration": "HB-EXP",
+    "aircraftModelType": "RV-7",
+    "icaoCode": "RV7",
+    "manufacturer": "VAN'S AIRCRAFT",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Bauer, Peter",
+        "address": { "extraLine": "UR", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Part Owner" } },
+        "ownerOperator": "Bauer, Maria",
+        "address": { "extraLine": "UR", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Bauer, Peter",
+        "address": { "extraLine": "UR", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "74321",
+      "yearOfManufacture": "2015",
+      "mtom": "816",
+      "minCrew": "1",
+      "regDate": [2015, 9, 9],
+      "aircraftAddresses": { "hex": "4b1111" }
+    },
+    "aircraftCategories": { "catId": "11130000003" },
+    "airworthinessExpiry": [2026, 9, 30]
+  },
+  {
+    "lfrId": "1000007",
+    "status": "Registered",
+    "registration": "HB-SHP",
+    "aircraftModelType": "AS 105 GD",
+    "icaoCode": "SHIP",
+    "manufacturer": "GEFA-FLUG",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Werbe AG",
+        "address": { "extraLine": "ZG", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Werbe AG",
+        "address": { "extraLine": "ZG", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "26",
+      "yearOfManufacture": "2008",
+      "mtom": "0",
+      "minCrew": "1",
+      "regDate": [2008, 4, 4],
+      "aircraftAddresses": { "hex": "4b2222" }
+    },
+    "aircraftCategories": { "catId": "11130000002" },
+    "airworthinessExpiry": [2027, 6, 1]
+  },
+  {
+    "lfrId": "1000008",
+    "status": "Registered",
+    "registration": "HB-GYR",
+    "aircraftModelType": "MTOSPORT",
+    "icaoCode": "GYRO",
+    "manufacturer": "AUTOGYRO",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Flug GmbH",
+        "address": { "extraLine": "N/A", "country": "Germany" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Flug GmbH",
+        "address": { "extraLine": "N/A", "country": "Germany" }
+      }
+    ],
+    "details": {
+      "serialNumber": "M01234",
+      "yearOfManufacture": "2019",
+      "mtom": "560",
+      "minCrew": "1",
+      "regDate": [2019, 11, 20],
+      "aircraftAddresses": { "hex": "4b3333" }
+    },
+    "aircraftCategories": { "catId": "11130000008" },
+    "airworthinessExpiry": [2026, 12, 15]
+  },
+  {
+    "lfrId": "1000009",
+    "status": "Registered",
+    "registration": "HB-TRK",
+    "aircraftModelType": "PIPISTREL",
+    "icaoCode": "N/A",
+    "manufacturer": "PIPISTREL",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Drachen, Urs",
+        "address": { "extraLine": "VS", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Drachen, Urs",
+        "address": { "extraLine": "VS", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "12345",
+      "yearOfManufacture": "2021",
+      "mtom": "472.5",
+      "minCrew": "1",
+      "regDate": [2021, 2, 28],
+      "aircraftAddresses": { "hex": "N/A", "dec": "N/A" }
+    },
+    "aircraftCategories": { "catId": "11130000001" },
+    "airworthinessExpiry": [2027, 3, 1]
+  },
+  {
+    "lfrId": "1000010",
+    "status": "Registered",
+    "registration": "HB-CO2",
+    "aircraftModelType": "A320",
+    "icaoCode": "A320",
+    "manufacturer": "AIRBUS",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Leasing AG",
+        "address": { "extraLine": "ZH", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Airline AG",
+        "address": { "extraLine": "ZH", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Part Operator" } },
+        "ownerOperator": "Airline Two AG",
+        "address": { "extraLine": "GE", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "9876",
+      "yearOfManufacture": "2018",
+      "mtom": "78000",
+      "minCrew": "2",
+      "numCrewPax": "150",
+      "regDate": [2018, 6, 1],
+      "aircraftAddresses": { "hex": "4b4444" }
+    },
+    "aircraftCategories": { "catId": "400002" },
+    "airworthinessExpiry": [2026, 6, 30]
+  },
+  {
+    "lfrId": "1000011",
+    "status": "Registered",
+    "registration": "HB-UNK",
+    "aircraftModelType": "PROTOTYPE",
+    "icaoCode": "P001",
+    "manufacturer": "EXPERIMENTAL CO",
+    "ownerOperators": [
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Owner" } },
+        "ownerOperator": "Test AG",
+        "address": { "extraLine": "AG", "country": "Switzerland" }
+      },
+      {
+        "holderCategory": { "categoryNames": { "en": "Main Operator" } },
+        "ownerOperator": "Test AG",
+        "address": { "extraLine": "AG", "country": "Switzerland" }
+      }
+    ],
+    "details": {
+      "serialNumber": "0001",
+      "yearOfManufacture": "2023",
+      "mtom": "600",
+      "minCrew": "1",
+      "regDate": [2023, 5, 5],
+      "aircraftAddresses": { "hex": "4b5555" }
+    },
+    "aircraftCategories": { "catId": "999999" },
+    "airworthinessExpiry": null
+  }
+]

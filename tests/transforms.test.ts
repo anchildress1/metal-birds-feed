@@ -487,3 +487,117 @@ describe('br_party_kind', () => {
     ).toBeNull());
   it('returns null for an empty cell', () => expect(applyScalar('br_party_kind', '')).toBeNull());
 });
+
+describe('na_or_null', () => {
+  it('trims and returns value', () => expect(applyScalar('na_or_null', '  C172  ')).toBe('C172'));
+  it('returns null for the N/A sentinel', () =>
+    expect(applyScalar('na_or_null', 'N/A')).toBeNull());
+  it('returns null for blank', () => expect(applyScalar('na_or_null', '   ')).toBeNull());
+  it('returns null for empty', () => expect(applyScalar('na_or_null', '')).toBeNull());
+});
+
+describe('foca_hex_or_null', () => {
+  it('lowercases a valid 24-bit hex', () =>
+    expect(applyScalar('foca_hex_or_null', '4B488F')).toBe('4b488f'));
+  it('passes a clean lowercase hex', () =>
+    expect(applyScalar('foca_hex_or_null', '4b488f')).toBe('4b488f'));
+  it('returns null for the N/A sentinel', () =>
+    expect(applyScalar('foca_hex_or_null', 'N/A')).toBeNull());
+  it('returns null for a wrong-length value', () =>
+    expect(applyScalar('foca_hex_or_null', '4b48')).toBeNull());
+  it('returns null for non-hex characters', () =>
+    expect(applyScalar('foca_hex_or_null', '4b48zz')).toBeNull());
+  it('returns null for empty', () => expect(applyScalar('foca_hex_or_null', '')).toBeNull());
+});
+
+describe('foca_date_array_or_null', () => {
+  it('formats a [y,m,d] array to ISO with zero-padding', () =>
+    expect(applyScalar('foca_date_array_or_null', '[2025,8,15]')).toBe('2025-08-15'));
+  it('formats a two-digit month/day without extra padding', () =>
+    expect(applyScalar('foca_date_array_or_null', '[1979,12,31]')).toBe('1979-12-31'));
+  it('returns null for an impossible date', () =>
+    expect(applyScalar('foca_date_array_or_null', '[2023,2,31]')).toBeNull());
+  it('returns null for the wrong number of elements', () =>
+    expect(applyScalar('foca_date_array_or_null', '[2025,8]')).toBeNull());
+  it('returns null for non-numeric elements', () =>
+    expect(applyScalar('foca_date_array_or_null', '["2025","8","15"]')).toBeNull());
+  it('returns null for malformed JSON', () =>
+    expect(applyScalar('foca_date_array_or_null', '[2025,8,')).toBeNull());
+  it('returns null for empty', () => expect(applyScalar('foca_date_array_or_null', '')).toBeNull());
+});
+
+const OWNER = (en: string, name: string, extraLine: string, country: string): string =>
+  `{"holderCategory":{"categoryNames":{"en":"${en}"}},"ownerOperator":"${name}","address":{"street":"Secret St","city":"Hidden","zipCode":"9999","extraLine":"${extraLine}","country":"${country}"}}`;
+
+const PARTIES = (...parties: string[]): string => `[${parties.join(',')}]`;
+
+describe('foca owner/operator transforms', () => {
+  const swissOwnerOnly = PARTIES(
+    OWNER('Main Owner', 'Muster AG', 'ZH', 'Switzerland'),
+    OWNER('Main Operator', 'Betrieb AG', 'BE', 'Switzerland')
+  );
+
+  it('extracts the Main Owner name', () =>
+    expect(applyScalar('foca_owner_name', swissOwnerOnly)).toBe('Muster AG'));
+  it('extracts the Main Operator name (distinct from owner)', () =>
+    expect(applyScalar('foca_operator_name', swissOwnerOnly)).toBe('Betrieb AG'));
+
+  it('keeps a valid Swiss canton as owner state', () =>
+    expect(applyScalar('foca_owner_state', swissOwnerOnly)).toBe('ZH'));
+  it('keeps the operator canton independently', () =>
+    expect(applyScalar('foca_operator_state', swissOwnerOnly)).toBe('BE'));
+
+  it('drops non-canton extraLine (care-of text) rather than leaking it', () =>
+    expect(
+      applyScalar(
+        'foca_owner_state',
+        PARTIES(OWNER('Main Owner', 'X', 'c/o Hans Muster', 'Switzerland'))
+      )
+    ).toBeNull());
+  it('drops the N/A extraLine sentinel', () =>
+    expect(
+      applyScalar('foca_owner_state', PARTIES(OWNER('Main Owner', 'X', 'N/A', 'Switzerland')))
+    ).toBeNull());
+
+  it('reads owner country verbatim', () =>
+    expect(
+      applyScalar('foca_owner_country', PARTIES(OWNER('Main Owner', 'X', 'N/A', 'Germany')))
+    ).toBe('Germany'));
+
+  it('returns co-owner when a Part Owner accompanies the Main Owner', () =>
+    expect(
+      applyScalar(
+        'foca_owner_kind',
+        PARTIES(
+          OWNER('Main Owner', 'A', 'UR', 'Switzerland'),
+          OWNER('Part Owner', 'B', 'UR', 'Switzerland')
+        )
+      )
+    ).toBe('co-owner'));
+  it('returns null owner kind for a single owner', () =>
+    expect(applyScalar('foca_owner_kind', swissOwnerOnly)).toBeNull());
+  it('returns co-owner for multiple operators', () =>
+    expect(
+      applyScalar(
+        'foca_operator_kind',
+        PARTIES(
+          OWNER('Main Operator', 'A', 'ZH', 'Switzerland'),
+          OWNER('Part Operator', 'B', 'GE', 'Switzerland')
+        )
+      )
+    ).toBe('co-owner'));
+
+  it('returns null when the role is absent', () =>
+    expect(
+      applyScalar('foca_owner_name', PARTIES(OWNER('Main Operator', 'OnlyOp', 'ZH', 'Switzerland')))
+    ).toBeNull());
+  it('returns null for an empty cell', () => expect(applyScalar('foca_owner_name', '')).toBeNull());
+  it('returns null for malformed JSON', () =>
+    expect(applyScalar('foca_owner_name', '[{bad')).toBeNull());
+  it('returns null for valid JSON that is not an array', () =>
+    expect(applyScalar('foca_owner_name', '{"holderCategory":{}}')).toBeNull());
+  it('collapses an empty-string party name to null', () =>
+    expect(
+      applyScalar('foca_owner_name', PARTIES(OWNER('Main Owner', '', 'ZH', 'Switzerland')))
+    ).toBeNull());
+});

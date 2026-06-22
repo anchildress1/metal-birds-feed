@@ -248,3 +248,49 @@ describe('loadSourceConfig', () => {
     }
   });
 });
+
+describe('loadSourceConfig — JSON + POST sources', () => {
+  const CH_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'ch-foca.yaml');
+
+  it('loads the FOCA config with format json and a POST download', () => {
+    const config = loadSourceConfig(CH_CONFIG);
+    expect(config.format).toBe('json');
+    expect(config.record_path).toBe('');
+    expect(config.download.method).toBe('POST');
+    expect(config.download.body).toBeDefined();
+    expect(config.source_id).toBe('lfrId');
+  });
+
+  it('defaults download.method to GET when omitted', () => {
+    const config = loadSourceConfig(FAA_CONFIG);
+    expect(config.download.method).toBe('GET');
+  });
+
+  it('rejects download.body without method POST', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_body_no_post.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CH\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/body is only valid with method POST/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts a json source whose response is itself the record array', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_json_post.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CH\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  method: POST\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nrecord_path: data.items\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
+    );
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.record_path).toBe('data.items');
+      expect(config.download.method).toBe('POST');
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+});

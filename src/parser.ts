@@ -16,6 +16,12 @@ export interface ParseOptions {
   skip_rows?: number;
 }
 
+export interface ParseJsonOptions {
+  encoding: 'utf8' | 'latin1';
+  // Dot-path to the record array inside the JSON; empty/omitted means the response is the array.
+  record_path?: string;
+}
+
 // hucre handles modern .ods/.xlsx (OOXML/zip); xls routes to a separate SheetJS path.
 export type HucreFormat = 'ods' | 'xlsx';
 
@@ -69,6 +75,77 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
     );
   });
 }
+
+// Parses a JSON API response into the same Row[] shape as the spreadsheet/CSV paths. Each record
+// is flattened to a string map so the existing field-mapping + transform machinery applies
+// unchanged: nested objects become dot-path keys ("details.aircraftAddresses.hex"), and arrays are
+// serialized back to a JSON string at their key so a source-specific transform can unpack them
+// (mirrors how the Brazilian register packs owner/operator JSON into a single CSV cell).
+// Human-readable JSON type for error messages — distinguishes null and array from plain 'object'.
+const jsonType = (value: unknown): string => {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+};
+
+// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so a parse throw becomes a rejection, matching the other parsers
+export async function parseJson(buf: Buffer, options: ParseJsonOptions): Promise<Row[]> {
+  const text = new TextDecoder(options.encoding).decode(buf);
+  const parsed: unknown = JSON.parse(text);
+  const records = navigateToArray(parsed, options.record_path);
+  return records.map((record, i) => {
+    // Fail fast at the boundary: a non-object record (number/string/array) would flatten to an
+    // empty-key row and later surface as a vague "missing source_id" instead of the real cause.
+    if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+      throw new TypeError(`JSON record at index ${i} is not an object (got ${jsonType(record)})`);
+    }
+    return flattenRecord(record);
+  });
+}
+
+const navigateToArray = (root: unknown, path: string | undefined): unknown[] => {
+  let node: unknown = root;
+  if (path) {
+    for (const key of path.split('.')) {
+      if (node === null || typeof node !== 'object') {
+        throw new TypeError(`JSON record_path "${path}" does not resolve to an object at "${key}"`);
+      }
+      node = (node as Record<string, unknown>)[key];
+    }
+  }
+  if (!Array.isArray(node)) {
+    throw new TypeError(
+      `JSON record_path "${path ?? ''}" did not resolve to an array (got ${jsonType(node)})`
+    );
+  }
+  return node;
+};
+
+// Flattens one record into a string map. Objects recurse with dot-path prefixes; arrays are
+// JSON-stringified whole (a transform unpacks them); scalars stringify; null/undefined are omitted
+// so `row[field] ?? ''` yields the empty-string default the engine expects.
+const flattenRecord = (record: unknown): Row => {
+  const row: Row = {};
+  const walk = (value: unknown, prefix: string): void => {
+    if (value === null || value === undefined) return;
+    if (Array.isArray(value)) {
+      row[prefix] = JSON.stringify(value);
+      return;
+    }
+    if (typeof value === 'object') {
+      for (const [k, v] of Object.entries(value)) {
+        walk(v, prefix ? `${prefix}.${k}` : k);
+      }
+      return;
+    }
+    // Only primitive leaves remain; symbols/functions are not valid JSON and are omitted.
+    if (typeof value === 'string') row[prefix] = value;
+    else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint')
+      row[prefix] = String(value);
+  };
+  walk(record, '');
+  return row;
+};
 
 // Parses .ods (OpenDocument Spreadsheet) and .xlsx via hucre. Returns the same Row[] shape
 // as parseCSV so the engine can dispatch by source format and treat the rows uniformly.

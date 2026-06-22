@@ -2,7 +2,13 @@ import { describe, it, expect } from 'bun:test';
 import { writeOds } from 'hucre/ods';
 import { writeXlsx } from 'hucre/xlsx';
 import * as XLSX from 'xlsx';
-import { parseCSV, parseSpreadsheet, parseXls, type HucreFormat } from '../src/parser.js';
+import {
+  parseCSV,
+  parseSpreadsheet,
+  parseXls,
+  parseJson,
+  type HucreFormat,
+} from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
 const opts = (
@@ -583,5 +589,62 @@ describe('parseXls — legacy binary .xls (BIFF8)', () => {
   it('throws when the sheet index is out of range', async () => {
     const buf = xlsBuf([{ name: 'only', rows: [['A'], ['x']] }]);
     await expect(parseXls(buf, xlsOpts({ sheet: 9 }))).rejects.toThrow('out of range');
+  });
+});
+
+describe('parseJson', () => {
+  const jbuf = (s: string): Buffer => Buffer.from(s, 'utf8');
+  const jopts = (record_path?: string) => ({ encoding: 'utf8' as const, record_path });
+
+  it('flattens a root array of records into dot-path string rows', async () => {
+    const rows = await parseJson(jbuf('[{"a":"x","b":{"c":"y"}}]'), jopts(''));
+    expect(rows).toEqual([{ a: 'x', 'b.c': 'y' }]);
+  });
+
+  it('serializes arrays to a JSON string for transforms to unpack', async () => {
+    const rows = await parseJson(jbuf('[{"items":[1,2,3]}]'), jopts());
+    expect(rows[0]?.items).toBe('[1,2,3]');
+  });
+
+  it('stringifies numbers and booleans, omits null/undefined leaves', async () => {
+    const rows = await parseJson(jbuf('[{"n":42,"b":true,"z":null}]'), jopts());
+    expect(rows[0]).toEqual({ n: '42', b: 'true' });
+  });
+
+  it('navigates a nested record_path to the array', async () => {
+    const rows = await parseJson(jbuf('{"data":{"items":[{"r":"HB-1"}]}}'), jopts('data.items'));
+    expect(rows).toEqual([{ r: 'HB-1' }]);
+  });
+
+  it('returns an empty array for an empty record set', async () => {
+    await expect(parseJson(jbuf('[]'), jopts())).resolves.toEqual([]);
+  });
+
+  it('throws when the root is not an array', async () => {
+    await expect(parseJson(jbuf('{"r":"HB-1"}'), jopts())).rejects.toThrow(
+      /did not resolve to an array/i
+    );
+  });
+
+  it('throws when record_path does not resolve to an array', async () => {
+    await expect(parseJson(jbuf('{"data":{}}'), jopts('data.items'))).rejects.toThrow(
+      /did not resolve to an array/i
+    );
+  });
+
+  it('throws when record_path traverses through a non-object', async () => {
+    await expect(parseJson(jbuf('{"data":"x"}'), jopts('data.items'))).rejects.toThrow(
+      /does not resolve to an object/i
+    );
+  });
+
+  it('rejects malformed JSON', async () => {
+    await expect(parseJson(jbuf('[{bad'), jopts())).rejects.toThrow();
+  });
+
+  it('fails fast when a record is not an object', async () => {
+    await expect(parseJson(jbuf('[{"r":"HB-1"},42]'), jopts())).rejects.toThrow(
+      /record at index 1 is not an object/i
+    );
   });
 });
