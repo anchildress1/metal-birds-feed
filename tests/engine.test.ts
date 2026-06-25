@@ -1314,7 +1314,12 @@ beforeAll(async () => {
   const result = await translate(config, files);
   brRecords = result.records;
   brStats = result.stats;
-  brByRegistration = new Map([...result.records.values()].map((record) => [record.registration!, record]));
+  brByRegistration = new Map(
+    [...result.records.values()].map((record) => {
+      if (!record.registration) throw new Error(`BR fixture record ${record.source_id} is missing registration`);
+      return [record.registration, record];
+    })
+  );
 });
 
 describe('BR-ANAC fixture translation', () => {
