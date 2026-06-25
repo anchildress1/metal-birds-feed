@@ -1405,6 +1405,8 @@ describe('BR-ANAC fixture translation', () => {
       expect(r.owner.name).toBe('HBR AVIACAO S.A');
       expect(r.operator).toEqual({ name: null, kind: null, state: null, country: 'BR' });
     });
+    it('falls back to the bare mark as source_id when ANAC omits the certificate number', () =>
+      expect(r.source_id).toBe('PPAPA'));
     it('leaves dates and unpublished capacity fields null', () => {
       expect(r.certification_date).toBeNull();
       expect(r.expiration_date).toBeNull();
