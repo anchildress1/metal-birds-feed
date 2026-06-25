@@ -248,6 +248,16 @@ const brPartyKind = (value: string): string | null => {
   return 'other';
 };
 
+// ANAC's MARCAS registration marks can be reassigned after cancellation/export, so a bare mark is
+// not globally unique across the full historical register. Use the certificate number when ANAC
+// publishes one, and fall back to the raw mark for uncertificated rows such as reserved marks.
+const brSourceId = (values: string[]): string | null => {
+  const mark = values[0]?.trim().toUpperCase() ?? '';
+  if (!/^[A-Z]{2}[A-Z0-9]{3}$/.test(mark)) return null;
+  const certificate = values[1]?.trim() ?? '';
+  return certificate.length > 0 ? `${mark}:${certificate}` : mark;
+};
+
 // FOCA's register API returns hex as a lowercase 24-bit Mode-S code, or "N/A" when none is
 // assigned (e.g. reservations). Normalize and drop anything that is not a real 6-digit hex.
 const focaHexOrNull = (value: string): string | null => {
@@ -507,6 +517,7 @@ const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => str
   tc_airframe: tcAirframe,
   nl_ilt_airframe: nlIltAirframe,
   casa_airframe: casaAirframe,
+  br_source_id: brSourceId,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

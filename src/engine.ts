@@ -105,10 +105,7 @@ function translateRow(
   records: Map<string, Aircraft>
 ): RowOutcome {
   const merged = mergeJoins(row, config, joinMaps);
-  const rawId = resolveScalar(merged, {
-    field: config.source_id,
-    transform: config.source_id_transform ?? 'trim_or_null',
-  });
+  const rawId = resolveSourceId(merged, config);
   if (!rawId) {
     if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
       log('warn', 'translate_skip', {
@@ -265,6 +262,19 @@ function resolveArray(row: Row, mapping: FieldMapping): string[] {
   const value = row[field] ?? '';
   if (!mapping.array_transform) return [];
   return applyArray(mapping.array_transform, value);
+}
+
+function resolveSourceId(row: Row, config: SourceConfig): string | null {
+  if (config.source_id_compound_transform) {
+    return resolveCompound(row, {
+      fields: config.source_id_fields,
+      compound_transform: config.source_id_compound_transform,
+    });
+  }
+  return resolveScalar(row, {
+    field: config.source_id,
+    transform: config.source_id_transform ?? 'trim_or_null',
+  });
 }
 
 function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown {

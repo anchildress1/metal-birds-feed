@@ -427,6 +427,15 @@ describe('br_status', () => {
     expect(applyScalar('br_status', '   ')).toBe('valid'));
 });
 
+describe('br_source_id', () => {
+  it('uses the mark plus certificate when the certificate is present', () =>
+    expect(applyCompound('br_source_id', ['ppjpg', '20783'])).toBe('PPJPG:20783'));
+  it('falls back to the bare mark for uncertificated rows', () =>
+    expect(applyCompound('br_source_id', ['PPAPA', ''])).toBe('PPAPA'));
+  it('returns null for malformed marks', () =>
+    expect(applyCompound('br_source_id', ['BAD', '20783'])).toBeNull());
+});
+
 describe('br_party_name', () => {
   const owner = '[{"NOME":"GRANO LTDA","DOCUMENTO":"52511458000109","UF":"SP"}]';
   it('extracts the first party name from the JSON array', () =>

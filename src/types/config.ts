@@ -42,7 +42,12 @@ export const SCALAR_TRANSFORMS = [
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
-export const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe', 'casa_airframe'] as const;
+export const COMPOUND_TRANSFORMS = [
+  'tc_airframe',
+  'nl_ilt_airframe',
+  'casa_airframe',
+  'br_source_id',
+] as const;
 
 export type ScalarTransformName = (typeof SCALAR_TRANSFORMS)[number];
 
@@ -112,8 +117,10 @@ export interface SourceConfig {
   columns?: Record<string, string[]>;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
-  source_id: string;
+  source_id?: string;
   source_id_transform?: ScalarTransformName;
+  source_id_fields?: string[];
+  source_id_compound_transform?: CompoundTransformName;
   registration: string;
   cadence_days?: number;
   mapping: Record<string, FieldMapping>;

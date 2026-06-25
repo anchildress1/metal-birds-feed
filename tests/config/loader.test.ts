@@ -14,6 +14,7 @@ describe('loadSourceConfig', () => {
     expect(config.encoding).toBe('latin1');
     expect(config.primary).toBe('master');
     expect(config.source_id).toBe('UNIQUE ID');
+    expect(config.source_id_fields).toBeUndefined();
     expect(config.joins).toHaveLength(2);
     expect(config.joins[0]?.name).toBe('acft');
     expect(config.joins[1]?.name).toBe('eng');
@@ -93,6 +94,60 @@ describe('loadSourceConfig', () => {
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/compound_transform requires fields/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts compound source_id configs', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_source_id_compound.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: BR\nencoding: utf8\ndownload:\n  url: https://example.com/x.csv\n  format: file\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ';'\nsource_id_fields: [MARK, CERT]\nsource_id_compound_transform: br_source_id\nregistration: MARK\nmapping:\n  registration: { field: MARK }\n`
+    );
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.source_id).toBeUndefined();
+      expect(config.source_id_fields).toEqual(['MARK', 'CERT']);
+      expect(config.source_id_compound_transform).toBe('br_source_id');
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects source_id_fields without source_id_compound_transform', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_source_id_fields_no_compound.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: BR\nencoding: utf8\ndownload:\n  url: https://example.com/x.csv\n  format: file\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ';'\nsource_id_fields: [MARK, CERT]\nregistration: MARK\nmapping:\n  registration: { field: MARK }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/source_id_compound_transform requires source_id_fields/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects configs that set both scalar and compound source_id modes', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_source_id_both_modes.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: BR\nencoding: utf8\ndownload:\n  url: https://example.com/x.csv\n  format: file\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ';'\nsource_id: MARK\nsource_id_fields: [MARK, CERT]\nsource_id_compound_transform: br_source_id\nregistration: MARK\nmapping:\n  registration: { field: MARK }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/source_id requires scalar mode/i);
     } finally {
       unlinkSync(tmp);
     }

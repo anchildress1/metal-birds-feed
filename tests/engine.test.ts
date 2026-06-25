@@ -1306,6 +1306,7 @@ function brBuffer(filename: string): Buffer {
 
 let brRecords: Map<string, Aircraft>;
 let brStats: EngineStats;
+let brByRegistration: Map<string, Aircraft>;
 
 beforeAll(async () => {
   const config = loadSourceConfig(BR_CONFIG_PATH);
@@ -1313,6 +1314,9 @@ beforeAll(async () => {
   const result = await translate(config, files);
   brRecords = result.records;
   brStats = result.stats;
+  brByRegistration = new Map(
+    [...result.records.values()].map((record) => [record.registration ?? record.source_id, record])
+  );
 });
 
 describe('BR-ANAC fixture translation', () => {
@@ -1324,10 +1328,11 @@ describe('BR-ANAC fixture translation', () => {
   describe('PPJPG — single-engine piston, individual owner, valid', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPJPG')!;
+      r = brByRegistration.get('PP-JPG')!;
     });
     it('hyphenates the registration mark', () => expect(r.registration).toBe('PP-JPG'));
-    it('uses the bare mark as source_id', () => expect(r.source_id).toBe('PPJPG'));
+    it('uses mark + certificate for the source_id when ANAC publishes a certificate', () =>
+      expect(r.source_id).toBe('PPJPG:20783'));
     it('is valid (no cancellation date)', () => expect(r.status).toBe('valid'));
     it('classifies a landplane single as fixed-wing-single-engine', () =>
       expect(r.airframe_type).toBe('fixed-wing-single-engine'));
@@ -1348,7 +1353,7 @@ describe('BR-ANAC fixture translation', () => {
   describe('PPACP — twin turbofan, corporate owner, transport category', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPACP')!;
+      r = brByRegistration.get('PP-ACP')!;
     });
     it('classifies a twin landplane as fixed-wing-multi-engine', () =>
       expect(r.airframe_type).toBe('fixed-wing-multi-engine'));
@@ -1360,7 +1365,7 @@ describe('BR-ANAC fixture translation', () => {
   describe('PPADZ — cancelled registration', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPADZ')!;
+      r = brByRegistration.get('PP-ADZ')!;
     });
     it('is cancelled when DT_CANC is present', () => expect(r.status).toBe('cancelled'));
     it('records the cancellation date as last_action_date', () =>
@@ -1380,15 +1385,15 @@ describe('BR-ANAC fixture translation', () => {
 
   describe('PPJCR — three-way co-ownership', () => {
     it('flags the owner kind as co-owner', () =>
-      expect(brRecords.get('PPJCR')?.owner.kind).toBe('co-owner'));
+      expect(brByRegistration.get('PP-JCR')?.owner.kind).toBe('co-owner'));
     it('keeps the primary owner name', () =>
-      expect(brRecords.get('PPJCR')?.owner.name).toBe('SERGIO MURILO LEANDRO COSTA'));
+      expect(brByRegistration.get('PP-JCR')?.owner.name).toBe('SERGIO MURILO LEANDRO COSTA'));
   });
 
   describe('PPAPA — helicopter, undisclosed operator', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPAPA')!;
+      r = brByRegistration.get('PP-APA')!;
     });
     it('classifies a helicopter class as rotorcraft', () =>
       expect(r.airframe_type).toBe('rotorcraft'));
@@ -1408,7 +1413,7 @@ describe('BR-ANAC fixture translation', () => {
   describe('PPFAL — unpowered (glider), cancelled', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPFAL')!;
+      r = brByRegistration.get('PP-FAL')!;
     });
     it('classifies an unpowered landplane (L00) as glider', () =>
       expect(r.airframe_type).toBe('glider'));
@@ -1423,7 +1428,7 @@ describe('BR-ANAC fixture translation', () => {
   describe('PRAFV — drone (RPA)', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PRAFV')!;
+      r = brByRegistration.get('PR-AFV')!;
     });
     it('leaves airframe_type null (no canonical UAV enum)', () =>
       expect(r.airframe_type).toBeNull());
@@ -1433,7 +1438,7 @@ describe('BR-ANAC fixture translation', () => {
   describe('PPASW — single turboprop, restricted category', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPASW')!;
+      r = brByRegistration.get('PP-ASW')!;
     });
     it('maps MOTOR TURBOHELICE to turbo-prop', () => expect(r.engine.type).toBe('turbo-prop'));
     it('maps RESTRITA to the limited category', () => expect(r.category).toBe('limited'));
@@ -1441,13 +1446,13 @@ describe('BR-ANAC fixture translation', () => {
 
   describe('PPACK — UTF-8 accented owner name round-trip', () => {
     it('preserves Brazilian Portuguese diacritics', () =>
-      expect(brRecords.get('PPACK')?.owner.name).toBe('HANGAR ONE SERVIÇOS AERONÁUTICOS LTDA.'));
+      expect(brByRegistration.get('PP-ACK')?.owner.name).toBe('HANGAR ONE SERVIÇOS AERONÁUTICOS LTDA.'));
   });
 
   describe('PPACK — interdiction code is preserved, never folded into status', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = brRecords.get('PPACK')!;
+      r = brByRegistration.get('PP-ACK')!;
     });
     it('preserves the raw interdiction code verbatim', () =>
       expect(r.interdiction_code).toBe('C8'));

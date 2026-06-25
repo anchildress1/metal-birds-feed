@@ -98,12 +98,26 @@ const SourceConfigSchema = z.object({
       })
     )
     .default([]),
-  source_id: z.string().min(1),
+  source_id: z.string().min(1).optional(),
   source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
+  source_id_fields: z.array(z.string().min(1)).min(1).optional(),
+  source_id_compound_transform: z.enum(COMPOUND_TRANSFORMS).optional(),
   registration: z.string().min(1),
   cadence_days: z.number().int().positive().optional(),
   mapping: z.record(z.string(), FieldMappingSchema),
-});
+})
+  .refine(
+    (v) =>
+      (v.source_id !== undefined || v.source_id_fields !== undefined) &&
+      ((v.source_id !== undefined) !== (v.source_id_fields !== undefined)),
+    {
+      message: 'source_id requires scalar mode, and source_id_fields requires compound mode',
+    }
+  )
+  .refine((v) => (v.source_id_compound_transform === undefined) === (v.source_id_fields === undefined), {
+    message:
+      'source_id_compound_transform requires source_id_fields, and source_id_fields requires source_id_compound_transform',
+  });
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 

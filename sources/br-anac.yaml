@@ -20,8 +20,10 @@ format: csv
 # Line 1 is an "Atualizado em: <date>" banner; skip it so the real header is parsed.
 skip_rows: 1
 
-# MARCAS is the permanent registration mark and ANAC's stable per-aircraft key.
-source_id: MARCAS
+# ANAC can reuse MARCAS after cancellation/export, so pair the mark with the certificate number
+# when present and fall back to the bare mark for uncertificated reservation rows.
+source_id_fields: [MARCAS, NR_CERT_MATRICULA]
+source_id_compound_transform: br_source_id
 registration: MARCAS
 
 mapping:
