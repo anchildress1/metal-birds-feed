@@ -430,6 +430,8 @@ describe('br_status', () => {
 describe('br_source_id', () => {
   it('uses the mark plus certificate when the certificate is present', () =>
     expect(applyCompound('br_source_id', ['ppjpg', '20783'])).toBe('PPJPG:20783'));
+  it('trims certificate whitespace before composing the source_id', () =>
+    expect(applyCompound('br_source_id', ['PPJPG', '  20783  '])).toBe('PPJPG:20783'));
   it('falls back to the bare mark for uncertificated rows', () =>
     expect(applyCompound('br_source_id', ['PPAPA', ''])).toBe('PPAPA'));
   it('returns null for malformed marks', () =>

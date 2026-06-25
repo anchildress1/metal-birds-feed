@@ -1314,9 +1314,7 @@ beforeAll(async () => {
   const result = await translate(config, files);
   brRecords = result.records;
   brStats = result.stats;
-  brByRegistration = new Map(
-    [...result.records.values()].map((record) => [record.registration ?? record.source_id, record])
-  );
+  brByRegistration = new Map([...result.records.values()].map((record) => [record.registration!, record]));
 });
 
 describe('BR-ANAC fixture translation', () => {
