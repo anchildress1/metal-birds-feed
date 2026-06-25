@@ -272,7 +272,9 @@ function resolveSourceId(row: Row, config: SourceConfig): string | null {
     });
   }
   if (!config.source_id) {
-    throw new Error('Internal invariant violated: source_id is undefined but no source_id_compound_transform is configured');
+    throw new Error(
+      'Internal invariant violated: source_id is undefined and source_id_compound_transform is not configured'
+    );
   }
   return resolveScalar(row, {
     field: config.source_id,
