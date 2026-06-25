@@ -271,6 +271,9 @@ function resolveSourceId(row: Row, config: SourceConfig): string | null {
       compound_transform: config.source_id_compound_transform,
     });
   }
+  if (!config.source_id) {
+    throw new Error('Invalid source config: scalar source_id is required when no source_id_compound_transform is set');
+  }
   return resolveScalar(row, {
     field: config.source_id,
     transform: config.source_id_transform ?? 'trim_or_null',

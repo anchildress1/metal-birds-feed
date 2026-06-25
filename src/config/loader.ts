@@ -106,14 +106,13 @@ const SourceConfigSchema = z.object({
   cadence_days: z.number().int().positive().optional(),
   mapping: z.record(z.string(), FieldMappingSchema),
 })
-  .refine(
-    (v) =>
-      (v.source_id !== undefined || v.source_id_fields !== undefined) &&
-      ((v.source_id !== undefined) !== (v.source_id_fields !== undefined)),
-    {
-      message: 'source_id requires scalar mode, and source_id_fields requires compound mode',
-    }
-  )
+  .refine((v) => {
+    const hasScalarSourceId = v.source_id !== undefined;
+    const hasCompoundSourceId = v.source_id_fields !== undefined;
+    return (hasScalarSourceId || hasCompoundSourceId) && hasScalarSourceId !== hasCompoundSourceId;
+  }, {
+    message: 'source_id requires scalar mode, and source_id_fields requires compound mode',
+  })
   .refine((v) => (v.source_id_compound_transform === undefined) === (v.source_id_fields === undefined), {
     message:
       'source_id_compound_transform requires source_id_fields, and source_id_fields requires source_id_compound_transform',

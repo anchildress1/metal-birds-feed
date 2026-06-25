@@ -128,7 +128,9 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: BR\nencoding: utf8\ndownload:\n  url: https://example.com/x.csv\n  format: file\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ';'\nsource_id_fields: [MARK, CERT]\nregistration: MARK\nmapping:\n  registration: { field: MARK }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/source_id_compound_transform requires source_id_fields/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /source_id_compound_transform requires source_id_fields.*source_id_fields requires source_id_compound_transform/i
+      );
     } finally {
       unlinkSync(tmp);
     }
