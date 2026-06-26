@@ -928,6 +928,30 @@ describe('engine — negative and edge cases', () => {
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N1'); // first occurrence wins
   });
+
+  it('skips a byte-identical duplicate row instead of failing', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-identical',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N1\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(stats.skipped).toBe(1);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
 });
 
 describe('engine — spreadsheet dispatch (parsePrimary)', () => {

@@ -137,9 +137,21 @@ function translateRow(
       });
       return { status: 'failed' };
     }
-    // source_id is the source's permanent unique key; a duplicate means the id assumption is wrong
-    // (e.g. a non-unique mark used as id) and last-wins would silently drop a record.
-    if (records.has(rawId)) {
+    // source_id is the source's permanent unique key. A duplicate id carrying a byte-identical
+    // record is a redundant row the registry published twice (e.g. ANAC's RAB ships some marks
+    // twice verbatim) — skip it. A duplicate id with differing content means the id assumption is
+    // wrong (e.g. a non-unique mark used as id) and last-wins would silently drop a record — fail.
+    const existing = records.get(rawId);
+    if (existing) {
+      if (Bun.deepEquals(existing, parsed.data)) {
+        log('warn', 'translate_skip', {
+          source: config.id,
+          row: i + 2,
+          source_id: rawId,
+          reason: 'exact duplicate row',
+        });
+        return { status: 'skipped' };
+      }
       log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
       return { status: 'failed' };
     }
