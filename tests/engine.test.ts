@@ -952,6 +952,58 @@ describe('engine — negative and edge cases', () => {
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
   });
+
+  it('fails a duplicate source_id that differs only in an unmapped column', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-unmapped',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // EXTRA is not mapped, so both rows produce identical canonical records. The raw-row compare
+    // still catches the upstream difference and fails rather than silently dropping it.
+    const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(1);
+  });
+
+  it('does not let duplicate skips consume the missing-source_id budget', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-budget',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      allowed_missing_source_id_rows: { max: 1, field: 'KIND', pattern: '^banner$' },
+      mapping: { registration: { field: 'REG' } },
+    };
+    // Row 2 is an exact duplicate (skipped); row 3 is the single allowed missing-id banner row.
+    // The duplicate skip must not eat the missing-id budget, so the banner row is still allowed.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,KIND\n1,N1,x\n1,N1,x\n,N3,banner\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(stats.skipped).toBe(2); // 1 duplicate + 1 missing-id
+    expect(records.size).toBe(1);
+  });
 });
 
 describe('engine — spreadsheet dispatch (parsePrimary)', () => {

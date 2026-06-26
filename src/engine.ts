@@ -65,8 +65,13 @@ export async function translate(
   const rows = await parsePrimary(primaryBuf, config);
 
   const records = new Map<string, Aircraft>();
+  // Raw merged row per source_id. The duplicate check compares the actual input, so an identical
+  // re-publish is skipped while any upstream difference (even an unmapped column) still fails.
+  const seenRows = new Map<string, Row>();
   let failed = 0;
-  let skipped = 0;
+  // Tracked apart from duplicate skips: only missing-id skips count against the missing-id budget.
+  let missingIdSkipped = 0;
+  let duplicateSkipped = 0;
 
   for (let i = 0; i < rows.length; i++) {
     const outcome = translateRow(
@@ -75,34 +80,41 @@ export async function translate(
       config,
       joinMaps,
       missingSourceIdPolicy,
-      skipped,
-      records
+      missingIdSkipped,
+      seenRows
     );
-    if (outcome.status === 'skipped') skipped++;
-    else if (outcome.status === 'failed') failed++;
-    else records.set(outcome.id, outcome.record);
+    if (outcome.status === 'skipped') {
+      if (outcome.reason === 'missing_id') missingIdSkipped++;
+      else duplicateSkipped++;
+    } else if (outcome.status === 'failed') failed++;
+    else {
+      records.set(outcome.id, outcome.record);
+      seenRows.set(outcome.id, outcome.row);
+    }
   }
 
+  const skipped = missingIdSkipped + duplicateSkipped;
   const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }
 
 type RowOutcome =
-  | { status: 'ok'; id: string; record: Aircraft }
-  | { status: 'skipped' }
+  | { status: 'ok'; id: string; record: Aircraft; row: Row }
+  | { status: 'skipped'; reason: 'missing_id' | 'duplicate' }
   | { status: 'failed' };
 
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
-// owns the counters and the insert. `skipped` is the running skip count, for the missing-id bound.
+// owns the counters and the insert. `missingIdSkipped` is the running missing-id skip count, used
+// only for the missing-id bound — duplicate skips are counted separately so they can't consume it.
 function translateRow(
   row: Row,
   i: number,
   config: SourceConfig,
   joinMaps: Map<string, Map<string, Row>>,
   missingSourceIdPolicy: MissingSourceIdPolicy | null,
-  skipped: number,
-  records: Map<string, Aircraft>
+  missingIdSkipped: number,
+  seenRows: Map<string, Row>
 ): RowOutcome {
   const merged = mergeJoins(row, config, joinMaps);
   const rawId = resolveScalar(merged, {
@@ -110,19 +122,38 @@ function translateRow(
     transform: config.source_id_transform ?? 'trim_or_null',
   });
   if (!rawId) {
-    if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, skipped)) {
+    if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, missingIdSkipped)) {
       log('warn', 'translate_skip', {
         source: config.id,
         row: i + 2,
         reason: 'allowed missing source_id',
       });
-      return { status: 'skipped' };
+      return { status: 'skipped', reason: 'missing_id' };
     }
     log('error', 'translate_invalid', {
       source: config.id,
       row: i + 2,
       reason: 'missing source_id',
     });
+    return { status: 'failed' };
+  }
+
+  // source_id is the source's permanent unique key. A second row with the same id whose raw input
+  // is identical is a redundant re-publish (e.g. ANAC's RAB ships some marks twice verbatim) — skip
+  // it. Any difference, even in an unmapped column, means the id assumption is wrong and last-wins
+  // would silently drop upstream data — fail.
+  const priorRow = seenRows.get(rawId);
+  if (priorRow) {
+    if (Bun.deepEquals(priorRow, merged)) {
+      log('warn', 'translate_skip', {
+        source: config.id,
+        row: i + 2,
+        source_id: rawId,
+        reason: 'exact duplicate row',
+      });
+      return { status: 'skipped', reason: 'duplicate' };
+    }
+    log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
     return { status: 'failed' };
   }
 
@@ -137,25 +168,7 @@ function translateRow(
       });
       return { status: 'failed' };
     }
-    // source_id is the source's permanent unique key. A duplicate id carrying a byte-identical
-    // record is a redundant row the registry published twice (e.g. ANAC's RAB ships some marks
-    // twice verbatim) — skip it. A duplicate id with differing content means the id assumption is
-    // wrong (e.g. a non-unique mark used as id) and last-wins would silently drop a record — fail.
-    const existing = records.get(rawId);
-    if (existing) {
-      if (Bun.deepEquals(existing, parsed.data)) {
-        log('warn', 'translate_skip', {
-          source: config.id,
-          row: i + 2,
-          source_id: rawId,
-          reason: 'exact duplicate row',
-        });
-        return { status: 'skipped' };
-      }
-      log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
-      return { status: 'failed' };
-    }
-    return { status: 'ok', id: rawId, record: parsed.data };
+    return { status: 'ok', id: rawId, record: parsed.data, row: merged };
   } catch (err) {
     log('error', 'translate_error', {
       source: config.id,
