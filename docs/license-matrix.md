@@ -152,7 +152,7 @@ Compact agency correspondence matrix. Rows are ordered alphabetically by country
 | Slovenia | CAA Slovenia | info@caa.si | 2026-05-10 | pending | sent |
 | South Africa | SACAA | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
 | South Sudan | SSCAA | support@sscaa.gov.ss | 2026-05-11 | pending | sent |
-| Spain | AESA | rmac.aesa@seguridadaerea.es | 2026-05-05 | open | cleared |
+| Spain | AESA | rmac.aesa@seguridadaerea.es | 2026-05-05 | pending | sent |
 | Sri Lanka | CAASL | daw@caa.lk | 2026-05-05 | pending | sent |
 | Sudan | CAA Sudan | none | n/a | none | excluded: conflict |
 | Suriname | CASAS | casasinfo@casas.sr | 2026-05-05 | pending | sent |

@@ -271,7 +271,7 @@ Rows are ordered alphabetically by country. Source IDs remain in backticks where
 | CAA Slovenia | Slovenia | info@caa.si | 2026-05-10 | pending | sent |
 | SACAA South Africa | South Africa | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
 | SSCAA | South Sudan | support@sscaa.gov.ss | 2026-05-11 | pending | sent |
-| AESA — es-aesa (pending impl) | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | open | cleared |
+| AESA | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | pending | sent |
 | CAASL | Sri Lanka | daw@caa.lk | 2026-05-05 | pending | sent |
 | CAA Sudan | Sudan | none | n/a | none | excluded: conflict |
 | CASAS | Suriname | casasinfo@casas.sr | 2026-05-05 | pending | sent |
