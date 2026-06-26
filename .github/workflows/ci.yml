@@ -21,9 +21,6 @@ jobs:
       contents: read
       pull-requests: write
 
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -64,7 +61,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: SonarQube scan
-        if: env.SONAR_TOKEN != ''
         # nosemgrep
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:

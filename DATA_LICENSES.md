@@ -1,6 +1,6 @@
 # Data Licenses
 
-Compact source status record. Update this when an agency is contacted, replies, changes license posture, or ships/becomes excluded.
+Single record of source for agency correspondence and license posture: every country contacted, with email, sent/reply dates, and status. Update this when an agency is contacted, replies, changes license posture, or ships/becomes excluded. The README sources table shows only live/cleared sources; this is the full tracker.
 
 ## Project License
 
@@ -159,7 +159,7 @@ Compact source status record. Update this when an agency is contacted, replies, 
 | CAA Slovenia | Slovenia | info@caa.si | 2026-05-10 | pending | sent |
 | SACAA | South Africa | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
 | SSCAA | South Sudan | support@sscaa.gov.ss | 2026-05-11 | pending | sent |
-| AESA | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | open | cleared |
+| AESA | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | pending | sent |
 | CAASL | Sri Lanka | daw@caa.lk | 2026-05-05 | pending | sent |
 | CAA Sudan | Sudan | none | n/a | none | excluded: conflict |
 | CASAS | Suriname | casasinfo@casas.sr | 2026-05-05 | pending | sent |

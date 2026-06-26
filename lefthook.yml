@@ -18,10 +18,10 @@ pre-commit:
       glob: '.github/workflows/*.yml'
       run: actionlint {staged_files}
     check-sources-sorted:
-      # Sources tables in README + license-matrix must stay alphabetical-by-country.
+      # The README Sources table must stay alphabetical-by-country.
       # Three batches in a row landed entries in the wrong position; this catches
       # it before commit so the next forty entries stay sorted automatically.
-      glob: '{README.md,docs/license-matrix.md}'
+      glob: '{README.md}'
       run: python3 scripts/check-sources-sorted.py
 
 commit-msg:

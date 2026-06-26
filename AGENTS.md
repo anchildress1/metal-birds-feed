@@ -40,15 +40,15 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Classify license per CC.1: Open / Personal-use / Restrictive / Unknown.
 - Personal-use + Unknown: send permission email via `docs/agency-permission-request.md`. 30-day public-record fallback applies to **Unknown only**; Personal-use needs affirmative reply (silence ≠ permission).
 - Restrictive: exclude. Document reason in `DATA_LICENSES.md`; do not email.
-- New source = 6 surfaces or incomplete: `sources/<id>.yaml` + `fixtures/<id>/` ground-truth + `DATA_LICENSES.md` entry + `README.md` sources row + `README.md` `## Attribution` block (required even for CC-0/public-domain: courtesy credit) + `docs/license-matrix.md` summary row.
-- README sources table + license-matrix summary table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append.
+- New source = 5 surfaces or incomplete: `sources/<id>.yaml` + `fixtures/<id>/` ground-truth + `DATA_LICENSES.md` entry + `README.md` sources row + `README.md` `## Attribution` block (required even for CC-0/public-domain: courtesy credit).
+- README sources table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append. The README table lists live/cleared sources only; the full agency-correspondence tracker lives in `DATA_LICENSES.md`.
 - New scalar/compound transform = 3 places simultaneously or loader rejects: enum in `src/types/config.ts` (`ScalarTransformName`/`CompoundTransformName`) + handler in `src/transforms.ts` + allowlist in `src/config/loader.ts`.
 
 ### Research-first rule
 
 - **Exhaust all research options before sending the first contact email.** Hunt national open-data portals (CKAN/Aporta/data.gov.\* listings), register pages, ToS / disclaimer text, and any public license declarations. Only send the permission email once research is genuinely exhausted and classification is still Unknown or under-verified.
 - **Never send a follow-up or clarifier before the 30-day fallback window expires.** A second email asking the same question is a duplicate request — agencies treat it as noise and it does not earn a faster reply.
-- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (detail entry) + `README.md` (sources row) + `docs/license-matrix.md` (summary row) + `docs/source-onboarding-checklist.md` (in-flight row, including any register-specific contact surfaced for the eventual follow-up).
+- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (the email record of source — correspondence row + license detail, including any register-specific contact surfaced for the eventual follow-up) + `docs/source-onboarding-checklist.md` (in-flight row: Source/Sent/Follow-up/Reply/Fallback). Add the `README.md` sources row only once the source is live or cleared.
 - After recon on an already-emailed agency: update docs, move on to the next source. Wait until the original 30-day timeline expires before sending anything else to that agency.
 - Exception — surfacing a new fact materially changes the ask (not "please confirm what we already asked"). Rare. Default is no.
 
@@ -113,7 +113,8 @@ Never: stack feature + unrelated docs because "commit + push" was said; call a m
 - Don't create new top-level doc files unilaterally. If work seems to call for one, ask first; answer is usually "fold into an existing one". Exception: `sources/<id>.yaml`, `fixtures/<id>/`, other source-onboarding artifacts in the standard workflow.
 - Required updates (not optional) when underlying state changes:
   - `DATA_LICENSES.md` — when a source is added or its license posture changes.
-  - `README.md` sources table + `README.md` `## Attribution` block + `docs/license-matrix.md` summary table — alongside any new `sources/<id>.yaml`.
+  - `README.md` sources table (live/cleared sources) + `README.md` `## Attribution` block — alongside any new `sources/<id>.yaml`.
   - `PRD.md` — only when goals, requirements, or constraints shift. It is planning, not a shipped-implementation log; do not restate source YAML or schema here.
-- `docs/license-matrix.md`: the summary table is the surface (triage across all candidate registries). Per-agency `### detail` blocks are legacy — they duplicate `DATA_LICENSES.md`; do not add them for new sources.
+- `DATA_LICENSES.md` is the single record of source for agency correspondence (every country contacted: email, sent/reply dates, status) and license posture. Do not duplicate that table into other docs.
+- `docs/source-onboarding-checklist.md`: triage worklist only. Tracking tables stay bare (Source/Sent/Follow-up/Reply/Fallback) — contact provenance, names, phones, and prefixes belong in `DATA_LICENSES.md`, not here.
 - Inline code comments: WHY only (per Hard prohibitions WHAT-vs-WHY rule).
