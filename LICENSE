@@ -43,9 +43,9 @@ Additional Terms
    This project ingests data published by national civil aviation authorities
    in multiple jurisdictions. Each such jurisdiction may impose data-use,
    redistribution, privacy, or other legal obligations on downstream users.
-   The license research documented in DATA_LICENSES.md and
-   docs/license-matrix.md is provided in good faith as informational context
-   only. It does not constitute legal advice and carries no guarantee of
+   The license research documented in DATA_LICENSES.md is provided in good
+   faith as informational context only. It does not constitute legal advice
+   and carries no guarantee of
    completeness, accuracy, or continued validity. You are solely responsible
    for assessing and satisfying the data-use obligations of every jurisdiction
    whose data you ingest.

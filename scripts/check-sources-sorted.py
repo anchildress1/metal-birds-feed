@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Verify that the Sources tables in README.md and docs/license-matrix.md are sorted
-alphabetically by Country.
+"""Verify that the README.md Sources table is sorted alphabetically by Country.
 
-The Sources tables grow as new agencies are triaged. Inserting new rows in the wrong
+The Sources table grows as new agencies are triaged. Inserting new rows in the wrong
 position has happened three times in a row across recent doc batches; this validator
 catches it at commit time so the next forty entries stay in shape.
 
 Exit codes:
-    0 — both tables are sorted by Country (case-insensitive).
-    1 — one or more tables out of order; offending pairs printed.
+    0 — the table is sorted by Country (case-insensitive).
+    1 — the table is out of order; offending pairs printed.
 
 Run via lefthook pre-commit (`scripts: check-sources-sorted` in lefthook.yml) or
 directly: `python3 scripts/check-sources-sorted.py`.
@@ -16,12 +15,10 @@ directly: `python3 scripts/check-sources-sorted.py`.
 Conventions per PRD:
     - README sources table sits under the `## Sources` heading. Country is the second
       pipe-delimited column (parts[2] after `line.split('|')`).
-    - docs/license-matrix.md summary table sits under `## Summary table`. Country is
-      the first column (parts[1]).
 
-The validator is intentionally specific to these two files and these two columns —
-no auto-discovery, no markdown-table parser dependency. If the doc structure
-changes, update CONFIG below and the validator.
+The validator is intentionally specific to this file and column — no auto-discovery,
+no markdown-table parser dependency. If the doc structure changes, update CONFIG below
+and the validator.
 """
 
 from __future__ import annotations
@@ -36,7 +33,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # (file path relative to REPO_ROOT, table-section heading marker, country-column index)
 CONFIG = [
     (REPO_ROOT / "README.md", "## Sources", 2),
-    (REPO_ROOT / "docs" / "license-matrix.md", "## Summary table", 1),
 ]
 
 

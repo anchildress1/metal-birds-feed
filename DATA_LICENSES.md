@@ -1,6 +1,6 @@
 # Data Licenses
 
-Compact source status record. Update this when an agency is contacted, replies, changes license posture, or ships/becomes excluded.
+Single record of source for agency correspondence and license posture: every country contacted, with email, sent/reply dates, and status. Update this when an agency is contacted, replies, changes license posture, or ships/becomes excluded. The README sources table shows only live/cleared sources; this is the full tracker.
 
 ## Project License
 
