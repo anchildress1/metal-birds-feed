@@ -279,7 +279,8 @@ const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegEx
   const anchorCoords = anchors.map((a) => axisCoord(a, recordAxis));
   const spread = outerSpread(anchorCoords);
   const lo = anchorCoords[0] - spread;
-  const hi = anchorCoords[anchorCoords.length - 1] + spread;
+  // anchors is non-empty (guarded above), so first/last coords are defined.
+  const hi = anchorCoords.at(-1)! + spread;
 
   const buckets = anchors.map(() => new Map<number, PdfItem[]>());
   for (const it of page) {
