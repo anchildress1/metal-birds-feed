@@ -1,0 +1,247 @@
+id: mv-caa
+label: CAA Maldives Civil Aircraft Register
+country: MV
+encoding: utf8
+trim_all: true
+cadence_days: 7
+
+download:
+  # The register PDF lives at a rolling content-hash URL under /attachments/; the registration
+  # page is the only stable surface, so discover_* scrapes the current link each run. The page
+  # also lists ~8 form PDFs under the same /attachments/ path, so the pattern anchors on the
+  # surrounding "register can be downloaded from" sentence to capture only the register link.
+  # `url` is the schema-required fallback (never fetched while discover_* resolves), pointed at
+  # the registration page rather than a hash URL that would go stale.
+  url: https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
+  format: file
+  discover_url: https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
+  discover_pattern: 'register can be downloaded from <a href="(https://[^"]+\.pdf)"'
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    register: register.pdf
+
+primary: register
+delimiter: ','
+format: pdf
+
+# The register is a single positioned table rotated 90°: each aircraft is one x-column, each
+# field is a y-band. `column_pos` are the value-band y-centers (paired by index with `columns`),
+# ordered top-of-page (highest y) to bottom; records are anchored on the 8Q-XXX nationality mark.
+# See PdfConfig in src/types/config.ts for the extraction model.
+pdf:
+  field_axis: y
+  anchor_pattern: '^8Q-[A-Z]{3}$'
+  column_pos:
+    - 746.8 # status
+    - 713 # date_revision
+    - 685.5 # date_issue
+    - 616.1 # idera
+    - 551.8 # mortgage
+    - 467.8 # other_specifics
+    - 383.8 # basis
+    - 299.8 # legal_owner
+    - 217.9 # owner (registered)
+    - 205.7 # year
+    - 184.5 # serial
+    - 157 # mtow
+    - 87.6 # mfg
+    - 66 # mark
+    - 40.7 # cert_no
+    - 27 # sn
+
+columns:
+  register:
+    - status
+    - date_revision
+    - date_issue
+    - idera
+    - mortgage
+    - other_specifics
+    - basis
+    - legal_owner
+    - owner
+    - year
+    - serial
+    - mtow
+    - mfg
+    - mark
+    - cert_no
+    - sn
+
+# Certificate number (CR-xxx) is the permanent per-registration key; the 8Q mark is reissued.
+source_id: cert_no
+source_id_transform: trim_or_null
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: trim_or_null
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # Current-fleet register: every listed aircraft is "Valid". Unknown values fail loudly rather
+  # than silently mapping to "other".
+  status:
+    field: status
+    transform: trim
+    lookup:
+      Valid: valid
+    default: other
+
+  country:
+    constant: MV
+
+  # The manufacturer/model cell combines both as free text ("Viking Air (De Havilland)" + model on
+  # the next line) with no reliable separator, so manufacturer stays null and model carries the
+  # whole flattened string — mirrors the tw-caa precedent.
+  manufacturer:
+    constant: ~
+
+  model:
+    field: mfg
+    transform: collapse_ws_or_null
+
+  serial_number:
+    field: serial
+    transform: trim_or_null
+
+  year_manufactured:
+    field: year
+    transform: int_or_null
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # Registered owner. Address lines (street/city/postal) are PII and dropped here — only the name
+  # is kept. Registrants on a national register are Maldivian entities, so country is constant MV.
+  owner.name:
+    field: owner
+    transform: first_line_or_null
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: MV
+
+  # The register's basis is "Operator of Aircraft" (registrant is the operator); a distinct operator
+  # party is not published separately, so operator.* stays null and the registrant maps to owner.*.
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  # Legal owner = the title-holder / lessor, distinct from the registrant. Name kept; address is
+  # free-text with inconsistent formatting (postal lines, no clean country token), so country is
+  # not reliably extractable and stays null rather than being fabricated.
+  legal_owner.name:
+    field: legal_owner
+    transform: first_line_or_null
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  # IDERA cell preserved verbatim (letter ref + authorised party + address), flattened to one line.
+  idera_authorised_party:
+    field: idera
+    transform: collapse_ws_or_null
+
+  certification_date:
+    field: date_issue
+    transform: date_dmmmyy_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    field: date_revision
+    transform: date_dmmmyy_or_null
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: mtow
+    transform: int_or_null
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  # Mortgagee name (or "None"); org address dropped.
+  lien_status:
+    field: mortgage
+    transform: first_line_or_null
+
+  interdiction_code:
+    constant: ~

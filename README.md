@@ -133,7 +133,7 @@ Live and license-cleared sources only, ordered alphabetically by country. Source
 | CAD HK | Hong Kong | enquiry@cad.gov.hk | 2026-05-11 | open | cleared |
 | CAA Latvia — lv-caa | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
 | CAA Lebanon | Lebanon | info@dgca.gov.lb | 2026-05-10 | open | live |
-| CAA Maldives — mv-caa (pending impl) | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | cleared: parser |
+| CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
 | ILT — nl-ilt | Netherlands | none | n/a | open | live |
 | CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | open | cleared: no dataset |
 | CAAS — sg-caas (pending impl) | Singapore | none | n/a | confirmed | cleared |
@@ -156,6 +156,7 @@ Required upstream notices, kept short:
 - Transport Canada value-added notice: This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.
 - CASA Australia: source data from the Civil Aviation Safety Authority, licensed under CC BY 4.0; normalized into this project schema without implying endorsement.
 - FOCA / BAZL Switzerland: source data from the Federal Office of Civil Aviation — [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/); redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.
+- CAA Maldives: source data from the Civil Aviation Authority of the Republic of Maldives — [caa.gov.mv](https://www.caa.gov.mv/); reproduced with the CAA's written permission, normalized into this project schema without implying endorsement. Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission.
 - Public-domain / CC0 sources: credited as courtesy in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
@@ -184,7 +185,7 @@ Required upstream notices, kept short:
    - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
 4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
 
-The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms).
+The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` transforms, and the `legal_owner` canonical field).
 
 ## License
 

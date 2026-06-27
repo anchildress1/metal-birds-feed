@@ -28,19 +28,19 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | CAA Taiwan        | Open (OGDL v1.0)                                  | Live (phase 6) |
 | ANAC Brasil       | Open w/ attribution (CC BY-equiv)                 | Live (phase 7) |
 | FOCA / BAZL (CH)  | Open w/ attribution (FOCA legal grant 2026-05-22) | Live (phase 8) |
+| CAA Maldives      | Open + attribution + error-disclaimer (written)   | Live (phase 9) |
 
 ### 🛠️ Cleared — implementation pending
 
 License is cleared (via public declaration or substantive agency reply). Ingest is blocked on engineering work — usually a new parser path, a non-standard fetch pattern, a data-shape issue, or upstream dataset publication. Full reply text and contacts live in `DATA_LICENSES.md`.
 
-| Source                 | License (cleared via)                                        | Ingest blocker                                                              | Reply           |
-| ---------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------- | --------------- |
-| Traficom Finland       | Open (CC BY 4.0) — confirmed in writing                      | Data shape — public ZIP-CSV is GDPR-stripped; no identifier-bearing channel | 2026-05-11      |
-| CAA Maldives           | Open + attribution + error-disclaimer — confirmed in writing | PDF parser path needed                                                      | 2026-05-11      |
-| Transpordiamet Estonia | Personal-use + attribution                                   | HTML scrape needed                                                          | replied         |
-| CAAT Thailand          | Personal-use + attribution — CAAT bilateral grant            | PDF parser path needed                                                      | replied         |
-| CAA Oman               | Open (CC BY 4.0-compat) — Oman Open Data License             | Register dataset not yet published                                          | sent 2026-05-11 |
-| CAAS Singapore         | Open + attribution — confirmed by CAAS                       | No bulk download surfaced                                                   | 2026-05-11      |
+| Source                 | License (cleared via)                             | Ingest blocker                                                              | Reply           |
+| ---------------------- | ------------------------------------------------- | --------------------------------------------------------------------------- | --------------- |
+| Traficom Finland       | Open (CC BY 4.0) — confirmed in writing           | Data shape — public ZIP-CSV is GDPR-stripped; no identifier-bearing channel | 2026-05-11      |
+| Transpordiamet Estonia | Personal-use + attribution                        | HTML scrape needed                                                          | replied         |
+| CAAT Thailand          | Personal-use + attribution — CAAT bilateral grant | config + fixtures (pdf parser path landed with mv-caa)                      | replied         |
+| CAA Oman               | Open (CC BY 4.0-compat) — Oman Open Data License  | Register dataset not yet published                                          | sent 2026-05-11 |
+| CAAS Singapore         | Open + attribution — confirmed by CAAS            | No bulk download surfaced                                                   | 2026-05-11      |
 
 ### 🟡 In flight — waiting on reply
 
