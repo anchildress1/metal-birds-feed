@@ -12,7 +12,11 @@ export const SCALAR_TRANSFORMS = [
   'date_yyyy_slash_or_null',
   'date_dd_slash_or_null',
   'date_ddmmyyyy_or_null',
+  'date_dmmmyy_or_null',
   'iso_date_only_or_null',
+  'first_line_or_null',
+  'collapse_ws_or_null',
+  'mv_idera_party',
   'excel_serial_year_or_null',
   'mph_to_ktas_or_null',
   'binary_to_hex_or_null',
@@ -92,7 +96,18 @@ export interface AllowedMissingSourceIdRowsConfig {
   pattern: string;
 }
 
-export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json';
+export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf';
+
+// Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
+// `field_axis` is the axis along which fields (columns) are distributed; the perpendicular axis is
+// the record axis. Each field's value band sits at `column_pos[i]` on `field_axis`, paired by index
+// with the field name in `columns[primary]`. One record per item matching `anchor_pattern`.
+// (CAA Maldives publishes a 90°-rotated grid: fields run down y, records across x.)
+export interface PdfConfig {
+  field_axis: 'x' | 'y';
+  column_pos: number[];
+  anchor_pattern: string;
+}
 
 export interface SourceConfig {
   id: string;
@@ -107,6 +122,7 @@ export interface SourceConfig {
   // Dot-path to the record array within a JSON response (e.g. "data.items"). Empty/omitted means
   // the response is itself the array. Only used when format is "json".
   record_path?: string;
+  pdf?: PdfConfig;
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;

@@ -1706,3 +1706,59 @@ describe('CH-FOCA fixture translation', () => {
       expect(chRecords.get('1000011')!.airframe_type).toBeNull());
   });
 });
+
+describe('CAA Maldives fixture translation (PDF)', () => {
+  const MV_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'mv-caa.yaml');
+  const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
+  let mvRecords: Map<string, Aircraft>;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(MV_CONFIG);
+    const result = await translate(config, new Map([['register', readFileSync(MV_PDF)]]));
+    mvRecords = result.records;
+  });
+
+  it('translates all 138 register rows with no failures', () => {
+    expect(mvRecords.size).toBe(138);
+  });
+
+  it('keys records on the certificate number, not the reissued mark', () => {
+    expect(mvRecords.has('CR-121')).toBe(true);
+    expect(mvRecords.get('CR-121')!.registration).toBe('8Q-OEQ');
+  });
+
+  describe('CR-337 — ATR 42-500, registrant + foreign lessor', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = mvRecords.get('CR-337')!;
+    });
+
+    it('maps the combined manufacturer/model cell to model', () =>
+      expect(r.model).toBe('Avions de Transport Regional, ATR 42-500'));
+    it('maps the registrant to owner with constant MV country', () => {
+      expect(r.owner.name).toBe('Island Aviation Services Limited');
+      expect(r.owner.country).toBe('MV');
+    });
+    it('maps the legal owner (lessor) to legal_owner', () =>
+      expect(r.legal_owner.name).toBe('Abelo Capital FL 1 Limited'));
+    it('leaves the operator slot null (registrant is the operator)', () =>
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null }));
+    it('parses the D-MMM-YY dates', () => {
+      expect(r.certification_date).toBe('2025-06-02');
+      expect(r.last_action_date).toBe('2025-06-15');
+    });
+    it('maps MTOW and year as numbers', () => {
+      expect(r.max_takeoff_weight_kg).toBe(18600);
+      expect(r.year_manufactured).toBe(2025);
+    });
+    it('keeps the IDERA authorised-party name and drops its address (PII)', () => {
+      expect(r.idera_authorised_party).toBe('Export Development Canada');
+      expect(r.idera_authorised_party).not.toContain('Slater Street');
+    });
+    it('drops owner/legal-owner address PII (no street/postal keys)', () =>
+      expect(Object.keys(r)).not.toContain('owner_street'));
+  });
+
+  it('marks the current-fleet register as valid', () =>
+    expect([...mvRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+});

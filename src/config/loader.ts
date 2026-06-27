@@ -39,71 +39,90 @@ const FieldMappingSchema = z
     message: 'compound_transform requires fields, and fields requires compound_transform',
   });
 
-const SourceConfigSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  country: z.string().min(1),
-  encoding: z.enum(['utf8', 'latin1']),
-  download: z
-    .object({
-      url: z.url(),
-      format: z.enum(['zip', 'file']).default('zip'),
-      method: z.enum(['GET', 'POST']).default('GET'),
-      body: z.unknown().optional(),
-      entries: z.record(z.string(), z.string()),
-      headers: z.record(z.string(), z.string()).optional(),
-      discover_url: z.url().optional(),
-      discover_pattern: z
-        .string()
-        .min(1)
-        .refine(isValidRegex, { message: 'discover_pattern must be a valid regular expression' })
-        .optional(),
-    })
-    .refine((d) => Object.keys(d.entries).length >= 1, {
-      message: 'download.entries must have at least one alias',
-    })
-    .refine((d) => d.format !== 'file' || Object.keys(d.entries).length === 1, {
-      message: 'download.entries must contain exactly one alias when format is "file"',
-    })
-    .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
-      message: 'download.discover_url and download.discover_pattern must be set together',
-    })
-    .refine((d) => d.method === 'POST' || d.body === undefined, {
-      message: 'download.body is only valid with method POST',
-    }),
-  primary: z.string().min(1),
-  delimiter: z.string().min(1),
-  trim_all: z.boolean().default(false),
-  format: z.enum(['csv', 'ods', 'xlsx', 'xls', 'json']).default('csv'),
-  record_path: z.string().optional(),
-  sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
-  skip_rows: z.number().int().nonnegative().optional(),
-  columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
-  allowed_missing_source_id_rows: z
-    .object({
-      max: z.number().int().nonnegative(),
-      field: z.string().min(1),
-      pattern: z.string().min(1).refine(isValidRegex, {
-        message: 'pattern must be a valid regular expression',
-      }),
-    })
-    .optional(),
-  joins: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        file: z.string().min(1),
-        key: z.string().min(1),
-        on: z.string().min(1),
+const SourceConfigSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    country: z.string().min(1),
+    encoding: z.enum(['utf8', 'latin1']),
+    download: z
+      .object({
+        url: z.url(),
+        format: z.enum(['zip', 'file']).default('zip'),
+        method: z.enum(['GET', 'POST']).default('GET'),
+        body: z.unknown().optional(),
+        entries: z.record(z.string(), z.string()),
+        headers: z.record(z.string(), z.string()).optional(),
+        discover_url: z.url().optional(),
+        discover_pattern: z
+          .string()
+          .min(1)
+          .refine(isValidRegex, { message: 'discover_pattern must be a valid regular expression' })
+          .optional(),
       })
-    )
-    .default([]),
-  source_id: z.string().min(1),
-  source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
-  registration: z.string().min(1),
-  cadence_days: z.number().int().positive().optional(),
-  mapping: z.record(z.string(), FieldMappingSchema),
-});
+      .refine((d) => Object.keys(d.entries).length >= 1, {
+        message: 'download.entries must have at least one alias',
+      })
+      .refine((d) => d.format !== 'file' || Object.keys(d.entries).length === 1, {
+        message: 'download.entries must contain exactly one alias when format is "file"',
+      })
+      .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
+        message: 'download.discover_url and download.discover_pattern must be set together',
+      })
+      .refine((d) => d.method === 'POST' || d.body === undefined, {
+        message: 'download.body is only valid with method POST',
+      }),
+    primary: z.string().min(1),
+    delimiter: z.string().min(1),
+    trim_all: z.boolean().default(false),
+    format: z.enum(['csv', 'ods', 'xlsx', 'xls', 'json', 'pdf']).default('csv'),
+    record_path: z.string().optional(),
+    pdf: z
+      .object({
+        field_axis: z.enum(['x', 'y']),
+        column_pos: z.array(z.number()).min(1),
+        anchor_pattern: z.string().min(1).refine(isValidRegex, {
+          message: 'pdf.anchor_pattern must be a valid regular expression',
+        }),
+      })
+      .optional(),
+    sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
+    skip_rows: z.number().int().nonnegative().optional(),
+    columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
+    allowed_missing_source_id_rows: z
+      .object({
+        max: z.number().int().nonnegative(),
+        field: z.string().min(1),
+        pattern: z.string().min(1).refine(isValidRegex, {
+          message: 'pattern must be a valid regular expression',
+        }),
+      })
+      .optional(),
+    joins: z
+      .array(
+        z.object({
+          name: z.string().min(1),
+          file: z.string().min(1),
+          key: z.string().min(1),
+          on: z.string().min(1),
+        })
+      )
+      .default([]),
+    source_id: z.string().min(1),
+    source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
+    registration: z.string().min(1),
+    cadence_days: z.number().int().positive().optional(),
+    mapping: z.record(z.string(), FieldMappingSchema),
+  })
+  .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
+    message: 'format "pdf" requires a pdf config block',
+  })
+  .refine(
+    (c) => c.pdf === undefined || c.pdf.column_pos.length === (c.columns?.[c.primary]?.length ?? 0),
+    {
+      message: 'pdf.column_pos length must match columns[primary] length',
+    }
+  );
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 

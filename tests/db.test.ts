@@ -31,6 +31,7 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   },
   owner: { name: null, kind: null, state: null, country: null },
   operator: { name: null, kind: null, state: null, country: null },
+  legal_owner: { name: null, kind: null, state: null, country: null },
   idera_authorised_party: null,
   certification_date: null,
   airworthiness_date: null,
@@ -77,6 +78,7 @@ const populated: Aircraft = {
   },
   owner: { name: 'Beispiel, Anna', kind: 'co-owner', state: 'SO', country: 'Switzerland' },
   operator: { name: 'Betrieb AG', kind: 'corporation', state: 'BE', country: 'Germany' },
+  legal_owner: { name: 'Leasing Trust Ltd', kind: 'corporation', state: null, country: 'Ireland' },
   idera_authorised_party: 'IDERA Bank AG',
   certification_date: '2025-08-15',
   airworthiness_date: '2024-01-02',
@@ -163,6 +165,10 @@ describe('buildSqlite', () => {
       operator_kind: 'corporation',
       operator_state: 'BE',
       operator_country: 'Germany',
+      legal_owner_name: 'Leasing Trust Ltd',
+      legal_owner_kind: 'corporation',
+      legal_owner_state: null,
+      legal_owner_country: 'Ireland',
       idera_authorised_party: 'IDERA Bank AG',
       certification_date: '2025-08-15',
       airworthiness_date: '2024-01-02',
@@ -220,7 +226,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(2);
+    expect(version.user_version).toBe(3);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -240,7 +246,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(2);
+    expect(version.user_version).toBe(3);
   });
 });
 

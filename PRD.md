@@ -106,7 +106,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 **R0.5 R2 writer.** Writes one SQLite artifact per source plus a small state object:
 
-- `aircraft/<source>.sqlite` — every record for the source in an `aircraft` table, **one typed column per canonical field** (`source_id` primary key; nested `owner`/`operator`/`engine` flattened to `owner_*`/`operator_*`/`engine_*`; the lone array `operational_classes` as a JSON-string column). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country`. Built in memory via `bun:sqlite` and PUT whole.
+- `aircraft/<source>.sqlite` — every record for the source in an `aircraft` table, **one typed column per canonical field** (`source_id` primary key; nested `owner`/`operator`/`legal_owner`/`engine` flattened to `owner_*`/`operator_*`/`legal_owner_*`/`engine_*`; the lone array `operational_classes` as a JSON-string column). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country`. Built in memory via `bun:sqlite` and PUT whole.
 - `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` for cadence gating and skip-if-unchanged.
 
 The same hex / registration can point to multiple historical records over time; consumers query the artifact (point lookup by the indexed columns) and filter by `status = 'valid'` for current. Replaces the prior object-per-record + by-hex / by-registration index scheme.

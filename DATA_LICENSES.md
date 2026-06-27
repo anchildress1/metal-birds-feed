@@ -109,7 +109,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAA Macedonia | Macedonia (North) | caa@gov.mk | 2026-05-10 | pending | sent |
 | ACM | Madagascar | acm@acm.mg | 2026-05-11 | pending | sent |
 | CAAM | Malaysia | none | n/a | none | not contacted |
-| CAA Maldives | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | cleared: parser |
+| CAA Maldives | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
 | CAD Malta | Malta | civil.aviation@transport.gov.mt | 2026-05-05 | pending | sent |
 | ANAC Mauritanie | Mauritania | anac@anac.mr | 2026-05-11 | pending | sent |
 | DCA Mauritius | Mauritius | civil-aviation@govmu.org | 2026-05-11 | denied | excluded: denied |

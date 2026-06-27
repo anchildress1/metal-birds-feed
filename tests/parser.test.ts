@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { writeOds } from 'hucre/ods';
 import { writeXlsx } from 'hucre/xlsx';
 import * as XLSX from 'xlsx';
@@ -7,7 +9,9 @@ import {
   parseSpreadsheet,
   parseXls,
   parseJson,
+  parsePdf,
   type HucreFormat,
+  type ParsePdfOptions,
 } from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
@@ -646,5 +650,78 @@ describe('parseJson', () => {
     await expect(parseJson(jbuf('[{"r":"HB-1"},42]'), jopts())).rejects.toThrow(
       /record at index 1 is not an object/i
     );
+  });
+});
+
+const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
+const mvBuf = (): Buffer => readFileSync(MV_PDF);
+// Mirrors sources/mv-caa.yaml: rotated grid, fields on y, records anchored on the 8Q mark.
+const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
+  field_axis: 'y',
+  anchor_pattern: '^8Q-[A-Z]{3}$',
+  column_pos: [
+    746.8, 713, 685.5, 616.1, 551.8, 467.8, 383.8, 299.8, 217.9, 205.7, 184.5, 157, 87.6, 66, 40.7,
+    27,
+  ],
+  columns: [
+    'status',
+    'date_revision',
+    'date_issue',
+    'idera',
+    'mortgage',
+    'other_specifics',
+    'basis',
+    'legal_owner',
+    'owner',
+    'year',
+    'serial',
+    'mtow',
+    'mfg',
+    'mark',
+    'cert_no',
+    'sn',
+  ],
+  trim: true,
+  ...overrides,
+});
+
+describe('parsePdf', () => {
+  it('reconstructs one row per anchor across all pages', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts());
+    expect(rows).toHaveLength(138);
+    expect(rows.every((r) => /^8Q-[A-Z]{3}$/.test(r.mark ?? ''))).toBe(true);
+    expect(rows.every((r) => /^CR-/.test(r.cert_no ?? ''))).toBe(true);
+  });
+
+  it('snaps single-line fields to their column band', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts());
+    const r = rows.find((row) => row.mark === '8Q-OEQ')!;
+    expect(r.cert_no).toBe('CR-121');
+    expect(r.sn).toBe('21');
+    expect(r.year).toBe('1967');
+    expect(r.mtow).toBe('5262');
+    expect(r.status).toBe('Valid');
+    expect(r.date_issue).toBe('2-Dec-95');
+  });
+
+  it('joins a wrapped multi-line cell with newlines in reading order', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts());
+    const r = rows.find((row) => row.mark === '8Q-OEQ')!;
+    const owner = r.owner.split('\n');
+    expect(owner[0]).toBe('Trans Maldivian Airways Pvt. Ltd.');
+    expect(owner.length).toBeGreaterThan(1);
+    expect(r.mfg.split('\n')[0]).toBe('Viking Air (De Havilland)');
+  });
+
+  it('excludes the repeated header-label column and the page footer', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts());
+    const blob = rows.flatMap((r) => Object.values(r)).join('\n');
+    expect(blob).not.toMatch(/Registration S\/N|Date of Original Issue|Nationality &/);
+    expect(blob).not.toMatch(/Whilst reasonable care|Page \d of \d/);
+  });
+
+  it('returns no rows when the anchor pattern matches nothing', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }));
+    expect(rows).toEqual([]);
   });
 });
