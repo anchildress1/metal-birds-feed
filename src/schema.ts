@@ -81,6 +81,11 @@ export type Owner = z.infer<typeof OwnerSchema>;
 
 export const OperatorSchema = OwnerSchema;
 
+// Legal owner = the title-holder / financier party, distinct from the registered owner and the
+// operator. Some registers (e.g. CAA Maldives) publish all three; modelling it avoids collapsing a
+// lessor into the operator slot.
+export const LegalOwnerSchema = OwnerSchema;
+
 // Date transforms emit YYYY-MM-DD or null; constrain the schema to match.
 const isoDate = z
   .string()
@@ -118,6 +123,7 @@ export const AircraftSchema = z.object({
   engine: EngineSchema,
   owner: OwnerSchema,
   operator: OperatorSchema,
+  legal_owner: LegalOwnerSchema,
   idera_authorised_party: z.string().nullable(),
   certification_date: isoDate,
   airworthiness_date: isoDate,

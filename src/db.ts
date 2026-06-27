@@ -25,10 +25,11 @@ type Bind = string | number | null;
 // this, so adding a field to `Aircraft`/`Owner`/`Engine` without mapping it here is a compile error
 // (guards the AGENTS "no silent loss of upstream information" rule).
 type FlatColumn =
-  | Exclude<keyof Aircraft, 'engine' | 'owner' | 'operator'>
+  | Exclude<keyof Aircraft, 'engine' | 'owner' | 'operator' | 'legal_owner'>
   | `engine_${keyof Engine}`
   | `owner_${keyof Owner}`
-  | `operator_${keyof Owner}`;
+  | `operator_${keyof Owner}`
+  | `legal_owner_${keyof Owner}`;
 
 // Single source of truth for column name → bound value. The INSERT column list and the bound
 // values both derive from this one object, so they cannot drift in order or membership. The lone
@@ -65,6 +66,10 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   operator_kind: r.operator.kind,
   operator_state: r.operator.state,
   operator_country: r.operator.country,
+  legal_owner_name: r.legal_owner.name,
+  legal_owner_kind: r.legal_owner.kind,
+  legal_owner_state: r.legal_owner.state,
+  legal_owner_country: r.legal_owner.country,
   idera_authorised_party: r.idera_authorised_party,
   certification_date: r.certification_date,
   airworthiness_date: r.airworthiness_date,
@@ -116,6 +121,10 @@ const DDL = `CREATE TABLE aircraft (
   operator_kind TEXT,
   operator_state TEXT,
   operator_country TEXT,
+  legal_owner_name TEXT,
+  legal_owner_kind TEXT,
+  legal_owner_state TEXT,
+  legal_owner_country TEXT,
   idera_authorised_party TEXT,
   certification_date TEXT,
   airworthiness_date TEXT,
@@ -147,7 +156,7 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
   const db = new Database(':memory:');
   try {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
-    db.run('PRAGMA user_version = 2');
+    db.run('PRAGMA user_version = 3');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

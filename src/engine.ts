@@ -354,6 +354,12 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
       state: scalar('operator.state'),
       country: scalar('operator.country'),
     },
+    legal_owner: {
+      name: scalar('legal_owner.name'),
+      kind: scalar('legal_owner.kind'),
+      state: scalar('legal_owner.state'),
+      country: scalar('legal_owner.country'),
+    },
     idera_authorised_party: scalar('idera_authorised_party'),
     certification_date: scalar('certification_date'),
     airworthiness_date: scalar('airworthiness_date'),
