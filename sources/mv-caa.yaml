@@ -86,14 +86,14 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # Current-fleet register: every listed aircraft is "Valid". Unknown values fail loudly rather
-  # than silently mapping to "other".
+  # Current-fleet register: every listed aircraft is "Valid". No default — an unexpected status
+  # (upstream change or a parser mis-snap) fails the run loudly instead of silently becoming "other".
+  # An empty cell still resolves to null and the engine's own "other" fallback applies.
   status:
     field: status
     transform: trim
     lookup:
       Valid: valid
-    default: other
 
   country:
     constant: MV
@@ -197,10 +197,11 @@ mapping:
   legal_owner.country:
     constant: ~
 
-  # IDERA cell preserved verbatim (letter ref + authorised party + address), flattened to one line.
+  # IDERA cell holds a letter ref, the authorised-party name, then its postal address. Only the
+  # party name is kept; the address block is PII and dropped at this boundary.
   idera_authorised_party:
     field: idera
-    transform: collapse_ws_or_null
+    transform: mv_idera_party
 
   certification_date:
     field: date_issue

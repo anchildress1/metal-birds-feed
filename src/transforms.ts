@@ -125,10 +125,24 @@ const dateDmmmyyOrNull = (value: string): string | null => {
 const firstLineOrNull = (value: string): string | null => trimOrNull(value.split('\n')[0] ?? '');
 
 // Collapses internal newlines/runs of whitespace to single spaces and trims; blank → null. Flattens
-// a wrapped multi-line cell (manufacturer/model, IDERA block) into one line, preserving all tokens.
+// a wrapped multi-line cell (manufacturer/model) into one line, preserving all tokens.
 const collapseWsOrNull = (value: string): string | null => {
   const v = value.replace(/\s+/g, ' ').trim();
   return v.length > 0 ? v : null;
+};
+
+// CAA Maldives IDERA cell → just the authorised-party name. The cell is a multi-line block:
+// optional "None" / "Letter No: …" reference / parenthetical-date prefix, then the party name, then
+// its postal address. Only the party name is kept; the address block that follows is PII and dropped
+// at the boundary, never reaching the artifact. Returns null when no party line is present (e.g.
+// "None"). A multi-line party name keeps only its first line — acceptable; the party stays identifiable.
+const mvIderaParty = (value: string): string | null => {
+  const lines = value
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  const party = lines.find((l) => l !== 'None' && !/^Letter No\b/i.test(l) && !/^\(.*\)$/.test(l));
+  return party ?? null;
 };
 
 // Excel day 0 is 1899-12-30 rather than 1899-12-31 to absorb the phantom leap day
@@ -434,6 +448,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   iso_date_only_or_null: isoDateOnlyOrNull,
   first_line_or_null: firstLineOrNull,
   collapse_ws_or_null: collapseWsOrNull,
+  mv_idera_party: mvIderaParty,
   excel_serial_year_or_null: excelSerialYearOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,

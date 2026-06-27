@@ -436,6 +436,31 @@ describe('collapse_ws_or_null', () => {
     expect(applyScalar('collapse_ws_or_null', '')).toBeNull());
 });
 
+describe('mv_idera_party', () => {
+  it('returns the party name after a "Letter No:" reference, dropping the address', () =>
+    expect(
+      applyScalar(
+        'mv_idera_party',
+        'Letter No: 201-ASD-D/MIS/2025/057\nExport Development Canada\n150 Slater Street\nOttawa, Ontario, K1A 1K3\nCanada'
+      )
+    ).toBe('Export Development Canada'));
+  it('skips a "Letter No." (period) reference variant, keeping the party', () =>
+    expect(
+      applyScalar('mv_idera_party', 'Letter No. 201-ASD-D/MAA/2023/011\nAER, LLC\nFukaya, Saitama')
+    ).toBe('AER, LLC'));
+  it('returns the first line as the party when there is no reference prefix', () =>
+    expect(applyScalar('mv_idera_party', 'AER, LLC\n3641-2 Higashikata\nJapan')).toBe('AER, LLC'));
+  it('skips a parenthetical-date prefix', () =>
+    expect(applyScalar('mv_idera_party', '(8 Aug 2023)\nAER, LLC\n3641-2 Higashikata')).toBe(
+      'AER, LLC'
+    ));
+  it('returns null for a bare "None"', () =>
+    expect(applyScalar('mv_idera_party', 'None')).toBeNull());
+  it('returns null when only a reference follows "None"', () =>
+    expect(applyScalar('mv_idera_party', 'None\nLetter No: 201-ASD-D/MAA/2023/010')).toBeNull());
+  it('returns null for an empty cell', () => expect(applyScalar('mv_idera_party', '')).toBeNull());
+});
+
 describe('br_registration', () => {
   it('inserts the hyphen after the two-letter prefix', () =>
     expect(applyScalar('br_registration', 'PPACK')).toBe('PP-ACK'));

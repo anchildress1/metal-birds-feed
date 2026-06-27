@@ -16,6 +16,7 @@ export const SCALAR_TRANSFORMS = [
   'iso_date_only_or_null',
   'first_line_or_null',
   'collapse_ws_or_null',
+  'mv_idera_party',
   'excel_serial_year_or_null',
   'mph_to_ktas_or_null',
   'binary_to_hex_or_null',

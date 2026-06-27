@@ -1751,8 +1751,10 @@ describe('CAA Maldives fixture translation (PDF)', () => {
       expect(r.max_takeoff_weight_kg).toBe(18600);
       expect(r.year_manufactured).toBe(2025);
     });
-    it('captures the IDERA authorised party verbatim', () =>
-      expect(r.idera_authorised_party).toContain('Export Development Canada'));
+    it('keeps the IDERA authorised-party name and drops its address (PII)', () => {
+      expect(r.idera_authorised_party).toBe('Export Development Canada');
+      expect(r.idera_authorised_party).not.toContain('Slater Street');
+    });
     it('drops owner/legal-owner address PII (no street/postal keys)', () =>
       expect(Object.keys(r)).not.toContain('owner_street'));
   });
