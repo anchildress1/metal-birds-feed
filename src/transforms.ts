@@ -93,6 +93,44 @@ const isoDateOnlyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(head.slice(0, 4), head.slice(5, 7), head.slice(8, 10));
 };
 
+const MONTH_ABBR: Record<string, string> = {
+  jan: '01',
+  feb: '02',
+  mar: '03',
+  apr: '04',
+  may: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08',
+  sep: '09',
+  oct: '10',
+  nov: '11',
+  dec: '12',
+};
+
+// `D-MMM-YY` (e.g. "2-Dec-95", "15-Jun-25") — the CAA Maldives register date style. Two-digit years
+// pivot at 50: 00–49 → 2000s, 50–99 → 1900s, which covers every aircraft registration date in use.
+const dateDmmmyyOrNull = (value: string): string | null => {
+  const m = /^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const month = MONTH_ABBR[m[2].toLowerCase()];
+  if (!month) return null;
+  const yy = Number(m[3]);
+  const year = String(yy < 50 ? 2000 + yy : 1900 + yy);
+  return validateAndFormatYMD(year, month, m[1].padStart(2, '0'));
+};
+
+// First physical line of a multi-line cell (positioned-PDF extraction joins wrapped lines with
+// "\n"), e.g. the name line of an owner/mortgagee address block. Blank → null.
+const firstLineOrNull = (value: string): string | null => trimOrNull(value.split('\n')[0] ?? '');
+
+// Collapses internal newlines/runs of whitespace to single spaces and trims; blank → null. Flattens
+// a wrapped multi-line cell (manufacturer/model, IDERA block) into one line, preserving all tokens.
+const collapseWsOrNull = (value: string): string | null => {
+  const v = value.replace(/\s+/g, ' ').trim();
+  return v.length > 0 ? v : null;
+};
+
 // Excel day 0 is 1899-12-30 rather than 1899-12-31 to absorb the phantom leap day
 // (Excel serial 60 = Feb 29, 1900, which never existed). Anchoring two days before
 // 1900-01-01 makes all serials >= 61 (1900-03-01+) resolve correctly, which covers
@@ -392,7 +430,10 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,
   date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
+  date_dmmmyy_or_null: dateDmmmyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
+  first_line_or_null: firstLineOrNull,
+  collapse_ws_or_null: collapseWsOrNull,
   excel_serial_year_or_null: excelSerialYearOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,

@@ -383,6 +383,59 @@ describe('date_ddmmyyyy_or_null', () => {
     expect(applyScalar('date_ddmmyyyy_or_null', '32012026')).toBeNull());
 });
 
+describe('date_dmmmyy_or_null', () => {
+  it('parses a D-MMM-YY date with a single-digit day', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '2-Dec-95')).toBe('1995-12-02'));
+  it('parses a two-digit-day date', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '15-Jun-25')).toBe('2025-06-15'));
+  it('pivots years < 50 into the 2000s', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '8-Aug-16')).toBe('2016-08-08'));
+  it('pivots years >= 50 into the 1900s', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '1-Jan-99')).toBe('1999-01-01'));
+  it('is case-insensitive on the month abbreviation', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '3-MAR-04')).toBe('2004-03-03'));
+  it('trims surrounding whitespace', () =>
+    expect(applyScalar('date_dmmmyy_or_null', ' 7-Jul-21 ')).toBe('2021-07-07'));
+  it('returns null for an unknown month abbreviation', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '2-Xyz-95')).toBeNull());
+  it('returns null for an impossible calendar date', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '31-Feb-20')).toBeNull());
+  it('returns null for a full four-digit year', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '2-Dec-1995')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('date_dmmmyy_or_null', '')).toBeNull());
+});
+
+describe('first_line_or_null', () => {
+  it('returns the first physical line of a multi-line cell', () =>
+    expect(applyScalar('first_line_or_null', 'Acme Air Ltd\n10 Runway Rd\nMalé')).toBe(
+      'Acme Air Ltd'
+    ));
+  it('trims the first line', () =>
+    expect(applyScalar('first_line_or_null', '  Acme Air Ltd  \nMalé')).toBe('Acme Air Ltd'));
+  it('returns a single-line value unchanged', () =>
+    expect(applyScalar('first_line_or_null', 'None')).toBe('None'));
+  it('returns null when the first line is blank', () =>
+    expect(applyScalar('first_line_or_null', '   \nMalé')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('first_line_or_null', '')).toBeNull());
+});
+
+describe('collapse_ws_or_null', () => {
+  it('flattens newlines to single spaces', () =>
+    expect(applyScalar('collapse_ws_or_null', 'Viking Air (De Havilland)\nDHC-6-300')).toBe(
+      'Viking Air (De Havilland) DHC-6-300'
+    ));
+  it('collapses runs of internal whitespace', () =>
+    expect(applyScalar('collapse_ws_or_null', 'ATR  42-500')).toBe('ATR 42-500'));
+  it('trims leading and trailing whitespace', () =>
+    expect(applyScalar('collapse_ws_or_null', '  hi \n there ')).toBe('hi there'));
+  it('returns null for a whitespace-only value', () =>
+    expect(applyScalar('collapse_ws_or_null', ' \n \t ')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('collapse_ws_or_null', '')).toBeNull());
+});
+
 describe('br_registration', () => {
   it('inserts the hyphen after the two-letter prefix', () =>
     expect(applyScalar('br_registration', 'PPACK')).toBe('PP-ACK'));

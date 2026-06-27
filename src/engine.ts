@@ -1,6 +1,6 @@
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
-import { parseCSV, parseSpreadsheet, parseXls, parseJson, type Row } from './parser.js';
+import { parseCSV, parseSpreadsheet, parseXls, parseJson, parsePdf, type Row } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
@@ -28,6 +28,17 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
   }
   if (config.format === 'json') {
     return parseJson(buf, { encoding: config.encoding, record_path: config.record_path });
+  }
+  if (config.format === 'pdf') {
+    const pdf = config.pdf;
+    if (!pdf) throw new Error(`Source "${config.id}" has format "pdf" but no pdf config`);
+    return parsePdf(buf, {
+      field_axis: pdf.field_axis,
+      column_pos: pdf.column_pos,
+      columns: config.columns?.[config.primary] ?? [],
+      anchor_pattern: pdf.anchor_pattern,
+      trim: config.trim_all,
+    });
   }
   return parseSpreadsheet(buf, {
     format: config.format,

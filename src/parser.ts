@@ -4,6 +4,7 @@ import { readOds } from 'hucre/ods';
 import { readXlsx } from 'hucre/xlsx';
 import type { Sheet } from 'hucre';
 import * as XLSX from 'xlsx';
+import { extractTextItems, getDocumentProxy } from 'unpdf';
 
 export type Row = Record<string, string>;
 
@@ -193,6 +194,121 @@ export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<R
     columns: options.columns,
     skipRows: options.skip_rows ?? 0,
   });
+}
+
+export interface ParsePdfOptions {
+  field_axis: 'x' | 'y';
+  // Value-band coordinate per field on `field_axis`, index-paired with `columns`.
+  column_pos: number[];
+  columns: string[];
+  anchor_pattern: string;
+  trim: boolean;
+}
+
+interface PdfItem {
+  str: string;
+  x: number;
+  y: number;
+}
+
+const axisCoord = (it: PdfItem, axis: 'x' | 'y'): number => (axis === 'x' ? it.x : it.y);
+
+// Index of the position nearest to `value`. Used both to snap an item to its field band and to its
+// record (anchor) along the record axis.
+const nearestIndex = (positions: number[], value: number): number => {
+  let best = 0;
+  let bestDist = Math.abs(positions[0] - value);
+  for (let i = 1; i < positions.length; i++) {
+    const d = Math.abs(positions[i] - value);
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
+  }
+  return best;
+};
+
+// Half the smallest gap between adjacent records. Used as the outer reach beyond the first/last
+// record so the repeated header-label column (a half-slot outside the record range) and the
+// page-footer text are dropped, while every real cell line (which clusters tighter than half a slot
+// around its record) is kept. A lone record on a page has no gap, so reach is unbounded.
+const outerSpread = (sortedCoords: number[]): number => {
+  if (sortedCoords.length < 2) return Infinity;
+  let min = Infinity;
+  for (let i = 1; i < sortedCoords.length; i++) {
+    min = Math.min(min, sortedCoords[i] - sortedCoords[i - 1]);
+  }
+  return min / 2;
+};
+
+const pushTo = (m: Map<number, PdfItem[]>, key: number, it: PdfItem): void => {
+  const arr = m.get(key);
+  if (arr) arr.push(it);
+  else m.set(key, [it]);
+};
+
+// Joins each field's items into a cell, ordered in reading order along the record axis (ascending
+// when records run along x, descending when along y — PDF y grows upward). Wrapped lines are joined
+// with "\n" so line-slicing transforms (first/last line) can recover structure.
+const buildPdfRow = (
+  cells: Map<number, PdfItem[]>,
+  options: ParsePdfOptions,
+  recordAxis: 'x' | 'y'
+): Row => {
+  const dir = recordAxis === 'x' ? 1 : -1;
+  const row: Row = {};
+  for (const [fi, its] of cells) {
+    its.sort((a, b) => dir * (axisCoord(a, recordAxis) - axisCoord(b, recordAxis)));
+    const text = its.map((t) => t.str.trim()).join('\n');
+    const name = options.columns[fi];
+    if (name !== undefined) row[name] = options.trim ? text.trim() : text;
+  }
+  return row;
+};
+
+const toPdfItems = (raw: { str: string; x: number; y: number }[]): PdfItem[] =>
+  raw.filter((i) => i.str.trim().length > 0).map((i) => ({ str: i.str, x: i.x, y: i.y }));
+
+const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegExp): Row[] => {
+  const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
+  const anchors = page
+    .filter((it) => anchorRe.test(it.str.trim()))
+    .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
+  if (anchors.length === 0) return [];
+
+  const anchorCoords = anchors.map((a) => axisCoord(a, recordAxis));
+  const spread = outerSpread(anchorCoords);
+  const lo = anchorCoords[0] - spread;
+  const hi = anchorCoords[anchorCoords.length - 1] + spread;
+
+  const buckets = anchors.map(() => new Map<number, PdfItem[]>());
+  for (const it of page) {
+    const rc = axisCoord(it, recordAxis);
+    if (rc < lo || rc > hi) continue;
+    const ri = nearestIndex(anchorCoords, rc);
+    const fi = nearestIndex(options.column_pos, axisCoord(it, options.field_axis));
+    pushTo(buckets[ri], fi, it);
+  }
+  return buckets.map((cells) => buildPdfRow(cells, options, recordAxis));
+};
+
+// Reconstructs a positioned-coordinate PDF table into Row[]. Items are snapped to a field by nearest
+// `column_pos` and to a record by nearest anchor along the perpendicular axis. See `PdfConfig`.
+export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<Row[]> {
+  // unpdf ships canvas/DOM-typed declarations our tsconfig cannot resolve (masked by skipLibCheck),
+  // so its exports surface as untyped at this call boundary. The runtime values are correct; cast
+  // the result to the structurally-known item shape to contain the untyped surface to this line.
+  const { items } = (await extractTextItems(await getDocumentProxy(new Uint8Array(buf)))) as {
+    items: PdfItem[][];
+  };
+  // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const anchorRe = new RegExp(options.anchor_pattern);
+  const rows: Row[] = [];
+  for (const pageItems of items) {
+    rows.push(...parsePdfPage(toPdfItems(pageItems), options, anchorRe));
+  }
+  return rows;
 }
 
 interface ShapeOptions {
