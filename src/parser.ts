@@ -259,9 +259,9 @@ const buildPdfRow = (
   const row: Row = {};
   for (const [fi, its] of cells) {
     its.sort((a, b) => dir * (axisCoord(a, recordAxis) - axisCoord(b, recordAxis)));
-    const text = its.map((t) => t.str.trim()).join('\n');
+    const text = its.map((t) => (options.trim ? t.str.trim() : t.str)).join('\n');
     const name = options.columns[fi];
-    if (name !== undefined) row[name] = options.trim ? text.trim() : text;
+    if (name !== undefined) row[name] = text;
   }
   return row;
 };
