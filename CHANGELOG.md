@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.8](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.7...v0.0.8) (2026-06-27)
+
+
+### Features
+
+* onboard CAA Maldives register via new PDF parser path ([#45](https://github.com/anchildress1/metal-birds-feed/issues/45)) ([bf7a06e](https://github.com/anchildress1/metal-birds-feed/commit/bf7a06ef7795ebc7afb79b334cefeee04b6fc168))
+
+
+### Bug Fixes
+
+* br-anac duplicate-row refresh failure + license-doc consolidation ([#43](https://github.com/anchildress1/metal-birds-feed/issues/43)) ([7af3458](https://github.com/anchildress1/metal-birds-feed/commit/7af34584f73d144810127bd148955e541e2f0479))
+
 ## [0.0.7](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.6...v0.0.7) (2026-06-22)
 
 
