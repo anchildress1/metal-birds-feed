@@ -169,7 +169,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAA Taiwan | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
 | Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | info@caa.tj | 2026-05-11 | open | live |
 | TCAA | Tanzania | tcaa@tcaa.go.tz | 2026-05-05 | pending | sent |
-| CAAT | Thailand | inter_focalpoint@caat.or.th | 2026-05-10 | confirmed | cleared |
+| CAAT | Thailand | registration@caat.or.th | 2026-05-10 | confirmed 2026-05-21 | cleared; blocked: cloudflare (datacenter-IP managed challenge) |
 | ANATL | Timor-Leste | none | n/a | none | excluded: no register |
 | ANAC Togo | Togo | anac@anac-togo.tg | 2026-05-10 | pending | sent: no bulk |
 | n/a | Tonga | none | n/a | none | excluded: no register |
