@@ -234,8 +234,9 @@ const casaEngineDetailOrNull = (value: string): string | null => {
 };
 
 // Estonia publishes marks spaced around the hyphen ("ES - MBA", "ES - 1004"); collapse to the
-// canonical hyphenated form ("ES-MBA"). Null if not the ES- shape (guards the dropped metadata
-// row from becoming a record).
+// canonical hyphenated form ("ES-MBA"). Null for any non-ES- value: as the source_id transform with
+// no allowed-missing policy, that makes an unexpected non-mark row fail the run rather than mint a
+// bogus id.
 const eeRegistration = (value: string): string | null => {
   const v = value.replace(/\s+/g, '').toUpperCase();
   return /^ES-[A-Z0-9]+$/.test(v) ? v : null;

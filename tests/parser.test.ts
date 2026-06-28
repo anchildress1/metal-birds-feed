@@ -784,4 +784,23 @@ describe('parseHtml', () => {
     expect(marks).not.toContain('19.06.2026/updated');
     expect(marks.every((m) => /^ES - /.test(m))).toBe(true);
   });
+
+  it('throws on a page with no parseable <table> (loud failure, never an empty set)', async () => {
+    const buf = Buffer.from(
+      '<html><body><p>register temporarily unavailable</p></body></html>',
+      'utf8'
+    );
+    await expect(parseHtml(buf, { encoding: 'utf8', trim: true, skip_rows: 2 })).rejects.toThrow();
+  });
+
+  it('returns an empty array for a header-only table (no data rows)', async () => {
+    const buf = Buffer.from('<table><tr><td>mark</td><td>type</td></tr></table>', 'utf8');
+    const rows = await parseHtml(buf, {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark', 'type'],
+      skip_rows: 1,
+    });
+    expect(rows).toEqual([]);
+  });
 });

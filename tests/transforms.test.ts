@@ -481,8 +481,10 @@ describe('ee_registration', () => {
     expect(applyScalar('ee_registration', 'ES - 1004')).toBe('ES-1004'));
   it('uppercases and strips all whitespace', () =>
     expect(applyScalar('ee_registration', '  es - say ')).toBe('ES-SAY'));
-  it('returns null for a non-ES mark (guards the dropped metadata row)', () =>
+  it('returns null for a non-ES value (e.g. the metadata-row text)', () =>
     expect(applyScalar('ee_registration', '19.06.2026/updated')).toBeNull());
+  it('returns null for the prefix alone with no body', () =>
+    expect(applyScalar('ee_registration', 'ES-')).toBeNull());
   it('returns null for an empty string', () =>
     expect(applyScalar('ee_registration', '')).toBeNull());
 });
