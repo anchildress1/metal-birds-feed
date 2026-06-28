@@ -1,6 +1,14 @@
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
-import { parseCSV, parseSpreadsheet, parseXls, parseJson, parsePdf, type Row } from './parser.js';
+import {
+  parseCSV,
+  parseSpreadsheet,
+  parseXls,
+  parseHtml,
+  parseJson,
+  parsePdf,
+  type Row,
+} from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
@@ -38,6 +46,15 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       columns: config.columns?.[config.primary] ?? [],
       anchor_pattern: pdf.anchor_pattern,
       trim: config.trim_all,
+    });
+  }
+  if (config.format === 'html') {
+    return parseHtml(buf, {
+      encoding: config.encoding,
+      trim: config.trim_all,
+      columns: config.columns?.[config.primary],
+      sheet: config.sheet,
+      skip_rows: config.skip_rows,
     });
   }
   return parseSpreadsheet(buf, {

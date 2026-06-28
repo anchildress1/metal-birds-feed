@@ -8,6 +8,7 @@ import {
   parseCSV,
   parseSpreadsheet,
   parseXls,
+  parseHtml,
   parseJson,
   parsePdf,
   type HucreFormat,
@@ -723,5 +724,64 @@ describe('parsePdf', () => {
   it('returns no rows when the anchor pattern matches nothing', async () => {
     const rows = await parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }));
     expect(rows).toEqual([]);
+  });
+});
+
+const EE_HTML = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram', 'input', 'register.html');
+const eeBuf = (): Buffer => readFileSync(EE_HTML);
+// Mirrors sources/ee-tram.yaml: 9-column table, two preamble rows dropped, explicit positional names.
+const eeColumns = [
+  'pad_lead',
+  'registration_mark',
+  'pad_2',
+  'pad_3',
+  'type',
+  'serial',
+  'owner',
+  'operator',
+  'pad_trail',
+];
+
+describe('parseHtml', () => {
+  it('extracts the server-rendered table into one row per aircraft, dropping preamble rows', async () => {
+    const rows = await parseHtml(eeBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: eeColumns,
+      skip_rows: 2,
+    });
+    expect(rows).toHaveLength(10);
+    const r = rows.find((row) => row.registration_mark === 'ES - MBA')!;
+    expect(r.type).toBe('Airbus A320');
+    expect(r.serial).toBe('6849');
+    expect(r.owner).toBe('Wilmington Trust SP Services (Dublin) Limited');
+    expect(r.operator).toBe('Marabu Airlines OÜ');
+  });
+
+  it('keeps commas, parentheses, and Estonian characters in cell text intact', async () => {
+    const rows = await parseHtml(eeBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: eeColumns,
+      skip_rows: 2,
+    });
+    expect(rows.find((row) => row.registration_mark === 'ES - MBB')?.owner).toBe(
+      'Bank of Utah, not in its individual capacity but solely as owner trustee'
+    );
+    expect(rows.find((row) => row.registration_mark === 'ES - PCO')?.operator).toBe(
+      'Politsei- ja Piirivalveamet'
+    );
+  });
+
+  it('does not leak the dropped metadata/header rows as records', async () => {
+    const rows = await parseHtml(eeBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: eeColumns,
+      skip_rows: 2,
+    });
+    const marks = rows.map((r) => r.registration_mark);
+    expect(marks).not.toContain('19.06.2026/updated');
+    expect(marks.every((m) => /^ES - /.test(m))).toBe(true);
   });
 });

@@ -42,6 +42,7 @@ export const SCALAR_TRANSFORMS = [
   'foca_operator_state',
   'foca_operator_kind',
   'foca_operator_country',
+  'ee_registration',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
@@ -96,7 +97,7 @@ export interface AllowedMissingSourceIdRowsConfig {
   pattern: string;
 }
 
-export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf';
+export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf' | 'html';
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
 // `field_axis` is the axis along which fields (columns) are distributed; the perpendicular axis is

@@ -474,6 +474,19 @@ describe('br_registration', () => {
     expect(applyScalar('br_registration', '')).toBeNull());
 });
 
+describe('ee_registration', () => {
+  it('collapses the spaced hyphen to canonical form', () =>
+    expect(applyScalar('ee_registration', 'ES - MBA')).toBe('ES-MBA'));
+  it('normalizes a numeric mark', () =>
+    expect(applyScalar('ee_registration', 'ES - 1004')).toBe('ES-1004'));
+  it('uppercases and strips all whitespace', () =>
+    expect(applyScalar('ee_registration', '  es - say ')).toBe('ES-SAY'));
+  it('returns null for a non-ES mark (guards the dropped metadata row)', () =>
+    expect(applyScalar('ee_registration', '19.06.2026/updated')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('ee_registration', '')).toBeNull());
+});
+
 describe('br_airframe', () => {
   it('maps a single-engine landplane (L1P) to fixed-wing-single-engine', () =>
     expect(applyScalar('br_airframe', 'L1P')).toBe('fixed-wing-single-engine'));

@@ -75,7 +75,7 @@ const SourceConfigSchema = z
     primary: z.string().min(1),
     delimiter: z.string().min(1),
     trim_all: z.boolean().default(false),
-    format: z.enum(['csv', 'ods', 'xlsx', 'xls', 'json', 'pdf']).default('csv'),
+    format: z.enum(['csv', 'ods', 'xlsx', 'xls', 'json', 'pdf', 'html']).default('csv'),
     record_path: z.string().optional(),
     pdf: z
       .object({

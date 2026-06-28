@@ -1,0 +1,169 @@
+id: ee-tram
+label: Estonian Transport Administration Civil Aircraft Register
+country: EE
+encoding: utf8
+trim_all: true
+# Register updates a few times a year (the page stamps its own "updated" date); poll weekly so a
+# fresh publication is picked up promptly while conditional fetch keeps off-cadence runs cheap.
+cadence_days: 7
+
+download:
+  # The full fleet is server-rendered as a single HTML <table> on the canonical register page —
+  # there is no CSV/XLSX/JSON channel (CAAT-style). `format: file` returns the raw page; the html
+  # parser extracts the table. Plain GET, no Cloudflare challenge on this path.
+  url: https://transpordiamet.ee/ohusoidukite-register
+  format: file
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    register: register.html
+
+primary: register
+delimiter: ','
+format: html
+
+# The table is 9 columns wide with three blank spacer columns; only mark/type/serial/owner/operator
+# carry data. `skip_rows: 2` drops the metadata row ("…/updated", total count) and the bilingual
+# header row so the explicit column names below override cleanly.
+skip_rows: 2
+columns:
+  register:
+    - pad_lead
+    - registration_mark
+    - pad_2
+    - pad_3
+    - type
+    - serial
+    - owner
+    - operator
+    - pad_trail
+
+# Estonia publishes no permanent per-aircraft id; the ES- mark is the only key. ee_registration
+# normalizes the spaced form ("ES - MBA") to canonical "ES-MBA" for both id and registration.
+source_id: registration_mark
+source_id_transform: ee_registration
+registration: registration_mark
+
+mapping:
+  registration:
+    field: registration_mark
+    transform: ee_registration
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # The published register lists currently-registered aircraft only (deregistered marks drop off),
+  # so status is constant `valid` for every row — there is no per-row status column.
+  status:
+    constant: valid
+
+  country:
+    constant: EE
+
+  # The "Type of the Aircraft" cell is free text combining make + model ("Airbus A320", "Cessna
+  # 172R") or a category word for non-powered types ("purilennuk/sailplane", "kuumaõhupall/balloon").
+  # It does not split reliably, so manufacturer stays null and model carries the whole string —
+  # mirrors the lv-caa / mv-caa precedent.
+  manufacturer:
+    constant: ~
+
+  model:
+    field: type
+    transform: collapse_ws_or_null
+
+  serial_number:
+    field: serial
+    transform: trim_or_null
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # Owner and operator are both published and frequently differ (a foreign lessor/trust owns; an
+  # Estonian airline operates), so both are mapped. "eraisik" (private individual) is the source's
+  # own privacy redaction and is kept verbatim. Owner address is not published, so there is no PII
+  # to drop here.
+  owner.name:
+    field: owner
+    transform: collapse_ws_or_null
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  # Owners are routinely foreign (Dublin/Utah trusts, US banks), so owner country is not the
+  # registration country and is not structurally published — left null rather than fabricated.
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: operator
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~

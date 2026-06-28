@@ -61,7 +61,7 @@ Single record of source for agency correspondence and license posture: every cou
 | ECAA | Egypt | none | n/a | none | excluded |
 | AAC El Salvador | El Salvador | jsalguero@aac.gob.sv | 2026-05-11 | pending | sent |
 | n/a | Eritrea | none | n/a | none | excluded |
-| Transpordiamet | Estonia | info@transpordiamet.ee | n/a | open | cleared |
+| Transpordiamet | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed 2026-05-13 | live |
 | ESWACAA | Eswatini | info@eswacaa.co.sz | 2026-05-11 | pending | sent |
 | ECAA | Ethiopia | caa.airnav@ethionet.et | 2026-05-05 | pending | sent |
 | CAAF | Fiji | info@caaf.org.fj | 2026-05-05 | pending | sent |

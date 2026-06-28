@@ -196,6 +196,33 @@ export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<R
   });
 }
 
+export type ParseHtmlOptions = BaseSpreadsheetOptions & { encoding: 'utf8' | 'latin1' };
+
+// Parses an HTML page whose register is a server-rendered <table> (e.g. Estonia's Transpordiamet,
+// which embeds the full fleet as one table with no separate data API). SheetJS reads the first
+// <table> into the same Row[] shape as the spreadsheet paths, so the existing column/skip_rows
+// machinery applies unchanged. The page also carries layout chrome, but SheetJS extracts only the
+// table; dynamic page tokens never reach the artifact because content_hash is over parsed records.
+// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
+export async function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise<Row[]> {
+  const html = new TextDecoder(options.encoding).decode(buf);
+  const wb = XLSX.read(html, { type: 'string' });
+  const sheet = wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)];
+
+  const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    raw: true,
+    defval: '',
+    blankrows: false,
+  });
+  const rawRows = aoa.map((cells) => cells.map((c) => stringifyCell(c)));
+  return shapeRows(rawRows, {
+    trim: options.trim,
+    columns: options.columns,
+    skipRows: options.skip_rows ?? 0,
+  });
+}
+
 export interface ParsePdfOptions {
   field_axis: 'x' | 'y';
   // Value-band coordinate per field on `field_axis`, index-paired with `columns`.
