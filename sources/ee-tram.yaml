@@ -22,7 +22,13 @@ primary: register
 delimiter: ','
 format: html
 
-# The table is 9 columns wide with three blank spacer columns; only mark/type/serial/owner/operator
+# The page publishes its own fleet total ("Kokku õhusõidukeid /total"). Assert the translated record
+# count matches it so a dropped/added row, or a shift in the preamble-row count that `skip_rows`
+# discards, fails the run loudly instead of silently publishing a short fleet.
+record_count:
+  pattern: 'Kokku[^\d]*(\d+)'
+
+# The table is 9 columns wide with four blank spacer columns; only mark/type/serial/owner/operator
 # carry data. `skip_rows: 2` drops the metadata row ("…/updated", total count) and the bilingual
 # header row so the explicit column names below override cleanly.
 skip_rows: 2

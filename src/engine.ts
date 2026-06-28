@@ -1,3 +1,4 @@
+import { TextDecoder } from 'node:util';
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import {
@@ -12,9 +13,8 @@ import {
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
-// Dispatches the primary-file parse based on `config.format`. CSV is the existing path;
-// `ods`/`xlsx` route to the hucre spreadsheet parser; legacy binary `xls` routes to the
-// SheetJS-backed parser; `json` flattens an API response into rows. Joins always read CSV —
+// Dispatches the primary-file parse based on `config.format`. Each branch routes to the parser for
+// that format; the hucre spreadsheet path (ods/xlsx) is the fallthrough. Joins always read CSV —
 // sources that need spreadsheet joins do not exist yet.
 const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
   if (config.format === 'csv') {
@@ -79,6 +79,24 @@ interface MissingSourceIdPolicy {
   pattern: RegExp;
 }
 
+// Asserts the translated record count matches a total the source publishes about itself (e.g. a
+// "Kokku ... /total" cell), failing the run loudly on mismatch so a dropped/added row or a
+// preamble-count shift can't silently publish a wrong-size fleet. The pattern is repo-controlled
+// source YAML, validated as a regex by the loader, and matched against the decoded primary file.
+const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: number): void => {
+  const check = config.record_count;
+  if (!check) return;
+  const text = new TextDecoder(config.encoding).decode(primaryBuf);
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const expected = new RegExp(check.pattern).exec(text)?.[1];
+  if (expected === undefined)
+    throw new Error(`Source "${config.id}": record_count pattern matched no count in primary file`);
+  if (actual !== Number(expected))
+    throw new Error(
+      `Source "${config.id}": translated ${actual} records but the source publishes ${expected}`
+    );
+};
+
 export async function translate(
   config: SourceConfig,
   files: Map<string, Buffer>
@@ -124,6 +142,7 @@ export async function translate(
   const skipped = missingIdSkipped + duplicateSkipped;
   const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
   log('info', 'translate_complete', { source: config.id, ...stats });
+  assertRecordCount(config, primaryBuf, records.size);
   return { records, stats };
 }
 

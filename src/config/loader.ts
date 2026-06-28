@@ -86,6 +86,13 @@ const SourceConfigSchema = z
         }),
       })
       .optional(),
+    record_count: z
+      .object({
+        pattern: z.string().min(1).refine(isValidRegex, {
+          message: 'record_count.pattern must be a valid regular expression',
+        }),
+      })
+      .optional(),
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
     skip_rows: z.number().int().nonnegative().optional(),
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),

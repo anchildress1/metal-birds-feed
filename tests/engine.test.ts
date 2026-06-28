@@ -1860,3 +1860,53 @@ describe('Transpordiamet Estonia (HTML) fixture translation', () => {
     }
   });
 });
+
+// Builds an ee-tram-shaped HTML table (9 columns, metadata + header preamble) with a stated total
+// and a set of marks, to exercise the record_count guard independently of the ground-truth fixture.
+const eeTable = (statedTotal: number, marks: string[]): Buffer => {
+  const cell = (v: string): string => `<td>${v || '&nbsp;'}</td>`;
+  const row = (cells: string[]): string => `<tr>${cells.map(cell).join('')}</tr>`;
+  const meta = row([
+    '',
+    '19.06.2026/updated',
+    '',
+    '',
+    '',
+    'Kokku õhusõidukeid /total',
+    String(statedTotal),
+    '',
+    '',
+  ]);
+  const header = row(['', 'mark', '', '', 'type', 'serial', 'owner', 'operator', '']);
+  const data = marks.map((m) =>
+    row(['', m, '', '', 'Cessna 172', '123', 'Owner OÜ', 'Owner OÜ', ''])
+  );
+  return Buffer.from(`<table>${meta}${header}${data.join('')}</table>`, 'utf8');
+};
+
+describe('record_count guard (ee-tram)', () => {
+  const config = loadSourceConfig(EE_CONFIG_PATH);
+
+  it('passes when the translated count equals the published total', async () => {
+    const { records } = await translate(
+      config,
+      new Map([['register', eeTable(2, ['ES - AAA', 'ES - AAB'])]])
+    );
+    expect(records.size).toBe(2);
+  });
+
+  it('fails loudly when a row is missing vs the published total', async () => {
+    await expect(
+      translate(config, new Map([['register', eeTable(3, ['ES - AAA', 'ES - AAB'])]]))
+    ).rejects.toThrow(/translated 2 records but the source publishes 3/);
+  });
+
+  it('fails loudly when the published total cannot be found', async () => {
+    const noTotal = eeTable(2, ['ES - AAA', 'ES - AAB'])
+      .toString('utf8')
+      .replace(/Kokku[^<]*/, 'x');
+    await expect(
+      translate(config, new Map([['register', Buffer.from(noTotal, 'utf8')]]))
+    ).rejects.toThrow(/pattern matched no count/);
+  });
+});
