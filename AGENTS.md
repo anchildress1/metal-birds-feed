@@ -59,7 +59,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Single-file (non-zip) download: `download.format: file` with exactly one `entries` alias.
 - Banner/metadata rows that aren't real records: `source_id_transform` returning `null` for non-records; pair with `allowed_missing_source_id_rows` to bound skip.
 - Headerful files using explicit `columns`: `skip_rows: 1` discards the file's own header so `columns` overrides cleanly.
-- Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. A page with more than one `<table>` (nav chrome, a summary table) needs `sheet:` to pick the right one — same selector (name or zero-based index) as the xls path; SheetJS names HTML tables `Sheet1`, `Sheet2`, ... in document order.
+- Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. Multi-table pages: `sheet:` (name or index, same as xls) — SheetJS names them `Sheet1`, `Sheet2`, ... in order.
 - Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't publish a wrong-size fleet silently.
 
 ## Architecture invariants
