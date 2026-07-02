@@ -21,6 +21,21 @@ const isValidRegex = (pattern: string): boolean => {
   }
 };
 
+// record_count.pattern is read positionally (`.exec(text)?.[1]`), so a pattern with zero capture
+// groups would silently produce `undefined` and surface as a misleading "matched no count" runtime
+// error instead of a config-time one. Matching against '' with a trailing empty alternative forces
+// every group in the pattern to appear (as undefined) in the result array without requiring the
+// pattern itself to match anything, so the array length reports the true group count.
+const hasOneCaptureGroup = (pattern: string): boolean => {
+  try {
+    // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+    const match = new RegExp(`(?:${pattern})|`).exec('');
+    return (match?.length ?? 0) - 1 === 1;
+  } catch {
+    return true; // invalid regex is already reported by the isValidRegex refine
+  }
+};
+
 const FieldMappingSchema = z
   .object({
     field: z.string().optional(),
@@ -88,9 +103,15 @@ const SourceConfigSchema = z
       .optional(),
     record_count: z
       .object({
-        pattern: z.string().min(1).refine(isValidRegex, {
-          message: 'record_count.pattern must be a valid regular expression',
-        }),
+        pattern: z
+          .string()
+          .min(1)
+          .refine(isValidRegex, {
+            message: 'record_count.pattern must be a valid regular expression',
+          })
+          .refine(hasOneCaptureGroup, {
+            message: 'record_count.pattern must have exactly one capture group',
+          }),
       })
       .optional(),
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
