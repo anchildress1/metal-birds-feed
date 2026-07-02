@@ -1909,4 +1909,15 @@ describe('record_count guard (ee-tram)', () => {
       translate(config, new Map([['register', Buffer.from(noTotal, 'utf8')]]))
     ).rejects.toThrow(/pattern matched no count/);
   });
+
+  it('skips the count check when a row already failed, leaving that failure for pipeline.ts to report', async () => {
+    // 'NOT-A-MARK' fails ee_registration (no ES- prefix), so this row is a row-level failure —
+    // independent of and prior to the record_count guard, which pipeline.ts's own
+    // `stats.failed > 0` abort path is responsible for surfacing.
+    const { stats } = await translate(
+      config,
+      new Map([['register', eeTable(2, ['ES - AAA', 'NOT-A-MARK'])]])
+    );
+    expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0 });
+  });
 });

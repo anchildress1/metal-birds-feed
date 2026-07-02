@@ -145,8 +145,11 @@ export async function translate(
 
   const skipped = missingIdSkipped + duplicateSkipped;
   const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
+  // Runs before the "complete" log and only when there are no row-level failures: pipeline.ts's
+  // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
+  // logging translate_complete before a guard that can still throw would misreport the run as done.
+  if (failed === 0) assertRecordCount(config, primaryBuf, records.size);
   log('info', 'translate_complete', { source: config.id, ...stats });
-  assertRecordCount(config, primaryBuf, records.size);
   return { records, stats };
 }
 
