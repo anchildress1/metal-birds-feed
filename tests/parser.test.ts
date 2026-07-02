@@ -803,4 +803,45 @@ describe('parseHtml', () => {
     });
     expect(rows).toEqual([]);
   });
+
+  // A page with more than one <table> (nav chrome, a summary table above the register, etc.)
+  // becomes "Sheet1", "Sheet2", ... — `sheet` selects which one, same as the xls path.
+  const multiTableBuf = (): Buffer =>
+    Buffer.from(
+      '<table><tr><td>mark</td></tr><tr><td>first</td></tr></table>' +
+        '<table><tr><td>mark</td></tr><tr><td>second</td></tr></table>',
+      'utf8'
+    );
+
+  it('defaults to the first table when no sheet selector is given', async () => {
+    const rows = await parseHtml(multiTableBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark'],
+      skip_rows: 1,
+    });
+    expect(rows).toEqual([{ mark: 'first' }]);
+  });
+
+  it('selects a later table by zero-based sheet index', async () => {
+    const rows = await parseHtml(multiTableBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark'],
+      skip_rows: 1,
+      sheet: 1,
+    });
+    expect(rows).toEqual([{ mark: 'second' }]);
+  });
+
+  it('selects a table by its generated sheet name', async () => {
+    const rows = await parseHtml(multiTableBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark'],
+      skip_rows: 1,
+      sheet: 'Sheet2',
+    });
+    expect(rows).toEqual([{ mark: 'second' }]);
+  });
 });
