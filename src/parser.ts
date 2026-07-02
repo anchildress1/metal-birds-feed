@@ -175,8 +175,9 @@ export async function parseSpreadsheet(
 
 // Shared SheetJS AOA→Row[] tail for the binary-xls and html-table paths: read the sheet as an
 // array-of-arrays, stringify each cell, then run the common header/skip_rows shaping. blankrows:false
-// strips blank rows before skip_rows, so both paths count non-blank rows (tw-caa's skip_rows relies
-// on this).
+// strips blank rows before skip_rows, so both paths count non-blank rows — unlike the hucre
+// ods/xlsx path (parseSpreadsheet), which doesn't strip blanks before slicing skip_rows
+// (tw-caa's skip_rows relies on this xls/html-specific behavior).
 const sheetToRows = (sheet: XLSX.WorkSheet, options: BaseSpreadsheetOptions): Row[] => {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,

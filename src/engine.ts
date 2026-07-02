@@ -81,8 +81,12 @@ interface MissingSourceIdPolicy {
 
 // Asserts the translated record count matches a total the source publishes about itself (e.g. a
 // "Kokku ... /total" cell), failing the run loudly on mismatch so a dropped/added row or a
-// preamble-count shift can't silently publish a wrong-size fleet. The pattern is repo-controlled
-// source YAML, validated as a regex by the loader, and matched against the decoded primary file.
+// preamble-count shift can't silently publish a wrong-size fleet. The pattern source is repo-
+// controlled source YAML (justifies the non-literal-regexp suppression below, since it isn't
+// runtime input); the loader also validates it's a syntactically valid regex with exactly one
+// capture group. It's still matched against the decoded primary file — externally-fetched register
+// content — so ReDoS risk is bounded by review, not by sandboxing: keep these patterns simple
+// (bounded quantifiers, no nested unbounded repetition) and treat them as reviewed code at PR time.
 const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: number): void => {
   const check = config.record_count;
   if (!check) return;
