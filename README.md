@@ -181,7 +181,7 @@ Required upstream notices, kept short:
 3. New source onboarding touches **all five surfaces** or the source is incomplete:
    - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls` | `json` | `pdf` | `html`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
    - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
-   - `DATA_LICENSES.md` — classification, permitted uses, attribution wording, reply text (verbatim).
+   - `DATA_LICENSES.md` — classification, permitted uses, attribution wording quoted exactly (not the full reply — see AGENTS.md).
    - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
    - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
 4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.

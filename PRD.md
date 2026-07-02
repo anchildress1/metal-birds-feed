@@ -81,7 +81,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 - **Restrictive** — paid, single-PC, no-redistribute, or active denial. **Excluded from the project entirely.**
 - **Unknown** — pending license research and/or permission-email reply. Source is not slotted into a phase until classification resolves.
 
-**CC.2 Permission protocol.** For Personal-use and Unknown sources, send the agency permission email (template at `docs/agency-permission-request.md`) before slotting. Reply preserved verbatim in `DATA_LICENSES.md`. If no reply within 30 calendar days from the send date, the source proceeds on the public-record argument: the data is already public on the agency's site, this project republishes the same information with attribution, and any later removal request is honored promptly.
+**CC.2 Permission protocol.** For Personal-use and Unknown sources, send the agency permission email (template at `docs/agency-permission-request.md`) before slotting. The agency's email thread is the verbatim reply record; `DATA_LICENSES.md` captures only status, license posture, and any attribution/use terms quoted exactly. If no reply within 30 calendar days from the send date, the source proceeds on the public-record argument: the data is already public on the agency's site, this project republishes the same information with attribution, and any later removal request is honored promptly.
 
 **CC.3 Non-commercial operator deployment.** The operator deployment of `metal-birds-feed` (read by `metal-birds-watch`) must remain non-commercial for the lifetime of any Personal-use source it ingests. Ads, sponsorship, monetization, or sale on the consumer site invalidates CC BY-NC and "personal-use" licenses, requiring those sources to be removed before any commercial change.
 
@@ -153,7 +153,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R2.2 NZ field-coverage parity.** Document fields CAA NZ does not provide. Null-rather-than-invent rule unchanged.
 
-**R2.3 NZ permission protocol.** Per CC.2, send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz before slotting. Reply preserved verbatim in `DATA_LICENSES.md`. If no reply within 30 calendar days, source proceeds on the public-record argument. CAA NZ classifies as **Personal-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
+**R2.3 NZ permission protocol.** Per CC.2, send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz before slotting. If no reply within 30 calendar days, source proceeds on the public-record argument. CAA NZ classifies as **Personal-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
 
 **Acceptance (NZ CAA track):** A consumer point-querying `aircraft/nz-caa.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
 
