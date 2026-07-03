@@ -233,6 +233,15 @@ const casaEngineDetailOrNull = (value: string): string | null => {
   return v;
 };
 
+// Estonia publishes marks spaced around the hyphen ("ES - MBA", "ES - 1004"); collapse to the
+// canonical hyphenated form ("ES-MBA"). Null for any non-ES- value: as the source_id transform with
+// no allowed-missing policy, that makes an unexpected non-mark row fail the run rather than mint a
+// bogus id.
+const eeRegistration = (value: string): string | null => {
+  const v = value.replace(/\s+/g, '').toUpperCase();
+  return /^ES-[A-Z0-9]+$/.test(v) ? v : null;
+};
+
 // Restores the hyphen in a dash-stripped mark (PPACK -> PP-ACK); null if not the 2+3 shape.
 const brRegistration = (value: string): string | null => {
   const v = value.trim().toUpperCase();
@@ -459,6 +468,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   casa_full_registration: casaFullRegistration,
   casa_engine_detail_or_null: casaEngineDetailOrNull,
   br_registration: brRegistration,
+  ee_registration: eeRegistration,
   br_airframe: brAirframe,
   br_status: brStatus,
   br_party_name: brPartyName,

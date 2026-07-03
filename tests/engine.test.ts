@@ -1762,3 +1762,162 @@ describe('CAA Maldives fixture translation (PDF)', () => {
   it('marks the current-fleet register as valid', () =>
     expect([...mvRecords.values()].every((r) => r.status === 'valid')).toBe(true));
 });
+
+const EE_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram');
+const EE_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ee-tram.yaml');
+
+const eeFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(EE_FIXTURES, 'input', filename));
+
+let eeRecords: Map<string, Aircraft>;
+let eeStats: EngineStats;
+
+beforeAll(async () => {
+  const config = loadSourceConfig(EE_CONFIG_PATH);
+  const files = new Map([['register', eeFixtureBuffer('register.html')]]);
+  const result = await translate(config, files);
+  eeRecords = result.records;
+  eeStats = result.stats;
+});
+
+describe('Transpordiamet Estonia (HTML) fixture translation', () => {
+  it('translates all 10 fixture aircraft with no failures', () => {
+    expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0 });
+    expect(eeRecords.size).toBe(10);
+  });
+
+  describe('ES-MBA — airline jet with a foreign trust owner', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = eeRecords.get('ES-MBA')!;
+    });
+    it('normalizes the spaced mark for id and registration', () => {
+      expect(r.source).toBe('ee-tram');
+      expect(r.source_id).toBe('ES-MBA');
+      expect(r.registration).toBe('ES-MBA');
+      expect(r.country).toBe('EE');
+    });
+    it('keeps the make+model string in model with manufacturer null', () => {
+      expect(r.model).toBe('Airbus A320');
+      expect(r.manufacturer).toBeNull();
+    });
+    it('captures owner and operator separately', () => {
+      expect(r.owner.name).toBe('Wilmington Trust SP Services (Dublin) Limited');
+      expect(r.operator.name).toBe('Marabu Airlines OÜ');
+    });
+    it('leaves owner.country null (foreign lessor, not the registration country)', () =>
+      expect(r.owner.country).toBeNull());
+    it('marks the register as valid (active-only listing)', () => expect(r.status).toBe('valid'));
+  });
+
+  describe('ES-MBB — comma in the owner name', () => {
+    it('preserves the full owner string verbatim', () =>
+      expect(eeRecords.get('ES-MBB')?.owner.name).toBe(
+        'Bank of Utah, not in its individual capacity but solely as owner trustee'
+      ));
+  });
+
+  describe('ES-ANS — private owner ("eraisik")', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = eeRecords.get('ES-ANS')!;
+    });
+    it("keeps the source's own privacy redaction verbatim", () =>
+      expect(r.owner.name).toBe('eraisik'));
+    it('still carries a distinct operator', () => expect(r.operator.name).toBe('VLR OÜ'));
+  });
+
+  describe('ES-ECG — alphanumeric serial', () => {
+    it('keeps a non-numeric serial intact', () =>
+      expect(eeRecords.get('ES-ECG')?.serial_number).toBe('F172-0873'));
+  });
+
+  describe('ES-1004 — numeric mark, sailplane, spaced serial', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = eeRecords.get('ES-1004')!;
+    });
+    it('normalizes a numeric mark', () => expect(r.registration).toBe('ES-1004'));
+    it('keeps the bilingual category type as model', () =>
+      expect(r.model).toBe('purilennuk/sailplane'));
+    it('preserves the spaced alphanumeric serial', () => expect(r.serial_number).toBe('B - 1454'));
+  });
+
+  it('every Estonia record has country=EE, status=valid, and no engine/PII-address data', () => {
+    for (const r of eeRecords.values()) {
+      expect(r.country).toBe('EE');
+      expect(r.status).toBe('valid');
+      expect(r.registration).toMatch(/^ES-[A-Z0-9]+$/);
+      expect(r.engine).toEqual({
+        manufacturer: null,
+        model: null,
+        type: null,
+        count: null,
+        horsepower: null,
+        thrust_lbs: null,
+      });
+      expect(Object.keys(r)).not.toContain('owner_street');
+    }
+  });
+});
+
+// Builds an ee-tram-shaped HTML table (9 columns, metadata + header preamble) with a stated total
+// and a set of marks, to exercise the record_count guard independently of the ground-truth fixture.
+const eeTable = (statedTotal: number, marks: string[]): Buffer => {
+  const cell = (v: string): string => `<td>${v || '&nbsp;'}</td>`;
+  const row = (cells: string[]): string => `<tr>${cells.map(cell).join('')}</tr>`;
+  const meta = row([
+    '',
+    '19.06.2026/updated',
+    '',
+    '',
+    '',
+    'Kokku õhusõidukeid /total',
+    String(statedTotal),
+    '',
+    '',
+  ]);
+  const header = row(['', 'mark', '', '', 'type', 'serial', 'owner', 'operator', '']);
+  const data = marks.map((m) =>
+    row(['', m, '', '', 'Cessna 172', '123', 'Owner OÜ', 'Owner OÜ', ''])
+  );
+  return Buffer.from(`<table>${meta}${header}${data.join('')}</table>`, 'utf8');
+};
+
+describe('record_count guard (ee-tram)', () => {
+  const config = loadSourceConfig(EE_CONFIG_PATH);
+
+  it('passes when the translated count equals the published total', async () => {
+    const { records } = await translate(
+      config,
+      new Map([['register', eeTable(2, ['ES - AAA', 'ES - AAB'])]])
+    );
+    expect(records.size).toBe(2);
+  });
+
+  it('fails loudly when a row is missing vs the published total', async () => {
+    await expect(
+      translate(config, new Map([['register', eeTable(3, ['ES - AAA', 'ES - AAB'])]]))
+    ).rejects.toThrow(/translated 2 records but the source publishes 3/);
+  });
+
+  it('fails loudly when the published total cannot be found', async () => {
+    const noTotal = eeTable(2, ['ES - AAA', 'ES - AAB'])
+      .toString('utf8')
+      .replace(/Kokku[^<]*/, 'x');
+    await expect(
+      translate(config, new Map([['register', Buffer.from(noTotal, 'utf8')]]))
+    ).rejects.toThrow(/pattern matched no count/);
+  });
+
+  it('skips the count check when a row already failed, leaving that failure for pipeline.ts to report', async () => {
+    // 'NOT-A-MARK' fails ee_registration (no ES- prefix), so this row is a row-level failure —
+    // independent of and prior to the record_count guard, which pipeline.ts's own
+    // `stats.failed > 0` abort path is responsible for surfacing.
+    const { stats } = await translate(
+      config,
+      new Map([['register', eeTable(2, ['ES - AAA', 'NOT-A-MARK'])]])
+    );
+    expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0 });
+  });
+});

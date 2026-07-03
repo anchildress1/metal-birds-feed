@@ -173,15 +173,12 @@ export async function parseSpreadsheet(
   });
 }
 
-// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS. Cells read raw (numeric serials
-// kept; dates deferred to transforms). blankrows:false strips blank rows before skip_rows, so the
-// xls path counts non-blank rows — unlike the hucre path (tw-caa's skip_rows relies on this).
-// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
-export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
-  const wb = XLSX.read(buf, { type: 'buffer' });
-  const name = pickXlsSheet(wb.SheetNames, options.sheet);
-  const sheet = wb.Sheets[name];
-
+// Shared SheetJS AOA→Row[] tail for the binary-xls and html-table paths: read the sheet as an
+// array-of-arrays, stringify each cell, then run the common header/skip_rows shaping. blankrows:false
+// strips blank rows before skip_rows, so both paths count non-blank rows — unlike the hucre
+// ods/xlsx path (parseSpreadsheet), which doesn't strip blanks before slicing skip_rows
+// (tw-caa's skip_rows relies on this xls/html-specific behavior).
+const sheetToRows = (sheet: XLSX.WorkSheet, options: BaseSpreadsheetOptions): Row[] => {
   const aoa = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
     header: 1,
     raw: true,
@@ -194,6 +191,29 @@ export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<R
     columns: options.columns,
     skipRows: options.skip_rows ?? 0,
   });
+};
+
+// Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS. Cells read raw (numeric serials kept;
+// dates deferred to transforms).
+// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
+export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
+  const wb = XLSX.read(buf, { type: 'buffer' });
+  return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
+}
+
+export type ParseHtmlOptions = BaseSpreadsheetOptions & { encoding: 'utf8' | 'latin1' };
+
+// Parses an HTML page whose register is a server-rendered <table> (e.g. Estonia's Transpordiamet,
+// which embeds the full fleet as one table with no separate data API). SheetJS turns each <table>
+// into a sheet; with no `sheet` selector the first table is used, and the same column/skip_rows
+// shaping as the spreadsheet paths applies. A page with no parseable table makes SheetJS throw,
+// failing the run loudly rather than yielding an empty set. Dynamic page chrome never reaches the
+// artifact because content_hash is over the parsed records, not the raw page.
+// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
+export async function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise<Row[]> {
+  const html = new TextDecoder(options.encoding).decode(buf);
+  const wb = XLSX.read(html, { type: 'string' });
+  return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
 }
 
 export interface ParsePdfOptions {

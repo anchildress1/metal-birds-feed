@@ -1,12 +1,20 @@
+import { TextDecoder } from 'node:util';
 import type { SourceConfig, FieldMapping } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
-import { parseCSV, parseSpreadsheet, parseXls, parseJson, parsePdf, type Row } from './parser.js';
+import {
+  parseCSV,
+  parseSpreadsheet,
+  parseXls,
+  parseHtml,
+  parseJson,
+  parsePdf,
+  type Row,
+} from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { log } from './logger.js';
 
-// Dispatches the primary-file parse based on `config.format`. CSV is the existing path;
-// `ods`/`xlsx` route to the hucre spreadsheet parser; legacy binary `xls` routes to the
-// SheetJS-backed parser; `json` flattens an API response into rows. Joins always read CSV —
+// Dispatches the primary-file parse based on `config.format`. Each branch routes to the parser for
+// that format; the hucre spreadsheet path (ods/xlsx) is the fallthrough. Joins always read CSV —
 // sources that need spreadsheet joins do not exist yet.
 const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
   if (config.format === 'csv') {
@@ -40,6 +48,15 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       trim: config.trim_all,
     });
   }
+  if (config.format === 'html') {
+    return parseHtml(buf, {
+      encoding: config.encoding,
+      trim: config.trim_all,
+      columns: config.columns?.[config.primary],
+      sheet: config.sheet,
+      skip_rows: config.skip_rows,
+    });
+  }
   return parseSpreadsheet(buf, {
     format: config.format,
     trim: config.trim_all,
@@ -61,6 +78,28 @@ interface MissingSourceIdPolicy {
   field: string;
   pattern: RegExp;
 }
+
+// Asserts the translated record count matches a total the source publishes about itself (e.g. a
+// "Kokku ... /total" cell), failing the run loudly on mismatch so a dropped/added row or a
+// preamble-count shift can't silently publish a wrong-size fleet. The pattern source is repo-
+// controlled source YAML (justifies the non-literal-regexp suppression below, since it isn't
+// runtime input); the loader also validates it's a syntactically valid regex with exactly one
+// capture group. It's still matched against the decoded primary file — externally-fetched register
+// content — so ReDoS risk is bounded by review, not by sandboxing: keep these patterns simple
+// (bounded quantifiers, no nested unbounded repetition) and treat them as reviewed code at PR time.
+const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: number): void => {
+  const check = config.record_count;
+  if (!check) return;
+  const text = new TextDecoder(config.encoding).decode(primaryBuf);
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const expected = new RegExp(check.pattern).exec(text)?.[1];
+  if (expected === undefined)
+    throw new Error(`Source "${config.id}": record_count pattern matched no count in primary file`);
+  if (actual !== Number(expected))
+    throw new Error(
+      `Source "${config.id}": translated ${actual} records but the source publishes ${expected}`
+    );
+};
 
 export async function translate(
   config: SourceConfig,
@@ -106,6 +145,10 @@ export async function translate(
 
   const skipped = missingIdSkipped + duplicateSkipped;
   const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
+  // Runs before the "complete" log and only when there are no row-level failures: pipeline.ts's
+  // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
+  // logging translate_complete before a guard that can still throw would misreport the run as done.
+  if (failed === 0) assertRecordCount(config, primaryBuf, records.size);
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }

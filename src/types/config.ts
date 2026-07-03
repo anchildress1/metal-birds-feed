@@ -42,6 +42,7 @@ export const SCALAR_TRANSFORMS = [
   'foca_operator_state',
   'foca_operator_kind',
   'foca_operator_country',
+  'ee_registration',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
@@ -96,7 +97,15 @@ export interface AllowedMissingSourceIdRowsConfig {
   pattern: string;
 }
 
-export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf';
+export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf' | 'html';
+
+// Source-published fleet total used to catch silent structural drift. `pattern` is a regex with one
+// capture group, matched against the decoded primary file; the engine asserts the translated record
+// count equals that integer and fails the run on mismatch (e.g. a dropped row or a preamble-count
+// shift that would otherwise publish a short fleet silently).
+export interface RecordCountCheck {
+  pattern: string;
+}
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
 // `field_axis` is the axis along which fields (columns) are distributed; the perpendicular axis is
@@ -123,6 +132,7 @@ export interface SourceConfig {
   // the response is itself the array. Only used when format is "json".
   record_path?: string;
   pdf?: PdfConfig;
+  record_count?: RecordCountCheck;
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;

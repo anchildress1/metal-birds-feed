@@ -8,6 +8,7 @@ import {
   parseCSV,
   parseSpreadsheet,
   parseXls,
+  parseHtml,
   parseJson,
   parsePdf,
   type HucreFormat,
@@ -723,5 +724,124 @@ describe('parsePdf', () => {
   it('returns no rows when the anchor pattern matches nothing', async () => {
     const rows = await parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }));
     expect(rows).toEqual([]);
+  });
+});
+
+const EE_HTML = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram', 'input', 'register.html');
+const eeBuf = (): Buffer => readFileSync(EE_HTML);
+// Mirrors sources/ee-tram.yaml: 9-column table, two preamble rows dropped, explicit positional names.
+const eeColumns = [
+  'pad_lead',
+  'registration_mark',
+  'pad_2',
+  'pad_3',
+  'type',
+  'serial',
+  'owner',
+  'operator',
+  'pad_trail',
+];
+
+describe('parseHtml', () => {
+  it('extracts the server-rendered table into one row per aircraft, dropping preamble rows', async () => {
+    const rows = await parseHtml(eeBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: eeColumns,
+      skip_rows: 2,
+    });
+    expect(rows).toHaveLength(10);
+    const r = rows.find((row) => row.registration_mark === 'ES - MBA')!;
+    expect(r.type).toBe('Airbus A320');
+    expect(r.serial).toBe('6849');
+    expect(r.owner).toBe('Wilmington Trust SP Services (Dublin) Limited');
+    expect(r.operator).toBe('Marabu Airlines OÜ');
+  });
+
+  it('keeps commas, parentheses, and Estonian characters in cell text intact', async () => {
+    const rows = await parseHtml(eeBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: eeColumns,
+      skip_rows: 2,
+    });
+    expect(rows.find((row) => row.registration_mark === 'ES - MBB')?.owner).toBe(
+      'Bank of Utah, not in its individual capacity but solely as owner trustee'
+    );
+    expect(rows.find((row) => row.registration_mark === 'ES - PCO')?.operator).toBe(
+      'Politsei- ja Piirivalveamet'
+    );
+  });
+
+  it('does not leak the dropped metadata/header rows as records', async () => {
+    const rows = await parseHtml(eeBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: eeColumns,
+      skip_rows: 2,
+    });
+    const marks = rows.map((r) => r.registration_mark);
+    expect(marks).not.toContain('19.06.2026/updated');
+    expect(marks.every((m) => /^ES - /.test(m))).toBe(true);
+  });
+
+  it('throws on a page with no parseable <table> (loud failure, never an empty set)', async () => {
+    const buf = Buffer.from(
+      '<html><body><p>register temporarily unavailable</p></body></html>',
+      'utf8'
+    );
+    await expect(parseHtml(buf, { encoding: 'utf8', trim: true, skip_rows: 2 })).rejects.toThrow();
+  });
+
+  it('returns an empty array for a header-only table (no data rows)', async () => {
+    const buf = Buffer.from('<table><tr><td>mark</td><td>type</td></tr></table>', 'utf8');
+    const rows = await parseHtml(buf, {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark', 'type'],
+      skip_rows: 1,
+    });
+    expect(rows).toEqual([]);
+  });
+
+  // A page with more than one <table> (nav chrome, a summary table above the register, etc.)
+  // becomes "Sheet1", "Sheet2", ... — `sheet` selects which one, same as the xls path.
+  const multiTableBuf = (): Buffer =>
+    Buffer.from(
+      '<table><tr><td>mark</td></tr><tr><td>first</td></tr></table>' +
+        '<table><tr><td>mark</td></tr><tr><td>second</td></tr></table>',
+      'utf8'
+    );
+
+  it('defaults to the first table when no sheet selector is given', async () => {
+    const rows = await parseHtml(multiTableBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark'],
+      skip_rows: 1,
+    });
+    expect(rows).toEqual([{ mark: 'first' }]);
+  });
+
+  it('selects a later table by zero-based sheet index', async () => {
+    const rows = await parseHtml(multiTableBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark'],
+      skip_rows: 1,
+      sheet: 1,
+    });
+    expect(rows).toEqual([{ mark: 'second' }]);
+  });
+
+  it('selects a table by its generated sheet name', async () => {
+    const rows = await parseHtml(multiTableBuf(), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['mark'],
+      skip_rows: 1,
+      sheet: 'Sheet2',
+    });
+    expect(rows).toEqual([{ mark: 'second' }]);
   });
 });

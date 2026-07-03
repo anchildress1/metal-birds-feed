@@ -18,29 +18,29 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### ✅ Done — no further action
 
-| Source            | License                                           | How handled    |
-| ----------------- | ------------------------------------------------- | -------------- |
-| FAA               | US public domain                                  | Live (phase 1) |
-| Transport Canada  | GC Open Data Licence Agreement (verbatim notices) | Live (phase 2) |
-| ILT (Netherlands) | CC-0                                              | Live (phase 3) |
-| CASA (Australia)  | CC BY 4.0                                         | Live (phase 4) |
-| CAA Latvia        | CC0-1.0                                           | Live (phase 5) |
-| CAA Taiwan        | Open (OGDL v1.0)                                  | Live (phase 6) |
-| ANAC Brasil       | Open w/ attribution (CC BY-equiv)                 | Live (phase 7) |
-| FOCA / BAZL (CH)  | Open w/ attribution (FOCA legal grant 2026-05-22) | Live (phase 8) |
-| CAA Maldives      | Open + attribution + error-disclaimer (written)   | Live (phase 9) |
+| Source                   | License                                           | How handled                          |
+| ------------------------ | ------------------------------------------------- | ------------------------------------ |
+| FAA                      | US public domain                                  | Live (phase 1)                       |
+| Transport Canada         | GC Open Data Licence Agreement (verbatim notices) | Live (phase 2)                       |
+| ILT (Netherlands)        | CC-0                                              | Live (phase 3)                       |
+| CASA (Australia)         | CC BY 4.0                                         | Live (phase 4)                       |
+| CAA Latvia               | CC0-1.0                                           | Live (phase 5)                       |
+| CAA Taiwan               | Open (OGDL v1.0)                                  | Live (phase 6)                       |
+| ANAC Brasil              | Open w/ attribution (CC BY-equiv)                 | Live (phase 7)                       |
+| FOCA / BAZL (CH)         | Open w/ attribution (FOCA legal grant 2026-05-22) | Live (phase 8)                       |
+| CAA Maldives             | Open + attribution + error-disclaimer (written)   | Live (phase 9)                       |
+| Transpordiamet (Estonia) | Personal-use + attribution (reply 2026-05-13)     | Live (phase 10) — `html` parser path |
 
 ### 🛠️ Cleared — implementation pending
 
 License is cleared (via public declaration or substantive agency reply). Ingest is blocked on engineering work — usually a new parser path, a non-standard fetch pattern, a data-shape issue, or upstream dataset publication. Full reply text and contacts live in `DATA_LICENSES.md`.
 
-| Source                 | License (cleared via)                             | Ingest blocker                                                              | Reply           |
-| ---------------------- | ------------------------------------------------- | --------------------------------------------------------------------------- | --------------- |
-| Traficom Finland       | Open (CC BY 4.0) — confirmed in writing           | Data shape — public ZIP-CSV is GDPR-stripped; no identifier-bearing channel | 2026-05-11      |
-| Transpordiamet Estonia | Personal-use + attribution                        | HTML scrape needed                                                          | replied         |
-| CAAT Thailand          | Personal-use + attribution — CAAT bilateral grant | config + fixtures (pdf parser path landed with mv-caa)                      | replied         |
-| CAA Oman               | Open (CC BY 4.0-compat) — Oman Open Data License  | Register dataset not yet published                                          | sent 2026-05-11 |
-| CAAS Singapore         | Open + attribution — confirmed by CAAS            | No bulk download surfaced                                                   | 2026-05-11      |
+| Source           | License (cleared via)                              | Ingest blocker                                                                                                                                                                                                                                                                                 | Reply           |
+| ---------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Traficom Finland | Open (CC BY 4.0) — confirmed in writing            | Data shape — public ZIP-CSV is GDPR-stripped; no identifier-bearing channel                                                                                                                                                                                                                    | 2026-05-11      |
+| CAAT Thailand    | Personal-use + attribution — CAAT reply 2026-05-21 | **Fetch — whole caat.or.th behind Cloudflare managed JS challenge (403); engine `fetch()` can't pass.** curl, curl_cffi (TLS-impersonation), and Playwright headless/headed/stealth all fail from a datacenter IP (incl. GitHub Actions). Verified 2026-06-27. PDF parser path itself is fine. | 2026-05-21      |
+| CAA Oman         | Open (CC BY 4.0-compat) — Oman Open Data License   | Register dataset not yet published                                                                                                                                                                                                                                                             | sent 2026-05-11 |
+| CAAS Singapore   | Open + attribution — confirmed by CAAS             | No bulk download surfaced                                                                                                                                                                                                                                                                      | 2026-05-11      |
 
 ### 🟡 In flight — waiting on reply
 
@@ -380,4 +380,4 @@ Ranked by license-posture promise:
 - The "Likely Open / Likely needs email" hints in Phase 1 are heuristics, not facts. Always verify before assuming.
 - Save evidence: when verifying a license, screenshot or copy the relevant page text into the agency's `DATA_LICENSES.md` entry. Site terms move; receipts are durable.
 - Re-verify each existing source annually. Government policies change quietly.
-- Any reply to a permission email goes verbatim into `DATA_LICENSES.md` — never paraphrase agency replies, since attribution conditions may need to be quoted exactly.
+- The agency's email thread is the verbatim reply record. Into `DATA_LICENSES.md` capture the status, license posture, and any attribution/license conditions that must be quoted exactly (never paraphrased) — don't transcribe the full reply into the tracker.

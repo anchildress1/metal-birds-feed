@@ -247,6 +247,83 @@ describe('loadSourceConfig', () => {
       unlinkSync(tmp);
     }
   });
+
+  it('accepts a record_count.pattern with exactly one capture group', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_record_count_ok.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: 'Total: (\\d+)'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.record_count?.pattern).toBe('Total: (\\d+)');
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects record_count.pattern that is not a valid regex', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_record_count_badre.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: '['\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /record_count\.pattern.*valid regular expression/i
+      );
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects record_count.pattern with no capture group', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_record_count_nogroup.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: 'Total: \\d+'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /record_count\.pattern.*exactly one capture group/i
+      );
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects record_count.pattern with more than one capture group', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_record_count_twogroups.yaml'
+    );
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: '(Total): (\\d+)'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /record_count\.pattern.*exactly one capture group/i
+      );
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
 });
 
 describe('loadSourceConfig — JSON + POST sources', () => {

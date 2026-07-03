@@ -57,6 +57,6 @@ Project lead, metal-birds-feed
 - "Source-available, non-commercial" is the accurate legal posture. Avoid "open source" — that has a specific meaning under the OSI definition that allows commercial use, which metal-birds-feed does not.
 - The email deliberately does not commit to a specific refresh cadence in writing. Internal target is monthly; the email keeps "regularly" so the project is not contractually pinned to a number.
 - For agencies whose primary working language is not English (GCAA in Georgian, EU member states in their respective languages), translate the body into the local language. A bilingual side-by-side format is also acceptable.
-- Any reply must be preserved verbatim and translated literally before being recorded in `DATA_LICENSES.md`. Do not paraphrase — attribution conditions and restrictions need to be quoted accurately.
+- The agency's email thread is the verbatim reply record — don't transcribe the full reply into `DATA_LICENSES.md`. Translate literally (not paraphrased) when extracting the status, license posture, and any attribution/use conditions the tracker needs, so quoted terms stay accurate.
 - The 30-day clock for falling back to the public-record argument (per spec) starts the day the email is sent. Record the send date in `DATA_LICENSES.md`.
 - For GCAA specifically: send to `office@gcaa.ge`. Send the Georgian translation, signing as project lead.

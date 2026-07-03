@@ -59,6 +59,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Single-file (non-zip) download: `download.format: file` with exactly one `entries` alias.
 - Banner/metadata rows that aren't real records: `source_id_transform` returning `null` for non-records; pair with `allowed_missing_source_id_rows` to bound skip.
 - Headerful files using explicit `columns`: `skip_rows: 1` discards the file's own header so `columns` overrides cleanly.
+- Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. Multi-table pages: `sheet:` (name or index, same as xls) — SheetJS names them `Sheet1`, `Sheet2`, ... in order.
+- Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't publish a wrong-size fleet silently.
 
 ## Architecture invariants
 
@@ -115,6 +117,6 @@ Never: stack feature + unrelated docs because "commit + push" was said; call a m
   - `DATA_LICENSES.md` — when a source is added or its license posture changes.
   - `README.md` sources table (live/cleared sources) + `README.md` `## Attribution` block — alongside any new `sources/<id>.yaml`.
   - `PRD.md` — only when goals, requirements, or constraints shift. It is planning, not a shipped-implementation log; do not restate source YAML or schema here.
-- `DATA_LICENSES.md` is the single record of source for agency correspondence (every country contacted: email, sent/reply dates, status) and license posture. Do not duplicate that table into other docs.
+- `DATA_LICENSES.md` is the single record of source for agency correspondence (every country contacted: email, sent/reply dates, status) and license posture. It is a flat tracker, not a reply archive: the agency's email thread is the complete verbatim record. Into the tracker capture only what downstream needs — status, license posture, and any license/attribution terms that must be quoted exactly (never paraphrased) so the `README.md` `## Attribution` block can cite them. Do not transcribe full replies into the table, and do not duplicate the table into other docs.
 - `docs/source-onboarding-checklist.md`: triage worklist only. Tracking tables stay bare (Source/Sent/Follow-up/Reply/Fallback) — contact provenance, names, phones, and prefixes belong in `DATA_LICENSES.md`, not here.
 - Inline code comments: WHY only (per Hard prohibitions WHAT-vs-WHY rule).
