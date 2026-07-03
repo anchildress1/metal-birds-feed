@@ -1,4 +1,5 @@
 import { once } from 'node:events';
+import { crc32 } from 'node:zlib';
 import { Open, Parse, type Entry } from 'unzipper';
 import type { DownloadConfig } from './types/config.js';
 import { log } from './logger.js';
@@ -185,9 +186,17 @@ async function extractZip(
             f.stream()
               .on('data', (c: Buffer) => chunks.push(c))
               .on('end', () => {
-                const alias = wanted.get(f.path);
-                if (alias) result.set(alias, Buffer.concat(chunks));
-                resolve();
+                try {
+                  const alias = wanted.get(f.path);
+                  if (alias) {
+                    const buf = Buffer.concat(chunks);
+                    assertEntryCrc(buf, f.crc32, f.path);
+                    result.set(alias, buf);
+                  }
+                  resolve();
+                } catch (err) {
+                  reject(err instanceof Error ? err : new Error(String(err)));
+                }
               })
               .on('error', reject);
           })
@@ -226,6 +235,9 @@ async function extractZipStream(
     const alias = wanted.get(entry.path);
     if (alias) {
       const buffered = entry.buffer().then((buf) => {
+        // Flag bit 3 defers the real CRC to a data descriptor unzipper never copies back into
+        // vars, so the local-header value is meaningless then — verify only when present.
+        if (!(entry.vars.flags & 0x08)) assertEntryCrc(buf, entry.vars.crc32, entry.path);
         result.set(alias, buf);
       });
       // A mid-entry failure also fails the parser, which wins the race below — observe the
@@ -275,6 +287,15 @@ async function extractZipStream(
   log('info', 'extract_complete', { files: result.size });
   return result;
 }
+
+// unzipper never verifies the archive's own CRC, and mangled deflate can stay structurally
+// valid — without this check corrupted register bytes ship in a green run. Plain Error, not
+// TerminalError: in-transit corruption is cured by a re-download, so it must stay retryable.
+const assertEntryCrc = (buf: Buffer, expected: number, path: string): void => {
+  const actual = crc32(buf);
+  if (actual !== expected)
+    throw new Error(`ZIP entry CRC mismatch for "${path}": expected ${expected}, got ${actual}`);
+};
 
 // Name the expected path and what the archive actually holds — the misconfiguration is almost
 // always the path (upstream renamed the file), not the alias. Terminal: a wrong path is

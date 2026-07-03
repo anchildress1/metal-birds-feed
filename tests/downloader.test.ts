@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { crc32 } from 'node:zlib';
 import { download, STREAM_THRESHOLD_BYTES, type RetryOptions } from '../src/downloader.js';
 import type { DownloadConfig } from '../src/types/config.js';
 
@@ -299,6 +300,117 @@ describe('download — stream vs buffer dispatch', () => {
       /not found.*NOTEXIST\.txt.*archive has/i
     );
     expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Minimal single-entry ZIP using `stored` compression — deterministic bytes for CRC tests
+// without fighting deflate validity. `dataDescriptor` moves the CRC out of the local header
+// (flag bit 3) the way streaming zippers do.
+const buildStoredZip = (name: string, data: Buffer, crc: number, dataDescriptor = false) => {
+  const nameBuf = Buffer.from(name, 'utf8');
+  const flags = dataDescriptor ? 0x08 : 0;
+
+  const local = Buffer.alloc(30);
+  local.writeUInt32LE(0x04034b50, 0);
+  local.writeUInt16LE(20, 4);
+  local.writeUInt16LE(flags, 6);
+  local.writeUInt32LE(dataDescriptor ? 0 : crc, 14);
+  local.writeUInt32LE(dataDescriptor ? 0 : data.byteLength, 18);
+  local.writeUInt32LE(dataDescriptor ? 0 : data.byteLength, 22);
+  local.writeUInt16LE(nameBuf.byteLength, 26);
+
+  const descriptor = Buffer.alloc(dataDescriptor ? 16 : 0);
+  if (dataDescriptor) {
+    descriptor.writeUInt32LE(0x08074b50, 0);
+    descriptor.writeUInt32LE(crc, 4);
+    descriptor.writeUInt32LE(data.byteLength, 8);
+    descriptor.writeUInt32LE(data.byteLength, 12);
+  }
+  const localBlock = Buffer.concat([local, nameBuf, data, descriptor]);
+
+  const central = Buffer.alloc(46);
+  central.writeUInt32LE(0x02014b50, 0);
+  central.writeUInt16LE(20, 4);
+  central.writeUInt16LE(20, 6);
+  central.writeUInt16LE(flags, 8);
+  central.writeUInt32LE(crc, 16);
+  central.writeUInt32LE(data.byteLength, 20);
+  central.writeUInt32LE(data.byteLength, 24);
+  central.writeUInt16LE(nameBuf.byteLength, 28);
+  const centralBlock = Buffer.concat([central, nameBuf]);
+
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(1, 8);
+  eocd.writeUInt16LE(1, 10);
+  eocd.writeUInt32LE(centralBlock.byteLength, 12);
+  eocd.writeUInt32LE(localBlock.byteLength, 16);
+
+  return Buffer.concat([localBlock, centralBlock, eocd]);
+};
+
+describe('download — CRC verification', () => {
+  const DATA = Buffer.from('N-NUMBER,SERIAL\n12345,17282099\n', 'utf8');
+  const GOOD_CRC = crc32(DATA);
+  const BAD_CRC = (GOOD_CRC ^ 0xdeadbeef) >>> 0;
+  const CRC_CONFIG: DownloadConfig = {
+    url: 'https://example.com/register.zip',
+    format: 'zip',
+    entries: { f: 'f.txt' },
+  };
+
+  const streamResponse = (zip: Buffer) => ({
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: new Headers(),
+    body: new Response(new Uint8Array(zip)).body,
+  });
+
+  it('extracts a stored entry whose CRC matches in buffer mode', async () => {
+    mockFetch(buildStoredZip('f.txt', DATA, GOOD_CRC));
+
+    const files = await download(CRC_CONFIG);
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
+  });
+
+  it('rejects a CRC mismatch in buffer mode and retries', async () => {
+    mockFetch(buildStoredZip('f.txt', DATA, BAD_CRC));
+
+    await expect(download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 })).rejects.toThrow(
+      /CRC mismatch.*f\.txt/
+    );
+    expect(globalThis.fetch as unknown as ReturnType<typeof mock>).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a CRC mismatch in stream mode then succeeds on retry', async () => {
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, BAD_CRC)))
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)))
+      );
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, FAST_RETRY);
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips CRC verification for data-descriptor entries in stream mode', async () => {
+    // Flag bit 3 leaves the local-header CRC at 0; the guard must not false-fail on it.
+    setFetch(
+      mock().mockImplementation(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC, true)))
+      )
+    );
+
+    const files = await download(CRC_CONFIG);
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
   });
 });
 
