@@ -33,7 +33,7 @@ const okZipResponse = () => {
 // Streams the fixture ZIP as a web ReadableStream body. `contentLength` controls only the
 // header the dispatch reads — the body is always the full fixture, so an at-threshold header
 // over a small body still exercises the stream path.
-const streamZipResponse = (contentLength?: number) => {
+const streamZipResponse = (contentLength?: number | string) => {
   const headers = new Headers();
   if (contentLength !== undefined) headers.set('content-length', String(contentLength));
   return {
@@ -199,6 +199,30 @@ describe('download — stream vs buffer dispatch', () => {
 
     expect(res.arrayBuffer).not.toHaveBeenCalled();
     expect(files.get('master')!.toString('latin1')).toContain('N-NUMBER');
+  });
+
+  it('streams when Content-Length is unparseable', async () => {
+    const res = streamZipResponse('garbage');
+    setFetch(mock().mockResolvedValue(res));
+
+    const files = await download(FAA_DOWNLOAD_CONFIG);
+
+    expect(res.arrayBuffer).not.toHaveBeenCalled();
+    expect(files.has('master')).toBe(true);
+  });
+
+  it('throws without retrying when a stream-mode response has no body', async () => {
+    const fn = mock().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      body: null,
+    });
+    setFetch(fn);
+
+    await expect(download(FAA_DOWNLOAD_CONFIG, FAST_RETRY)).rejects.toThrow(/no body to stream/i);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
   it('streamed content matches buffered content', async () => {
