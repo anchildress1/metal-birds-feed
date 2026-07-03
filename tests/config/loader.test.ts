@@ -188,6 +188,19 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('rejects two aliases mapping to the same archive path', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dup_path.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries:\n    a: same.txt\n    b: same.txt\nprimary: a\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/paths must be unique/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('accepts discover_url + discover_pattern when set together', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dl_discover.yaml');
     writeFileSync(
