@@ -215,11 +215,32 @@ async function extractZipStream(
   const result = new Map<string, Buffer>();
   const seen: string[] = [];
 
+  // A synchronous 'entry' listener, not forceStream + async iteration: unzipper picks the
+  // entry's inflater in the same tick it delivers the entry, so only a listener can flag
+  // autodrain() early enough to skip decompressing unwanted entries rather than inflating
+  // them and throwing the bytes away.
+  const parser = Parse();
+  const pending: Promise<void>[] = [];
+  parser.on('entry', (entry: Entry) => {
+    seen.push(entry.path);
+    const alias = wanted.get(entry.path);
+    if (alias) {
+      const buffered = entry.buffer().then((buf) => {
+        result.set(alias, buf);
+      });
+      // A mid-entry failure also fails the parser, which wins the race below — observe the
+      // losing rejection so it is never left unhandled.
+      buffered.catch(() => {});
+      pending.push(buffered);
+    } else {
+      entry.autodrain();
+    }
+  });
+
   // Manual pump, not Readable.fromWeb(...).pipe(parser): pipe() never forwards source errors,
   // and under Bun fromWeb doesn't emit 'error' at all — a connection dropped mid-body would
   // hang the parse forever instead of rejecting into the retry. reader.read() rejects reliably,
-  // so the pump routes the failure into the parser, which rejects the iteration below.
-  const parser = Parse({ forceStream: true });
+  // so the pump routes the failure into the parser, which rejects the promise() below.
   // Bun types Response.body as an untyped ReadableStream; the payload is always bytes.
   const reader = res.body.getReader() as ReadableStreamDefaultReader<Uint8Array>;
   void (async () => {
@@ -237,27 +258,18 @@ async function extractZipStream(
   })();
 
   try {
-    // Node streams iterate as `any`; Entry is unzipper's documented yield type for Parse.
-    // ZIP entries arrive sequentially on one stream — each must be consumed (or drained) before
-    // the parser can surface the next, so this loop cannot be parallelized with Promise.all.
-    for await (const entry of parser as AsyncIterable<Entry>) {
-      seen.push(entry.path);
-      const alias = wanted.get(entry.path);
-      if (alias) {
-        result.set(alias, await entry.buffer());
-      } else {
-        entry.autodrain();
-      }
-    }
+    await parser.promise();
   } finally {
-    // Close the connection if extraction bailed early; on a dead socket cancel itself can
-    // reject, and that must not mask the extraction error.
+    // Close the connection if parsing bailed early; on a dead socket cancel itself can
+    // reject, and that must not mask the parse error.
     try {
       await reader.cancel();
     } catch {
       // connection already gone
     }
   }
+  // Entry buffers can settle a tick after the parser finishes; collect before asserting.
+  await Promise.all(pending);
 
   assertAllEntries(result, entries, seen);
   log('info', 'extract_complete', { files: result.size });
