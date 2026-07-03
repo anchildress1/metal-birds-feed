@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { download, type RetryOptions } from '../src/downloader.js';
+import { download, STREAM_THRESHOLD_BYTES, type RetryOptions } from '../src/downloader.js';
 import type { DownloadConfig } from '../src/types/config.js';
 
 // No-op sleep keeps backoff out of the test clock; assertions cover attempt counts, not timing.
@@ -19,12 +19,32 @@ const zipArrayBuffer = (): ArrayBuffer => {
   return z.buffer.slice(z.byteOffset, z.byteOffset + z.byteLength);
 };
 
-const okZipResponse = () => ({
-  ok: true,
-  status: 200,
-  statusText: 'OK',
-  arrayBuffer: () => Promise.resolve(zipArrayBuffer()),
-});
+const okZipResponse = () => {
+  const bytes = zipArrayBuffer();
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: new Headers({ 'content-length': String(bytes.byteLength) }),
+    arrayBuffer: () => Promise.resolve(bytes),
+  };
+};
+
+// Streams the fixture ZIP as a web ReadableStream body. `contentLength` controls only the
+// header the dispatch reads — the body is always the full fixture, so an at-threshold header
+// over a small body still exercises the stream path.
+const streamZipResponse = (contentLength?: number) => {
+  const headers = new Headers();
+  if (contentLength !== undefined) headers.set('content-length', String(contentLength));
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers,
+    body: new Response(zipArrayBuffer()).body,
+    arrayBuffer: mock(() => Promise.resolve(zipArrayBuffer())),
+  };
+};
 
 const httpErrResponse = (status: number) => ({ ok: false, status, statusText: 'err' });
 
@@ -44,6 +64,7 @@ function mockFetch(buf: Buffer, ok = true, status = 200): void {
       ok,
       status,
       statusText: ok ? 'OK' : 'Not Found',
+      headers: new Headers({ 'content-length': String(buf.byteLength) }),
       arrayBuffer: () =>
         Promise.resolve(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)),
     })
@@ -64,6 +85,7 @@ const mockFetchSequence = (responses: MockResponse[]): ReturnType<typeof mock> =
       ok: r.ok,
       status: r.status,
       statusText: r.statusText,
+      headers: new Headers({ 'content-length': String(Buffer.byteLength(r.body)) }),
       arrayBuffer: () => {
         const buf = typeof r.body === 'string' ? Buffer.from(r.body, 'utf8') : r.body;
         return Promise.resolve(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
@@ -143,6 +165,116 @@ describe('download', () => {
     };
 
     await expect(download(badConfig)).rejects.toThrow(/not found.*NOTEXIST\.txt.*archive has/i);
+  });
+});
+
+describe('download — stream vs buffer dispatch', () => {
+  it('buffers when Content-Length is below the threshold', async () => {
+    const res = streamZipResponse(zipArrayBuffer().byteLength);
+    setFetch(mock().mockResolvedValue(res));
+
+    const files = await download(FAA_DOWNLOAD_CONFIG);
+
+    expect(res.arrayBuffer).toHaveBeenCalled();
+    expect(files.has('master')).toBe(true);
+  });
+
+  it('streams when Content-Length is at the threshold', async () => {
+    const res = streamZipResponse(STREAM_THRESHOLD_BYTES);
+    setFetch(mock().mockResolvedValue(res));
+
+    const files = await download(FAA_DOWNLOAD_CONFIG);
+
+    expect(res.arrayBuffer).not.toHaveBeenCalled();
+    expect(files.has('master')).toBe(true);
+    expect(files.has('acftref')).toBe(true);
+    expect(files.has('engine')).toBe(true);
+  });
+
+  it('streams when Content-Length is absent', async () => {
+    const res = streamZipResponse();
+    setFetch(mock().mockResolvedValue(res));
+
+    const files = await download(FAA_DOWNLOAD_CONFIG);
+
+    expect(res.arrayBuffer).not.toHaveBeenCalled();
+    expect(files.get('master')!.toString('latin1')).toContain('N-NUMBER');
+  });
+
+  it('streamed content matches buffered content', async () => {
+    setFetch(mock().mockResolvedValue(streamZipResponse()));
+    const streamed = await download(FAA_DOWNLOAD_CONFIG);
+
+    mockFetch(readFileSync(FIXTURE_ZIP));
+    const buffered = await download(FAA_DOWNLOAD_CONFIG);
+
+    for (const [alias, buf] of buffered) {
+      expect(streamed.get(alias)!.equals(buf)).toBe(true);
+    }
+  });
+
+  it('autodrains unwanted entries and returns only the declared ones', async () => {
+    setFetch(mock().mockResolvedValue(streamZipResponse()));
+
+    const files = await download({ ...FAA_DOWNLOAD_CONFIG, entries: { master: 'MASTER.txt' } });
+
+    expect(files.size).toBe(1);
+    expect(files.get('master')!.length).toBeGreaterThan(0);
+  });
+
+  // Web body that delivers half the fixture then errors — the mid-download connection drop the
+  // stream path must surface into the retry instead of hanging on.
+  const droppedZipResponse = () => {
+    const zip = readFileSync(FIXTURE_ZIP);
+    return {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(zip.subarray(0, Math.floor(zip.byteLength / 2)));
+          controller.error(new Error('ECONNRESET mid-body'));
+        },
+      }),
+    };
+  };
+
+  it('retries a body that drops mid-stream in stream mode', async () => {
+    const fn = mock()
+      .mockImplementationOnce(() => Promise.resolve(droppedZipResponse()))
+      .mockImplementationOnce(() => Promise.resolve(streamZipResponse()));
+    setFetch(fn);
+
+    const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
+
+    expect(files.has('master')).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects after exhausting attempts on a persistently dropping stream', async () => {
+    const fn = mock().mockImplementation(() => Promise.resolve(droppedZipResponse()));
+    setFetch(fn);
+
+    await expect(download(FAA_DOWNLOAD_CONFIG, { ...FAST_RETRY, attempts: 2 })).rejects.toThrow(
+      /ECONNRESET/
+    );
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws without retrying when a declared entry is missing from the streamed archive', async () => {
+    const fn = mock().mockImplementation(() => Promise.resolve(streamZipResponse()));
+    setFetch(fn);
+
+    const badConfig: DownloadConfig = {
+      ...FAA_DOWNLOAD_CONFIG,
+      entries: { ...FAA_DOWNLOAD_CONFIG.entries, missing: 'NOTEXIST.txt' },
+    };
+
+    await expect(download(badConfig, FAST_RETRY)).rejects.toThrow(
+      /not found.*NOTEXIST\.txt.*archive has/i
+    );
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -318,6 +450,7 @@ describe('download — retry', () => {
         ok: true,
         status: 200,
         statusText: 'OK',
+        headers: new Headers({ 'content-length': '1024' }),
         arrayBuffer: () => Promise.reject(new Error('terminated')),
       })
       .mockResolvedValueOnce(okZipResponse());
