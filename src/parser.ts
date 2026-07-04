@@ -56,7 +56,8 @@ export type ParseXlsOptions = BaseSpreadsheetOptions;
 export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[]> {
   const text = new TextDecoder(options.encoding).decode(buf);
   const cast = options.trim ? (value: string): string => value.trim() : undefined;
-  const columns = options.columns ?? ((header: string[]) => header.map((h) => h.trim()));
+  const columns =
+    options.columns ?? ((header: string[]) => assertUniqueHeaders(header.map((h) => h.trim())));
   // from_line is 1-based and counts the header, so the header sits at skip_rows + 1.
   const fromLine = (options.skip_rows ?? 0) + 1;
   if (options.columns && (options.skip_rows ?? 0) >= 1) {
@@ -444,6 +445,20 @@ const stringifyCell = (cell: unknown): string => {
 
 const isNonEmptyRow = (cells: string[]): boolean => cells.some((c) => c.length > 0);
 
+// Row assembly is last-wins per header name, so a duplicated header silently shadows the earlier
+// column's data — and hand-maintained registry spreadsheets do ship duplicated labels. Empty
+// names are padding cells that never carry data, so only non-empty duplicates are fatal.
+const assertUniqueHeaders = (headers: string[]): string[] => {
+  const seen = new Set<string>();
+  for (const h of headers) {
+    if (h.length === 0) continue;
+    if (seen.has(h))
+      throw new Error(`Duplicate header name "${h}" — the earlier column would be shadowed`);
+    seen.add(h);
+  }
+  return headers;
+};
+
 // A source that declares `columns` pins the upstream layout, and the discarded header row is the
 // only run-time witness to it. Width drift means a column was added or removed upstream —
 // positional mapping would silently shift every field across the change, and row-count/hash
@@ -471,7 +486,7 @@ const resolveHeadersAndData = (
   }
   const headerIndex = rows.findIndex(isNonEmptyRow);
   if (headerIndex === -1) return { headers: [], dataRows: [] };
-  const headers = rows[headerIndex].map((h) => h.trim());
+  const headers = assertUniqueHeaders(rows[headerIndex].map((h) => h.trim()));
   const dataRows = rows.slice(headerIndex + 1).filter(isNonEmptyRow);
   return { headers, dataRows };
 };

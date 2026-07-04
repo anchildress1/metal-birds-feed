@@ -168,6 +168,14 @@ const SourceConfigSchema = z
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
     message: 'format "pdf" requires a pdf config block',
   })
+  // Row assembly is last-wins per name, so a duplicated declared column silently shadows the
+  // earlier one at run time.
+  .refine(
+    (c) => Object.values(c.columns ?? {}).every((cols) => new Set(cols).size === cols.length),
+    {
+      message: 'columns arrays must not contain duplicate names',
+    }
+  )
   .refine(
     (c) => c.pdf === undefined || c.pdf.column_pos.length === (c.columns?.[c.primary]?.length ?? 0),
     {

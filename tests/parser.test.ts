@@ -143,6 +143,18 @@ describe('parseCSV', () => {
     );
   });
 
+  it('rejects a duplicated header name instead of silently shadowing the earlier column', async () => {
+    await expect(parseCSV(buf('name,name,x\n1,2,3\n'), opts())).rejects.toThrow(
+      /duplicate header.*"name"/i
+    );
+  });
+
+  it('rejects headers that collide only after trimming', async () => {
+    await expect(parseCSV(buf('name ,name,x\n1,2,3\n'), opts())).rejects.toThrow(
+      /duplicate header/i
+    );
+  });
+
   it('trims trailing whitespace from header names (FAA registry quirk)', async () => {
     // FAA's MASTER.txt headers are space-padded — `'N-NUMBER '` instead of `'N-NUMBER'`.
     // Without normalization, every per-field lookup downstream silently returns undefined.
@@ -866,6 +878,32 @@ describe('shapeRows discarded-header width guard (html/xls/ods/xlsx shared path)
       columns: ['REG', 'OWNER'],
     });
     expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects a duplicated inferred header name', async () => {
+    await expect(
+      parseHtml(
+        table([
+          ['name', 'name', 'x'],
+          ['1', '2', '3'],
+        ]),
+        { encoding: 'utf8', trim: true }
+      )
+    ).rejects.toThrow(/duplicate header.*"name"/i);
+  });
+
+  it('tolerates repeated empty header cells (padding columns carry no data)', async () => {
+    const rows = await parseHtml(
+      table([
+        ['reg', '', '', 'owner'],
+        ['N1', 'a', 'b', 'Alice'],
+      ]),
+      {
+        encoding: 'utf8',
+        trim: true,
+      }
+    );
+    expect(rows).toEqual([{ reg: 'N1', owner: 'Alice' }]);
   });
 });
 

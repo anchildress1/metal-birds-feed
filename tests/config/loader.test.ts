@@ -267,6 +267,19 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('rejects duplicate names within a columns array', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dup_columns.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\ncolumns:\n  f: [REG, REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects a negative allowed_ragged_rows', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_neg_ragged.yaml');
     writeFileSync(
