@@ -777,9 +777,20 @@ describe('parsePdf', () => {
     expect(blob).not.toMatch(/Whilst reasonable care|Page \d of \d/);
   });
 
-  it('returns no rows when the anchor pattern matches nothing', async () => {
-    const rows = await parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }));
-    expect(rows).toEqual([]);
+  it('throws when the anchor pattern matches nothing on a text-bearing page', async () => {
+    // Silently returning [] here published a zero/short fleet whenever the register's mark
+    // format drifted; the writer's guards can't attribute the loss to a page.
+    await expect(parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }))).rejects.toThrow(
+      /page \d+ has text but no anchor_pattern matches/i
+    );
+  });
+
+  it('throws when only some pages lose their anchors (partial template drift)', async () => {
+    // 8Q-OEQ exists on one page only; the other pages still carry text, so their fleet slice
+    // would silently vanish — a 10-40% loss that clears the writer's 50% retain floor.
+    await expect(parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^8Q-OEQ$' }))).rejects.toThrow(
+      /page \d+ has text but no anchor_pattern matches/i
+    );
   });
 });
 

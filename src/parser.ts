@@ -361,8 +361,18 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
   const rows: Row[] = [];
-  for (const pageItems of items) {
-    rows.push(...parsePdfPage(toPdfItems(pageItems), options, anchorRe));
+  for (const [i, pageItems] of items.entries()) {
+    const page = toPdfItems(pageItems);
+    // A page with no text at all carries no records to lose. A page WITH text but zero anchor
+    // matches means the template or mark format drifted on that page — its whole slice of the
+    // fleet would vanish while the >0-records and 50%-floor guards stay green.
+    if (page.length === 0) continue;
+    const pageRows = parsePdfPage(page, options, anchorRe);
+    if (pageRows.length === 0)
+      throw new Error(
+        `PDF page ${i + 1} has text but no anchor_pattern matches — page layout or mark format drifted`
+      );
+    rows.push(...pageRows);
   }
   return rows;
 }
