@@ -234,16 +234,7 @@ async function extractZipStream(
     seen.push(entry.path);
     const alias = wanted.get(entry.path);
     if (alias) {
-      const buffered = entry.buffer().then((buf) => {
-        // Flag bit 3 defers the real CRC to a data descriptor unzipper never copies back into
-        // vars, so the local-header value is meaningless then — verify only when present.
-        if (!(entry.vars.flags & 0x08)) assertEntryCrc(buf, entry.vars.crc32, entry.path);
-        result.set(alias, buf);
-      });
-      // A mid-entry failure also fails the parser, which wins the race below — observe the
-      // losing rejection so it is never left unhandled.
-      buffered.catch(() => {});
-      pending.push(buffered);
+      pending.push(bufferEntry(entry, alias, result));
     } else {
       entry.autodrain();
     }
@@ -279,14 +270,31 @@ async function extractZipStream(
     } catch {
       // connection already gone
     }
+    // A mid-entry failure also fails the parser, whose error is the one thrown — settle the
+    // losing entry-buffer rejections here so none are ever left unhandled.
+    await Promise.allSettled(pending);
   }
-  // Entry buffers can settle a tick after the parser finishes; collect before asserting.
+  // Entry buffers can settle a tick after the parser finishes; collect (rethrowing any
+  // buffer-only failure) before asserting.
   await Promise.all(pending);
 
   assertAllEntries(result, entries, seen);
   log('info', 'extract_complete', { files: result.size });
   return result;
 }
+
+// Buffers one wanted entry, verifies its CRC, and records it under its alias. Flag bit 3 defers
+// the real CRC to a data descriptor unzipper never copies back into vars, so the local-header
+// value is meaningless then — verify only when present.
+const bufferEntry = async (
+  entry: Entry,
+  alias: string,
+  result: Map<string, Buffer>
+): Promise<void> => {
+  const buf = await entry.buffer();
+  if (!(entry.vars.flags & 0x08)) assertEntryCrc(buf, entry.vars.crc32, entry.path);
+  result.set(alias, buf);
+};
 
 // unzipper never verifies the archive's own CRC, and mangled deflate can stay structurally
 // valid — without this check corrupted register bytes ship in a green run. Plain Error, not
