@@ -59,6 +59,14 @@ describe('AircraftSchema', () => {
     expect(AircraftSchema.safeParse({ ...base, registration: '' }).success).toBe(false);
   });
 
+  it('rejects a whitespace-only registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: '   ' }).success).toBe(false);
+  });
+
+  it('rejects a null registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: null }).success).toBe(false);
+  });
+
   it('accepts a null icao_hex', () => {
     expect(AircraftSchema.safeParse({ ...base, icao_hex: null }).success).toBe(true);
   });
