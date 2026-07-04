@@ -908,6 +908,86 @@ describe('engine — negative and edge cases', () => {
     expect(r.get('1')?.owner.kind).toBeNull();
   });
 
+  it('fails the run when a declared join matches zero rows', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-join-miss',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // Total miss = key drift (e.g. FAA renames the ACFTREF key column). All joined fields are
+    // nullable, so without this guard the fleet publishes with them silently nulled.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n1,N1\n2,N2\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n999,foo\n', 'utf8')],
+    ]);
+    await expect(translate(config, files)).rejects.toThrow(/join "j" matched 0 of 2 rows/i);
+  });
+
+  it('accepts a join with partial hits (occasional misses are legal)', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-join-partial',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        manufacturer: { field: 'j.EXTRA', transform: 'trim_or_null' },
+      },
+    };
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n1,N1\n2,N2\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n1,Cessna\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.manufacturer).toBe('Cessna');
+    expect(records.get('2')?.manufacturer).toBeNull();
+  });
+
+  it('skips the join-hit floor when the primary has no rows', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-join-empty',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // Zero-record refusal lives in the writer; translate itself must not misreport an empty
+    // primary as a join failure.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n1,Cessna\n', 'utf8')],
+    ]);
+    const { records } = await translate(config, files);
+    expect(records.size).toBe(0);
+  });
+
   it('fails a row with a blank registration instead of publishing an empty mark', async () => {
     const config: SourceConfig = {
       id: 'synthetic-blank-reg',
