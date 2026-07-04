@@ -170,7 +170,9 @@ describe('R2ArtifactWriter — write', () => {
   it('rewrites when the hash matches but the artifact is missing (external-deletion self-heal)', async () => {
     // State and artifact are separate objects; a lifecycle rule or manual cleanup can delete the
     // artifact while state still holds its hash — without the HEAD check every run would report
-    // unchanged while consumers 404 indefinitely.
+    // unchanged while consumers 404 indefinitely. The re-PUT still reports changed: false — the
+    // DATA is identical, so last_content_change must not be stamped and staleness issues must
+    // not close just because the object was rewritten.
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
@@ -188,7 +190,7 @@ describe('R2ArtifactWriter — write', () => {
 
     const second = await writer.write(records, 'faa', prior);
 
-    expect(second.changed).toBe(true);
+    expect(second.changed).toBe(false);
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
   });
 

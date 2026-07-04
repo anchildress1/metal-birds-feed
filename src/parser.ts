@@ -13,7 +13,9 @@ export interface ParseOptions {
   delimiter: string;
   trim: boolean;
   columns?: string[];
-  // Preamble rows dropped before the header line (not data rows after it).
+  // Leading rows dropped before parsing: banner/preamble lines, plus — when `columns` overrides
+  // the header — the file's own header row (then the LAST dropped row; its width is asserted
+  // against `columns`). Never data rows.
   skip_rows?: number;
   // Budget for known non-tabular rows whose cell count differs from the header; see SourceConfig.
   allowed_ragged_rows?: number;

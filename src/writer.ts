@@ -104,7 +104,8 @@ export class R2ArtifactWriter {
     // requires the artifact to actually exist: state and artifact are separate objects, and an
     // externally deleted artifact (lifecycle rule, manual cleanup) would otherwise 404 for
     // consumers indefinitely while every run reports unchanged.
-    if (priorState?.content_hash === content_hash && (await this.artifactExists(source))) {
+    const dataUnchanged = priorState?.content_hash === content_hash;
+    if (dataUnchanged && (await this.artifactExists(source))) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return { changed: false, record_count: records.size, content_hash };
     }
@@ -117,7 +118,9 @@ export class R2ArtifactWriter {
       record_count: records.size,
       bytes: bytes.byteLength,
     });
-    return { changed: true, record_count: records.size, content_hash };
+    // `changed` reports DATA change only. A self-heal rewrite of a deleted artifact carries the
+    // same record set, so it must not stamp last_content_change or close staleness issues.
+    return { changed: !dataUnchanged, record_count: records.size, content_hash };
   }
 
   // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.

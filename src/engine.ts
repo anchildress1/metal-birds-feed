@@ -296,8 +296,9 @@ const assertJoinHits = (
   if (rows.length === 0) return;
   for (const join of config.joins) {
     const map = joinMaps.get(join.name);
-    const hits = rows.filter((row) => map?.has(row[join.on] ?? '')).length;
-    if (hits === 0)
+    // some() exits at the first hit — the guard only needs existence, not a count.
+    const anyHit = rows.some((row) => map?.has(row[join.on] ?? ''));
+    if (!anyHit)
       throw new Error(
         `Source "${config.id}": join "${join.name}" matched 0 of ${rows.length} rows — join key drifted upstream or the join file is broken`
       );
