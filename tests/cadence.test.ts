@@ -88,9 +88,11 @@ describe('isOverdue', () => {
     expect(isOverdue(state, cadence, now)).toBe(false);
   });
 
-  it('returns false when last_content_change is an invalid date string', () => {
+  it('returns true when last_content_change is an invalid date string (fail open)', () => {
+    // A garbage timestamp never heals itself; returning false would disarm the staleness alarm
+    // for that source forever.
     const state: SourceState = { last_run: '2026-01-01', last_content_change: 'bad-date' };
-    expect(isOverdue(state, 30, new Date())).toBe(false);
+    expect(isOverdue(state, 30, new Date())).toBe(true);
   });
 
   it('returns false when last_content_change is in the future', () => {

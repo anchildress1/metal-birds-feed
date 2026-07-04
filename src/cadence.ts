@@ -35,7 +35,9 @@ export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: 
 export const isOverdue = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
   if (!state) return false;
   const lastChange = new Date(state.last_content_change);
-  if (Number.isNaN(lastChange.getTime())) return false;
+  // Fail open: an unparseable timestamp can never become parseable on its own, so returning
+  // false here would disarm the staleness alarm for that source forever.
+  if (Number.isNaN(lastChange.getTime())) return true;
   return now.getTime() - lastChange.getTime() > cadenceDays * STALENESS_MULTIPLIER * MS_PER_DAY;
 };
 
