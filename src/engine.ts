@@ -373,7 +373,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
   return {
     source: config.id,
     source_id: sourceId,
-    registration: scalar('registration') ?? '',
+    registration: scalar('registration'),
     icao_hex: scalar('icao_hex'),
     icao_type_code: scalar('icao_type_code'),
     status: scalar('status') ?? 'other',

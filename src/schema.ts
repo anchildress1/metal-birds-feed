@@ -105,7 +105,9 @@ export type Engine = z.infer<typeof EngineSchema>;
 export const AircraftSchema = z.object({
   source: z.string(),
   source_id: z.string(),
-  registration: z.string(),
+  // Non-empty enforced here so a broken/renamed registration mapping fails each row loudly
+  // instead of publishing a fleet of blank marks (row-count and hash guards can't see that).
+  registration: z.string().min(1),
   icao_hex: z.string().nullable(),
   icao_type_code: z.string().nullable(),
   status: AircraftStatusSchema,

@@ -906,6 +906,30 @@ describe('engine — negative and edge cases', () => {
     expect(r.get('1')?.owner.kind).toBeNull();
   });
 
+  it('fails a row with a blank registration instead of publishing an empty mark', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-blank-reg',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // A renamed/broken registration mapping nulls every mark; row count and content hash both
+    // stay plausible, so the schema reject is the only guard that can catch it.
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(0);
+  });
+
   it('counts a duplicate source_id as a failed row instead of silently overwriting', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup',

@@ -55,6 +55,10 @@ describe('AircraftSchema', () => {
     expect(AircraftSchema.safeParse({ ...base, registration: 'VH-ABC' }).success).toBe(true);
   });
 
+  it('rejects an empty registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: '' }).success).toBe(false);
+  });
+
   it('accepts a null icao_hex', () => {
     expect(AircraftSchema.safeParse({ ...base, icao_hex: null }).success).toBe(true);
   });
