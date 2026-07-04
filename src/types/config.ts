@@ -136,6 +136,10 @@ export interface SourceConfig {
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;
+  // Known non-tabular rows in the CSV (e.g. a "N rows selected." trailer) whose cell count
+  // differs from the header. Any ragged row beyond this budget fails the parse: a short row
+  // silently nulls trailing fields and a long row silently drops cells. Defaults to 0.
+  allowed_ragged_rows?: number;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
   source_id: string;

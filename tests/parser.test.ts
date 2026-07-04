@@ -22,6 +22,7 @@ const opts = (
     trim: boolean;
     columns: string[];
     skip_rows: number;
+    allowed_ragged_rows: number;
   }> = {}
 ) => ({
   encoding: 'latin1' as const,
@@ -48,10 +49,65 @@ describe('parseCSV', () => {
     expect(rows[1].MODEL).toBe('GUNS"S');
   });
 
-  it('tolerates rows with extra columns (relax_column_count)', async () => {
-    const rows = await parseCSV(buf('A,B\n1,2,3\n'), opts());
-    expect(rows[0].A).toBe('1');
-    expect(rows[0].B).toBe('2');
+  it('accepts explicit columns whose width matches the discarded header', async () => {
+    const rows = await parseCSV(
+      buf('reg,owner\nN1,Alice\n'),
+      opts({ columns: ['REG', 'OWNER'], skip_rows: 1 })
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects explicit columns when the discarded header is wider (column added upstream)', async () => {
+    await expect(
+      parseCSV(
+        buf('reg,NEW,owner\nN1,x,Alice\n'),
+        opts({ columns: ['REG', 'OWNER'], skip_rows: 1 })
+      )
+    ).rejects.toThrow(/columns \(2\).*header row \(3 cells\)/i);
+  });
+
+  it('rejects explicit columns when the discarded header is narrower (column removed upstream)', async () => {
+    await expect(
+      parseCSV(buf('reg\nN1\n'), opts({ columns: ['REG', 'OWNER'], skip_rows: 1 }))
+    ).rejects.toThrow(/columns \(2\).*header row \(1 cells\)/i);
+  });
+
+  it('ignores banner lines above the header when checking width', async () => {
+    const rows = await parseCSV(
+      buf('Fleet register export\nreg,owner\nN1,Alice\n'),
+      opts({ columns: ['REG', 'OWNER'], skip_rows: 2 })
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('skips the header check for headerless files (columns without skip_rows)', async () => {
+    const rows = await parseCSV(buf('N1,Alice\n'), opts({ columns: ['REG', 'OWNER'] }));
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects a row with extra cells beyond the header (silent cell drop)', async () => {
+    await expect(parseCSV(buf('A,B\n1,2,3\n'), opts())).rejects.toThrow(/cell count.*allowed: 0/i);
+  });
+
+  it('rejects a row with fewer cells than the header (silent field loss)', async () => {
+    await expect(parseCSV(buf('A,B,C\n1,2,3\n4,5\n'), opts())).rejects.toThrow(
+      /cell count.*allowed: 0/i
+    );
+  });
+
+  it('allows a bounded ragged row via allowed_ragged_rows', async () => {
+    const rows = await parseCSV(
+      buf('A,B\n1,2\n9 rows selected.\n'),
+      opts({ allowed_ragged_rows: 1 })
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[1].A).toBe('9 rows selected.');
+  });
+
+  it('rejects ragged rows beyond the allowed_ragged_rows budget', async () => {
+    await expect(
+      parseCSV(buf('A,B\n1,2\nshort\nalso short\n'), opts({ allowed_ragged_rows: 1 }))
+    ).rejects.toThrow(/2 row\(s\).*allowed: 1/i);
   });
 
   it('skips fully empty lines', async () => {
@@ -741,6 +797,66 @@ const eeColumns = [
   'operator',
   'pad_trail',
 ];
+
+describe('shapeRows discarded-header width guard (html/xls/ods/xlsx shared path)', () => {
+  const table = (rows: string[][]): Buffer =>
+    Buffer.from(
+      `<table>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`,
+      'utf8'
+    );
+
+  it('accepts explicit columns whose width matches the discarded header', async () => {
+    const rows = await parseHtml(
+      table([
+        ['reg', 'owner'],
+        ['N1', 'Alice'],
+      ]),
+      {
+        encoding: 'utf8',
+        trim: true,
+        columns: ['REG', 'OWNER'],
+        skip_rows: 1,
+      }
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects explicit columns when the discarded header is wider (column added upstream)', async () => {
+    await expect(
+      parseHtml(
+        table([
+          ['reg', 'NEW', 'owner'],
+          ['N1', 'x', 'Alice'],
+        ]),
+        {
+          encoding: 'utf8',
+          trim: true,
+          columns: ['REG', 'OWNER'],
+          skip_rows: 1,
+        }
+      )
+    ).rejects.toThrow(/columns \(2\).*header row \(3 cells\)/i);
+  });
+
+  it('ignores a short banner row above the header when checking width', async () => {
+    const rows = await parseHtml(table([['Fleet register'], ['reg', 'owner'], ['N1', 'Alice']]), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['REG', 'OWNER'],
+      skip_rows: 2,
+    });
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('skips the header check when skip_rows is absent', async () => {
+    const rows = await parseHtml(table([['N1', 'Alice']]), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['REG', 'OWNER'],
+    });
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+});
 
 describe('parseHtml', () => {
   it('extracts the server-rendered table into one row per aircraft, dropping preamble rows', async () => {

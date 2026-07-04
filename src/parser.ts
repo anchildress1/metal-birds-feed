@@ -15,6 +15,8 @@ export interface ParseOptions {
   columns?: string[];
   // Preamble rows dropped before the header line (not data rows after it).
   skip_rows?: number;
+  // Budget for known non-tabular rows whose cell count differs from the header; see SourceConfig.
+  allowed_ragged_rows?: number;
 }
 
 export interface ParseJsonOptions {
@@ -57,6 +59,10 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
   const columns = options.columns ?? ((header: string[]) => header.map((h) => h.trim()));
   // from_line is 1-based and counts the header, so the header sits at skip_rows + 1.
   const fromLine = (options.skip_rows ?? 0) + 1;
+  if (options.columns && (options.skip_rows ?? 0) >= 1) {
+    assertDiscardedHeaderWidth(await parseSkippedRegion(text, options), options.columns);
+  }
+  const allowedRagged = options.allowed_ragged_rows ?? 0;
   return new Promise((resolve, reject) => {
     parse(
       text,
@@ -69,13 +75,42 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
         relax_quotes: true,
         cast,
       },
-      (err, records: Row[]) => {
+      (err, records: Row[], info?: { invalid_field_length: number }) => {
+        const ragged = info?.invalid_field_length ?? 0;
         if (err) reject(err);
+        // A ragged row is silent field loss — a short row nulls its trailing fields and a long
+        // row drops cells — indistinguishable downstream from real nulls. Known non-tabular rows
+        // (e.g. tc-ca's "N rows selected." trailer) are bounded by allowed_ragged_rows.
+        else if (ragged > allowedRagged)
+          reject(
+            new Error(
+              `CSV has ${ragged} row(s) whose cell count differs from the header (allowed: ${allowedRagged})`
+            )
+          );
         else resolve(records);
       }
     );
   });
 }
+
+// The rows skip_rows discards, parsed raggedly — banner lines above the header can be any width.
+const parseSkippedRegion = (text: string, options: ParseOptions): Promise<string[][]> =>
+  new Promise((resolve, reject) => {
+    parse(
+      text,
+      {
+        delimiter: options.delimiter,
+        to_line: options.skip_rows,
+        skip_empty_lines: true,
+        relax_column_count: true,
+        relax_quotes: true,
+      },
+      (err, records: string[][]) => {
+        if (err) reject(err);
+        else resolve(records);
+      }
+    );
+  });
 
 // Parses a JSON API response into the same Row[] shape as the spreadsheet/CSV paths. Each record
 // is flattened to a string map so the existing field-mapping + transform machinery applies
@@ -340,6 +375,9 @@ interface ShapeOptions {
 
 // Shared row-shaping so hucre and SheetJS paths produce identical Row[] output.
 const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
+  if (options.columns && options.skipRows >= 1) {
+    assertDiscardedHeaderWidth(rawRows.slice(0, options.skipRows), options.columns);
+  }
   const sliced = rawRows.slice(options.skipRows);
   const trimmed = options.trim ? sliced.map((cells) => cells.map((c) => c.trim())) : sliced;
   const { headers, dataRows } = resolveHeadersAndData(trimmed, options.columns);
@@ -395,6 +433,19 @@ const stringifyCell = (cell: unknown): string => {
 };
 
 const isNonEmptyRow = (cells: string[]): boolean => cells.some((c) => c.length > 0);
+
+// A source that declares `columns` pins the upstream layout, and the discarded header row is the
+// only run-time witness to it. Width drift means a column was added or removed upstream —
+// positional mapping would silently shift every field across the change, and row-count/hash
+// guards can't see it. The last non-empty skipped row is the header; banners above it may be
+// any width.
+const assertDiscardedHeaderWidth = (skippedRows: string[][], columns: string[]): void => {
+  const header = skippedRows.findLast((cells) => cells.some((c) => c.trim().length > 0));
+  if (header && header.length !== columns.length)
+    throw new Error(
+      `Explicit columns (${columns.length}) do not match the file's discarded header row (${header.length} cells) — upstream layout changed`
+    );
+};
 
 interface HeadersAndData {
   headers: string[];

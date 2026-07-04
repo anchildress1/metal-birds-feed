@@ -54,6 +54,7 @@ describe('loadSourceConfig', () => {
       field: 'MARK',
       pattern: '^\\d+ rows selected\\.$',
     });
+    expect(config.allowed_ragged_rows).toBe(1);
     expect(config.mapping['airframe_type']).toMatchObject({
       compound_transform: 'tc_airframe',
       fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES'],
@@ -183,6 +184,19 @@ describe('loadSourceConfig', () => {
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/exactly one alias.*format.*file/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a negative allowed_ragged_rows', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_neg_ragged.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_ragged_rows: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
     } finally {
       unlinkSync(tmp);
     }

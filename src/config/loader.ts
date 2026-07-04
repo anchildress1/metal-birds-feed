@@ -117,6 +117,7 @@ const SourceConfigSchema = z
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
     skip_rows: z.number().int().nonnegative().optional(),
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
+    allowed_ragged_rows: z.number().int().nonnegative().optional(),
     allowed_missing_source_id_rows: z
       .object({
         max: z.number().int().nonnegative(),

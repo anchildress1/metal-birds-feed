@@ -760,8 +760,10 @@ describe('engine — negative and edge cases', () => {
   it('fails missing source_id rows that exceed the configured skip max', async () => {
     const config = loadSourceConfig(TC_CONFIG_PATH);
     const text = new TextDecoder('latin1').decode(tcFixtureBuffer('carscurr.txt'));
+    // Full-width (46 trailing empty cells = carscurr's 47 columns): stays inside the parser's
+    // allowed_ragged_rows budget so this exercises the engine's missing-id max, not the parser.
     const files = new Map([
-      ['carscurr', Buffer.from(`${text}11 rows selected.\n`, 'latin1')],
+      ['carscurr', Buffer.from(`${text}11 rows selected.${','.repeat(46)}\n`, 'latin1')],
       ['carsownr', tcFixtureBuffer('carsownr.txt')],
     ]);
     const { stats } = await translate(config, files);
