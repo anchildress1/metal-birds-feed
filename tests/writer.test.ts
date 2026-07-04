@@ -212,6 +212,50 @@ describe('R2ArtifactWriter — write', () => {
     ).rejects.toThrow(/drop from prior 100/);
   });
 
+  it('accepts a shrink at exactly the 50% retain floor (strict comparison)', async () => {
+    // Legitimate registry cleanups land here; if threshold drift ever rejects this, every such
+    // cleanup bricks the source's daily refresh until someone deletes its state by hand.
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 4 };
+    const records = new Map([
+      ['00001', makeAircraft('00001', 'N1')],
+      ['00002', makeAircraft('00002', 'N2')],
+    ]);
+
+    const stats = await writer.write(records, 'faa', prior);
+
+    expect(stats.changed).toBe(true);
+    expect(stats.record_count).toBe(2);
+  });
+
+  it('rejects a shrink just below the 50% retain floor', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 5 };
+    const records = new Map([
+      ['00001', makeAircraft('00001', 'N1')],
+      ['00002', makeAircraft('00002', 'N2')],
+    ]);
+
+    await expect(writer.write(records, 'faa', prior)).rejects.toThrow(/drop from prior 5/);
+  });
+
+  it('bypasses the truncation guard when prior state has no record_count (legacy escape hatch)', async () => {
+    // Legacy state predates record_count, and deleting _state/<source>.json is the documented
+    // override for a legitimate mass shrink — both flow through this bypass.
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', content_hash: 'stale' };
+
+    const stats = await writer.write(
+      new Map([['00001', makeAircraft('00001', 'N1')]]),
+      'faa',
+      prior
+    );
+
+    expect(stats.changed).toBe(true);
+  });
+
   it('retries a transient error on the artifact PUT', async () => {
     mockSend.mockRejectedValueOnce(s3Error('internal', 500)).mockResolvedValueOnce({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);

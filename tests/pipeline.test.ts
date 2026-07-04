@@ -119,6 +119,18 @@ describe('run', () => {
     expect(mockR2Write).not.toHaveBeenCalled();
   });
 
+  it('does not write state when the artifact write fails', async () => {
+    // If state were stamped despite a failed PUT, its content_hash would mark the never-written
+    // artifact as current and skip-if-unchanged would suppress every subsequent PUT — permanent
+    // silent staleness. Correct today by code order only; this pins it.
+    process.env['DRY_RUN'] = 'false';
+    mockR2Write.mockRejectedValueOnce(new Error('PUT failed'));
+
+    await expect(run('faa')).rejects.toThrow(/PUT failed/);
+
+    expect(mockWriteState).not.toHaveBeenCalled();
+  });
+
   it('skips download and write when cadence check says not due', async () => {
     process.env['DRY_RUN'] = 'false';
     const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
@@ -278,6 +290,35 @@ describe('main', () => {
     const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
     const body = JSON.parse(createCall.body as string) as { title: string; labels: string[] };
     expect(body.labels).toContain('data-staleness');
+    expect(body.title).toContain('[staleness] faa');
+  });
+
+  it('opens a staleness issue for an overdue source even when cadence skips the run', async () => {
+    // Cadence-skipped sources are exactly the ones most likely stuck (recent last_run, ancient
+    // last_content_change); a refactor adding `if (skipped) continue` would kill their alarm.
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const oldChange = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    const recentRun = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentRun,
+      last_content_change: oldChange,
+      content_hash: HASH64,
+    });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) }) // list open issues
+      .mockResolvedValueOnce({ ok: true }); // create issue
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockDownload).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+    const body = JSON.parse(createCall.body as string) as { title: string };
     expect(body.title).toContain('[staleness] faa');
   });
 
