@@ -7,9 +7,9 @@ import { retry, type RetryOptions } from './retry.js';
 
 export type { RetryOptions };
 
-// Above this size (or when Content-Length is absent), the ZIP is extracted from the response
-// stream instead of buffering the whole archive — caps memory at the wanted entries, not
-// compressed + decompressed whole-archive.
+// At or above this size (or when Content-Length is absent), the ZIP is extracted from the
+// response stream instead of buffering the whole archive — caps memory at the wanted entries,
+// not compressed + decompressed whole-archive.
 export const STREAM_THRESHOLD_BYTES = 256 * 1024 * 1024;
 
 // 4xx (e.g. 404 moved file) are permanent — retrying wastes the daily run. Only transient
