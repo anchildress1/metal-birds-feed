@@ -109,7 +109,12 @@ export const AircraftSchema = z.object({
   // instead of publishing a fleet of blank marks (row-count and hash guards can't see that).
   // \S also rejects whitespace-only values from padded columns in sources without trim_all.
   registration: z.string().regex(/\S/, 'registration must not be blank'),
-  icao_hex: z.string().nullable(),
+  // Consumers index and join on this; a mixed-case or malformed value breaks every lookup
+  // silently, so the canonical form (6 lowercase hex chars) is enforced at validation.
+  icao_hex: z
+    .string()
+    .regex(/^[0-9a-f]{6}$/, 'icao_hex must be 6 lowercase hex characters')
+    .nullable(),
   icao_type_code: z.string().nullable(),
   status: AircraftStatusSchema,
   country: z.string(),
