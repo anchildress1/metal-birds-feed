@@ -61,6 +61,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: SonarQube scan
+        # SHA-pinned third-party action; SONAR_TOKEN is a GitHub-managed secret reference, not a
+        # literal, so the flagged secret-exposure pattern does not apply here.
         # nosemgrep
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         env:

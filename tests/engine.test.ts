@@ -861,7 +861,7 @@ describe('engine — negative and edge cases', () => {
   it('resolveCompound applies lookup to the compound-transformed result', async () => {
     const config = loadSourceConfig(TC_CONFIG_PATH);
     // TC's airframe_type uses tc_airframe compound transform but no lookup.
-    // Adding a lookup exercises the resolveCompound → resolveLookup path (engine.ts line 206).
+    // Adding a lookup exercises the resolveCompound → resolveLookup path.
     const modConfig = {
       ...config,
       mapping: {

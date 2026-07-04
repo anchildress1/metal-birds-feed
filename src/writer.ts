@@ -9,7 +9,7 @@ import { SourceStateSchema, type SourceState } from './cadence.js';
 // The SDK's adaptive retry rate-limiter drains its token bucket during a blip and then fast-fails
 // the rest of a batch — so an app-level retry sits outside it, absorbing the residual transient
 // errors. NoSuchKey is a real "absent" signal callers handle, never a transport failure — exclude
-// it. 4xx (auth/validation) are permanent.
+// it. 4xx (auth/validation) are permanent, except 429 — rate limits heal once the bucket drains.
 export const isTransientS3Error = (err: unknown): boolean => {
   if (err instanceof NoSuchKey) return false;
   const status = (err as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata

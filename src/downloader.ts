@@ -5,8 +5,8 @@ import { retry, type RetryOptions } from './retry.js';
 
 export type { RetryOptions };
 
-// 4xx (e.g. 404 moved file) are permanent — retrying wastes the daily run. Only transient
-// transport failures earn a retry.
+// Most 4xx (e.g. 404 moved file) are permanent — retrying wastes the daily run. Only statuses
+// that can heal on their own (timeouts 408/425, rate limit 429, server-side 5xx) earn a retry.
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 // Retryable status surfaced after attempts are exhausted; carries the real status/statusText so
