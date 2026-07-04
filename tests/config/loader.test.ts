@@ -189,6 +189,84 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('rejects an unknown top-level key instead of silently discarding it', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nskiprows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects an unknown key nested under download', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_dl_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\n  discover_patern: 'x'\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects an unknown key inside a mapping entry', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_map_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transfrom: trim_or_null }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects constant combined with transform (silent precedence)', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_const_transform.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { constant: valid, transform: trim_or_null }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects field combined with constant (exactly one mapping kind)', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_field_constant.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, constant: X }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects transform combined with array_transform', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_two_transforms.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transform: trim_or_null, array_transform: br_operational_classes }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects a negative allowed_ragged_rows', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_neg_ragged.yaml');
     writeFileSync(

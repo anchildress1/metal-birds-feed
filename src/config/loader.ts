@@ -36,8 +36,10 @@ const hasOneCaptureGroup = (pattern: string): boolean => {
   }
 };
 
+// strictObject throughout: source YAML is hand-written, so an unknown key is a typo that strip
+// mode would silently discard — the engine would then read `undefined` forever with no error.
 const FieldMappingSchema = z
-  .object({
+  .strictObject({
     field: z.string().optional(),
     fields: z.array(z.string().min(1)).min(1).optional(),
     constant: z.string().nullable().optional(),
@@ -47,21 +49,41 @@ const FieldMappingSchema = z
     lookup: z.record(z.string(), z.string()).optional(),
     default: z.string().nullable().optional(),
   })
-  .refine((v) => v.field !== undefined || v.fields !== undefined || v.constant !== undefined, {
-    message: 'FieldMapping must have field, fields, or constant',
+  // The mapping kinds are mutually exclusive; the engine resolves constant before field before
+  // fields, so a combined mapping would silently ignore the losers instead of erroring.
+  .refine((v) => [v.field, v.fields, v.constant].filter((x) => x !== undefined).length === 1, {
+    message: 'FieldMapping requires exactly one of field, fields, or constant',
   })
   .refine((v) => (v.compound_transform === undefined) === (v.fields === undefined), {
     message: 'compound_transform requires fields, and fields requires compound_transform',
+  })
+  .refine(
+    (v) =>
+      v.constant === undefined ||
+      (v.transform === undefined &&
+        v.array_transform === undefined &&
+        v.lookup === undefined &&
+        v.default === undefined),
+    { message: 'constant cannot be combined with transform, array_transform, lookup, or default' }
+  )
+  .refine((v) => v.transform === undefined || v.field !== undefined, {
+    message: 'transform requires field',
+  })
+  .refine((v) => v.array_transform === undefined || v.field !== undefined, {
+    message: 'array_transform requires field',
+  })
+  .refine((v) => v.transform === undefined || v.array_transform === undefined, {
+    message: 'transform and array_transform are mutually exclusive',
   });
 
 const SourceConfigSchema = z
-  .object({
+  .strictObject({
     id: z.string().min(1),
     label: z.string().min(1),
     country: z.string().min(1),
     encoding: z.enum(['utf8', 'latin1']),
     download: z
-      .object({
+      .strictObject({
         url: z.url(),
         format: z.enum(['zip', 'file']).default('zip'),
         method: z.enum(['GET', 'POST']).default('GET'),
@@ -93,7 +115,7 @@ const SourceConfigSchema = z
     format: z.enum(['csv', 'ods', 'xlsx', 'xls', 'json', 'pdf', 'html']).default('csv'),
     record_path: z.string().optional(),
     pdf: z
-      .object({
+      .strictObject({
         field_axis: z.enum(['x', 'y']),
         column_pos: z.array(z.number()).min(1),
         anchor_pattern: z.string().min(1).refine(isValidRegex, {
@@ -102,7 +124,7 @@ const SourceConfigSchema = z
       })
       .optional(),
     record_count: z
-      .object({
+      .strictObject({
         pattern: z
           .string()
           .min(1)
@@ -119,7 +141,7 @@ const SourceConfigSchema = z
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
     allowed_ragged_rows: z.number().int().nonnegative().optional(),
     allowed_missing_source_id_rows: z
-      .object({
+      .strictObject({
         max: z.number().int().nonnegative(),
         field: z.string().min(1),
         pattern: z.string().min(1).refine(isValidRegex, {
@@ -129,7 +151,7 @@ const SourceConfigSchema = z
       .optional(),
     joins: z
       .array(
-        z.object({
+        z.strictObject({
           name: z.string().min(1),
           file: z.string().min(1),
           key: z.string().min(1),
