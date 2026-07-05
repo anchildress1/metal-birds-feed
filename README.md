@@ -168,7 +168,7 @@ Required upstream notices, kept short:
 - **Per-country compliance is the operator's responsibility.** This project ingests data from civil aviation authorities in multiple jurisdictions. Each imposes its own data-use, redistribution, and privacy obligations. Operators must independently assess and satisfy those obligations.
 - **Research is informational, not legal advice.** The license classifications and permissions in `DATA_LICENSES.md` reflect good-faith research at a point in time. They are not legal advice and carry no guarantee of completeness, accuracy, or continued validity.
 - **Upstream terms change without notice.** Agencies amend terms, withdraw permissions, or restructure publication channels. Operators are responsible for monitoring those changes.
-- **No warranty.** The data pipeline, its output, and the license research are provided as-is. See the `No Warranty` section of the [LICENSE](LICENSE).
+- **No liability.** The data pipeline, its output, and the license research are provided as-is. See the `No Liability` section of the [LICENSE](LICENSE).
 
 ---
 
