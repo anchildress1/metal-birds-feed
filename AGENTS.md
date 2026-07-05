@@ -62,6 +62,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Ragged CSV rows (cell count ≠ header) fail the parse: short rows silently null trailing fields, long rows silently drop cells. Known non-tabular rows (e.g. an Oracle "N rows selected." trailer): bound with `allowed_ragged_rows` (default 0).
 - Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. Multi-table pages: `sheet:` (name or index, same as xls) — SheetJS names them `Sheet1`, `Sheet2`, ... in order.
 - Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't publish a wrong-size fleet silently.
+- PDF cover/preface pages (text, zero anchors by design): `pdf.allowed_anchorless_pages` (default 0) bounds how many text-bearing pages may yield no `anchor_pattern` matches. Beyond the budget the parse fails naming the pages (a drifted register page drops its fleet slice and PDF sources can't use `record_count`); zero rows overall always fails regardless of budget. Declare cover pages explicitly — position-based tolerance would silently forgive a drifted first page.
 
 ## Architecture invariants
 

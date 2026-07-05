@@ -116,6 +116,11 @@ export interface PdfConfig {
   field_axis: 'x' | 'y';
   column_pos: number[];
   anchor_pattern: string;
+  // Budget of text-bearing pages expected to yield zero anchor matches (cover/preface/legend
+  // pages). Any anchorless page beyond this fails the parse: a register page that silently loses
+  // its anchors drops its whole fleet slice, and PDF sources cannot use record_count to catch it.
+  // Defaults to 0 — declare cover pages explicitly rather than inferring them from position.
+  allowed_anchorless_pages?: number;
 }
 
 export interface SourceConfig {

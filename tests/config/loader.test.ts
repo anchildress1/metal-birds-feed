@@ -293,6 +293,62 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  const pdfYaml = (anchorlessLine: string): string =>
+    `id: t\nlabel: t\ncountry: MV\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  field_axis: y\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${anchorlessLine}  column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+
+  it('accepts pdf.allowed_anchorless_pages', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_pdf_anchorless.yaml');
+    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: 1\n'));
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.pdf?.allowed_anchorless_pages).toBe(1);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('defaults pdf.allowed_anchorless_pages to undefined when omitted', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_pdf_no_anchorless.yaml');
+    writeFileSync(tmp, pdfYaml(''));
+    try {
+      expect(loadSourceConfig(tmp).pdf?.allowed_anchorless_pages).toBeUndefined();
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a negative pdf.allowed_anchorless_pages', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_pdf_neg_anchorless.yaml'
+    );
+    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: -1\n'));
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a non-integer pdf.allowed_anchorless_pages', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_pdf_frac_anchorless.yaml'
+    );
+    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: 1.5\n'));
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('accepts discover_url + discover_pattern when set together', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dl_discover.yaml');
     writeFileSync(

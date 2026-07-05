@@ -46,6 +46,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       column_pos: pdf.column_pos,
       columns: config.columns?.[config.primary] ?? [],
       anchor_pattern: pdf.anchor_pattern,
+      allowed_anchorless_pages: pdf.allowed_anchorless_pages,
       trim: config.trim_all,
     });
   }

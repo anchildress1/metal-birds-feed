@@ -261,6 +261,8 @@ export interface ParsePdfOptions {
   columns: string[];
   anchor_pattern: string;
   trim: boolean;
+  // Budget of text-bearing pages allowed to yield zero anchors (cover/preface pages). See PdfConfig.
+  allowed_anchorless_pages?: number;
 }
 
 interface PdfItem {
@@ -364,19 +366,34 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
   const rows: Row[] = [];
+  const anchorlessPages: number[] = [];
   for (const [i, pageItems] of items.entries()) {
     const page = toPdfItems(pageItems);
     // A page with no text at all carries no records to lose. A page WITH text but zero anchor
-    // matches means the template or mark format drifted on that page — its whole slice of the
-    // fleet would vanish while the >0-records and 50%-floor guards stay green.
+    // matches either is a known cover/preface page or means the template or mark format drifted
+    // on that page — a drifted page's whole slice of the fleet would vanish while the >0-records
+    // and 50%-floor guards stay green. The parser cannot tell the two apart from geometry, so the
+    // source config declares its expected anchorless-page count (`allowed_anchorless_pages`,
+    // default 0) — the same bounded-budget idiom as allowed_ragged_rows: a positional heuristic
+    // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
+    // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
     if (page.length === 0) continue;
     const pageRows = parsePdfPage(page, options, anchorRe);
-    if (pageRows.length === 0)
-      throw new Error(
-        `PDF page ${i + 1} has text but no anchor_pattern matches — page layout or mark format drifted`
-      );
-    rows.push(...pageRows);
+    if (pageRows.length === 0) anchorlessPages.push(i + 1);
+    else rows.push(...pageRows);
   }
+  const allowed = options.allowed_anchorless_pages ?? 0;
+  if (anchorlessPages.length > allowed)
+    throw new Error(
+      `PDF page(s) ${anchorlessPages.join(', ')} carry text but no anchor_pattern matches ` +
+        `(allowed_anchorless_pages: ${allowed}) — page layout or mark format drifted`
+    );
+  // Full template drift: every page fit the budget (or had no text) yet nothing parsed. A budget
+  // must never authorize publishing an empty fleet.
+  if (rows.length === 0)
+    throw new Error(
+      'PDF yielded no rows — no anchor_pattern matches on any page (template drift or empty document)'
+    );
   return rows;
 }
 

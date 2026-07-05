@@ -121,6 +121,7 @@ const SourceConfigSchema = z
         anchor_pattern: z.string().min(1).refine(isValidRegex, {
           message: 'pdf.anchor_pattern must be a valid regular expression',
         }),
+        allowed_anchorless_pages: z.number().int().nonnegative().optional(),
       })
       .optional(),
     record_count: z
