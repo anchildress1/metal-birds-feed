@@ -229,6 +229,69 @@ describe('buildSqlite', () => {
     expect(version.user_version).toBe(3);
   });
 
+  it('locks the aircraft table shape to the user_version pin', () => {
+    // PRAGMA user_version is the producer shape contract: any column add/remove/rename MUST bump
+    // it (AGENTS.md), or consumers mis-detect the artifact shape. This list forces every shape
+    // change through this file — update the columns AND the user_version assertions together.
+    const db = Database.deserialize(buildSqlite(new Map()));
+    const cols = db.query("SELECT name FROM pragma_table_info('aircraft') ORDER BY cid").all() as {
+      name: string;
+    }[];
+    expect(cols.map((c) => c.name)).toEqual([
+      'source',
+      'source_id',
+      'registration',
+      'icao_hex',
+      'icao_type_code',
+      'status',
+      'country',
+      'manufacturer',
+      'model',
+      'serial_number',
+      'year_manufactured',
+      'airframe_type',
+      'category',
+      'build_certification',
+      'airworthiness_class',
+      'operating_environment',
+      'operational_classes',
+      'engine_manufacturer',
+      'engine_model',
+      'engine_type',
+      'engine_count',
+      'engine_horsepower',
+      'engine_thrust_lbs',
+      'owner_name',
+      'owner_kind',
+      'owner_state',
+      'owner_country',
+      'operator_name',
+      'operator_kind',
+      'operator_state',
+      'operator_country',
+      'legal_owner_name',
+      'legal_owner_kind',
+      'legal_owner_state',
+      'legal_owner_country',
+      'idera_authorised_party',
+      'certification_date',
+      'airworthiness_date',
+      'expiration_date',
+      'last_action_date',
+      'cruise_speed_ktas',
+      'max_takeoff_weight_kg',
+      'seats',
+      'max_passengers',
+      'min_crew',
+      'airworthiness_review_date',
+      'cancellation_reason',
+      'lien_status',
+      'interdiction_code',
+    ]);
+    const version = db.query('PRAGMA user_version').get() as { user_version: number };
+    expect(version.user_version).toBe(3);
+  });
+
   it('indexes the common filter columns and stamps the schema version', () => {
     const db = Database.deserialize(buildSqlite(records));
     const indexes = db.query("SELECT name FROM sqlite_master WHERE type = 'index'").all() as {

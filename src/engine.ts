@@ -24,6 +24,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       trim: config.trim_all,
       columns: config.columns?.[config.primary],
       skip_rows: config.skip_rows,
+      allowed_ragged_rows: config.allowed_ragged_rows,
     });
   }
   if (config.format === 'xls') {
@@ -45,6 +46,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       column_pos: pdf.column_pos,
       columns: config.columns?.[config.primary] ?? [],
       anchor_pattern: pdf.anchor_pattern,
+      allowed_anchorless_pages: pdf.allowed_anchorless_pages,
       trim: config.trim_all,
     });
   }
@@ -113,6 +115,7 @@ export async function translate(
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
   const rows = await parsePrimary(primaryBuf, config);
+  assertJoinHits(config, joinMaps, rows);
 
   const records = new Map<string, Aircraft>();
   // Raw merged row per source_id. The duplicate check compares the actual input, so an identical
@@ -247,6 +250,7 @@ async function buildJoinMaps(
         delimiter: config.delimiter,
         trim: config.trim_all,
         columns: config.columns?.[join.file],
+        allowed_ragged_rows: config.allowed_ragged_rows,
       });
       const index = new Map<string, Row>();
       for (const row of rows) {
@@ -281,6 +285,26 @@ function isAllowedMissingSourceIdRow(
   const value = row[policy.field] ?? '';
   return policy.pattern.test(value);
 }
+
+// A declared join matching zero rows is upstream key drift or a broken join file — every record
+// would lose that join's fields, and with all of them nullable the schema can't see the loss.
+// Occasional misses are legal; a total miss is not.
+const assertJoinHits = (
+  config: SourceConfig,
+  joinMaps: Map<string, Map<string, Row>>,
+  rows: Row[]
+): void => {
+  if (rows.length === 0) return;
+  for (const join of config.joins) {
+    const map = joinMaps.get(join.name);
+    // some() exits at the first hit — the guard only needs existence, not a count.
+    const anyHit = rows.some((row) => map?.has(row[join.on] ?? ''));
+    if (!anyHit)
+      throw new Error(
+        `Source "${config.id}": join "${join.name}" matched 0 of ${rows.length} rows — join key drifted upstream or the join file is broken`
+      );
+  }
+};
 
 function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<string, Row>>): Row {
   const merged: Row = { ...row };
@@ -373,7 +397,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
   return {
     source: config.id,
     source_id: sourceId,
-    registration: scalar('registration') ?? '',
+    registration: scalar('registration'),
     icao_hex: scalar('icao_hex'),
     icao_type_code: scalar('icao_type_code'),
     status: scalar('status') ?? 'other',

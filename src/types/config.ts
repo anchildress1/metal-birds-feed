@@ -116,6 +116,11 @@ export interface PdfConfig {
   field_axis: 'x' | 'y';
   column_pos: number[];
   anchor_pattern: string;
+  // Budget of text-bearing pages expected to yield zero anchor matches (cover/preface/legend
+  // pages). Any anchorless page beyond this fails the parse: a register page that silently loses
+  // its anchors drops its whole fleet slice, and PDF sources cannot use record_count to catch it.
+  // Defaults to 0 — declare cover pages explicitly rather than inferring them from position.
+  allowed_anchorless_pages?: number;
 }
 
 export interface SourceConfig {
@@ -136,6 +141,10 @@ export interface SourceConfig {
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;
+  // Known non-tabular rows in the CSV (e.g. a "N rows selected." trailer) whose cell count
+  // differs from the header. Any ragged row beyond this budget fails the parse: a short row
+  // silently nulls trailing fields and a long row silently drops cells. Defaults to 0.
+  allowed_ragged_rows?: number;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   joins: JoinConfig[];
   source_id: string;

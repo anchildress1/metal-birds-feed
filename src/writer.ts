@@ -1,4 +1,10 @@
-import { S3Client, GetObjectCommand, PutObjectCommand, NoSuchKey } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  HeadObjectCommand,
+  NoSuchKey,
+} from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
 import { buildSqlite, hashRecords } from './db.js';
 import { log } from './logger.js';
@@ -9,7 +15,7 @@ import { SourceStateSchema, type SourceState } from './cadence.js';
 // The SDK's adaptive retry rate-limiter drains its token bucket during a blip and then fast-fails
 // the rest of a batch — so an app-level retry sits outside it, absorbing the residual transient
 // errors. NoSuchKey is a real "absent" signal callers handle, never a transport failure — exclude
-// it. 4xx (auth/validation) are permanent.
+// it. 4xx (auth/validation) are permanent, except 429 — rate limits heal once the bucket drains.
 export const isTransientS3Error = (err: unknown): boolean => {
   if (err instanceof NoSuchKey) return false;
   const status = (err as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata
@@ -94,8 +100,12 @@ export class R2ArtifactWriter {
     }
 
     // A prior hash that is absent (legacy/first-run state) never equals the current one, so the
-    // artifact is rewritten — exactly what a format migration needs.
-    if (priorState?.content_hash === content_hash) {
+    // artifact is rewritten — exactly what a format migration needs. The skip additionally
+    // requires the artifact to actually exist: state and artifact are separate objects, and an
+    // externally deleted artifact (lifecycle rule, manual cleanup) would otherwise 404 for
+    // consumers indefinitely while every run reports unchanged.
+    const dataUnchanged = priorState?.content_hash === content_hash;
+    if (dataUnchanged && (await this.artifactExists(source))) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return { changed: false, record_count: records.size, content_hash };
     }
@@ -108,7 +118,29 @@ export class R2ArtifactWriter {
       record_count: records.size,
       bytes: bytes.byteLength,
     });
-    return { changed: true, record_count: records.size, content_hash };
+    // `changed` reports DATA change only. A self-heal rewrite of a deleted artifact carries the
+    // same record set, so it must not stamp last_content_change or close staleness issues.
+    return { changed: !dataUnchanged, record_count: records.size, content_hash };
+  }
+
+  // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.
+  // HEAD 404s surface as generic errors (not NoSuchKey, which is GET-only), so any non-transient
+  // failure reads as "absent" — the false-negative cost is one redundant PUT, never a lost one.
+  private async artifactExists(source: string): Promise<boolean> {
+    if (this.dryRun) return true;
+    try {
+      await retry(
+        () =>
+          this.client.send(
+            new HeadObjectCommand({ Bucket: this.bucket, Key: `aircraft/${source}.sqlite` })
+          ),
+        S3_RETRY
+      );
+      return true;
+    } catch {
+      log('warn', 'artifact_missing_on_hash_match', { source });
+      return false;
+    }
   }
 
   async readState(source: string): Promise<SourceState | null> {

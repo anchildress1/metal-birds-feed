@@ -54,6 +54,7 @@ describe('loadSourceConfig', () => {
       field: 'MARK',
       pattern: '^\\d+ rows selected\\.$',
     });
+    expect(config.allowed_ragged_rows).toBe(1);
     expect(config.mapping['airframe_type']).toMatchObject({
       compound_transform: 'tc_airframe',
       fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES'],
@@ -196,6 +197,166 @@ describe('loadSourceConfig', () => {
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/paths must be unique/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects an unknown top-level key instead of silently discarding it', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nskiprows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects an unknown key nested under download', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_dl_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\n  discover_patern: 'x'\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects an unknown key inside a mapping entry', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_map_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transfrom: trim_or_null }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects constant combined with transform (silent precedence)', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_const_transform.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { constant: valid, transform: trim_or_null }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects field combined with constant (exactly one mapping kind)', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_field_constant.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, constant: X }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects transform combined with array_transform', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_two_transforms.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transform: trim_or_null, array_transform: br_operational_classes }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects duplicate names within a columns array', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dup_columns.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\ncolumns:\n  f: [REG, REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a negative allowed_ragged_rows', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_neg_ragged.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_ragged_rows: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  const pdfYaml = (anchorlessLine: string): string =>
+    `id: t\nlabel: t\ncountry: MV\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  field_axis: y\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${anchorlessLine}  column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+
+  it('accepts pdf.allowed_anchorless_pages', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_pdf_anchorless.yaml');
+    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: 1\n'));
+    try {
+      const config = loadSourceConfig(tmp);
+      expect(config.pdf?.allowed_anchorless_pages).toBe(1);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('defaults pdf.allowed_anchorless_pages to undefined when omitted', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_pdf_no_anchorless.yaml');
+    writeFileSync(tmp, pdfYaml(''));
+    try {
+      expect(loadSourceConfig(tmp).pdf?.allowed_anchorless_pages).toBeUndefined();
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a negative pdf.allowed_anchorless_pages', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_pdf_neg_anchorless.yaml'
+    );
+    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: -1\n'));
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a non-integer pdf.allowed_anchorless_pages', () => {
+    const tmp = resolve(
+      import.meta.dirname,
+      '..',
+      '..',
+      'sources',
+      '_test_pdf_frac_anchorless.yaml'
+    );
+    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: 1.5\n'));
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
     } finally {
       unlinkSync(tmp);
     }

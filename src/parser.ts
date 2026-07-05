@@ -13,8 +13,12 @@ export interface ParseOptions {
   delimiter: string;
   trim: boolean;
   columns?: string[];
-  // Preamble rows dropped before the header line (not data rows after it).
+  // Leading rows dropped before parsing: banner/preamble lines, plus — when `columns` overrides
+  // the header — the file's own header row (then the LAST dropped row; its width is asserted
+  // against `columns`). Never data rows.
   skip_rows?: number;
+  // Budget for known non-tabular rows whose cell count differs from the header; see SourceConfig.
+  allowed_ragged_rows?: number;
 }
 
 export interface ParseJsonOptions {
@@ -54,9 +58,14 @@ export type ParseXlsOptions = BaseSpreadsheetOptions;
 export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[]> {
   const text = new TextDecoder(options.encoding).decode(buf);
   const cast = options.trim ? (value: string): string => value.trim() : undefined;
-  const columns = options.columns ?? ((header: string[]) => header.map((h) => h.trim()));
+  const columns =
+    options.columns ?? ((header: string[]) => assertUniqueHeaders(header.map((h) => h.trim())));
   // from_line is 1-based and counts the header, so the header sits at skip_rows + 1.
   const fromLine = (options.skip_rows ?? 0) + 1;
+  if (options.columns && (options.skip_rows ?? 0) >= 1) {
+    assertDiscardedHeaderWidth(await parseSkippedRegion(text, options), options.columns);
+  }
+  const allowedRagged = options.allowed_ragged_rows ?? 0;
   return new Promise((resolve, reject) => {
     parse(
       text,
@@ -69,13 +78,42 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
         relax_quotes: true,
         cast,
       },
-      (err, records: Row[]) => {
+      (err, records: Row[], info?: { invalid_field_length: number }) => {
+        const ragged = info?.invalid_field_length ?? 0;
         if (err) reject(err);
+        // A ragged row is silent field loss — a short row nulls its trailing fields and a long
+        // row drops cells — indistinguishable downstream from real nulls. Known non-tabular rows
+        // (e.g. tc-ca's "N rows selected." trailer) are bounded by allowed_ragged_rows.
+        else if (ragged > allowedRagged)
+          reject(
+            new Error(
+              `CSV has ${ragged} row(s) whose cell count differs from the header (allowed: ${allowedRagged})`
+            )
+          );
         else resolve(records);
       }
     );
   });
 }
+
+// The rows skip_rows discards, parsed raggedly — banner lines above the header can be any width.
+const parseSkippedRegion = (text: string, options: ParseOptions): Promise<string[][]> =>
+  new Promise((resolve, reject) => {
+    parse(
+      text,
+      {
+        delimiter: options.delimiter,
+        to_line: options.skip_rows,
+        skip_empty_lines: true,
+        relax_column_count: true,
+        relax_quotes: true,
+      },
+      (err, records: string[][]) => {
+        if (err) reject(err);
+        else resolve(records);
+      }
+    );
+  });
 
 // Parses a JSON API response into the same Row[] shape as the spreadsheet/CSV paths. Each record
 // is flattened to a string map so the existing field-mapping + transform machinery applies
@@ -223,6 +261,8 @@ export interface ParsePdfOptions {
   columns: string[];
   anchor_pattern: string;
   trim: boolean;
+  // Budget of text-bearing pages allowed to yield zero anchors (cover/preface pages). See PdfConfig.
+  allowed_anchorless_pages?: number;
 }
 
 interface PdfItem {
@@ -326,9 +366,34 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
   const rows: Row[] = [];
-  for (const pageItems of items) {
-    rows.push(...parsePdfPage(toPdfItems(pageItems), options, anchorRe));
+  const anchorlessPages: number[] = [];
+  for (const [i, pageItems] of items.entries()) {
+    const page = toPdfItems(pageItems);
+    // A page with no text at all carries no records to lose. A page WITH text but zero anchor
+    // matches either is a known cover/preface page or means the template or mark format drifted
+    // on that page — a drifted page's whole slice of the fleet would vanish while the >0-records
+    // and 50%-floor guards stay green. The parser cannot tell the two apart from geometry, so the
+    // source config declares its expected anchorless-page count (`allowed_anchorless_pages`,
+    // default 0) — the same bounded-budget idiom as allowed_ragged_rows: a positional heuristic
+    // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
+    // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
+    if (page.length === 0) continue;
+    const pageRows = parsePdfPage(page, options, anchorRe);
+    if (pageRows.length === 0) anchorlessPages.push(i + 1);
+    else rows.push(...pageRows);
   }
+  const allowed = options.allowed_anchorless_pages ?? 0;
+  if (anchorlessPages.length > allowed)
+    throw new Error(
+      `PDF page(s) ${anchorlessPages.join(', ')} carry text but no anchor_pattern matches ` +
+        `(allowed_anchorless_pages: ${allowed}) — page layout or mark format drifted`
+    );
+  // Full template drift: every page fit the budget (or had no text) yet nothing parsed. A budget
+  // must never authorize publishing an empty fleet.
+  if (rows.length === 0)
+    throw new Error(
+      'PDF yielded no rows — no anchor_pattern matches on any page (template drift or empty document)'
+    );
   return rows;
 }
 
@@ -340,6 +405,9 @@ interface ShapeOptions {
 
 // Shared row-shaping so hucre and SheetJS paths produce identical Row[] output.
 const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
+  if (options.columns && options.skipRows >= 1) {
+    assertDiscardedHeaderWidth(rawRows.slice(0, options.skipRows), options.columns);
+  }
   const sliced = rawRows.slice(options.skipRows);
   const trimmed = options.trim ? sliced.map((cells) => cells.map((c) => c.trim())) : sliced;
   const { headers, dataRows } = resolveHeadersAndData(trimmed, options.columns);
@@ -396,6 +464,33 @@ const stringifyCell = (cell: unknown): string => {
 
 const isNonEmptyRow = (cells: string[]): boolean => cells.some((c) => c.length > 0);
 
+// Row assembly is last-wins per header name, so a duplicated header silently shadows the earlier
+// column's data — and hand-maintained registry spreadsheets do ship duplicated labels. Empty
+// names are padding cells that never carry data, so only non-empty duplicates are fatal.
+const assertUniqueHeaders = (headers: string[]): string[] => {
+  const seen = new Set<string>();
+  for (const h of headers) {
+    if (h.length === 0) continue;
+    if (seen.has(h))
+      throw new Error(`Duplicate header name "${h}" — the earlier column would be shadowed`);
+    seen.add(h);
+  }
+  return headers;
+};
+
+// A source that declares `columns` pins the upstream layout, and the discarded header row is the
+// only run-time witness to it. Width drift means a column was added or removed upstream —
+// positional mapping would silently shift every field across the change, and row-count/hash
+// guards can't see it. The last non-empty skipped row is the header; banners above it may be
+// any width.
+const assertDiscardedHeaderWidth = (skippedRows: string[][], columns: string[]): void => {
+  const header = skippedRows.findLast((cells) => cells.some((c) => c.trim().length > 0));
+  if (header && header.length !== columns.length)
+    throw new Error(
+      `Explicit columns (${columns.length}) do not match the file's discarded header row (${header.length} cells) — upstream layout changed`
+    );
+};
+
 interface HeadersAndData {
   headers: string[];
   dataRows: string[][];
@@ -410,7 +505,7 @@ const resolveHeadersAndData = (
   }
   const headerIndex = rows.findIndex(isNonEmptyRow);
   if (headerIndex === -1) return { headers: [], dataRows: [] };
-  const headers = rows[headerIndex].map((h) => h.trim());
+  const headers = assertUniqueHeaders(rows[headerIndex].map((h) => h.trim()));
   const dataRows = rows.slice(headerIndex + 1).filter(isNonEmptyRow);
   return { headers, dataRows };
 };

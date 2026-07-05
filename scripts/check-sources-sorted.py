@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Verify that the README.md Sources table is sorted alphabetically by Country.
 
-The Sources table grows as new agencies are triaged. Inserting new rows in the wrong
-position has happened three times in a row across recent doc batches; this validator
-catches it at commit time so the next forty entries stay in shape.
+The Sources table grows as new agencies are triaged, and inserting new rows in the wrong
+position is a recurring, easy-to-miss mistake; this validator catches it at commit time
+so the table stays in shape as it grows.
 
 Exit codes:
     0 — the table is sorted by Country (case-insensitive).
@@ -104,7 +104,10 @@ def main() -> int:
         rel = path.relative_to(REPO_ROOT)
         rows = extract_table_countries(path, marker, col)
         if not rows:
-            print(f"⚠️  {rel}: table after '{marker}' is empty or missing — skipping")
+            # The table is guaranteed to exist, so absence means the heading moved or the parser
+            # broke — a soft skip would silently disable the whole check.
+            print(f"❌ {rel}: table after '{marker}' is empty or missing — validator anchor broken")
+            exit_code = 1
             continue
         violations = find_sort_violations(rows)
         if violations:
