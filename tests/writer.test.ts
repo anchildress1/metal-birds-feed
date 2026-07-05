@@ -25,6 +25,10 @@ void mock.module('@aws-sdk/client-s3', () => ({
       public input: { Bucket: string; Key: string; Body: Uint8Array | string; ContentType: string }
     ) {}
   },
+  HeadObjectCommand: class {
+    readonly _kind = 'head';
+    constructor(public input: { Bucket: string; Key: string }) {}
+  },
   NoSuchKey: class NoSuchKey extends Error {
     constructor() {
       super('The specified key does not exist.');
@@ -163,6 +167,33 @@ describe('R2ArtifactWriter — write', () => {
     expect(putCalls()).toHaveLength(0);
   });
 
+  it('rewrites when the hash matches but the artifact is missing (external-deletion self-heal)', async () => {
+    // State and artifact are separate objects; a lifecycle rule or manual cleanup can delete the
+    // artifact while state still holds its hash — without the HEAD check every run would report
+    // unchanged while consumers 404 indefinitely. The re-PUT still reports changed: false — the
+    // DATA is identical, so last_content_change must not be stamped and staleness issues must
+    // not close just because the object was rewritten.
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
+    const first = await writer.write(records, 'faa', null);
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 1,
+      content_hash: first.content_hash,
+    };
+    mockSend.mockReset();
+    mockSend.mockImplementation((cmd: { _kind: string }) =>
+      cmd._kind === 'head' ? Promise.reject(s3Error('NotFound', 404)) : Promise.resolve({})
+    );
+
+    const second = await writer.write(records, 'faa', prior);
+
+    expect(second.changed).toBe(false);
+    expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
+  });
+
   it('rewrites the artifact when the content hash differs from prior state', async () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -210,6 +241,50 @@ describe('R2ArtifactWriter — write', () => {
     await expect(
       writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior)
     ).rejects.toThrow(/drop from prior 100/);
+  });
+
+  it('accepts a shrink at exactly the 50% retain floor (strict comparison)', async () => {
+    // Legitimate registry cleanups land here; if threshold drift ever rejects this, every such
+    // cleanup bricks the source's daily refresh until someone deletes its state by hand.
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 4 };
+    const records = new Map([
+      ['00001', makeAircraft('00001', 'N1')],
+      ['00002', makeAircraft('00002', 'N2')],
+    ]);
+
+    const stats = await writer.write(records, 'faa', prior);
+
+    expect(stats.changed).toBe(true);
+    expect(stats.record_count).toBe(2);
+  });
+
+  it('rejects a shrink just below the 50% retain floor', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 5 };
+    const records = new Map([
+      ['00001', makeAircraft('00001', 'N1')],
+      ['00002', makeAircraft('00002', 'N2')],
+    ]);
+
+    await expect(writer.write(records, 'faa', prior)).rejects.toThrow(/drop from prior 5/);
+  });
+
+  it('bypasses the truncation guard when prior state has no record_count (legacy escape hatch)', async () => {
+    // Legacy state predates record_count, and deleting _state/<source>.json is the documented
+    // override for a legitimate mass shrink — both flow through this bypass.
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const prior: SourceState = { last_run: 'x', last_content_change: 'x', content_hash: 'stale' };
+
+    const stats = await writer.write(
+      new Map([['00001', makeAircraft('00001', 'N1')]]),
+      'faa',
+      prior
+    );
+
+    expect(stats.changed).toBe(true);
   });
 
   it('retries a transient error on the artifact PUT', async () => {

@@ -55,6 +55,31 @@ describe('AircraftSchema', () => {
     expect(AircraftSchema.safeParse({ ...base, registration: 'VH-ABC' }).success).toBe(true);
   });
 
+  it('rejects an empty registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: '' }).success).toBe(false);
+  });
+
+  it('rejects a whitespace-only registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: '   ' }).success).toBe(false);
+  });
+
+  it('rejects a null registration', () => {
+    expect(AircraftSchema.safeParse({ ...base, registration: null }).success).toBe(false);
+  });
+
+  it('rejects a non-hex icao_hex', () => {
+    expect(AircraftSchema.safeParse({ ...base, icao_hex: 'NOTHEX' }).success).toBe(false);
+  });
+
+  it('rejects an uppercase icao_hex (canonical form is lowercase)', () => {
+    expect(AircraftSchema.safeParse({ ...base, icao_hex: 'A4E294' }).success).toBe(false);
+  });
+
+  it('rejects an icao_hex that is not exactly 6 chars', () => {
+    expect(AircraftSchema.safeParse({ ...base, icao_hex: 'a4e29' }).success).toBe(false);
+    expect(AircraftSchema.safeParse({ ...base, icao_hex: 'a4e2941' }).success).toBe(false);
+  });
+
   it('accepts a null icao_hex', () => {
     expect(AircraftSchema.safeParse({ ...base, icao_hex: null }).success).toBe(true);
   });

@@ -311,8 +311,8 @@ describe('download — retry', () => {
   });
 
   it('retries a body read that drops mid-stream after a 200', async () => {
-    // The connection delivers 200 headers, then the body stream fails — the failure this PR's
-    // reviewer flagged. The whole request (headers + body) must be retried.
+    // The connection delivers 200 headers, then the body stream fails. The whole request
+    // (headers + body) must be retried, not just the initial handshake.
     const fn = mock()
       .mockResolvedValueOnce({
         ok: true,

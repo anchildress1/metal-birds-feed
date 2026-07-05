@@ -760,8 +760,10 @@ describe('engine — negative and edge cases', () => {
   it('fails missing source_id rows that exceed the configured skip max', async () => {
     const config = loadSourceConfig(TC_CONFIG_PATH);
     const text = new TextDecoder('latin1').decode(tcFixtureBuffer('carscurr.txt'));
+    // Full-width (46 trailing empty cells = carscurr's 47 columns): stays inside the parser's
+    // allowed_ragged_rows budget so this exercises the engine's missing-id max, not the parser.
     const files = new Map([
-      ['carscurr', Buffer.from(`${text}11 rows selected.\n`, 'latin1')],
+      ['carscurr', Buffer.from(`${text}11 rows selected.${','.repeat(46)}\n`, 'latin1')],
       ['carsownr', tcFixtureBuffer('carsownr.txt')],
     ]);
     const { stats } = await translate(config, files);
@@ -859,7 +861,7 @@ describe('engine — negative and edge cases', () => {
   it('resolveCompound applies lookup to the compound-transformed result', async () => {
     const config = loadSourceConfig(TC_CONFIG_PATH);
     // TC's airframe_type uses tc_airframe compound transform but no lookup.
-    // Adding a lookup exercises the resolveCompound → resolveLookup path (engine.ts line 206).
+    // Adding a lookup exercises the resolveCompound → resolveLookup path.
     const modConfig = {
       ...config,
       mapping: {
@@ -904,6 +906,154 @@ describe('engine — negative and edge cases', () => {
     const { records: r, stats } = await translate(config, files);
     expect(stats.failed).toBe(0);
     expect(r.get('1')?.owner.kind).toBeNull();
+  });
+
+  it('fails the run when a declared join matches zero rows', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-join-miss',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // Total miss = key drift (e.g. FAA renames the ACFTREF key column). All joined fields are
+    // nullable, so without this guard the fleet publishes with them silently nulled.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n1,N1\n2,N2\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n999,foo\n', 'utf8')],
+    ]);
+    await expect(translate(config, files)).rejects.toThrow(/join "j" matched 0 of 2 rows/i);
+  });
+
+  it('accepts a join with partial hits (occasional misses are legal)', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-join-partial',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        manufacturer: { field: 'j.EXTRA', transform: 'trim_or_null' },
+      },
+    };
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n1,N1\n2,N2\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n1,Cessna\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.manufacturer).toBe('Cessna');
+    expect(records.get('2')?.manufacturer).toBeNull();
+  });
+
+  it('skips the join-hit floor when the primary has no rows', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-join-empty',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // Zero-record refusal lives in the writer; translate itself must not misreport an empty
+    // primary as a join failure.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n1,Cessna\n', 'utf8')],
+    ]);
+    const { records } = await translate(config, files);
+    expect(records.size).toBe(0);
+  });
+
+  it('fails a row with a blank registration instead of publishing an empty mark', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-blank-reg',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // A renamed/broken registration mapping nulls every mark; row count and content hash both
+    // stay plausible, so the schema reject is the only guard that can catch it.
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(0);
+  });
+
+  it('fails a row whose registration is only whitespace when trim is off', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-ws-reg',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: false,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,"   "\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(0);
+  });
+
+  it('fails rows when the mapping has no registration entry at all', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-no-reg-mapping',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { 'owner.name': { field: 'REG' } },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(0);
   });
 
   it('counts a duplicate source_id as a failed row instead of silently overwriting', async () => {

@@ -22,6 +22,7 @@ const opts = (
     trim: boolean;
     columns: string[];
     skip_rows: number;
+    allowed_ragged_rows: number;
   }> = {}
 ) => ({
   encoding: 'latin1' as const,
@@ -48,10 +49,65 @@ describe('parseCSV', () => {
     expect(rows[1].MODEL).toBe('GUNS"S');
   });
 
-  it('tolerates rows with extra columns (relax_column_count)', async () => {
-    const rows = await parseCSV(buf('A,B\n1,2,3\n'), opts());
-    expect(rows[0].A).toBe('1');
-    expect(rows[0].B).toBe('2');
+  it('accepts explicit columns whose width matches the discarded header', async () => {
+    const rows = await parseCSV(
+      buf('reg,owner\nN1,Alice\n'),
+      opts({ columns: ['REG', 'OWNER'], skip_rows: 1 })
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects explicit columns when the discarded header is wider (column added upstream)', async () => {
+    await expect(
+      parseCSV(
+        buf('reg,NEW,owner\nN1,x,Alice\n'),
+        opts({ columns: ['REG', 'OWNER'], skip_rows: 1 })
+      )
+    ).rejects.toThrow(/columns \(2\).*header row \(3 cells\)/i);
+  });
+
+  it('rejects explicit columns when the discarded header is narrower (column removed upstream)', async () => {
+    await expect(
+      parseCSV(buf('reg\nN1\n'), opts({ columns: ['REG', 'OWNER'], skip_rows: 1 }))
+    ).rejects.toThrow(/columns \(2\).*header row \(1 cells\)/i);
+  });
+
+  it('ignores banner lines above the header when checking width', async () => {
+    const rows = await parseCSV(
+      buf('Fleet register export\nreg,owner\nN1,Alice\n'),
+      opts({ columns: ['REG', 'OWNER'], skip_rows: 2 })
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('skips the header check for headerless files (columns without skip_rows)', async () => {
+    const rows = await parseCSV(buf('N1,Alice\n'), opts({ columns: ['REG', 'OWNER'] }));
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects a row with extra cells beyond the header (silent cell drop)', async () => {
+    await expect(parseCSV(buf('A,B\n1,2,3\n'), opts())).rejects.toThrow(/cell count.*allowed: 0/i);
+  });
+
+  it('rejects a row with fewer cells than the header (silent field loss)', async () => {
+    await expect(parseCSV(buf('A,B,C\n1,2,3\n4,5\n'), opts())).rejects.toThrow(
+      /cell count.*allowed: 0/i
+    );
+  });
+
+  it('allows a bounded ragged row via allowed_ragged_rows', async () => {
+    const rows = await parseCSV(
+      buf('A,B\n1,2\n9 rows selected.\n'),
+      opts({ allowed_ragged_rows: 1 })
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[1].A).toBe('9 rows selected.');
+  });
+
+  it('rejects ragged rows beyond the allowed_ragged_rows budget', async () => {
+    await expect(
+      parseCSV(buf('A,B\n1,2\nshort\nalso short\n'), opts({ allowed_ragged_rows: 1 }))
+    ).rejects.toThrow(/2 row\(s\).*allowed: 1/i);
   });
 
   it('skips fully empty lines', async () => {
@@ -84,6 +140,18 @@ describe('parseCSV', () => {
   it('rejects when csv-parse encounters an unrecoverable structural error', async () => {
     await expect(parseCSV(buf('A,B\n"unterminated\n'), opts())).rejects.toThrow(
       /Quote Not Closed/i
+    );
+  });
+
+  it('rejects a duplicated header name instead of silently shadowing the earlier column', async () => {
+    await expect(parseCSV(buf('name,name,x\n1,2,3\n'), opts())).rejects.toThrow(
+      /duplicate header.*"name"/i
+    );
+  });
+
+  it('rejects headers that collide only after trimming', async () => {
+    await expect(parseCSV(buf('name ,name,x\n1,2,3\n'), opts())).rejects.toThrow(
+      /duplicate header/i
     );
   });
 
@@ -721,9 +789,150 @@ describe('parsePdf', () => {
     expect(blob).not.toMatch(/Whilst reasonable care|Page \d of \d/);
   });
 
-  it('returns no rows when the anchor pattern matches nothing', async () => {
-    const rows = await parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }));
-    expect(rows).toEqual([]);
+  it('throws when the anchor pattern matches nothing on a text-bearing page', async () => {
+    // Silently returning [] here published a zero/short fleet whenever the register's mark
+    // format drifted; the writer's guards can't attribute the loss to a page.
+    await expect(parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^ZZ-NOPE$' }))).rejects.toThrow(
+      /page\(s\) [\d, ]+ carry text but no anchor_pattern matches/i
+    );
+  });
+
+  it('throws when only some pages lose their anchors (partial template drift)', async () => {
+    // 8Q-OEQ exists on one page only; the other pages still carry text, so their fleet slice
+    // would silently vanish — a 10-40% loss that clears the writer's 50% retain floor.
+    await expect(parsePdf(mvBuf(), mvOpts({ anchor_pattern: '^8Q-OEQ$' }))).rejects.toThrow(
+      /page\(s\) [\d, ]+ carry text but no anchor_pattern matches/i
+    );
+  });
+});
+
+// Minimal single-font uncompressed PDF writer so multi-page layouts (cover pages, per-page anchor
+// loss) can be exercised without a hand-crafted binary fixture. unpdf reads Td coordinates back
+// verbatim, so item positions in `pages` are exactly what parsePdf sees.
+interface SynthItem {
+  str: string;
+  x: number;
+  y: number;
+}
+
+const pdfEsc = (s: string): string =>
+  s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+
+const buildPdf = (pages: SynthItem[][]): Buffer => {
+  const objects: string[] = [];
+  objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objects[2] = `<< /Type /Pages /Kids [${pages.map((_, i) => `${4 + 2 * i} 0 R`).join(' ')}] /Count ${pages.length} >>`;
+  objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+  pages.forEach((items, i) => {
+    const pageNum = 4 + 2 * i;
+    objects[pageNum] =
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] ' +
+      `/Resources << /Font << /F1 3 0 R >> >> /Contents ${pageNum + 1} 0 R >>`;
+    const stream = items
+      .map((it) => `BT /F1 10 Tf ${it.x} ${it.y} Td (${pdfEsc(it.str)}) Tj ET`)
+      .join('\n');
+    objects[pageNum + 1] = `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`;
+  });
+  let body = '%PDF-1.4\n';
+  const offsets: number[] = [];
+  for (let n = 1; n < objects.length; n++) {
+    offsets[n] = body.length;
+    body += `${n} 0 obj\n${objects[n]}\nendobj\n`;
+  }
+  const xrefStart = body.length;
+  let xref = `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for (let n = 1; n < objects.length; n++) {
+    xref += `${String(offsets[n]).padStart(10, '0')} 00000 n \n`;
+  }
+  body += `${xref}trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+  return Buffer.from(body, 'latin1');
+};
+
+// Same orientation as mv-caa: fields banded on y (value at 100, mark at 50), records along x.
+const synthOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
+  field_axis: 'y',
+  anchor_pattern: '^8Q-[A-Z]{3}$',
+  column_pos: [100, 50],
+  columns: ['value', 'mark'],
+  trim: true,
+  ...overrides,
+});
+
+const coverPage: SynthItem[] = [
+  { str: 'Republic of Testland', x: 72, y: 700 },
+  { str: 'Civil Aircraft Register', x: 72, y: 680 },
+];
+// A register page whose marks drifted out of the anchor format — text present, zero matches.
+const driftedPage: SynthItem[] = [
+  { str: '8QAAA', x: 100, y: 50 },
+  { str: 'Alpha Air', x: 100, y: 100 },
+];
+const registerPage = (records: [mark: string, value: string][]): SynthItem[] =>
+  records.flatMap(([mark, value], i) => [
+    { str: mark, x: 100 + 200 * i, y: 50 },
+    { str: value, x: 100 + 200 * i, y: 100 },
+  ]);
+
+const pageAB = registerPage([
+  ['8Q-AAA', 'Alpha Air'],
+  ['8Q-BBB', 'Bravo Air'],
+]);
+const pageC = registerPage([['8Q-CCC', 'Charlie Air']]);
+
+describe('parsePdf anchorless-page budget', () => {
+  it('tolerates a leading cover page within allowed_anchorless_pages', async () => {
+    const rows = await parsePdf(
+      buildPdf([coverPage, pageAB, pageC]),
+      synthOpts({ allowed_anchorless_pages: 1 })
+    );
+    expect(rows.map((r) => r.mark)).toEqual(['8Q-AAA', '8Q-BBB', '8Q-CCC']);
+    expect(rows[2]?.value).toBe('Charlie Air');
+  });
+
+  it('still skips text-free pages without consuming the budget', async () => {
+    const rows = await parsePdf(buildPdf([[], pageAB, pageC]), synthOpts());
+    expect(rows).toHaveLength(3);
+  });
+
+  it('throws on an unbudgeted leading anchorless page (default 0)', async () => {
+    await expect(parsePdf(buildPdf([coverPage, pageAB, pageC]), synthOpts())).rejects.toThrow(
+      /page\(s\) 1 carry text but no anchor_pattern matches.*allowed_anchorless_pages: 0/i
+    );
+  });
+
+  it('throws when an interior page loses its anchors', async () => {
+    await expect(parsePdf(buildPdf([pageAB, driftedPage, pageC]), synthOpts())).rejects.toThrow(
+      /page\(s\) 2 carry text but no anchor_pattern matches/i
+    );
+  });
+
+  it('throws when a trailing page loses its anchors', async () => {
+    await expect(parsePdf(buildPdf([pageAB, pageC, driftedPage]), synthOpts())).rejects.toThrow(
+      /page\(s\) 3 carry text but no anchor_pattern matches/i
+    );
+  });
+
+  it('throws naming every anchorless page once the budget is exceeded', async () => {
+    // Budgeted cover page + a drifted register page: the budget covers one, not both, and the
+    // error must attribute the loss to specific pages so drift is diagnosable from the log.
+    await expect(
+      parsePdf(
+        buildPdf([coverPage, pageAB, driftedPage]),
+        synthOpts({ allowed_anchorless_pages: 1 })
+      )
+    ).rejects.toThrow(/page\(s\) 1, 3 carry text but no anchor_pattern matches/i);
+  });
+
+  it('throws on full template drift even when every page fits the budget', async () => {
+    await expect(
+      parsePdf(buildPdf([coverPage, driftedPage]), synthOpts({ allowed_anchorless_pages: 5 }))
+    ).rejects.toThrow(/no anchor_pattern matches on any page/i);
+  });
+
+  it('throws on a PDF with no text at all instead of returning an empty fleet', async () => {
+    await expect(parsePdf(buildPdf([[], []]), synthOpts())).rejects.toThrow(
+      /no anchor_pattern matches on any page/i
+    );
   });
 });
 
@@ -741,6 +950,92 @@ const eeColumns = [
   'operator',
   'pad_trail',
 ];
+
+describe('shapeRows discarded-header width guard (html/xls/ods/xlsx shared path)', () => {
+  const table = (rows: string[][]): Buffer =>
+    Buffer.from(
+      `<table>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`,
+      'utf8'
+    );
+
+  it('accepts explicit columns whose width matches the discarded header', async () => {
+    const rows = await parseHtml(
+      table([
+        ['reg', 'owner'],
+        ['N1', 'Alice'],
+      ]),
+      {
+        encoding: 'utf8',
+        trim: true,
+        columns: ['REG', 'OWNER'],
+        skip_rows: 1,
+      }
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects explicit columns when the discarded header is wider (column added upstream)', async () => {
+    await expect(
+      parseHtml(
+        table([
+          ['reg', 'NEW', 'owner'],
+          ['N1', 'x', 'Alice'],
+        ]),
+        {
+          encoding: 'utf8',
+          trim: true,
+          columns: ['REG', 'OWNER'],
+          skip_rows: 1,
+        }
+      )
+    ).rejects.toThrow(/columns \(2\).*header row \(3 cells\)/i);
+  });
+
+  it('ignores a short banner row above the header when checking width', async () => {
+    const rows = await parseHtml(table([['Fleet register'], ['reg', 'owner'], ['N1', 'Alice']]), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['REG', 'OWNER'],
+      skip_rows: 2,
+    });
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('skips the header check when skip_rows is absent', async () => {
+    const rows = await parseHtml(table([['N1', 'Alice']]), {
+      encoding: 'utf8',
+      trim: true,
+      columns: ['REG', 'OWNER'],
+    });
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  it('rejects a duplicated inferred header name', async () => {
+    await expect(
+      parseHtml(
+        table([
+          ['name', 'name', 'x'],
+          ['1', '2', '3'],
+        ]),
+        { encoding: 'utf8', trim: true }
+      )
+    ).rejects.toThrow(/duplicate header.*"name"/i);
+  });
+
+  it('tolerates repeated empty header cells (padding columns carry no data)', async () => {
+    const rows = await parseHtml(
+      table([
+        ['reg', '', '', 'owner'],
+        ['N1', 'a', 'b', 'Alice'],
+      ]),
+      {
+        encoding: 'utf8',
+        trim: true,
+      }
+    );
+    expect(rows).toEqual([{ reg: 'N1', owner: 'Alice' }]);
+  });
+});
 
 describe('parseHtml', () => {
   it('extracts the server-rendered table into one row per aircraft, dropping preamble rows', async () => {
