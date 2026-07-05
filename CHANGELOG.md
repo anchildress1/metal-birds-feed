@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.0.9](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.8...v0.0.9) (2026-07-05)
+
+
+### Features
+
+* onboard Estonia (Transpordiamet) register via HTML parser path ([#47](https://github.com/anchildress1/metal-birds-feed/issues/47)) ([91d3a93](https://github.com/anchildress1/metal-birds-feed/commit/91d3a9331e76451db00dd7a28cb7af1b825f9c15))
+* stream large zip downloads instead of buffering whole archives ([#52](https://github.com/anchildress1/metal-birds-feed/issues/52)) ([876090b](https://github.com/anchildress1/metal-birds-feed/commit/876090bc0c6de6e5090de848b4a98ecccdb2edd8))
+
+
+### Bug Fixes
+
+* silent-corruption guards across parser, engine, schema, and writer ([#51](https://github.com/anchildress1/metal-birds-feed/issues/51)) ([c4474d5](https://github.com/anchildress1/metal-birds-feed/commit/c4474d58ff0bcc2ce57b049f9b033888ea723924))
+
 ## [0.0.8](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.7...v0.0.8) (2026-06-27)
 
 
