@@ -107,7 +107,7 @@ export async function download(
 // Absent or unparseable Content-Length reads as unknown size → the caller streams to stay safe.
 const contentLengthOf = (res: Response): number | null => {
   const raw = res.headers.get('content-length');
-  const bytes = raw === null ? NaN : Number(raw);
+  const bytes = raw === null ? Number.NaN : Number(raw);
   return Number.isFinite(bytes) ? bytes : null;
 };
 
