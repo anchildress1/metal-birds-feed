@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.10](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.9...v0.0.10) (2026-07-05)
+
+
+### Bug Fixes
+
+* **build:** make build emits again + CI gate so it can't silently regress ([#55](https://github.com/anchildress1/metal-birds-feed/issues/55)) ([dd03850](https://github.com/anchildress1/metal-birds-feed/commit/dd03850df0d39eff2b945b16de8fd170fb142479))
+
 ## [0.0.9](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.8...v0.0.9) (2026-07-05)
 
 
