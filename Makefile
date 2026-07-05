@@ -32,8 +32,9 @@ typecheck:
 test:
 	$(BUN) test --isolate --coverage
 
+# tsconfig.json is noEmit; emit lives in tsconfig.build.json — bare tsc produces no dist/.
 build:
-	$(BUNX) tsc
+	$(BUNX) tsc -p tsconfig.build.json
 
 ENV_FILE ?= .env
 
