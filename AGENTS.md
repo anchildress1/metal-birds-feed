@@ -22,7 +22,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - `??`/`??=` over null/undefined checks. `?.` over guard clauses.
 - `const fn = () =>` over `function fn()`. `const` over `let`. Never `var`.
 - No `as T` unless TS cannot narrow structurally.
-- `await` over `.then()`/`.catch()`. Never `await` inside `for`/`while` — use `Promise.all`/`allSettled` + `.map()`.
+- `await` over `.then()`/`.catch()`. Never `await` inside `for`/`while` — use `Promise.all`/`allSettled` + `.map()`. Exception: inherently sequential consumption (stream pumps, backoff chains) where each iteration depends on the previous — state the WHY in an inline comment.
 - Max cognitive complexity per function: 15.
 
 ## Tests

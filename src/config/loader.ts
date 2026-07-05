@@ -103,6 +103,11 @@ const SourceConfigSchema = z
       .refine((d) => d.format !== 'file' || Object.keys(d.entries).length === 1, {
         message: 'download.entries must contain exactly one alias when format is "file"',
       })
+      // The downloader's path→alias lookup can hold one alias per path; a duplicate would make
+      // the shadowed alias falsely report "ZIP entry not found" at run time.
+      .refine((d) => new Set(Object.values(d.entries)).size === Object.keys(d.entries).length, {
+        message: 'download.entries paths must be unique — one alias per archive entry',
+      })
       .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
         message: 'download.discover_url and download.discover_pattern must be set together',
       })
