@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve, isAbsolute, relative } from 'node:path';
-import yaml from 'js-yaml';
+import { load } from 'js-yaml';
 import { z } from 'zod';
 import {
   SCALAR_TRANSFORMS,
@@ -204,7 +204,7 @@ function safePath(rel: string): string {
 
 export function loadSourceConfig(relPath: string): SourceConfig {
   const abs = safePath(relPath);
-  const raw = yaml.load(readFileSync(abs, 'utf8'));
+  const raw = load(readFileSync(abs, 'utf8'));
   const result = SourceConfigSchema.safeParse(raw);
   if (!result.success) {
     throw new Error(`Invalid source config ${relPath}: ${result.error.message}`);
