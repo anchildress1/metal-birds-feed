@@ -44,6 +44,13 @@ jobs:
       - name: Type check
         run: make typecheck
 
+      # refresh.yml runs dist/pipeline.js built by make build; tsc can exit 0 while
+      # emitting nothing (noEmit config drift), so assert the artifact actually exists.
+      - name: Build
+        run: |
+          make build
+          test -f dist/pipeline.js
+
       - name: Unit tests
         run: make test
 
