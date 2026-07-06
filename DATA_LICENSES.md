@@ -201,4 +201,4 @@ Single record of source for agency correspondence and license posture: every cou
 - CASA Australia: Civil Aviation Safety Authority source data, CC BY 4.0, normalized into this project schema; no endorsement implied.
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
-- Other public-domain, CC0, or open-government sources are credited in the correspondence table above as courtesy attribution unless the agency required more.
+- Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence and status.

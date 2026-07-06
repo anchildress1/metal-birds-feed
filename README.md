@@ -156,7 +156,7 @@ Required upstream notices, kept short:
 - CAA Maldives: source data from the Civil Aviation Authority of the Republic of Maldives — [caa.gov.mv](https://www.caa.gov.mv/); reproduced with the CAA's written permission, normalized into this project schema without implying endorsement. Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission.
 - Source: Estonian Transport Administration (Transpordiamet) – [transpordiamet.ee/ohusoidukite-register](https://transpordiamet.ee/ohusoidukite-register); reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.
 - CAAS Singapore: source data from the Civil Aviation Authority of Singapore — [certificate-of-registration](https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.
-- Public-domain / CC0 sources: credited as courtesy in [DATA_LICENSES.md](DATA_LICENSES.md).
+- Public-domain, CC0, and open-government sources without a specific notice above are credited here as a courtesy; the full source list is tracked in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
 
