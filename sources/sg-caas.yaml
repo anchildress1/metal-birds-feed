@@ -1,0 +1,156 @@
+id: sg-caas
+label: CAAS Singapore Civil Aircraft Register
+country: SG
+encoding: utf8
+trim_all: true
+cadence_days: 30
+
+download:
+  # discover_url + discover_pattern do the real work. The monthly XLSX lives on the Isomer CDN
+  # under a per-upload UUID path (…/175/<uuid>/Aircraft-Register-as-at-<Mon><Year>.xlsx) whose
+  # UUID and filename both roll every month, so it can never be pinned. The stable CAAS register
+  # page lists exactly one such link; the pattern captures it. `url` is a schema-required fallback
+  # only — never fetched while discover_* is set. The register page is CloudFront/S3 static content
+  # (reachable from CI); the file host is a separate open CDN — neither is WAF-gated.
+  url: https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/
+  format: file
+  discover_url: https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/
+  discover_pattern: 'href="(https://isomer-user-content\.by\.gov\.sg/[^"]+Aircraft-Register[^"]+\.xlsx)"'
+  headers:
+    User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+  entries:
+    register: register.xlsx
+
+primary: register
+delimiter: ','
+format: xlsx
+
+# The published XLSX ships one clean header row (Aircraft Registration | Aircraft S/N |
+# Aircraft Model | Operator | Aircraft Manufacturer | Engine Model | Engine Manufacturer), so the
+# engine infers headers from row 1 — no `columns`/`skip_rows` override. The data sheet is sheet 0.
+
+# The 9V- mark is unique per aircraft and the canonical id. The register is a current-fleet snapshot
+# with exactly one clean row per tail (no subtotal/banner rows), so no allowed_missing_source_id_rows
+# budget is needed — any id-less row is a real defect and must fail the run.
+source_id: Aircraft Registration
+registration: Aircraft Registration
+
+mapping:
+  registration:
+    field: Aircraft Registration
+    transform: trim_or_null
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # Current-fleet snapshot — cancelled/deregistered aircraft never appear, so every listed row is
+  # active.
+  status:
+    constant: valid
+
+  country:
+    constant: SG
+
+  manufacturer:
+    field: Aircraft Manufacturer
+    transform: trim_or_null
+
+  # CAAS publishes a single free-text model string; some rows embed the make ("CESSNA 172N"),
+  # others don't ("A350-941"). There's no reliable separator, so it is preserved verbatim.
+  model:
+    field: Aircraft Model
+    transform: trim_or_null
+
+  serial_number:
+    field: Aircraft S/N
+    transform: trim_or_null
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    field: Engine Manufacturer
+    transform: trim_or_null
+
+  engine.model:
+    field: Engine Model
+    transform: trim_or_null
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # CAAS publishes the operator, not the registered owner, so it maps to operator.* and owner.*
+  # stays null. operator.country is SG (national register).
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: Operator
+    transform: trim_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: SG
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~

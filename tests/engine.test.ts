@@ -2071,3 +2071,132 @@ describe('record_count guard (ee-tram)', () => {
     expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0 });
   });
 });
+
+const SG_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'sg-caas');
+const SG_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'sg-caas.yaml');
+
+const sgFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(SG_FIXTURES, 'input', filename));
+
+let sgRecords: Map<string, Aircraft>;
+let sgStats: EngineStats;
+
+beforeAll(async () => {
+  const config = loadSourceConfig(SG_CONFIG_PATH);
+  const result = await translate(config, new Map([['register', sgFixtureBuffer('register.xlsx')]]));
+  sgRecords = result.records;
+  sgStats = result.stats;
+});
+
+describe('CAAS Singapore fixture translation', () => {
+  it('translates all 10 fixture rows with no failures', () => {
+    expect(sgStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0 });
+    expect(sgRecords.size).toBe(10);
+  });
+
+  describe('9V-BLL — Cessna 172S trainer, operator published', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = sgRecords.get('9V-BLL')!;
+    });
+
+    it('has correct identity (registration is the source_id)', () => {
+      expect(r.source).toBe('sg-caas');
+      expect(r.source_id).toBe('9V-BLL');
+      expect(r.registration).toBe('9V-BLL');
+      expect(r.country).toBe('SG');
+    });
+    it('has status=valid (register is a current-fleet snapshot)', () =>
+      expect(r.status).toBe('valid'));
+    it('maps manufacturer, model and serial', () => {
+      expect(r.manufacturer).toBe('Cessna');
+      expect(r.model).toBe('172S');
+      expect(r.serial_number).toBe('172S12746');
+    });
+    it('maps engine make and model', () => {
+      expect(r.engine.manufacturer).toBe('Lycoming');
+      expect(r.engine.model).toBe('IO-360-L2A');
+    });
+    it('maps the operator (not owner) with SG country', () => {
+      expect(r.operator.name).toBe('Aviation Hub Pte Ltd');
+      expect(r.operator.country).toBe('SG');
+    });
+    it('leaves owner null — CAAS publishes operator only, no owner PII', () => {
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+    });
+    it('leaves CAAS-not-published fields null', () => {
+      expect(r.icao_hex).toBeNull();
+      expect(r.icao_type_code).toBeNull();
+      expect(r.airframe_type).toBeNull();
+      expect(r.year_manufactured).toBeNull();
+      expect(r.engine.type).toBeNull();
+      expect(r.engine.count).toBeNull();
+      expect(r.category).toBeNull();
+      expect(r.certification_date).toBeNull();
+      expect(r.legal_owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.idera_authorised_party).toBeNull();
+    });
+  });
+
+  describe('9V-BOQ — model and engine strings that embed the manufacturer', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = sgRecords.get('9V-BOQ')!;
+    });
+    // CAAS free-texts the model; some rows prefix the make. There is no reliable separator, so the
+    // string is preserved verbatim rather than guessing where the make ends and the model begins.
+    it('preserves the make-prefixed model verbatim', () => expect(r.model).toBe('CESSNA 172N'));
+    it('preserves the make-prefixed engine model verbatim', () =>
+      expect(r.engine.model).toBe('Lycoming O-320-H'));
+  });
+
+  describe('9V-YFC — Diamond DA40, dotted serial number', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = sgRecords.get('9V-YFC')!;
+    });
+    it('keeps the dotted serial as a string (no numeric coercion)', () =>
+      expect(r.serial_number).toBe('40.1072'));
+    it('maps a fifth manufacturer (Diamond) and its operator', () => {
+      expect(r.manufacturer).toBe('Diamond');
+      expect(r.operator.name).toBe('Singapore Youth Flying Club');
+    });
+  });
+
+  describe('9V-THA — Embraer, punctuation in operator/manufacturer/engine make', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = sgRecords.get('9V-THA')!;
+    });
+    it('preserves punctuation verbatim across fields', () => {
+      expect(r.operator.name).toBe('Scoot Pte. Ltd.');
+      expect(r.manufacturer).toBe('Embraer S.A.');
+      expect(r.engine.manufacturer).toBe('Pratt & Whitney');
+      expect(r.model).toBe('ERJ 190-300');
+    });
+  });
+
+  describe('9V-SKM — Airbus A380 widebody', () => {
+    it('maps the A380 model and Rolls-Royce engine', () => {
+      const r = sgRecords.get('9V-SKM')!;
+      expect(r.model).toBe('A380-841');
+      expect(r.engine.model).toBe('RB211-TRENT 970');
+    });
+  });
+
+  it('every SG record carries country=SG, operator.country=SG, and no owner or PII fields', () => {
+    for (const r of sgRecords.values()) {
+      expect(r.source).toBe('sg-caas');
+      expect(r.registration.startsWith('9V-')).toBe(true);
+      expect(r.country).toBe('SG');
+      expect(r.status).toBe('valid');
+      expect(r.operator.country).toBe('SG');
+      expect(r.operator.name).not.toBeNull();
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.legal_owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.icao_hex).toBeNull();
+      expect(r).not.toHaveProperty('street');
+      expect(r).not.toHaveProperty('postal_code');
+    }
+  });
+});

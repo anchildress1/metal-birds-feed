@@ -154,7 +154,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAD Serbia | Serbia | dgca@cad.gov.rs | 2026-05-10 | pending | sent |
 | SCAA | Seychelles | secretariat@scaa.sc | 2026-05-05 | pending | sent |
 | SLCAA | Sierra Leone | info@slcaa.gov.sl | 2026-05-11 | pending | sent |
-| CAAS | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed 2026-05-12 | cleared: monthly xlsx, pending impl |
+| CAAS | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed 2026-05-12 | live |
 | Dopravný úrad | Slovakia | register.lietadiel@nsat.sk | 2026-05-10 | pending | sent |
 | CAA Slovenia | Slovenia | info@caa.si | 2026-05-10 | pending | sent |
 | SACAA | South Africa | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
@@ -200,4 +200,5 @@ Single record of source for agency correspondence and license posture: every cou
 - Transport Canada: This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.
 - CASA Australia: Civil Aviation Safety Authority source data, CC BY 4.0, normalized into this project schema; no endorsement implied.
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
+- CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
 - Other public-domain, CC0, or open-government sources are credited in the correspondence table above as courtesy attribution unless the agency required more.

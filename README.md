@@ -134,7 +134,7 @@ Live and license-cleared sources only, ordered alphabetically by country. Source
 | CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
 | ILT — nl-ilt | Netherlands | none | n/a | open | live |
 | CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
-| CAAS — sg-caas (pending impl) | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed | cleared: pending impl |
+| CAAS — sg-caas | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed | live |
 | FOCA / BAZL — ch-foca | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | CAA Taiwan — tw-caa | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
 | CAAT Thailand | Thailand | inter_focalpoint@caat.or.th | 2026-05-10 | confirmed | cleared |
@@ -155,6 +155,7 @@ Required upstream notices, kept short:
 - FOCA / BAZL Switzerland: source data from the Federal Office of Civil Aviation — [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/); redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.
 - CAA Maldives: source data from the Civil Aviation Authority of the Republic of Maldives — [caa.gov.mv](https://www.caa.gov.mv/); reproduced with the CAA's written permission, normalized into this project schema without implying endorsement. Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission.
 - Source: Estonian Transport Administration (Transpordiamet) – [transpordiamet.ee/ohusoidukite-register](https://transpordiamet.ee/ohusoidukite-register); reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.
+- CAAS Singapore: source data from the Civil Aviation Authority of Singapore — [certificate-of-registration](https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.
 - Public-domain / CC0 sources: credited as courtesy in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
