@@ -130,16 +130,13 @@ Live and license-cleared sources only, ordered alphabetically by country. Source
 | ANAC Brasil — br-anac | Brazil | rab@anac.gov.br | 2026-05-05 | confirmed | live |
 | Transport Canada — tc-ca | Canada | none | n/a | open | live |
 | Transpordiamet — ee-tram | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed | live |
-| CAD HK | Hong Kong | enquiry@cad.gov.hk | 2026-05-11 | open | cleared |
 | CAA Latvia — lv-caa | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
-| CAA Lebanon | Lebanon | info@dgca.gov.lb | 2026-05-10 | open | live |
 | CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
 | ILT — nl-ilt | Netherlands | none | n/a | open | live |
-| CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | open | cleared: no dataset |
-| CAAS — sg-caas (pending impl) | Singapore | none | n/a | confirmed | cleared |
+| CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
+| CAAS — sg-caas (pending impl) | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed | cleared: pending impl |
 | FOCA / BAZL — ch-foca | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | CAA Taiwan — tw-caa | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
-| Tajikistan CAA | Tajikistan | info@caa.tj | 2026-05-11 | open | live |
 | CAAT Thailand | Thailand | inter_focalpoint@caat.or.th | 2026-05-10 | confirmed | cleared |
 | FAA — faa | United States | none | n/a | open | live |
 <!-- prettier-ignore-end -->
