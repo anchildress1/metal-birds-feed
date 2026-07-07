@@ -252,11 +252,9 @@ const esAesaDetailOrNull = (value: string): string | null => {
 const esAesaClassEn = (value: string): string | null => {
   const raw = value.replace(/\s+/g, ' ').trim().toUpperCase();
   if (raw.length === 0) return null;
-  const prefix = /^ULM\s*-\s*/.test(raw)
-    ? 'ultralight'
-    : /^AFI\s*-\s*/.test(raw)
-      ? 'amateur-built'
-      : '';
+  let prefix = '';
+  if (/^ULM\s*-\s*/.test(raw)) prefix = 'ultralight';
+  else if (/^AFI\s*-\s*/.test(raw)) prefix = 'amateur-built';
   const base = raw.replace(/^(?:ULM|AFI)\s*-\s*/, '');
   let type: string | null = null;
   if (base.startsWith('HELICOPTERO')) type = 'helicopter (VTOL)';
