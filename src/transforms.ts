@@ -233,6 +233,40 @@ const casaEngineDetailOrNull = (value: string): string | null => {
   return v;
 };
 
+// AESA writes sentinels for absent values instead of leaving cells blank: "NO DISPONIBLE" / "N/A"
+// (serial), "NO TIENE" (no engine), "DESCONOCIDO" (engine model unknown). Positioned-PDF extraction
+// wraps "NO DISPONIBLE" across two lines, so whitespace is collapsed before the sentinel test. Real
+// values pass through collapsed and case-preserved.
+const ES_AESA_SENTINELS = new Set(['NO DISPONIBLE', 'N/A', 'NO TIENE', 'DESCONOCIDO']);
+const esAesaDetailOrNull = (value: string): string | null => {
+  const v = value.replace(/\s+/g, ' ').trim();
+  if (v.length === 0 || ES_AESA_SENTINELS.has(v.toUpperCase())) return null;
+  return v;
+};
+
+// Renders AESA's Spanish `Clase` as an English label, preserving the certification tier the enum
+// `airframe_type` flattens away: the optional "ULM - " (ultralight) / "AFI - " (amateur-built)
+// prefix becomes an English qualifier, its absence meaning a standard type-certificated aircraft.
+// The physical type is translated from the base word (the wrapped PLANEADOR/MOTOPLANEADOR cell
+// collapses first). Unknown/blank → null.
+const esAesaClassEn = (value: string): string | null => {
+  const raw = value.replace(/\s+/g, ' ').trim().toUpperCase();
+  if (raw.length === 0) return null;
+  let prefix = '';
+  if (/^ULM\s*-\s*/.test(raw)) prefix = 'ultralight';
+  else if (/^AFI\s*-\s*/.test(raw)) prefix = 'amateur-built';
+  const base = raw.replace(/^(?:ULM|AFI)\s*-\s*/, '');
+  let type: string | null = null;
+  if (base.startsWith('HELICOPTERO')) type = 'helicopter (VTOL)';
+  else if (base.startsWith('GLOBO')) type = 'balloon';
+  else if (base.startsWith('PLANEADOR')) type = 'glider / motor-glider';
+  else if (base.startsWith('AUTOGIRO')) type = 'gyroplane';
+  else if (base.startsWith('PENDULAR')) type = 'weight-shift';
+  else if (base.startsWith('AVION')) type = 'airplane';
+  if (type === null) return null;
+  return prefix ? `${prefix} ${type}` : type;
+};
+
 // Estonia publishes marks spaced around the hyphen ("ES - MBA", "ES - 1004"); collapse to the
 // canonical hyphenated form ("ES-MBA"). Null for any non-ES- value: as the source_id transform with
 // no allowed-missing policy, that makes an unexpected non-mark row fail the run rather than mint a
@@ -474,6 +508,8 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   br_party_name: brPartyName,
   br_party_state: brPartyState,
   br_party_kind: brPartyKind,
+  es_aesa_detail_or_null: esAesaDetailOrNull,
+  es_aesa_class_en: esAesaClassEn,
   foca_hex_or_null: focaHexOrNull,
   foca_date_array_or_null: focaDateArrayOrNull,
   foca_owner_name: focaOwnerName,
@@ -569,10 +605,37 @@ const casaAirframe = (values: string[]): string | null => {
   return null;
 };
 
+// Maps AESA's `Clase` + engine-count columns to a canonical `airframe_type`. Clase carries an
+// optional certification prefix ("ULM - " ultralight, "AFI - " amateur-built) on the physical type;
+// the prefix is stripped for typing (it is preserved verbatim in airworthiness_class) and the base
+// word drives the enum:
+// - HELICOPTERO (VTOL) → rotorcraft; GLOBO → balloon; AUTOGIRO → gyroplane; PENDULAR → weight-shift.
+// - PLANEADOR/MOTOPLANEADOR → glider (a motor-glider is structurally a glider; the wrapped-cell
+//   newline is collapsed first).
+// - AVION disambiguates single- vs multi-engine via the engine-count column; a non-positive count
+//   (blank/0) returns null rather than guessing. Anything unrecognized → null.
+const esAesaAirframe = (values: string[]): string | null => {
+  const raw = (values[0] ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
+  if (raw.length === 0) return null;
+  const base = raw.replace(/^(?:ULM|AFI)\s*-\s*/, '');
+  if (base.startsWith('HELICOPTERO')) return 'rotorcraft';
+  if (base.startsWith('GLOBO')) return 'balloon';
+  if (base.startsWith('PLANEADOR')) return 'glider';
+  if (base.startsWith('AUTOGIRO')) return 'gyroplane';
+  if (base.startsWith('PENDULAR')) return 'weight-shift';
+  if (base.startsWith('AVION')) {
+    const n = Number.parseInt((values[1] ?? '').trim(), 10);
+    if (Number.isNaN(n) || n < 1) return null;
+    return n === 1 ? 'fixed-wing-single-engine' : 'fixed-wing-multi-engine';
+  }
+  return null;
+};
+
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
   tc_airframe: tcAirframe,
   nl_ilt_airframe: nlIltAirframe,
   casa_airframe: casaAirframe,
+  es_aesa_airframe: esAesaAirframe,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

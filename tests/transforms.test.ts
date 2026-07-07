@@ -162,6 +162,54 @@ describe('applyScalar', () => {
       expect(applyScalar('casa_engine_detail_or_null', 'NOT APPLICABLE')).toBeNull());
   });
 
+  describe('es_aesa_detail_or_null', () => {
+    it('returns the real detail when present', () =>
+      expect(applyScalar('es_aesa_detail_or_null', 'ROTAX')).toBe('ROTAX'));
+    it('collapses internal whitespace and trims', () =>
+      expect(applyScalar('es_aesa_detail_or_null', '  912  ULS  ')).toBe('912 ULS'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('es_aesa_detail_or_null', '')).toBeNull());
+    it('returns null for the wrapped NO DISPONIBLE serial sentinel', () =>
+      expect(applyScalar('es_aesa_detail_or_null', 'NO\nDISPONIBLE')).toBeNull());
+    it('returns null for the NO TIENE engine sentinel', () =>
+      expect(applyScalar('es_aesa_detail_or_null', 'NO TIENE')).toBeNull());
+    it('returns null for the DESCONOCIDO engine sentinel', () =>
+      expect(applyScalar('es_aesa_detail_or_null', 'DESCONOCIDO')).toBeNull());
+    it('returns null for the N/A serial sentinel', () =>
+      expect(applyScalar('es_aesa_detail_or_null', 'N/A')).toBeNull());
+  });
+
+  describe('es_aesa_class_en', () => {
+    it('labels a standard AVION with no certification qualifier', () =>
+      expect(applyScalar('es_aesa_class_en', 'AVION')).toBe('airplane'));
+    it('renders the ULM prefix as "ultralight"', () =>
+      expect(applyScalar('es_aesa_class_en', 'ULM - AVION')).toBe('ultralight airplane'));
+    it('renders the AFI prefix as "amateur-built"', () =>
+      expect(applyScalar('es_aesa_class_en', 'AFI - AVION')).toBe('amateur-built airplane'));
+    it('translates HELICOPTERO (VTOL)', () =>
+      expect(applyScalar('es_aesa_class_en', 'HELICOPTERO (VTOL)')).toBe('helicopter (VTOL)'));
+    it('translates GLOBO to balloon', () =>
+      expect(applyScalar('es_aesa_class_en', 'GLOBO')).toBe('balloon'));
+    it('translates AUTOGIRO to gyroplane', () =>
+      expect(applyScalar('es_aesa_class_en', 'AUTOGIRO')).toBe('gyroplane'));
+    it('combines an ULM prefix with AUTOGIRO', () =>
+      expect(applyScalar('es_aesa_class_en', 'ULM - AUTOGIRO')).toBe('ultralight gyroplane'));
+    it('renders AFI - PENDULAR as amateur-built weight-shift', () =>
+      expect(applyScalar('es_aesa_class_en', 'AFI - PENDULAR')).toBe('amateur-built weight-shift'));
+    it('translates the wrapped PLANEADOR/MOTOPLANEADOR cell', () =>
+      expect(applyScalar('es_aesa_class_en', 'PLANEADOR/MOTOPL\nANEADOR')).toBe(
+        'glider / motor-glider'
+      ));
+    it('combines an AFI prefix with the wrapped PLANEADOR cell', () =>
+      expect(applyScalar('es_aesa_class_en', 'AFI -\nPLANEADOR/MOTOPL\nANEADOR')).toBe(
+        'amateur-built glider / motor-glider'
+      ));
+    it('returns null for a blank class', () =>
+      expect(applyScalar('es_aesa_class_en', '')).toBeNull());
+    it('returns null for an unknown class', () =>
+      expect(applyScalar('es_aesa_class_en', 'NAVE ESPACIAL')).toBeNull());
+  });
+
   describe('date_dd_slash_or_null', () => {
     it('parses DD/MM/YYYY into ISO date', () =>
       expect(applyScalar('date_dd_slash_or_null', '15/04/2026')).toBe('2026-04-15'));
@@ -338,6 +386,47 @@ describe('applyCompound', () => {
       ));
     it('returns null for an empty values array', () =>
       expect(applyCompound('casa_airframe', [])).toBeNull());
+  });
+
+  describe('es_aesa_airframe', () => {
+    it('maps a single-engine AVION by engine count', () =>
+      expect(applyCompound('es_aesa_airframe', ['AVION', '1'])).toBe('fixed-wing-single-engine'));
+    it('maps a multi-engine AVION by engine count', () =>
+      expect(applyCompound('es_aesa_airframe', ['AVION', '2'])).toBe('fixed-wing-multi-engine'));
+    it('strips the ULM (ultralight) prefix before typing', () =>
+      expect(applyCompound('es_aesa_airframe', ['ULM - AVION', '1'])).toBe(
+        'fixed-wing-single-engine'
+      ));
+    it('strips the AFI (amateur-built) prefix before typing', () =>
+      expect(applyCompound('es_aesa_airframe', ['AFI - AVION', '2'])).toBe(
+        'fixed-wing-multi-engine'
+      ));
+    it('maps HELICOPTERO (VTOL) to rotorcraft', () =>
+      expect(applyCompound('es_aesa_airframe', ['HELICOPTERO (VTOL)', '2'])).toBe('rotorcraft'));
+    it('maps GLOBO to balloon', () =>
+      expect(applyCompound('es_aesa_airframe', ['GLOBO', '0'])).toBe('balloon'));
+    it('maps AUTOGIRO to gyroplane', () =>
+      expect(applyCompound('es_aesa_airframe', ['AUTOGIRO', '1'])).toBe('gyroplane'));
+    it('maps the ULM - AUTOGIRO prefix form to gyroplane', () =>
+      expect(applyCompound('es_aesa_airframe', ['ULM - AUTOGIRO', '1'])).toBe('gyroplane'));
+    it('maps AFI - PENDULAR (weight-shift control) to weight-shift', () =>
+      expect(applyCompound('es_aesa_airframe', ['AFI - PENDULAR', '1'])).toBe('weight-shift'));
+    it('maps the wrapped PLANEADOR/MOTOPLANEADOR cell to glider', () =>
+      expect(applyCompound('es_aesa_airframe', ['PLANEADOR/MOTOPL\nANEADOR', '0'])).toBe('glider'));
+    it('maps the AFI-prefixed wrapped PLANEADOR cell to glider', () =>
+      expect(applyCompound('es_aesa_airframe', ['AFI -\nPLANEADOR/MOTOPL\nANEADOR', '1'])).toBe(
+        'glider'
+      ));
+    it('returns null for an AVION with a non-positive engine count', () =>
+      expect(applyCompound('es_aesa_airframe', ['AVION', '0'])).toBeNull());
+    it('returns null for an AVION with a blank engine count', () =>
+      expect(applyCompound('es_aesa_airframe', ['AVION', ''])).toBeNull());
+    it('returns null for an empty clase', () =>
+      expect(applyCompound('es_aesa_airframe', ['', '1'])).toBeNull());
+    it('returns null for an unknown clase', () =>
+      expect(applyCompound('es_aesa_airframe', ['NAVE ESPACIAL', '1'])).toBeNull());
+    it('returns null for an empty values array', () =>
+      expect(applyCompound('es_aesa_airframe', [])).toBeNull());
   });
 });
 

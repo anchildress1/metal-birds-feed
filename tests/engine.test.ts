@@ -1913,6 +1913,104 @@ describe('CAA Maldives fixture translation (PDF)', () => {
     expect([...mvRecords.values()].every((r) => r.status === 'valid')).toBe(true));
 });
 
+describe('AESA Spain fixture translation (PDF)', () => {
+  const ES_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'es-aesa.yaml');
+  const ES_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'es-aesa', 'input', 'register.pdf');
+  let esRecords: Map<string, Aircraft>;
+  let esStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(ES_CONFIG);
+    const result = await translate(config, new Map([['register', readFileSync(ES_PDF)]]));
+    esRecords = result.records;
+    esStats = result.stats;
+  });
+
+  it('translates all 90 fixture rows with no failures', () => {
+    expect(esStats).toEqual({ total: 90, ok: 90, failed: 0, skipped: 0 });
+    expect(esRecords.size).toBe(90);
+  });
+
+  it('keys records on the EC-XXX mark and stamps source/country', () => {
+    const r = esRecords.get('EC-AAP')!;
+    expect(r.source).toBe('es-aesa');
+    expect(r.source_id).toBe('EC-AAP');
+    expect(r.registration).toBe('EC-AAP');
+    expect(r.country).toBe('ES');
+  });
+
+  describe('EC-AAP — a type-certificated single-engine aeroplane', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = esRecords.get('EC-AAP')!;
+    });
+    it('splits manufacturer and model into their own fields', () => {
+      expect(r.manufacturer).toBe('PIPER AIRCRAFT CORPORATION');
+      expect(r.model).toBe('L-14');
+    });
+    it('types it single-engine via the engine count and labels the class in English', () => {
+      expect(r.airframe_type).toBe('fixed-wing-single-engine');
+      expect(r.airworthiness_class).toBe('airplane');
+    });
+    it('maps the engine detail and count', () => {
+      expect(r.engine.manufacturer).toBe('LYCOMING');
+      expect(r.engine.model).toBe('O-290-C');
+      expect(r.engine.count).toBe(1);
+    });
+    it('parses the DD/MM/YYYY registration date and year', () => {
+      expect(r.certification_date).toBe('1952-04-02');
+      expect(r.year_manufactured).toBe(1945);
+    });
+  });
+
+  it('nulls the wrapped NO DISPONIBLE serial sentinel and labels the ULM tier in English', () => {
+    const r = esRecords.get('EC-AB8')!;
+    expect(r.serial_number).toBeNull();
+    expect(r.airworthiness_class).toBe('ultralight airplane');
+    expect(r.airframe_type).toBe('fixed-wing-single-engine');
+  });
+
+  it('types a GLOBO as a balloon with no engine (NO TIENE → null, count 0)', () => {
+    const r = esRecords.get('EC-DYI')!;
+    expect(r.airframe_type).toBe('balloon');
+    expect(r.airworthiness_class).toBe('balloon');
+    expect(r.engine.manufacturer).toBeNull();
+    expect(r.engine.model).toBeNull();
+    expect(r.engine.count).toBe(0);
+  });
+
+  it('types HELICOPTERO (VTOL) as rotorcraft', () =>
+    expect(esRecords.get('EC-DUY')!.airframe_type).toBe('rotorcraft'));
+
+  it('flattens the wrapped PLANEADOR/MOTOPLANEADOR cell to glider with an English label', () => {
+    const r = esRecords.get('EC-BHR')!;
+    expect(r.airframe_type).toBe('glider');
+    expect(r.airworthiness_class).toBe('glider / motor-glider');
+  });
+
+  it('types a multi-engine aeroplane via the engine count', () =>
+    expect(esRecords.get('EC-DXJ')!.airframe_type).toBe('fixed-wing-multi-engine'));
+
+  it('keeps the amateur-built (AFI) builder name in manufacturer (a bare name is not dropped PII)', () => {
+    const r = esRecords.get('EC-XAR')!;
+    expect(r.airworthiness_class).toBe('amateur-built airplane');
+    expect(r.manufacturer).not.toBeNull();
+    expect(r.model).toBe('Storm Century 04');
+  });
+
+  it('marks the active-only register as valid', () =>
+    expect([...esRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+
+  it('publishes no party data (the register carries no owner/operator, so no PII)', () => {
+    const nullParty = { name: null, kind: null, state: null, country: null };
+    for (const r of esRecords.values()) {
+      expect(r.owner).toEqual(nullParty);
+      expect(r.operator).toEqual(nullParty);
+      expect(r.legal_owner).toEqual(nullParty);
+    }
+  });
+});
+
 const EE_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram');
 const EE_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ee-tram.yaml');
 
