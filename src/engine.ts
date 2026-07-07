@@ -195,10 +195,11 @@ function translateRow(
     return { status: 'failed' };
   }
 
-  // source_id is the source's permanent unique key. A second row with the same id whose raw input
-  // is identical is a redundant re-publish (e.g. ANAC's RAB ships some marks twice verbatim) — skip
-  // it. Any difference, even in an unmapped column, means the id assumption is wrong and last-wins
-  // would silently drop upstream data — fail.
+  // A second row with the same id whose raw input is identical is a redundant re-publish (e.g.
+  // ANAC's RAB ships some marks twice verbatim) — skip it. A second row that differs means the mark
+  // was reissued within one export (e.g. NL-ILT deregisters then re-registers a balloon under the
+  // same mark days later) — the later row reflects the current state, so it replaces the earlier one
+  // rather than failing the run. Rows are processed in file order, so "later" == "last write wins".
   const priorRow = seenRows.get(rawId);
   if (priorRow) {
     if (Bun.deepEquals(priorRow, merged)) {
@@ -210,8 +211,11 @@ function translateRow(
       });
       return { status: 'skipped', reason: 'duplicate' };
     }
-    log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
-    return { status: 'failed' };
+    log('warn', 'translate_duplicate_id_replaced', {
+      source: config.id,
+      row: i + 2,
+      source_id: rawId,
+    });
   }
 
   try {

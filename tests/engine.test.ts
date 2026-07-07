@@ -1056,7 +1056,7 @@ describe('engine — negative and edge cases', () => {
     expect(records.size).toBe(0);
   });
 
-  it('counts a duplicate source_id as a failed row instead of silently overwriting', async () => {
+  it('replaces a duplicate source_id with the newer row instead of failing', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup',
       label: 'synthetic',
@@ -1074,9 +1074,9 @@ describe('engine — negative and edge cases', () => {
     };
     const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
     const { records, stats } = await translate(config, files);
-    expect(stats.failed).toBe(1);
+    expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
-    expect(records.get('1')?.registration).toBe('N1'); // first occurrence wins
+    expect(records.get('1')?.registration).toBe('N2'); // last occurrence wins
   });
 
   it('skips a byte-identical duplicate row instead of failing', async () => {
@@ -1103,7 +1103,7 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
-  it('fails a duplicate source_id that differs only in an unmapped column', async () => {
+  it('replaces a duplicate source_id that differs only in an unmapped column', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-unmapped',
       label: 'synthetic',
@@ -1120,10 +1120,11 @@ describe('engine — negative and edge cases', () => {
       mapping: { registration: { field: 'REG' } },
     };
     // EXTRA is not mapped, so both rows produce identical canonical records. The raw-row compare
-    // still catches the upstream difference and fails rather than silently dropping it.
+    // still detects the upstream difference (logged), but the later row replaces the earlier one
+    // rather than failing the run.
     const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
     const { records, stats } = await translate(config, files);
-    expect(stats.failed).toBe(1);
+    expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
   });
 
