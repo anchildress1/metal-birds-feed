@@ -125,17 +125,9 @@ export async function translate(
   let missingIdSkipped = 0;
   let duplicateSkipped = 0;
 
+  const ctx: TranslateRowContext = { config, joinMaps, missingSourceIdPolicy, seenRows, records };
   for (let i = 0; i < rows.length; i++) {
-    const outcome = translateRow(
-      rows[i],
-      i,
-      config,
-      joinMaps,
-      missingSourceIdPolicy,
-      missingIdSkipped,
-      seenRows,
-      records
-    );
+    const outcome = translateRow(rows[i], i, missingIdSkipped, ctx);
     if (outcome.status === 'skipped') {
       if (outcome.reason === 'missing_id') missingIdSkipped++;
       else duplicateSkipped++;
@@ -172,7 +164,7 @@ const RECENCY_DATE_FIELDS = [
 const latestKnownDate = (record: Aircraft): string | null =>
   RECENCY_DATE_FIELDS.map((f) => record[f])
     .filter((d): d is string => d !== null)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .at(-1) ?? null;
 
 // Cross-source recency check for a reissued source_id: a cancelled row never outranks a live one;
@@ -189,19 +181,24 @@ function isNewerRecord(candidate: Aircraft, incumbent: Aircraft): boolean {
   return false;
 }
 
+interface TranslateRowContext {
+  config: SourceConfig;
+  joinMaps: Map<string, Map<string, Row>>;
+  missingSourceIdPolicy: MissingSourceIdPolicy | null;
+  seenRows: Map<string, Row>;
+  records: Map<string, Aircraft>;
+}
+
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
 // owns the counters and the insert. `missingIdSkipped` is the running missing-id skip count, used
 // only for the missing-id bound — duplicate skips are counted separately so they can't consume it.
 function translateRow(
   row: Row,
   i: number,
-  config: SourceConfig,
-  joinMaps: Map<string, Map<string, Row>>,
-  missingSourceIdPolicy: MissingSourceIdPolicy | null,
   missingIdSkipped: number,
-  seenRows: Map<string, Row>,
-  records: Map<string, Aircraft>
+  ctx: TranslateRowContext
 ): RowOutcome {
+  const { config, joinMaps, missingSourceIdPolicy, seenRows, records } = ctx;
   const merged = mergeJoins(row, config, joinMaps);
   const rawId = resolveScalar(merged, {
     field: config.source_id,

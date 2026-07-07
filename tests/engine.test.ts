@@ -1129,12 +1129,20 @@ describe('engine — negative and edge cases', () => {
       registration: 'REG',
       mapping: {
         registration: { field: 'REG' },
-        last_action_date: { field: 'DATE' },
+        certification_date: { field: 'CERT' },
+        last_action_date: { field: 'ACTION' },
       },
     };
-    // Older date is listed second (file order can't be trusted), the earlier date must still lose.
+    // Each row has two known dates, so picking the "latest known date" must compare within a
+    // record as well as across records. Older pair is listed second (file order can't be trusted).
     const files = new Map([
-      ['primary', Buffer.from('ID,REG,DATE\n1,N1,2021-06-01\n1,N2,2020-01-01\n', 'utf8')],
+      [
+        'primary',
+        Buffer.from(
+          'ID,REG,CERT,ACTION\n1,N1,2021-06-01,2019-01-01\n1,N2,2020-01-01,2018-01-01\n',
+          'utf8'
+        ),
+      ],
     ]);
     const { records, stats } = await translate(config, files);
     expect(stats.failed).toBe(0);
