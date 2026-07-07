@@ -175,6 +175,8 @@ describe('applyScalar', () => {
       expect(applyScalar('es_aesa_detail_or_null', 'NO TIENE')).toBeNull());
     it('returns null for the DESCONOCIDO engine sentinel', () =>
       expect(applyScalar('es_aesa_detail_or_null', 'DESCONOCIDO')).toBeNull());
+    it('returns null for the N/A serial sentinel', () =>
+      expect(applyScalar('es_aesa_detail_or_null', 'N/A')).toBeNull());
   });
 
   describe('es_aesa_class_en', () => {

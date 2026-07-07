@@ -1926,9 +1926,9 @@ describe('AESA Spain fixture translation (PDF)', () => {
     esStats = result.stats;
   });
 
-  it('translates all 70 fixture rows with no failures', () => {
-    expect(esStats).toEqual({ total: 70, ok: 70, failed: 0, skipped: 0 });
-    expect(esRecords.size).toBe(70);
+  it('translates all 90 fixture rows with no failures', () => {
+    expect(esStats).toEqual({ total: 90, ok: 90, failed: 0, skipped: 0 });
+    expect(esRecords.size).toBe(90);
   });
 
   it('keys records on the EC-XXX mark and stamps source/country', () => {
@@ -1990,6 +1990,13 @@ describe('AESA Spain fixture translation (PDF)', () => {
 
   it('types a multi-engine aeroplane via the engine count', () =>
     expect(esRecords.get('EC-DXJ')!.airframe_type).toBe('fixed-wing-multi-engine'));
+
+  it('keeps the amateur-built (AFI) builder name in manufacturer (a bare name is not dropped PII)', () => {
+    const r = esRecords.get('EC-XAR')!;
+    expect(r.airworthiness_class).toBe('amateur-built airplane');
+    expect(r.manufacturer).not.toBeNull();
+    expect(r.model).toBe('Storm Century 04');
+  });
 
   it('marks the active-only register as valid', () =>
     expect([...esRecords.values()].every((r) => r.status === 'valid')).toBe(true));

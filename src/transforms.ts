@@ -233,14 +233,14 @@ const casaEngineDetailOrNull = (value: string): string | null => {
   return v;
 };
 
-// AESA writes Spanish sentinels for absent values instead of leaving cells blank: "NO DISPONIBLE"
+// AESA writes sentinels for absent values instead of leaving cells blank: "NO DISPONIBLE" / "N/A"
 // (serial), "NO TIENE" (no engine), "DESCONOCIDO" (engine model unknown). Positioned-PDF extraction
 // wraps "NO DISPONIBLE" across two lines, so whitespace is collapsed before the sentinel test. Real
 // values pass through collapsed and case-preserved.
+const ES_AESA_SENTINELS = new Set(['NO DISPONIBLE', 'N/A', 'NO TIENE', 'DESCONOCIDO']);
 const esAesaDetailOrNull = (value: string): string | null => {
   const v = value.replace(/\s+/g, ' ').trim();
-  if (v.length === 0 || v === 'NO DISPONIBLE' || v === 'NO TIENE' || v === 'DESCONOCIDO')
-    return null;
+  if (v.length === 0 || ES_AESA_SENTINELS.has(v.toUpperCase())) return null;
   return v;
 };
 

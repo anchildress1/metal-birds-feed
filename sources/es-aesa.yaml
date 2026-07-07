@@ -74,6 +74,9 @@ mapping:
   country:
     constant: ES
 
+  # Amateur-built (AFI) rows name the natural-person builder here; kept verbatim. A bare personal
+  # name is not the PII this project drops (that is street/postal/care-of address detail) — the same
+  # allowance that keeps owner/operator names.
   manufacturer:
     field: mfr
     transform: collapse_ws_or_null
