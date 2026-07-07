@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.0.11](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.10...v0.0.11) (2026-07-07)
+
+
+### Features
+
+* **sg-caas:** onboard CAAS Singapore register + correct license tracker ([#57](https://github.com/anchildress1/metal-birds-feed/issues/57)) ([2e85079](https://github.com/anchildress1/metal-birds-feed/commit/2e85079df5b15f3e9c264588fa7115cbba21e58d))
+
 ## [0.0.10](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.9...v0.0.10) (2026-07-05)
 
 
