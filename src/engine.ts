@@ -118,24 +118,16 @@ export async function translate(
   assertJoinHits(config, joinMaps, rows);
 
   const records = new Map<string, Aircraft>();
-  // Raw merged row per source_id. The duplicate check compares the actual input, so an identical
-  // re-publish is skipped while any upstream difference (even an unmapped column) still fails.
+  // Raw merged row per source_id, used to detect a byte-identical re-publish.
   const seenRows = new Map<string, Row>();
   let failed = 0;
   // Tracked apart from duplicate skips: only missing-id skips count against the missing-id budget.
   let missingIdSkipped = 0;
   let duplicateSkipped = 0;
 
+  const ctx: TranslateRowContext = { config, joinMaps, missingSourceIdPolicy, seenRows, records };
   for (let i = 0; i < rows.length; i++) {
-    const outcome = translateRow(
-      rows[i],
-      i,
-      config,
-      joinMaps,
-      missingSourceIdPolicy,
-      missingIdSkipped,
-      seenRows
-    );
+    const outcome = translateRow(rows[i], i, missingIdSkipped, ctx);
     if (outcome.status === 'skipped') {
       if (outcome.reason === 'missing_id') missingIdSkipped++;
       else duplicateSkipped++;
@@ -161,18 +153,52 @@ type RowOutcome =
   | { status: 'skipped'; reason: 'missing_id' | 'duplicate' }
   | { status: 'failed' };
 
+const RECENCY_DATE_FIELDS = [
+  'certification_date',
+  'airworthiness_date',
+  'expiration_date',
+  'last_action_date',
+] as const;
+
+// Most recent of a record's known dates; null if none are set.
+const latestKnownDate = (record: Aircraft): string | null =>
+  RECENCY_DATE_FIELDS.map((f) => record[f])
+    .filter((d): d is string => d !== null)
+    .sort((a, b) => a.localeCompare(b))
+    .at(-1) ?? null;
+
+// Cross-source recency check for a reissued source_id: a cancelled row never outranks a live one;
+// otherwise the record with the more recent known date wins.
+function isNewerRecord(candidate: Aircraft, incumbent: Aircraft): boolean {
+  const candidateCancelled = candidate.status === 'cancelled';
+  const incumbentCancelled = incumbent.status === 'cancelled';
+  if (candidateCancelled !== incumbentCancelled) return incumbentCancelled;
+
+  const candidateDate = latestKnownDate(candidate);
+  const incumbentDate = latestKnownDate(incumbent);
+  if (candidateDate !== incumbentDate) return (candidateDate ?? '') > (incumbentDate ?? '');
+
+  return false;
+}
+
+interface TranslateRowContext {
+  config: SourceConfig;
+  joinMaps: Map<string, Map<string, Row>>;
+  missingSourceIdPolicy: MissingSourceIdPolicy | null;
+  seenRows: Map<string, Row>;
+  records: Map<string, Aircraft>;
+}
+
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
 // owns the counters and the insert. `missingIdSkipped` is the running missing-id skip count, used
 // only for the missing-id bound — duplicate skips are counted separately so they can't consume it.
 function translateRow(
   row: Row,
   i: number,
-  config: SourceConfig,
-  joinMaps: Map<string, Map<string, Row>>,
-  missingSourceIdPolicy: MissingSourceIdPolicy | null,
   missingIdSkipped: number,
-  seenRows: Map<string, Row>
+  ctx: TranslateRowContext
 ): RowOutcome {
+  const { config, joinMaps, missingSourceIdPolicy, seenRows, records } = ctx;
   const merged = mergeJoins(row, config, joinMaps);
   const rawId = resolveScalar(merged, {
     field: config.source_id,
@@ -195,23 +221,16 @@ function translateRow(
     return { status: 'failed' };
   }
 
-  // source_id is the source's permanent unique key. A second row with the same id whose raw input
-  // is identical is a redundant re-publish (e.g. ANAC's RAB ships some marks twice verbatim) — skip
-  // it. Any difference, even in an unmapped column, means the id assumption is wrong and last-wins
-  // would silently drop upstream data — fail.
+  // Byte-identical re-publish (e.g. ANAC's RAB ships some marks twice) — skip.
   const priorRow = seenRows.get(rawId);
-  if (priorRow) {
-    if (Bun.deepEquals(priorRow, merged)) {
-      log('warn', 'translate_skip', {
-        source: config.id,
-        row: i + 2,
-        source_id: rawId,
-        reason: 'exact duplicate row',
-      });
-      return { status: 'skipped', reason: 'duplicate' };
-    }
-    log('error', 'translate_duplicate_id', { source: config.id, row: i + 2, source_id: rawId });
-    return { status: 'failed' };
+  if (priorRow && Bun.deepEquals(priorRow, merged)) {
+    log('warn', 'translate_skip', {
+      source: config.id,
+      row: i + 2,
+      source_id: rawId,
+      reason: 'exact duplicate row',
+    });
+    return { status: 'skipped', reason: 'duplicate' };
   }
 
   try {
@@ -224,6 +243,27 @@ function translateRow(
         msg: parsed.error.issues.map((e) => e.message).join('; '),
       });
       return { status: 'failed' };
+    }
+
+    // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a
+    // balloon under the same mark). Keep whichever row is actually newer instead of trusting
+    // file position — resolve via status (a cancellation never outranks a live record), falling
+    // back to the most recent known date.
+    const incumbent = priorRow && records.get(rawId);
+    if (incumbent) {
+      if (!isNewerRecord(parsed.data, incumbent)) {
+        log('warn', 'translate_duplicate_id_stale', {
+          source: config.id,
+          row: i + 2,
+          source_id: rawId,
+        });
+        return { status: 'skipped', reason: 'duplicate' };
+      }
+      log('warn', 'translate_duplicate_id_replaced', {
+        source: config.id,
+        row: i + 2,
+        source_id: rawId,
+      });
     }
     return { status: 'ok', id: rawId, record: parsed.data, row: merged };
   } catch (err) {

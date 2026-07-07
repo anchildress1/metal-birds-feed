@@ -1056,9 +1056,9 @@ describe('engine — negative and edge cases', () => {
     expect(records.size).toBe(0);
   });
 
-  it('counts a duplicate source_id as a failed row instead of silently overwriting', async () => {
+  it('replaces a cancelled duplicate with a live reissue', async () => {
     const config: SourceConfig = {
-      id: 'synthetic-dup',
+      id: 'synthetic-dup-status',
       label: 'synthetic',
       country: 'US',
       encoding: 'utf8',
@@ -1070,13 +1070,84 @@ describe('engine — negative and edge cases', () => {
       joins: [],
       source_id: 'ID',
       registration: 'REG',
-      mapping: { registration: { field: 'REG' } },
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
     };
-    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,valid\n', 'utf8')],
+    ]);
     const { records, stats } = await translate(config, files);
-    expect(stats.failed).toBe(1);
+    expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
-    expect(records.get('1')?.registration).toBe('N1'); // first occurrence wins
+    expect(records.get('1')?.registration).toBe('N2');
+  });
+
+  it('keeps a live record over a later cancelled duplicate (order-independent)', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-status-reversed',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
+    };
+    // Cancelled row is later in the file, but a cancellation must never outrank a live record.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,STATUS\n1,N1,valid\n1,N2,cancelled\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
+
+  it('replaces a duplicate with the row that has the more recent known date', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-date',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        certification_date: { field: 'CERT' },
+        last_action_date: { field: 'ACTION' },
+      },
+    };
+    // Each row has two known dates, so picking the "latest known date" must compare within a
+    // record as well as across records. Older pair is listed second (file order can't be trusted).
+    const files = new Map([
+      [
+        'primary',
+        Buffer.from(
+          'ID,REG,CERT,ACTION\n1,N1,2021-06-01,2019-01-01\n1,N2,2020-01-01,2018-01-01\n',
+          'utf8'
+        ),
+      ],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
   });
 
   it('skips a byte-identical duplicate row instead of failing', async () => {
@@ -1103,7 +1174,7 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
-  it('fails a duplicate source_id that differs only in an unmapped column', async () => {
+  it('keeps the incumbent for a duplicate that differs only in an unmapped column', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-unmapped',
       label: 'synthetic',
@@ -1119,11 +1190,11 @@ describe('engine — negative and edge cases', () => {
       registration: 'REG',
       mapping: { registration: { field: 'REG' } },
     };
-    // EXTRA is not mapped, so both rows produce identical canonical records. The raw-row compare
-    // still catches the upstream difference and fails rather than silently dropping it.
+    // EXTRA is not mapped, so both rows produce identical canonical records. No status/date
+    // signal distinguishes them, so this doesn't fail — it just keeps the first one.
     const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
     const { records, stats } = await translate(config, files);
-    expect(stats.failed).toBe(1);
+    expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
   });
 
