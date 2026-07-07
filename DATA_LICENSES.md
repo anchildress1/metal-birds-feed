@@ -55,7 +55,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAA CR | Czech Republic | dousova@caa.cz | 2026-05-10 | pending | sent |
 | AAC RDC | Democratic Republic of the Congo | info@aacrdc.org | 2026-05-11 | pending | sent |
 | Trafikstyrelsen | Denmark | info@trafikstyrelsen.dk | 2026-05-05 | pending | sent: no bulk |
-| IDAC | Dominican Republic | info@idac.gob.do | 2026-05-10 | open | sent: no bulk |
+| IDAC | Dominican Republic | info@idac.gov.do | 2026-05-10 | pending | sent: no bulk |
 | ECCAA (regional) | Eastern Caribbean (OECS) | contact@eccaa.aero | 2026-05-11 | pending | sent |
 | DGAC Ecuador | Ecuador | oswaldo.veloz@aviacioncivil.gob.ec | 2026-05-10 | pending | sent |
 | ECAA | Egypt | none | n/a | none | excluded |
@@ -76,7 +76,7 @@ Single record of source for agency correspondence and license posture: every cou
 | GCAA | Guyana | aisguyana@gcaa-gy.org | 2026-05-11 | pending | sent |
 | OFNAC | Haiti | division.ais@ofnac.gouv.ht | 2026-05-10 | pending | sent: no bulk |
 | AHAC | Honduras | secretariaadministrativa@ahac.gob.hn | 2026-05-10 | pending | sent |
-| CAD HK | Hong Kong | enquiry@cad.gov.hk | 2026-05-11 | open | cleared |
+| CAD HK | Hong Kong | enquiry@cad.gov.hk | 2026-05-11 | not published | excluded: not published |
 | Közlekedési Hatóság | Hungary | lfhf@ekm.gov.hu | 2026-05-10 | pending | sent |
 | ICETRA | Iceland | samgongustofa@samgongustofa.is | 2026-05-05 | pending | sent: no bulk |
 | DGCA | India | rkanand.dgca@nic.in | 2026-05-05 | pending | sent |
@@ -99,7 +99,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAA Kyrgyzstan | Kyrgyzstan | mail@caa.kg | 2026-05-10 | pending | sent |
 | DCAL | Laos | info@dcal.gov.la | 2026-05-11 | pending | sent |
 | CAA Latvia | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
-| CAA Lebanon (formerly DGCA) | Lebanon | info@dgca.gov.lb | 2026-05-10 | open | live |
+| CAA Lebanon (formerly DGCA) | Lebanon | info@caa.gov.lb | 2026-05-10 | pending | sent: dgca.gov.lb undeliverable |
 | LCAA | Liberia | liberiacaa@lcaa.gov.lr | 2026-05-11 | pending | sent |
 | LCAA | Libya | none | n/a | none | excluded: sanctions |
 | n/a | Liechtenstein | none | n/a | confirmed | excluded |
@@ -132,7 +132,7 @@ Single record of source for agency correspondence and license posture: every cou
 | n/a | Niue | none | n/a | none | excluded |
 | GACA DPRK | North Korea | none | n/a | none | excluded: sanctions |
 | Luftfartstilsynet | Norway | postmottak@caa.no | 2026-05-05 | pending | sent |
-| CAA Oman | Oman | customerservice@caa.gov.om | 2026-05-11 | open | cleared: no dataset |
+| CAA Oman | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
 | PASO (regional) | Pacific Island states (PASO) | info@paso.aero | 2026-05-11 | pending | sent |
 | PCAA | Pakistan | umair.sufyan@caapakistan.com.pk | 2026-05-05 | pending | sent |
 | Bureau of Aviation Palau | Palau | none | n/a | none | excluded: no register |
@@ -154,7 +154,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAD Serbia | Serbia | dgca@cad.gov.rs | 2026-05-10 | pending | sent |
 | SCAA | Seychelles | secretariat@scaa.sc | 2026-05-05 | pending | sent |
 | SLCAA | Sierra Leone | info@slcaa.gov.sl | 2026-05-11 | pending | sent |
-| CAAS | Singapore | none | n/a | confirmed | cleared |
+| CAAS | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed 2026-05-12 | live |
 | Dopravný úrad | Slovakia | register.lietadiel@nsat.sk | 2026-05-10 | pending | sent |
 | CAA Slovenia | Slovenia | info@caa.si | 2026-05-10 | pending | sent |
 | SACAA | South Africa | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
@@ -167,7 +167,7 @@ Single record of source for agency correspondence and license posture: every cou
 | FOCA / BAZL | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | SyCAA | Syria | none | n/a | none | excluded: sanctions |
 | CAA Taiwan | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
-| Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | info@caa.tj | 2026-05-11 | open | live |
+| Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | info@caa.tj | 2026-05-11 | pending | sent |
 | TCAA | Tanzania | tcaa@tcaa.go.tz | 2026-05-05 | pending | sent |
 | CAAT | Thailand | registration@caat.or.th | 2026-05-10 | confirmed 2026-05-21 | cleared; blocked: cloudflare (datacenter-IP managed challenge) |
 | ANATL | Timor-Leste | none | n/a | none | excluded: no register |
@@ -200,4 +200,5 @@ Single record of source for agency correspondence and license posture: every cou
 - Transport Canada: This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.
 - CASA Australia: Civil Aviation Safety Authority source data, CC BY 4.0, normalized into this project schema; no endorsement implied.
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
-- Other public-domain, CC0, or open-government sources are credited in the correspondence table above as courtesy attribution unless the agency required more.
+- CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
+- Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence and status.
