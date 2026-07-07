@@ -159,7 +159,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAA Slovenia | Slovenia | info@caa.si | 2026-05-10 | pending | sent |
 | SACAA | South Africa | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
 | SSCAA | South Sudan | support@sscaa.gov.ss | 2026-05-11 | pending | sent |
-| AESA | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | pending | sent |
+| AESA | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | pending | live: open via public reuse licence (RD 1495/2011 / Ley 37/2007), no reply needed |
 | CAASL | Sri Lanka | daw@caa.lk | 2026-05-05 | pending | sent |
 | CAA Sudan | Sudan | none | n/a | none | excluded: conflict |
 | CASAS | Suriname | casasinfo@casas.sr | 2026-05-05 | pending | sent |
@@ -201,4 +201,5 @@ Single record of source for agency correspondence and license posture: every cou
 - CASA Australia: Civil Aviation Safety Authority source data, CC BY 4.0, normalized into this project schema; no endorsement implied.
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
+- AESA Spain: reusable under Real Decreto 1495/2011 (developing Ley 37/2007 on public-sector-information reuse); conditions require the source of origin be cited, the meaning not be distorted, and the update-date/reuse-condition metadata be preserved. Required citation, verbatim: "Data source: Agencia Estatal de Seguridad Aérea (AESA)". Normalized into this project schema; no endorsement implied.
 - Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence and status.

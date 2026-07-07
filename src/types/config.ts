@@ -32,6 +32,8 @@ export const SCALAR_TRANSFORMS = [
   'br_party_name',
   'br_party_state',
   'br_party_kind',
+  'es_aesa_detail_or_null',
+  'es_aesa_class_en',
   'foca_hex_or_null',
   'foca_date_array_or_null',
   'foca_owner_name',
@@ -47,7 +49,12 @@ export const SCALAR_TRANSFORMS = [
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
 
-export const COMPOUND_TRANSFORMS = ['tc_airframe', 'nl_ilt_airframe', 'casa_airframe'] as const;
+export const COMPOUND_TRANSFORMS = [
+  'tc_airframe',
+  'nl_ilt_airframe',
+  'casa_airframe',
+  'es_aesa_airframe',
+] as const;
 
 export type ScalarTransformName = (typeof SCALAR_TRANSFORMS)[number];
 

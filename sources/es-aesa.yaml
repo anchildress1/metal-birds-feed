@@ -1,0 +1,217 @@
+id: es-aesa
+label: AESA Registro de Matrícula de Aeronaves Civiles
+country: ES
+encoding: utf8
+trim_all: true
+cadence_days: 30
+
+download:
+  # AESA republishes the full active register at a fixed filename (overwritten in place, dated on
+  # the cover as "Matrículas Activas a 1 de <month>"), so the URL is stable — no discover_* needed.
+  # Conditional fetch (Last-Modified/ETag) keeps the daily cron cheap against a monthly publication.
+  url: https://www.seguridadaerea.gob.es/sites/default/files/aeronaves_inscritas.pdf
+  format: file
+  entries:
+    register: register.pdf
+
+primary: register
+delimiter: ','
+format: pdf
+
+# Landscape positioned table: each aircraft is one y-row, each field a fixed x-band. `column_pos`
+# are the value-band x-centers (paired by index with `columns`); records anchor on the EC-XXX
+# nationality mark. See PdfConfig in src/types/config.ts for the extraction model.
+pdf:
+  field_axis: x
+  anchor_pattern: '^EC-[A-Z0-9]{3}$'
+  column_pos:
+    - 21 # mark
+    - 62 # date (registration)
+    - 110 # manufacturer
+    - 266 # model
+    - 414 # serial
+    - 484 # year
+    - 514 # engine manufacturer
+    - 606 # engine model
+    - 712 # engine count
+    - 740 # clase
+
+columns:
+  register:
+    - mark
+    - date
+    - mfr
+    - model
+    - serial
+    - year
+    - eng_mfr
+    - eng_model
+    - eng_count
+    - clase
+
+# The EC-XXX mark is the only stable per-registration key the register publishes (no serial on many
+# rows; no separate permanent id). Active-only listing, so each mark appears once.
+source_id: mark
+source_id_transform: trim_or_null
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: trim
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # "Matrículas Activas" — the register lists active registrations only; there is no per-row status
+  # column. Constant rather than a defaulted lookup: the whole document IS the active fleet.
+  status:
+    constant: valid
+
+  country:
+    constant: ES
+
+  manufacturer:
+    field: mfr
+    transform: collapse_ws_or_null
+
+  model:
+    field: model
+    transform: collapse_ws_or_null
+
+  serial_number:
+    field: serial
+    transform: es_aesa_detail_or_null
+
+  year_manufactured:
+    field: year
+    transform: int_or_null
+
+  # Physical type from the Clase column, single/multi-engine disambiguated by engine count.
+  airframe_type:
+    fields: ['clase', 'eng_count']
+    compound_transform: es_aesa_airframe
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  # Clase rendered as an English label ("ultralight airplane", "amateur-built gyroplane"): keeps the
+  # certification tier (ULM = ultralight, AFI = amateur-built, none = standard) that airframe_type
+  # flattens away, so no upstream distinction is lost — translated here rather than at a consumer.
+  airworthiness_class:
+    field: clase
+    transform: es_aesa_class_en
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    field: eng_mfr
+    transform: es_aesa_detail_or_null
+
+  engine.model:
+    field: eng_model
+    transform: es_aesa_detail_or_null
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    field: eng_count
+    transform: int_or_null
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # The public register publishes no owner, operator, or legal-owner party — technical fields only.
+  # Every party slot stays null (nothing to drop; there is no PII in this source).
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: date
+    transform: date_dd_slash_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~
