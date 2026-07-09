@@ -1,13 +1,14 @@
 # Data Licenses
 
-Single record of source for agency correspondence and license posture: every country contacted, with email, sent/reply dates, and status. Update this when an agency is contacted, replies, changes license posture, or ships/becomes excluded. The README sources table shows only live/cleared sources; this is the full tracker.
+Single record of source for agency correspondence and source-use posture: every country contacted, with email, sent/reply dates, and status. Update this when an agency is contacted, replies, changes license/storage posture, or ships/becomes excluded. The README sources table shows sources active in the private operator pipeline; this is the full tracker.
 
 ## Project License
 
 - Project: metal-birds-feed
 - Maintainer: Ashley Childress (anchildress1@gmail.com)
 - Source license: Polyform Shield 1.0.0 + Supplemental Terms; see [LICENSE](LICENSE).
-- Deployment posture: operator-private R2; no public read API; non-commercial while any Personal-use source is included.
+- Deployment posture: private operator R2 for Ashley-operated applications only; no public read API, public download, public query surface, or public dataset publication; non-commercial while any Private-use source is included.
+- Source-use gate: public redistribution is not the maintained deployment. For non-open sources, the blocking question is whether private automated fetch, storage, caching, and application use are allowed or at least not prohibited.
 
 ## Agency Correspondence
 
@@ -113,7 +114,7 @@ Single record of source for agency correspondence and license posture: every cou
 | CAD Malta | Malta | civil.aviation@transport.gov.mt | 2026-05-05 | pending | sent |
 | ANAC Mauritanie | Mauritania | anac@anac.mr | 2026-05-11 | pending | sent |
 | DCA Mauritius | Mauritius | civil-aviation@govmu.org | 2026-05-11 | denied | excluded: denied |
-| AFAC | Mexico | tramites@afac.gob.mx | 2026-05-05 | pending | excluded |
+| AFAC | Mexico | tramites@afac.gob.mx | 2026-05-05 | pending | sent: corrected from self-contradictory status |
 | n/a | Micronesia (FSM) | none | n/a | none | excluded: no register |
 | CAA Moldova | Moldova | info@caa.gov.md | 2026-05-10 | pending | sent |
 | n/a | Monaco | none | n/a | none | excluded |
@@ -202,4 +203,4 @@ Single record of source for agency correspondence and license posture: every cou
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
 - AESA Spain: reusable under Real Decreto 1495/2011 (developing Ley 37/2007 on public-sector-information reuse); conditions require the source of origin be cited, the meaning not be distorted, and the update-date/reuse-condition metadata be preserved. Required citation, verbatim: "Data source: Agencia Estatal de Seguridad Aérea (AESA)". Normalized into this project schema; no endorsement implied.
-- Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence and status.
+- Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence, storage/cache posture, and status.

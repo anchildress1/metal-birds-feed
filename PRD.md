@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Owner:** Ashley (anchildress1)
-**Last updated:** 2026-05-09 (CASA Australia live in phase 4; spec/license posture aligned)
+**Last updated:** 2026-07-09 (CC.1-CC.5 reframed around private source-use/storage posture, not public redistribution)
 **Consumes by:** Personal forked deployment of [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)
 
 ---
@@ -11,7 +11,7 @@
 
 `metal-birds-watch` displays live ADS-B traffic but has no way to enrich a tail number or ICAO hex code with anything beyond what the ADS-B feed alone provides. Existing enrichment APIs (Aviation Edge, OpenSky's commercial tier, etc.) are paid, rate-limited, or both. National aviation registries (FAA, Transport Canada, CAA NZ, GCAA, CASA, EU member states, UK CAA, etc.) publish data of varying quality, accessibility, and licensing — some clean monthly bulk CSVs under open licenses, some web search interfaces, some PDF dumps, some paid Excel under restrictive single-PC licenses. Painful to consume directly.
 
-`metal-birds-feed` solves this by translating each national registry into a single normalized JSON schema, stored as static objects in Cloudflare R2 (free tier), keyed for O(1) lookup by registration ID and ICAO hex. One translation engine, many config-driven source mappings.
+`metal-birds-feed` solves this by translating each national registry into a normalized SQLite artifact, stored in a private Cloudflare R2 bucket (free tier), for fast indexed lookup by registration ID and ICAO hex from Ashley-operated applications. One translation engine, many config-driven source mappings.
 
 ---
 
@@ -21,15 +21,15 @@
 2. **Transport Canada registry, same shape.** ~37k Canadian aircraft, same canonical schema, no consumer-side code changes. Proves the engine generalizes — the second source is a config file, not a code change. _(v2)_
 3. **Third-registry milestone — two parallel sources.** _(v3)_
    - **Netherlands ILT** (PH-prefix, ~3k aircraft). CC-0 (public domain) per data.overheid.nl. **No CC.2 permission email needed** — ships independently of any agency reply. Published as OpenDocument Spreadsheet (.ods), filename includes a date stamp that requires a small discovery step. Adds the spreadsheet parser path to the engine (R2.6), which also unblocks IAA Ireland later.
-   - **CAA NZ** (ZK-prefix, ~5k aircraft). CSV at a stable URL. License is "personal use" (CC.1 Personal-use) — operator-private R2 only, CC.3 applies. CC.2 permission email gates slotting; ships when reply lands or 30-day timeout passes.
+   - **CAA NZ** (ZK-prefix, ~5k aircraft). CSV at a stable URL. License is "personal use" (CC.1 Private-use) — private operator R2 only, CC.3 applies. CC.2 permission email gates slotting only if private caching is not clear from public terms.
 
-   v3 is "complete" when both ship. NL is the no-gate path that drives the parser-extension work; NZ is the email-gated path that runs in parallel. This milestone tests the engine against two independent schema dialects, two file formats, and the cross-cutting permission protocol in one phase.
+   v3 is "complete" when both ship. NL is the no-gate path that drives the parser-extension work; NZ is the private-caching-gated path (email only if public terms don't already clear it) that runs in parallel. This milestone tests the engine against two independent schema dialects, two file formats, and the cross-cutting permission protocol in one phase.
 
 4. **Georgia (country) registry, GCAA.** 4L prefix, small fleet (~hundreds of aircraft). Sentimental priority — operator's site lives there. First source where we may not have a clean bulk download; doubles as the proving ground for the long tail of registries that publish data inconveniently. _(v4)_
 
-UK CAA is **excluded** for the foreseeable future (see Future Considerations → Blocked). G-INFO is paid + single-PC + non-redistributable, structurally incompatible with this project's deployment model.
+UK CAA is **excluded** for the foreseeable future (see Future Considerations → Blocked). G-INFO is paid + single-PC + non-redistributable, structurally incompatible with private R2 storage.
 
-Ireland (IAA) and other EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 license classification and CC.2 permission protocol before slotting when applicable. Australia (CASA) is already live in phase 4 under an Open classification after license re-research confirmed the register surfaces are CC BY 4.0, not CC BY-NC. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
+Ireland (IAA) and other EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 source-use classification and CC.2 permission protocol before slotting when applicable. Australia (CASA) is already live in phase 4 under an Open classification after license re-research confirmed the register surfaces are CC BY 4.0, not CC BY-NC. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
 
 Stretch goal across all phases: the translation engine itself stays generic. Adding a new country = writing a config file (and, when the source format requires it, registering a parser path) — never modifying the engine's translation logic.
 
@@ -39,12 +39,12 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 1. **Aircraft photos.** No registry provides them, scraping the ones that do (JetPhotos, PlaneSpotters) violates their terms. Schema has no `photo_url` field in v1. Hook reserved for future.
 2. **Live flight data.** This is a static enrichment layer, not an ADS-B feed. `metal-birds-watch` stays the source of live position data; `metal-birds-feed` only answers "what is N12345 / hex A1B2C3?"
-3. **Owner mailing addresses.** FAA publishes full street/city/ZIP for ~300k registrants in their bulk dump. Republishing trivially-queryable PII at scale creates GDPR exposure, doxxing risk, and Cloudflare TOS issues. Schema keeps owner name, kind, state, and registrant country only. (See Open Questions if this changes.)
+3. **Owner mailing addresses.** FAA publishes full street/city/ZIP for ~300k registrants in their bulk dump. Storing and making that PII trivially queryable inside the application creates privacy and Cloudflare TOS risk. Schema keeps owner name, kind, state, and registrant country only. (See Open Questions if this changes.)
 4. **A hosted query API or search.** metal-birds-feed ships a per-source SQLite artifact (every canonical field is a queryable column — point lookups by `icao_hex` / `registration`, plus filter/sort on any indexed field) but hosts no endpoint — no full-text search, no filtering service, no list API. Consumers query the artifact themselves (R2 binding, HTTP range reads, or a local copy).
 5. **Real-time refresh.** FAA publishes monthly. Transport Canada publishes monthly. National EU registries vary. The pipeline syncs at registry cadence, not on demand.
 6. **Account-management airframes (corporate jet ownership tracing across LLC shells).** Out of scope; this is a registry mirror, not an investigative tool.
 7. **Schema versioning / migration tooling.** v1 is a snapshot. If the schema changes, R2 gets rewritten from source on the next refresh. Acceptable because there is no `raw` blob to migrate independently.
-8. **Hosted public read API.** No public read endpoint. Distribution is operator-private R2 binding only. Forks self-host. (See CC.4.) An earlier draft included a rate-limited Workers proxy for third parties; it was dropped because most national registers publish data under restrictive licenses that forbid public redistribution.
+8. **Hosted public read API.** No public read endpoint. Output is private operator R2 only. Forks self-host. (See CC.4.) An earlier draft included a rate-limited Workers proxy for third parties; it was dropped because the maintained deployment is for Ashley's applications only.
 9. **Commercial operator deployment.** The operator's `metal-birds-feed` deployment must remain non-commercial — ads, sponsorship, monetization, or sale on `metal-birds-watch` invalidates CC BY-NC and "personal-use" source licenses, requiring those sources to be removed. (See CC.3.)
 
 ---
@@ -65,7 +65,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 **Future: forks / contributors**
 
-- As a forker building a different consumer (a different flight tracker, a research tool), I want to fork the engine, point it at my own R2 bucket, and run my own pipeline so that the feed is reusable on my infrastructure under my own per-source license assessment.
+- As a forker building a different consumer (a different flight tracker, a research tool), I want to fork the engine, point it at my own R2 bucket, and run my own pipeline so that the feed is reusable on my infrastructure under my own per-source source-use assessment.
 - As a contributor adding a new country, I want a documented mapping-config schema and a test fixture pattern so that I can submit a PR without reverse-engineering the engine.
 
 ---
@@ -74,18 +74,20 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 ### Cross-Cutting (CC) — applies to every source
 
-**CC.1 License classification.** Each source license is recorded in `DATA_LICENSES.md` under one of:
+**CC.1 Source-use classification.** Each source's use posture is recorded in `DATA_LICENSES.md` under one of:
 
-- **Open** — public domain, OGL, CC BY (no NC). No usage restriction beyond attribution. Eligible for any deployment model the project might adopt later.
-- **Personal-use** — CC BY-NC, "personal use only" terms. Operator-private R2 only; operator deployment must satisfy CC.3.
-- **Restrictive** — paid, single-PC, no-redistribute, or active denial. **Excluded from the project entirely.**
-- **Unknown** — pending license research and/or permission-email reply. Source is not slotted into a phase until classification resolves.
+- **Open** — public domain, OGL, CC BY (no NC), CC0, or equivalent. No usage restriction beyond attribution.
+- **Private-use** — public, fetchable, and parseable source where private non-commercial caching/application use is allowed or not prohibited, but public redistribution is not proven.
+- **Restrictive** — paid single-PC, no-copy, no-storage, no-scraping, view-only, no-redistribute with storage implications, or active denial. **Excluded from the project entirely.**
+- **Unknown** — pending source-use research and/or permission-email reply. Source is not slotted until private caching/storage posture resolves.
 
-**CC.2 Permission protocol.** For Personal-use and Unknown sources, send the agency permission email (template at `docs/agency-permission-request.md`) before slotting. The agency's email thread is the verbatim reply record; `DATA_LICENSES.md` captures only status, license posture, and any attribution/use terms quoted exactly. If no reply within 30 calendar days from the send date, the source proceeds on the public-record argument: the data is already public on the agency's site, this project republishes the same information with attribution, and any later removal request is honored promptly.
+**CC.2 Permission protocol.** For Private-use and Unknown sources, exhaust public research first: registry page, download page, robots/terms, open-data portal, and any visible source-use/license declaration. Send the agency permission email (template at `docs/agency-permission-request.md`) only when private caching/storage remains unclear. The agency's email thread is the verbatim reply record; `DATA_LICENSES.md` captures only status, source-use posture, and any attribution/use terms quoted exactly. If no reply within 30 calendar days from the send date and no terms prohibit private caching, the source may proceed for private operator use on the public-record argument: the data is already publicly available, the output remains private to Ashley's applications, attribution is preserved, and any later removal request is honored promptly.
 
-**CC.3 Non-commercial operator deployment.** The operator deployment of `metal-birds-feed` (read by `metal-birds-watch`) must remain non-commercial for the lifetime of any Personal-use source it ingests. Ads, sponsorship, monetization, or sale on the consumer site invalidates CC BY-NC and "personal-use" licenses, requiring those sources to be removed before any commercial change.
+**CC.3 Non-commercial operator deployment.** The operator deployment of `metal-birds-feed` (read by Ashley-operated applications such as `metal-birds-watch`) must remain non-commercial for the lifetime of any Private-use source it ingests. Ads, sponsorship, monetization, or sale on the consumer site invalidates CC BY-NC and "personal-use" source terms, requiring those sources to be removed before any commercial change.
 
-**CC.4 No public read API.** Distribution model is operator-private R2 binding only — `metal-birds-watch` reads R2 directly inside the same Cloudflare account. There is no hosted public read endpoint. Source-available code (Polyform Shield) lets third parties fork and self-host against their own R2 buckets and their own per-source license assessments.
+**CC.4 Private output only.** The maintained deployment writes normalized artifacts only to Ashley's private R2 bucket. Ashley-operated applications read R2 directly inside the same Cloudflare account. There is no hosted public read endpoint, public download, public query surface, or public dataset publication. Source-available code (Polyform Shield) lets third parties fork and self-host against their own R2 buckets and their own per-source source-use assessments.
+
+**CC.5 Storage/caching gate.** The decisive blocker for non-open sources is private storage. If a source's terms prohibit copying, caching, automated extraction, database storage, or use beyond on-site viewing, exclude it unless written permission exists. If terms are silent and the source is publicly fetchable and parseable, it may proceed as Private-use after CC.2 research.
 
 ### Must-Have (P0) — FAA, v1
 
@@ -123,9 +125,9 @@ GHA disables scheduled workflows after 60 days of repo inactivity. Mitigated by 
 
 **R0.9 Acceptance fixture.** A hand-curated set of ~10 FAA records covering edge cases (single-engine piston, twin turboprop, jet, helicopter, glider, balloon, experimental kit-built, fractional ownership, non-citizen corp, expired registration). Expected canonical output is committed. CI runs the engine against fixtures on every PR.
 
-**R0.10 R2 access model.** R2 bucket is **private** (no public URL). Operator's own consumers (`metal-birds-watch` on Cloudflare Pages) read via R2 binding inside the same Cloudflare account — direct, no proxy, no rate limit. Third-party consumers fork the repo, point a GHA workflow at their own R2 bucket, and read from there under their own per-source license assessment. There is no hosted public read endpoint (see CC.4).
+**R0.10 R2 access model.** R2 bucket is **private** (no public URL). Operator's own consumers (`metal-birds-watch` on Cloudflare Pages) read via R2 binding inside the same Cloudflare account — direct, no proxy, no rate limit. Third-party consumers fork the repo, point a GHA workflow at their own R2 bucket, and read from there under their own per-source source-use assessment. There is no hosted public read endpoint (see CC.4).
 
-This is the deliberate trade: operator's costs stay $0 regardless of external interest, and anyone who needs access has a self-serve path that does not involve operator infrastructure.
+This is the deliberate trade: operator costs stay $0 and output stays private regardless of external interest, and anyone who needs access has a self-serve fork path that does not involve operator infrastructure.
 
 **Acceptance criteria for FAA milestone:**
 
@@ -145,17 +147,17 @@ This is the deliberate trade: operator's costs stay $0 regardless of external in
 
 ### Could-Have (P2) — Third-registry milestone, v3
 
-v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drives the spreadsheet parser path) and **CAA NZ** (email-gated, ships when reply lands or 30-day timeout passes). Both must be in R2 before v3 is "complete."
+v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drives the spreadsheet parser path) and **CAA NZ** (private-caching-gated, ships once caching posture is cleared — by research or by a permission reply/30-day timeout). Both must be in R2 before v3 is "complete."
 
-#### CAA NZ track (email-gated)
+#### CAA NZ track (private-caching-gated)
 
 **R2.1 NZ CAA source config.** New file `sources/nz-caa.yaml`. Single national registry, ZK-prefix, ~5k aircraft. CAA NZ publishes the full register as a CSV at a stable URL (https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv). No engine changes. Same canonical schema.
 
 **R2.2 NZ field-coverage parity.** Document fields CAA NZ does not provide. Null-rather-than-invent rule unchanged.
 
-**R2.3 NZ permission protocol.** Per CC.2, send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz before slotting. If no reply within 30 calendar days, source proceeds on the public-record argument. CAA NZ classifies as **Personal-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
+**R2.3 NZ permission protocol.** Per CC.2, research public terms for CAA NZ first. If they clear private caching, no email is needed. Otherwise send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz. CAA NZ classifies as **Private-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
 
-**Acceptance (NZ CAA track):** A consumer point-querying `aircraft/nz-caa.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
+**Acceptance (NZ CAA track):** A consumer point-querying `aircraft/nz-caa.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ's private-caching posture is resolved — either cleared by public-terms research, or a permission email was sent and is either honored or 30-day-timed-out — status recorded in `DATA_LICENSES.md`.
 
 #### Netherlands ILT track (no-email path)
 
@@ -183,11 +185,11 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 #### Roadmap — additional registries
 
-Each new registry is gated on CC.1 license classification + CC.2 permission protocol if needed. None of these are committed; they slot in incrementally if/when there is reason to.
+Each new registry is gated on CC.1 source-use classification + CC.2 permission protocol if needed. None of these are committed; they slot in incrementally if/when there is reason to.
 
 **R4.1 Australia (CASA).** Shipped 2026-05-08. Open under CC.1 (register surfaces inherit CASA's site-wide CC BY 4.0); no CC.2 email. `sources/au-casa.yaml`.
 
-**R4.2 Ireland (IAA).** New file `sources/ie-iaa.yaml`. ~1.4k aircraft, EI-prefix, monthly XLSX. The XLSX parser path is shared with NL ILT (added in R2.6 during v3), so IAA's engine work is just config + fixtures. License classification pending (CC.1) and CC.2 permission email if needed.
+**R4.2 Ireland (IAA).** New file `sources/ie-iaa.yaml`. ~1.4k aircraft, EI-prefix, monthly XLSX. The XLSX parser path is shared with NL ILT (added in R2.6 during v3), so IAA's engine work is just config + fixtures. Source-use classification pending (CC.1) and CC.2 permission email if needed.
 
 **R4.3 EU member-state registries.** One config per country (`sources/de-lba.yaml`, `sources/fr-dgac.yaml`, `sources/ch-bazl.yaml`, Nordics, etc.). Prioritize by license clarity, not fleet size — Open sources first.
 
@@ -201,9 +203,9 @@ Each new registry is gated on CC.1 license classification + CC.2 permission prot
 
 #### Blocked
 
-**UK CAA.** G-INFO is published only as a paid product (£1,745/yr monthly subscription, £450 single issue) under a single-PC license that explicitly forbids copying, distribution, sale, or hire without written CAA consent. The single-PC clause is incompatible with R2 storage even for purely operator-private use; the no-redistribution clause is incompatible with source-available code that another fork might run. Excluded under CC.1 (Restrictive). Revisit only if CAA changes the licensing terms.
+**UK CAA.** G-INFO is published only as a paid product (£1,745/yr monthly subscription, £450 single issue) under a single-PC license that explicitly forbids copying, distribution, sale, or hire without written CAA consent. The single-PC and no-copy clauses are incompatible with private R2 storage. Excluded under CC.1 (Restrictive). Revisit only if CAA changes the licensing terms.
 
-**Public read API (revival).** If at some future point every slotted source has migrated to an Open license under CC.1, a rate-limited public read endpoint (Cloudflare Workers, ~100 req/min/IP) could be reintroduced. Until then, CC.4 stands.
+**Public read API (revival).** Not planned. It would require a separate product decision plus every exposed source being Open under CC.1. Until then, CC.4 stands.
 
 ---
 
@@ -233,7 +235,7 @@ R2 storage cost. The whole point is that this fits in the free tier. If FAA + TC
 
 **Georgia GCAA data accessibility (data, blocking R3.2 only — does not block v1, v2, or v3).** Does GCAA publish a bulk-downloadable aircraft register? If not, what's actually available — scrapeable web search, PDFs, FOIA-equivalent request, nothing? R3.1 is the time-boxed research to answer this. Outcome shapes whether v4 is "another easy config" or "build a scraper."
 
-**Per-source license terms (legal, settled framework).** Code license: Polyform Shield 1.0.0 (source-available, no commercial use by competitors). Source data licenses are per-source under CC.1: FAA = Open (US public domain); TC-CA = Open (OGL-Canada, attribution); CAA NZ = Personal-use (CC.2 email pending); CASA AU = Open (CC BY 4.0, no permission email required); UK CAA = Restrictive, excluded. Per-source attribution and permission status tracked in `DATA_LICENSES.md`.
+**Per-source source-use terms (legal, settled framework).** Code license: Polyform Shield 1.0.0 (source-available, no commercial use by competitors). Source data use is tracked per-source under CC.1: FAA = Open (US public domain); TC-CA = Open (OGL-Canada, attribution); CAA NZ = Private-use candidate; CASA AU = Open (CC BY 4.0, no permission email required); UK CAA = Restrictive, excluded. Per-source attribution, storage/caching posture, and permission status are tracked in `DATA_LICENSES.md`.
 
 ---
 

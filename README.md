@@ -7,13 +7,15 @@
 
 </div>
 
-Translates national aviation registries into a normalized JSON schema in Cloudflare R2 for
-O(1) tail-number and ICAO hex lookups. Inspired by
+Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2 for
+fast, indexed tail-number and ICAO hex lookups. Inspired by
 [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
-**Distribution model:** source-available code (Polyform Shield) + operator-private R2.
-No hosted public read API. Forks self-host against their own R2 bucket and their own
-per-source license assessment. See [PRD.md](PRD.md) §Cross-Cutting for the full model.
+**Distribution model:** source-available code (Polyform Shield) + private operator
+artifacts. The normalized output is for Ashley's own applications only, stored in a
+private R2 bucket with no hosted public read API, public download, or public query
+surface. Forks self-host against their own R2 bucket and their own per-source source-use
+assessment. See [PRD.md](PRD.md) §Cross-Cutting for the full model.
 
 ## How It Works
 
@@ -121,7 +123,10 @@ make install
 
 ## Sources
 
-Live and license-cleared sources only, ordered alphabetically by country. Source IDs remain in backticks where a source has a checked-in or planned config. The full agency-correspondence tracker (every country contacted, sent/reply dates, status) lives in [DATA_LICENSES.md](DATA_LICENSES.md).
+Sources active in the private operator pipeline, ordered alphabetically by country. Source
+IDs remain in backticks where a source has a checked-in or planned config. The full
+source-use tracker (every country contacted, sent/reply dates, status, and known storage
+or cache restrictions) lives in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 <!-- prettier-ignore-start -->
 | Agency | Country | Email | Sent | Reply | Status |
@@ -165,8 +170,9 @@ Required upstream notices, kept short:
 ## Legal Notice
 
 - **No liability transfer.** Using, forking, or deploying this repository does not transfer liability to the maintainer. Each operator is solely responsible for their own deployment and its consequences.
-- **Per-country compliance is the operator's responsibility.** This project ingests data from civil aviation authorities in multiple jurisdictions. Each imposes its own data-use, redistribution, and privacy obligations. Operators must independently assess and satisfy those obligations.
-- **Research is informational, not legal advice.** The license classifications and permissions in `DATA_LICENSES.md` reflect good-faith research at a point in time. They are not legal advice and carry no guarantee of completeness, accuracy, or continued validity.
+- **Private output only.** The maintained deployment writes normalized artifacts only to Ashley's private R2 bucket for Ashley-operated applications. It does not publish a public API, public dataset, or public download.
+- **Per-country compliance is the operator's responsibility.** This project ingests data from civil aviation authorities in multiple jurisdictions. Each imposes its own data-use, storage, caching, redistribution, and privacy obligations. Operators must independently assess and satisfy those obligations.
+- **Research is informational, not legal advice.** The source-use classifications and permissions in `DATA_LICENSES.md` reflect good-faith research at a point in time. They are not legal advice and carry no guarantee of completeness, accuracy, or continued validity.
 - **Upstream terms change without notice.** Agencies amend terms, withdraw permissions, or restructure publication channels. Operators are responsible for monitoring those changes.
 - **No liability.** The data pipeline, its output, and the license research are provided as-is. See the `No Liability` section of the [LICENSE](LICENSE).
 
@@ -176,8 +182,8 @@ Required upstream notices, kept short:
 
 [AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
 
-1. Classify the license under PRD CC.1 (Open / Personal-use / Restrictive / Unknown). Restrictive sources are excluded.
-2. For Personal-use or Unknown sources, send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)). The 30-day public-record fallback applies to Unknown only — Personal-use needs an affirmative reply (silence ≠ permission). Record outcome in `DATA_LICENSES.md`.
+1. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
+2. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
 3. New source onboarding touches **all five surfaces** or the source is incomplete:
    - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls` | `json` | `pdf` | `html`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
    - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
