@@ -73,6 +73,7 @@ export interface EngineStats {
   ok: number;
   failed: number;
   skipped: number;
+  duplicateSkipped: number;
 }
 
 interface MissingSourceIdPolicy {
@@ -139,7 +140,13 @@ export async function translate(
   }
 
   const skipped = missingIdSkipped + duplicateSkipped;
-  const stats: EngineStats = { total: rows.length, ok: records.size, failed, skipped };
+  const stats: EngineStats = {
+    total: rows.length,
+    ok: records.size,
+    failed,
+    skipped,
+    duplicateSkipped,
+  };
   // Runs before the "complete" log and only when there are no row-level failures: pipeline.ts's
   // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
   // logging translate_complete before a guard that can still throw would misreport the run as done.
@@ -160,25 +167,38 @@ const RECENCY_DATE_FIELDS = [
   'last_action_date',
 ] as const;
 
-// Most recent of a record's known dates; null if none are set.
 const latestKnownDate = (record: Aircraft): string | null =>
   RECENCY_DATE_FIELDS.map((f) => record[f])
     .filter((d): d is string => d !== null)
     .sort((a, b) => a.localeCompare(b))
     .at(-1) ?? null;
 
-// Cross-source recency check for a reissued source_id: a cancelled row never outranks a live one;
-// otherwise the record with the more recent known date wins.
-function isNewerRecord(candidate: Aircraft, incumbent: Aircraft): boolean {
+type RecencyReason = 'cancelled_status' | 'newer_date';
+
+// Resolves two rows sharing a reissued source_id within one source's file: a cancelled row never
+// outranks a live one; otherwise the more recent known date wins. Returns null when neither status
+// nor date distinguishes them — that's not a reissue signal, it's an ambiguous id collision the
+// caller must fail on rather than guess via file order.
+function resolveRecency(
+  candidate: Aircraft,
+  incumbent: Aircraft
+): { winner: 'candidate' | 'incumbent'; reason: RecencyReason } | null {
   const candidateCancelled = candidate.status === 'cancelled';
   const incumbentCancelled = incumbent.status === 'cancelled';
-  if (candidateCancelled !== incumbentCancelled) return incumbentCancelled;
+  if (candidateCancelled !== incumbentCancelled) {
+    return { winner: incumbentCancelled ? 'candidate' : 'incumbent', reason: 'cancelled_status' };
+  }
 
   const candidateDate = latestKnownDate(candidate);
   const incumbentDate = latestKnownDate(incumbent);
-  if (candidateDate !== incumbentDate) return (candidateDate ?? '') > (incumbentDate ?? '');
+  if (candidateDate !== incumbentDate) {
+    return {
+      winner: (candidateDate ?? '') > (incumbentDate ?? '') ? 'candidate' : 'incumbent',
+      reason: 'newer_date',
+    };
+  }
 
-  return false;
+  return null;
 }
 
 interface TranslateRowContext {
@@ -248,14 +268,26 @@ function translateRow(
     // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a
     // balloon under the same mark). Keep whichever row is actually newer instead of trusting
     // file position — resolve via status (a cancellation never outranks a live record), falling
-    // back to the most recent known date.
+    // back to the most recent known date. A collision with neither signal isn't a reissue; it
+    // means the source_id assumption is wrong and last-wins would silently drop upstream data.
     const incumbent = priorRow && records.get(rawId);
     if (incumbent) {
-      if (!isNewerRecord(parsed.data, incumbent)) {
+      const resolution = resolveRecency(parsed.data, incumbent);
+      if (!resolution) {
+        log('error', 'translate_duplicate_id', {
+          source: config.id,
+          row: i + 2,
+          source_id: rawId,
+          reason: 'no distinguishing signal (same status, same or absent recency dates)',
+        });
+        return { status: 'failed' };
+      }
+      if (resolution.winner === 'incumbent') {
         log('warn', 'translate_duplicate_id_stale', {
           source: config.id,
           row: i + 2,
           source_id: rawId,
+          reason: resolution.reason,
         });
         return { status: 'skipped', reason: 'duplicate' };
       }
@@ -263,6 +295,7 @@ function translateRow(
         source: config.id,
         row: i + 2,
         source_id: rawId,
+        reason: resolution.reason,
       });
     }
     return { status: 'ok', id: rawId, record: parsed.data, row: merged };

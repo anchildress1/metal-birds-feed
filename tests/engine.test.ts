@@ -387,7 +387,7 @@ beforeAll(async () => {
 
 describe('CASA fixture translation', () => {
   it('translates all 11 fixture rows with no failures', () => {
-    expect(casaStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0 });
+    expect(casaStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(casaRecords.size).toBe(11);
   });
 
@@ -566,7 +566,7 @@ beforeAll(async () => {
 
 describe('CAA Latvia fixture translation', () => {
   it('translates all 10 fixture rows with no failures', () => {
-    expect(lvStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0 });
+    expect(lvStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(lvRecords.size).toBe(10);
   });
 
@@ -1150,6 +1150,103 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
+  it('replaces the incumbent when a later file row has the newer date', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-date-replace',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        last_action_date: { field: 'ACTION' },
+      },
+    };
+    // Mirror of the test above with the newer date second in the file, so the "candidate is
+    // actually newer" branch of resolveRecency (not just "candidate loses") gets exercised.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,ACTION\n1,N1,2018-01-01\n1,N2,2021-06-01\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N2');
+  });
+
+  it('keeps a live record over a cancelled duplicate even when the cancelled row is newer', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-status-beats-date',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+        last_action_date: { field: 'ACTION' },
+      },
+    };
+    // The cancelled row has a materially newer date, but status is checked before date — a
+    // cancellation must never outrank a live record regardless of recency.
+    const files = new Map([
+      [
+        'primary',
+        Buffer.from(
+          'ID,REG,STATUS,ACTION\n1,N1,valid,2018-01-01\n1,N2,cancelled,2024-01-01\n',
+          'utf8'
+        ),
+      ],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
+
+  it('resolves a duplicate by date when only one row has a known date', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-date-asymmetric',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        last_action_date: { field: 'ACTION' },
+      },
+    };
+    // Row 1 has no known date at all (blank ACTION); row 2 has one. A known date must beat an
+    // absent one regardless of file order.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,ACTION\n1,N1,\n1,N2,2020-01-01\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N2');
+  });
+
   it('skips a byte-identical duplicate row instead of failing', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-identical',
@@ -1174,7 +1271,7 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
-  it('keeps the incumbent for a duplicate that differs only in an unmapped column', async () => {
+  it('fails a duplicate source_id with no distinguishing signal', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-unmapped',
       label: 'synthetic',
@@ -1190,11 +1287,13 @@ describe('engine — negative and edge cases', () => {
       registration: 'REG',
       mapping: { registration: { field: 'REG' } },
     };
-    // EXTRA is not mapped, so both rows produce identical canonical records. No status/date
-    // signal distinguishes them, so this doesn't fail — it just keeps the first one.
+    // EXTRA is not mapped, so both rows produce identical canonical records. With no status or
+    // date signal to tell them apart, this isn't a reissue — it's an ambiguous id collision, and
+    // guessing via file order would silently drop upstream data. It must fail, not guess.
     const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
     const { records, stats } = await translate(config, files);
-    expect(stats.failed).toBe(0);
+    expect(stats.failed).toBe(1);
+    // The first row still succeeded before the second one collided with it.
     expect(records.size).toBe(1);
   });
 
@@ -1352,7 +1451,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     );
 
     let nlRecords: Map<string, Aircraft>;
-    let nlStats: { total: number; ok: number; failed: number; skipped: number };
+    let nlStats: EngineStats;
 
     beforeAll(async () => {
       const config = loadSourceConfig(NL_CONFIG_PATH);
@@ -1363,7 +1462,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     });
 
     it('skips the "Information" banner row and translates 8 aircraft', () => {
-      expect(nlStats).toEqual({ total: 9, ok: 8, failed: 0, skipped: 1 });
+      expect(nlStats).toEqual({ total: 9, ok: 8, failed: 0, skipped: 1, duplicateSkipped: 0 });
       expect(nlRecords.size).toBe(8);
     });
 
@@ -1509,7 +1608,7 @@ describe('CAA Taiwan fixture translation (binary .xls)', () => {
     twStats = result.stats;
   });
   it('translates 6 aircraft and skips the 6 subtotal/total rows', () => {
-    expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6 });
+    expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6, duplicateSkipped: 0 });
     expect(twRecords.size).toBe(6);
   });
 
@@ -1614,7 +1713,7 @@ beforeAll(async () => {
 
 describe('BR-ANAC fixture translation', () => {
   it('translates all 9 fixture rows with no failures (banner row skipped)', () => {
-    expect(brStats).toEqual({ total: 9, ok: 9, failed: 0, skipped: 0 });
+    expect(brStats).toEqual({ total: 9, ok: 9, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(brRecords.size).toBe(9);
   });
 
@@ -1779,7 +1878,7 @@ describe('CH-FOCA fixture translation', () => {
   });
 
   it('translates every fixture record', () => {
-    expect(chStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0 });
+    expect(chStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
   describe('HB-1000 — glider, individual, Swiss canton', () => {
@@ -1998,7 +2097,7 @@ describe('AESA Spain fixture translation (PDF)', () => {
   });
 
   it('translates all 90 fixture rows with no failures', () => {
-    expect(esStats).toEqual({ total: 90, ok: 90, failed: 0, skipped: 0 });
+    expect(esStats).toEqual({ total: 90, ok: 90, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(esRecords.size).toBe(90);
   });
 
@@ -2101,7 +2200,7 @@ beforeAll(async () => {
 
 describe('Transpordiamet Estonia (HTML) fixture translation', () => {
   it('translates all 10 fixture aircraft with no failures', () => {
-    expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0 });
+    expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(eeRecords.size).toBe(10);
   });
 
@@ -2237,7 +2336,7 @@ describe('record_count guard (ee-tram)', () => {
       config,
       new Map([['register', eeTable(2, ['ES - AAA', 'NOT-A-MARK'])]])
     );
-    expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0 });
+    expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0, duplicateSkipped: 0 });
   });
 });
 
@@ -2259,7 +2358,7 @@ beforeAll(async () => {
 
 describe('CAAS Singapore fixture translation', () => {
   it('translates all 10 fixture rows with no failures', () => {
-    expect(sgStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0 });
+    expect(sgStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(sgRecords.size).toBe(10);
   });
 
