@@ -265,6 +265,14 @@ describe('run', () => {
 });
 
 describe('main', () => {
+  it('falls back to every sources/*.yaml file when REFRESH_SOURCE is unset', async () => {
+    // No REFRESH_SOURCE set — resolveSources must read the real sources/ directory instead of
+    // running a single hardcoded source, fanning out across every real config in the repo.
+    await main();
+
+    expect(mockDownload.mock.calls.length).toBeGreaterThan(1);
+  });
+
   it('opens a staleness issue when source is overdue and token is present', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
@@ -322,6 +330,60 @@ describe('main', () => {
     expect(body.title).toContain('[staleness] faa');
   });
 
+  it('logs and skips issue creation when the open-issues list fetch fails', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const oldChange = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    const recentRun = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentRun,
+      last_content_change: oldChange,
+      content_hash: HASH64,
+    });
+    const fetchMock = mock().mockResolvedValueOnce({ ok: false, status: 500 });
+    setFetch(fetchMock);
+
+    await main();
+
+    // Failing to list means we never risk creating a duplicate issue blind.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(mockLog).toHaveBeenCalledWith(
+      'error',
+      'staleness_issue_list_failed',
+      expect.objectContaining({ source: 'faa', status: 500 })
+    );
+  });
+
+  it('logs when the staleness issue create call fails', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const oldChange = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    const recentRun = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentRun,
+      last_content_change: oldChange,
+      content_hash: HASH64,
+    });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) }) // list open issues
+      .mockResolvedValueOnce({ ok: false, status: 422 }); // create issue
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockLog).toHaveBeenCalledWith(
+      'error',
+      'staleness_issue_create_failed',
+      expect.objectContaining({ source: 'faa', status: 422 })
+    );
+  });
+
   it('calls closeStalenessIssues when content changes on a cadence-tracked source', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
@@ -351,6 +413,71 @@ describe('main', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1][0])).toContain('/issues/7');
+  });
+
+  it('logs staleness_close_failed when the close PATCH call rejects', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const pastTimestamp = new Date(Date.now() - 35 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: pastTimestamp,
+      last_content_change: pastTimestamp,
+    });
+    mockR2Write.mockResolvedValueOnce({
+      changed: true,
+      record_count: 1,
+      content_hash: 'h',
+    });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([{ number: 7, title: '[staleness] faa has not updated in 40 days' }]),
+      })
+      .mockRejectedValueOnce(new Error('network blip'));
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockLog).toHaveBeenCalledWith(
+      'error',
+      'staleness_close_failed',
+      expect.objectContaining({ source: 'faa', msg: 'network blip' })
+    );
+  });
+
+  it('logs staleness_close_error when closeStalenessIssues itself rejects', async () => {
+    // Distinct from the PATCH-rejects case above: here the *list* call throws, so
+    // closeStalenessIssues itself rejects rather than handling the failure internally —
+    // this is the outer .catch() in closeWithLogging, not the Promise.allSettled loop.
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const pastTimestamp = new Date(Date.now() - 35 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: pastTimestamp,
+      last_content_change: pastTimestamp,
+    });
+    mockR2Write.mockResolvedValueOnce({
+      changed: true,
+      record_count: 1,
+      content_hash: 'h',
+    });
+    const fetchMock = mock().mockRejectedValueOnce(new Error('DNS failure'));
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockLog).toHaveBeenCalledWith(
+      'error',
+      'staleness_close_error',
+      expect.objectContaining({ source: 'faa', msg: 'DNS failure' })
+    );
   });
 
   it('does not close a sibling source whose name shares this source as a prefix', async () => {

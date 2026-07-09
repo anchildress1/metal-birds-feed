@@ -33,7 +33,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Coverage thresholds (`bunfig.toml`): 85% lines/functions/statements. Do not lower. Branch coverage is not enforced — `bun test` cannot threshold branches (line/function/statement only).
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground-truth. Change only with schema or config change.
-- `src/pipeline.ts` excluded from coverage (untestable entry point).
+- `src/pipeline.ts` holds real business logic (cadence gating, staleness-issue open/close, failure-summary rendering) and is covered like any other module via `mock.module` on its dependencies (`tests/pipeline.test.ts`). Only the top-level `if (isCliEntryPoint())` bootstrap is inherently untested — it only runs when the file is invoked as a script, not imported.
 - Local-validation test files removed before commit.
 
 ## Source onboarding (PRD §CC.x — read it first)
