@@ -6,9 +6,9 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 1. **Verify** — open the agency's register URL, find their copyright / terms / data-license page (usually footer link), and classify:
    - **Open** (CC BY, CC-0, OGL, public domain, "any purpose") → no email; just attribute.
-   - **Personal-use** (CC BY-NC, "for personal use only," "non-commercial only") → send permission email.
-   - **Unknown** (no statement, no terms link) → send permission email.
-   - **Restrictive** (paid, single-PC, no-redistribute) → exclude. Don't email.
+   - **Private-use** (public, fetchable, parseable, and no visible ban on private caching/storage) → may ingest into private operator R2.
+   - **Unknown** (no statement, no terms link, or unclear storage/cache terms) → research first, email only if still unclear.
+   - **Restrictive** (paid single-PC, no-copy, no-storage, no-scraping, view-only, no-redistribute with storage implications) → exclude. Don't email unless a new fact materially changes the ask.
 2. **Email** (if needed) — fill in the template at [`docs/agency-permission-request.md`](agency-permission-request.md) and send. Record send date in `DATA_LICENSES.md`.
 3. **Update** — add a new section to `DATA_LICENSES.md` (the email record of source) and add the row to the README Sources table.
 
@@ -29,23 +29,23 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | ANAC Brasil              | Open w/ attribution (CC BY-equiv)                 | Live (phase 7)                                                                         |
 | FOCA / BAZL (CH)         | Open w/ attribution (FOCA legal grant 2026-05-22) | Live (phase 8)                                                                         |
 | CAA Maldives             | Open + attribution + error-disclaimer (written)   | Live (phase 9)                                                                         |
-| Transpordiamet (Estonia) | Personal-use + attribution (reply 2026-05-13)     | Live (phase 10) — `html` parser path                                                   |
+| Transpordiamet (Estonia) | Private-use + attribution (reply 2026-05-13)      | Live (phase 10) — `html` parser path                                                   |
 | CAAS (Singapore)         | Open + attribution (CAAS reply 2026-05-12)        | Live (phase 11) — `xlsx` + monthly `discover_url` (Isomer CDN)                         |
 | AESA (Spain)             | Open + attribution (Ley 37/2007 / RD 1495/2011)   | Live (phase 12) — `pdf` parser path; cleared via public reuse licence, no reply needed |
 
 ### 🛠️ Cleared — implementation pending
 
-License is cleared (via public declaration or substantive agency reply). Ingest is blocked on engineering work — usually a new parser path, a non-standard fetch pattern, a data-shape issue, or upstream dataset publication. Full reply text and contacts live in `DATA_LICENSES.md`.
+Private use or open use is cleared (via public declaration, absence of storage/cache prohibition after research, or substantive agency reply). Ingest is blocked on engineering work — usually a new parser path, a non-standard fetch pattern, a data-shape issue, or upstream dataset publication. Full reply text and contacts live in `DATA_LICENSES.md`.
 
 | Source           | License (cleared via)                                                                 | Ingest blocker                                                                                                                                                                                                                                                                                                                                            | Reply                |
 | ---------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
 | Traficom Finland | Open (CC BY 4.0) — confirmed in writing                                               | Data shape — public ZIP-CSV is GDPR-stripped; no identifier-bearing channel. Verified 2026-07-05: open `aircraftregister.csv` columns are model/technical only (`Aircraft_name`, ICAO **type** designator, MTOM, engines) — **no registration mark, no ICAO 24-bit hex, no owner**. Identifier-bearing register is the auth-gated per-record lookup only. | 2026-05-11           |
-| CAAT Thailand    | Personal-use + attribution — CAAT reply 2026-05-21                                    | **Fetch — whole caat.or.th behind Cloudflare managed JS challenge (403); engine `fetch()` can't pass.** curl, curl_cffi (TLS-impersonation), and Playwright headless/headed/stealth all fail from a datacenter IP (incl. GitHub Actions). Verified 2026-06-27. PDF parser path itself is fine.                                                            | 2026-05-21           |
+| CAAT Thailand    | Private-use + attribution — CAAT reply 2026-05-21                                     | **Fetch — whole caat.or.th behind Cloudflare managed JS challenge (403); engine `fetch()` can't pass.** curl, curl_cffi (TLS-impersonation), and Playwright headless/headed/stealth all fail from a datacenter IP (incl. GitHub Actions). Verified 2026-06-27. PDF parser path itself is fine.                                                            | 2026-05-21           |
 | CAA Oman         | Open (CC BY 4.0-compat) — Oman Open Data License (public policy, **no agency reply**) | Register dataset not yet published                                                                                                                                                                                                                                                                                                                        | n/a — public license |
 
 ### 🟡 In flight — waiting on reply
 
-All awaiting a substantive reply. Contact addresses, verification provenance, and per-agency notes live in `DATA_LICENSES.md` (the record of source). Fallback = whether the 30-day public-record fallback applies (Unknown) or an affirmative reply is required (Personal-use).
+All awaiting a substantive reply or a completed private-cache research pass. Contact addresses, verification provenance, and per-agency notes live in `DATA_LICENSES.md` (the record of source). Fallback = whether the 30-day public-record/private-output fallback applies (Unknown) or an affirmative reply is required because terms appear to restrict storage/cache use.
 
 | Source                                    | Sent       | Follow-up  | Reply   | Fallback |
 | ----------------------------------------- | ---------- | ---------- | ------- | -------- |
@@ -278,9 +278,9 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 > Note: Russia (Rosaviatsia) was moved to the **Excluded** section above (sanctions exposure).
 
-| Country | Agency         | Register URL                                                                                                                               | Language |
-| ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| Estonia | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(✅ Cleared 2026-05-13, Personal-use — see Cleared section above)** | Estonian |
+| Country | Agency         | Register URL                                                                                                                              | Language |
+| ------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Estonia | Transpordiamet | [transpordiamet.ee](https://transpordiamet.ee/ohusoidukite-register) **(✅ Cleared 2026-05-13, Private-use — see Cleared section above)** | Estonian |
 
 ### CJK / East Asian
 
@@ -304,7 +304,7 @@ The lists below are grouped by language family for organizational clarity (so a 
 
 ## Phase 3 — beyond avcodes (initial recon)
 
-The avcodes.co.uk list (~86 entries) is not exhaustive of world civil aviation authorities. This section captures agencies with national aircraft registers that are NOT on avcodes but exist and operate registers. Initial Pass 1 recon completed 2026-05-10 — agency confirmed, register URL surfaced where possible, license posture indicator noted. Most land in **Unknown** and need a permission email (Pass 2 + send).
+The avcodes.co.uk list (~86 entries) is not exhaustive of world civil aviation authorities. This section captures agencies with national aircraft registers that are NOT on avcodes but exist and operate registers. Initial Pass 1 recon completed 2026-05-10 — agency confirmed, register URL surfaced where possible, source-use posture indicator noted. Most land in **Unknown** and need a permission email (Pass 2 + send).
 
 **Auto-deferred — sanctions / active conflict exposure (no research):**
 
@@ -370,7 +370,7 @@ Ranked by license-posture promise:
 
 > **Phase 4 long-tail status (2026-05-11):** 17 new in-flight entries added in the long-tail batch (Benin, Burkina Faso, Cook Islands, ECCAA regional, Eswatini, Guyana, Hong Kong, Kazakhstan, Kosovo, Liberia, Mauritania, PASO regional, São Tomé, Sierra Leone, South Sudan, Türkiye, Turkmenistan). ~26 Excluded entries added (no-agency / commercial-offshore / sanctions audit including new Afghanistan + Niger). 8 entries Deferred for VPN-round (Brunei, Kiribati, Mali, Marshall Islands, Solomon Islands, Somalia, Tajikistan, Uzbekistan) — see Deferred section above.
 
-1. **Phase 1 quick wins:** Iceland, Trinidad & Tobago, Cyprus — most likely Open or simple-email cases. Knock these out one afternoon. (Israel and Singapore were previously listed here; both moved out — Israel to **Excluded** after CAAI register confirmed fee-gated + FOI-only, Singapore to "known-difficult" after CAAS Terms of Use confirmed Personal-use.)
+1. **Phase 1 quick wins:** Iceland, Trinidad & Tobago, Cyprus — most likely Open or simple-email cases. Knock these out one afternoon. (Israel and Singapore were previously listed here; both moved out — Israel to **Excluded** after CAAI register confirmed fee-gated + FOI-only, Singapore to "known-difficult" after CAAS Terms of Use confirmed Private-use.)
 2. **Phase 1 known-difficult:** India, Pakistan, Sri Lanka, Maldives, Ethiopia, Malaysia — verify, send emails, expect mixed responses.
 3. **Phase 2 (non-English registries):** send English to all of them per the agreed strategy. Tier by fleet size or bandwidth — eight largest were sent 2026-05-05 (Brazil, France, Italy, Spain, Argentina, Switzerland, Sweden, Norway). Next likely batch: Germany (LBA), Japan (JCAB), Mexico (AFAC), Indonesia (DKPPU), Korea (KOCA), Taiwan (CAA Taiwan), Belgium (DGTA), Austria (Austro Control), Denmark (TS), Finland (Traficom).
 4. **Translator follow-up only** when an agency replies in their local language with substantive license terms, or when no English reply arrives and a follow-up in the local language is warranted.
@@ -380,4 +380,4 @@ Ranked by license-posture promise:
 - The "Likely Open / Likely needs email" hints in Phase 1 are heuristics, not facts. Always verify before assuming.
 - Save evidence: when verifying a license, screenshot or copy the relevant page text into the agency's `DATA_LICENSES.md` entry. Site terms move; receipts are durable.
 - Re-verify each existing source annually. Government policies change quietly.
-- The agency's email thread is the verbatim reply record. Into `DATA_LICENSES.md` capture the status, license posture, and any attribution/license conditions that must be quoted exactly (never paraphrased) — don't transcribe the full reply into the tracker.
+- The agency's email thread is the verbatim reply record. Into `DATA_LICENSES.md` capture the status, source-use posture, and any attribution/license conditions that must be quoted exactly (never paraphrased) — don't transcribe the full reply into the tracker.

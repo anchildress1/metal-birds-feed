@@ -5,8 +5,9 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Hard prohibitions
 
 - PII allowed: `owner.{name,kind,state,country}` + `operator.{name,kind,state,country}`. Drop street/street2/city/postal-code/county/region/care-of at the mapping config.
-- No public read API. Operator-private R2 binding only (PRD §CC.4).
-- No commercial operator deployment. CC BY-NC + Personal-use sources require non-commercial use (PRD §CC.3).
+- No public read API. Private operator R2 binding only (PRD §CC.4).
+- No commercial operator deployment. CC BY-NC + Private-use sources require non-commercial use (PRD §CC.3).
+- No public output distribution. Normalized artifacts are private to Ashley-operated applications only; forks self-host their own artifacts.
 - No `..` in path inputs. Resolve to absolute, enforce sandbox-root containment after resolution, default deny on validation failure.
 - No quick fixes. Long-term, maintainable only.
 - No `// @ts-ignore` without justifying comment.
@@ -37,18 +38,18 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 ## Source onboarding (PRD §CC.x — read it first)
 
-- Classify license per CC.1: Open / Personal-use / Restrictive / Unknown.
-- Personal-use + Unknown: send permission email via `docs/agency-permission-request.md`. 30-day public-record fallback applies to **Unknown only**; Personal-use needs affirmative reply (silence ≠ permission).
-- Restrictive: exclude. Document reason in `DATA_LICENSES.md`; do not email.
+- Classify source-use posture per CC.1: Open / Private-use / Restrictive / Unknown.
+- Private-use + Unknown: research storage/caching/automation terms first. Send permission email via `docs/agency-permission-request.md` only when private caching is unclear after public-web research.
+- Restrictive means paid single-PC, no-copy, no-storage, no-scraping, view-only, no-redistribute with storage implications, or active denial (PRD §CC.5 storage/caching gate). Exclude. Document reason in `DATA_LICENSES.md`; do not email unless there is a new material fact.
 - New source = 5 surfaces or incomplete: `sources/<id>.yaml` + `fixtures/<id>/` ground-truth + `DATA_LICENSES.md` entry + `README.md` sources row + `README.md` `## Attribution` block (required even for CC-0/public-domain: courtesy credit).
-- README sources table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append. The README table lists live/cleared sources only; the full agency-correspondence tracker lives in `DATA_LICENSES.md`.
+- README sources table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append. The README table lists sources active in the private operator pipeline; the full agency/source-use tracker lives in `DATA_LICENSES.md`.
 - New scalar/compound transform = 3 places simultaneously or loader rejects: enum in `src/types/config.ts` (`ScalarTransformName`/`CompoundTransformName`) + handler in `src/transforms.ts` + allowlist in `src/config/loader.ts`.
 
 ### Research-first rule
 
-- **Exhaust all research options before sending the first contact email.** Hunt national open-data portals (CKAN/Aporta/data.gov.\* listings), register pages, ToS / disclaimer text, and any public license declarations. Only send the permission email once research is genuinely exhausted and classification is still Unknown or under-verified.
+- **Exhaust all research options before sending the first contact email.** Hunt national open-data portals (CKAN/Aporta/data.gov.\* listings), register pages, ToS / disclaimer text, robots policy, and any public license declarations. Only send the permission email once research is genuinely exhausted and private storage/caching posture is still Unknown or under-verified.
 - **Never send a follow-up or clarifier before the 30-day fallback window expires.** A second email asking the same question is a duplicate request — agencies treat it as noise and it does not earn a faster reply.
-- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (the email record of source — correspondence row + license detail, including any register-specific contact surfaced for the eventual follow-up) + `docs/source-onboarding-checklist.md` (in-flight row: Source/Sent/Follow-up/Reply/Fallback). Add the `README.md` sources row only once the source is live or cleared.
+- Record findings in the proper docs in lockstep: `DATA_LICENSES.md` (the record of source — correspondence row + source-use detail, including storage/cache restrictions and any register-specific contact surfaced for the eventual follow-up) + `docs/source-onboarding-checklist.md` (in-flight row: Source/Sent/Follow-up/Reply/Fallback). Add the `README.md` sources row only once the source is active in the private pipeline or cleared for implementation.
 - After recon on an already-emailed agency: update docs, move on to the next source. Wait until the original 30-day timeline expires before sending anything else to that agency.
 - Exception — surfacing a new fact materially changes the ask (not "please confirm what we already asked"). Rare. Default is no.
 
@@ -61,7 +62,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Headerful files using explicit `columns`: `skip_rows: 1` discards the file's own header so `columns` overrides cleanly. The parser asserts the discarded header's cell count equals `columns` length (csv + sheet paths) — width drift means an upstream column add/remove that positional mapping would silently shuffle.
 - Ragged CSV rows (cell count ≠ header) fail the parse: short rows silently null trailing fields, long rows silently drop cells. Known non-tabular rows (e.g. an Oracle "N rows selected." trailer): bound with `allowed_ragged_rows` (default 0).
 - Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. Multi-table pages: `sheet:` (name or index, same as xls) — SheetJS names them `Sheet1`, `Sheet2`, ... in order.
-- Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't publish a wrong-size fleet silently.
+- Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't write a wrong-size private artifact silently.
 - PDF cover/preface pages (text, zero anchors by design): `pdf.allowed_anchorless_pages` (default 0) bounds how many text-bearing pages may yield no `anchor_pattern` matches. Beyond the budget the parse fails naming the pages (a drifted register page drops its fleet slice and PDF sources can't use `record_count`); zero rows overall always fails regardless of budget. Declare cover pages explicitly — position-based tolerance would silently forgive a drifted first page.
 
 ## Architecture invariants
@@ -77,8 +78,9 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 ## Distribution model
 
-- Source-available code (Polyform Shield 1.0.0 + Supplemental Terms). Forks self-host against own R2 + own per-source license assessment.
-- Operator deployment must remain non-commercial for lifetime of any Personal-use source ingested.
+- Source-available code (Polyform Shield 1.0.0 + Supplemental Terms). Forks self-host against own R2 + own per-source source-use assessment.
+- Normalized output is private to Ashley-operated applications only. No public API, public download, public query surface, or public dataset publication.
+- Operator deployment must remain non-commercial for lifetime of any Private-use source ingested.
 
 ## GitHub Actions
 
@@ -116,9 +118,9 @@ Never: stack feature + unrelated docs because "commit + push" was said; call a m
 - Prose docs carry intent, rationale, and license/legal facts — never restate what `sources/*.yaml`, `src/schema.ts`, or other code already states. If a reader can get it from the source, link; don't transcribe. Per-source CSV mechanics, field mappings, and schema field lists belong in the YAML/schema, not in prose.
 - Don't create new top-level doc files unilaterally. If work seems to call for one, ask first; answer is usually "fold into an existing one". Exception: `sources/<id>.yaml`, `fixtures/<id>/`, other source-onboarding artifacts in the standard workflow.
 - Required updates (not optional) when underlying state changes:
-  - `DATA_LICENSES.md` — when a source is added or its license posture changes.
-  - `README.md` sources table (live/cleared sources) + `README.md` `## Attribution` block — alongside any new `sources/<id>.yaml`.
+  - `DATA_LICENSES.md` — when a source is added or its source-use posture changes.
+  - `README.md` sources table (private-pipeline/cleared sources) + `README.md` `## Attribution` block — alongside any new `sources/<id>.yaml`.
   - `PRD.md` — only when goals, requirements, or constraints shift. It is planning, not a shipped-implementation log; do not restate source YAML or schema here.
-- `DATA_LICENSES.md` is the single record of source for agency correspondence (every country contacted: email, sent/reply dates, status) and license posture. It is a flat tracker, not a reply archive: the agency's email thread is the complete verbatim record. Into the tracker capture only what downstream needs — status, license posture, and any license/attribution terms that must be quoted exactly (never paraphrased) so the `README.md` `## Attribution` block can cite them. Do not transcribe full replies into the table, and do not duplicate the table into other docs.
+- `DATA_LICENSES.md` is the single record of source for agency correspondence (every country contacted: email, sent/reply dates, status) and source-use posture. It is a flat tracker, not a reply archive: the agency's email thread is the complete verbatim record. Into the tracker capture only what downstream needs — status, source-use posture, storage/cache restrictions, and any license/attribution terms that must be quoted exactly (never paraphrased) so the `README.md` `## Attribution` block can cite them. Do not transcribe full replies into the table, and do not duplicate the table into other docs.
 - `docs/source-onboarding-checklist.md`: triage worklist only. Tracking tables stay bare (Source/Sent/Follow-up/Reply/Fallback) — contact provenance, names, phones, and prefixes belong in `DATA_LICENSES.md`, not here.
 - Inline code comments: WHY only (per Hard prohibitions WHAT-vs-WHY rule).
