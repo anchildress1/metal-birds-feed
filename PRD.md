@@ -231,8 +231,6 @@ R2 storage cost. The whole point is that this fits in the free tier. If FAA + TC
 
 **ICAO type-code source (data, non-blocking).** FAA stores manufacturer + model strings but not always the ICAO type designator (e.g., `B738`). Mapping requires a separate ICAO type-code lookup table (~12k entries, available from ICAO Doc 8643 or community-maintained CSVs). Decision: bundle a lookup table in the repo, or skip `icao_type_code` for FAA records?
 
-**FAA UNIQUE ID vs. N-number for `source_id` (engineering, leaning UNIQUE ID).** N-numbers are reissued; UNIQUE ID is permanent per registration. Spec currently assumes UNIQUE ID. Confirm before R0.5 wires the R2 paths.
-
 **Georgia GCAA data accessibility (data, blocking R3.2 only — does not block v1, v2, or v3).** Does GCAA publish a bulk-downloadable aircraft register? If not, what's actually available — scrapeable web search, PDFs, FOIA-equivalent request, nothing? R3.1 is the time-boxed research to answer this. Outcome shapes whether v4 is "another easy config" or "build a scraper."
 
 **Per-source license terms (legal, settled framework).** Code license: Polyform Shield 1.0.0 (source-available, no commercial use by competitors). Source data licenses are per-source under CC.1: FAA = Open (US public domain); TC-CA = Open (OGL-Canada, attribution); CAA NZ = Personal-use (CC.2 email pending); CASA AU = Open (CC BY 4.0, no permission email required); UK CAA = Restrictive, excluded. Per-source attribution and permission status tracked in `DATA_LICENSES.md`.
