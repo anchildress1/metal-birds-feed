@@ -11,7 +11,7 @@
 
 `metal-birds-watch` displays live ADS-B traffic but has no way to enrich a tail number or ICAO hex code with anything beyond what the ADS-B feed alone provides. Existing enrichment APIs (Aviation Edge, OpenSky's commercial tier, etc.) are paid, rate-limited, or both. National aviation registries (FAA, Transport Canada, CAA NZ, GCAA, CASA, EU member states, UK CAA, etc.) publish data of varying quality, accessibility, and licensing — some clean monthly bulk CSVs under open licenses, some web search interfaces, some PDF dumps, some paid Excel under restrictive single-PC licenses. Painful to consume directly.
 
-`metal-birds-feed` solves this by translating each national registry into a normalized SQLite artifact, stored in a private Cloudflare R2 bucket (free tier), for O(1) lookup by registration ID and ICAO hex from Ashley-operated applications. One translation engine, many config-driven source mappings.
+`metal-birds-feed` solves this by translating each national registry into a normalized SQLite artifact, stored in a private Cloudflare R2 bucket (free tier), for fast indexed lookup by registration ID and ICAO hex from Ashley-operated applications. One translation engine, many config-driven source mappings.
 
 ---
 
@@ -23,7 +23,7 @@
    - **Netherlands ILT** (PH-prefix, ~3k aircraft). CC-0 (public domain) per data.overheid.nl. **No CC.2 permission email needed** — ships independently of any agency reply. Published as OpenDocument Spreadsheet (.ods), filename includes a date stamp that requires a small discovery step. Adds the spreadsheet parser path to the engine (R2.6), which also unblocks IAA Ireland later.
    - **CAA NZ** (ZK-prefix, ~5k aircraft). CSV at a stable URL. License is "personal use" (CC.1 Private-use) — private operator R2 only, CC.3 applies. CC.2 permission email gates slotting only if private caching is not clear from public terms.
 
-   v3 is "complete" when both ship. NL is the no-gate path that drives the parser-extension work; NZ is the email-gated path that runs in parallel. This milestone tests the engine against two independent schema dialects, two file formats, and the cross-cutting permission protocol in one phase.
+   v3 is "complete" when both ship. NL is the no-gate path that drives the parser-extension work; NZ is the private-caching-gated path (email only if public terms don't already clear it) that runs in parallel. This milestone tests the engine against two independent schema dialects, two file formats, and the cross-cutting permission protocol in one phase.
 
 4. **Georgia (country) registry, GCAA.** 4L prefix, small fleet (~hundreds of aircraft). Sentimental priority — operator's site lives there. First source where we may not have a clean bulk download; doubles as the proving ground for the long tail of registries that publish data inconveniently. _(v4)_
 
@@ -147,17 +147,17 @@ This is the deliberate trade: operator costs stay $0 and output stays private re
 
 ### Could-Have (P2) — Third-registry milestone, v3
 
-v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drives the spreadsheet parser path) and **CAA NZ** (email-gated, ships when reply lands or 30-day timeout passes). Both must be in R2 before v3 is "complete."
+v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drives the spreadsheet parser path) and **CAA NZ** (private-caching-gated, ships once caching posture is cleared — by research or by a permission reply/30-day timeout). Both must be in R2 before v3 is "complete."
 
-#### CAA NZ track (email-gated)
+#### CAA NZ track (private-caching-gated)
 
 **R2.1 NZ CAA source config.** New file `sources/nz-caa.yaml`. Single national registry, ZK-prefix, ~5k aircraft. CAA NZ publishes the full register as a CSV at a stable URL (https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv). No engine changes. Same canonical schema.
 
 **R2.2 NZ field-coverage parity.** Document fields CAA NZ does not provide. Null-rather-than-invent rule unchanged.
 
-**R2.3 NZ permission protocol.** Per CC.2, send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz if public terms do not clear private caching. CAA NZ classifies as **Private-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
+**R2.3 NZ permission protocol.** Per CC.2, research public terms for CAA NZ first. If they clear private caching, no email is needed. Otherwise send the agency permission email (template at `docs/agency-permission-request.md`) to info@caa.govt.nz. CAA NZ classifies as **Private-use** under CC.1, so CC.3 (non-commercial operator deployment) applies.
 
-**Acceptance (NZ CAA track):** A consumer point-querying `aircraft/nz-caa.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ permission email sent and either honored or 30-day-timed-out, status recorded in `DATA_LICENSES.md`.
+**Acceptance (NZ CAA track):** A consumer point-querying `aircraft/nz-caa.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA and Canada. CAA NZ's private-caching posture is resolved — either cleared by public-terms research, or a permission email was sent and is either honored or 30-day-timed-out — status recorded in `DATA_LICENSES.md`.
 
 #### Netherlands ILT track (no-email path)
 

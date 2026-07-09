@@ -8,7 +8,7 @@
 </div>
 
 Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2 for
-O(1) tail-number and ICAO hex lookups. Inspired by
+fast, indexed tail-number and ICAO hex lookups. Inspired by
 [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + private operator
