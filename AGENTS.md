@@ -76,6 +76,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - The artifact PUT is gated on `content_hash` (sha256 over the sorted record set, in `db.ts`): unchanged set → no PUT. Registry data (`source_id`/`registration`/`icao_hex`) lives inside the SQLite, never in an R2 key — so it carries no key-escaping constraint.
 - FAA `UNIQUE ID` = `source_id`, never N-number. N-numbers are reissued; UNIQUE ID is permanent.
 - Duplicate `source_id` within a source: byte-identical rows are skipped. Differing rows resolve by recency (`resolveRecency` in `src/engine.ts`) only when a signal exists — a `cancelled` status never outranks a live one, checked before date; failing that, the row with the most recent known date wins. A collision with neither signal fails the row instead of guessing via file order — silently picking one would drop upstream data.
+- A mapping `lookup` with a declared `default`: an unrecognized value doesn't fail the row (the schema still represents it via the default), but `resolveLookup` logs `translate_lookup_default` — matching every other bounded mechanism in the engine (missing-id budget, ragged-row budget, anchorless-page budget), an unrecognized code should be visible, not silently blended into the default forever.
 
 ## Distribution model
 

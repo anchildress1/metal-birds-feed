@@ -126,7 +126,18 @@ export async function translate(
   let missingIdSkipped = 0;
   let duplicateSkipped = 0;
 
-  const ctx: TranslateRowContext = { config, joinMaps, missingSourceIdPolicy, seenRows, records };
+  const sourceIdMapping: FieldMapping = {
+    field: config.source_id,
+    transform: config.source_id_transform ?? 'trim_or_null',
+  };
+  const ctx: TranslateRowContext = {
+    config,
+    joinMaps,
+    missingSourceIdPolicy,
+    seenRows,
+    records,
+    sourceIdMapping,
+  };
   for (let i = 0; i < rows.length; i++) {
     const outcome = translateRow(rows[i], i, missingIdSkipped, ctx);
     if (outcome.status === 'skipped') {
@@ -207,6 +218,9 @@ interface TranslateRowContext {
   missingSourceIdPolicy: MissingSourceIdPolicy | null;
   seenRows: Map<string, Row>;
   records: Map<string, Aircraft>;
+  // config.source_id/source_id_transform never change across rows — built once per translate()
+  // call instead of allocating an identical FieldMapping object on every row.
+  sourceIdMapping: FieldMapping;
 }
 
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
@@ -218,12 +232,9 @@ function translateRow(
   missingIdSkipped: number,
   ctx: TranslateRowContext
 ): RowOutcome {
-  const { config, joinMaps, missingSourceIdPolicy, seenRows, records } = ctx;
+  const { config, joinMaps, missingSourceIdPolicy, seenRows, records, sourceIdMapping } = ctx;
   const merged = mergeJoins(row, config, joinMaps);
-  const rawId = resolveScalar(merged, {
-    field: config.source_id,
-    transform: config.source_id_transform ?? 'trim_or_null',
-  });
+  const rawId = resolveScalar(merged, sourceIdMapping, config.id);
   if (!rawId) {
     if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, missingIdSkipped)) {
       log('warn', 'translate_skip', {
@@ -391,21 +402,31 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
   return merged;
 }
 
+// A declared `default` absorbs any value the lookup table doesn't recognize, including a
+// genuinely new/drifted upstream code — the schema still represents it (via the default), but
+// with zero signal that a value the config author never anticipated came through. Every other
+// bounded-skip mechanism in this engine (missing-id budget, ragged-row budget, anchorless-page
+// budget) logs when it fires; this warns for the same reason, so a source that starts emitting an
+// unrecognized code is visible in the run log instead of silently blending into "other".
 function resolveLookup(
   value: string,
   lookup: Record<string, string>,
   defaultValue: string | null | undefined,
-  field: string
+  field: string,
+  source: string
 ): string | null {
   // hasOwn, not `!== undefined`: a cell equal to an inherited member ("valueOf", "__proto__")
   // must not return the prototype function.
   if (Object.hasOwn(lookup, value)) return lookup[value];
-  if (defaultValue !== undefined) return defaultValue;
+  if (defaultValue !== undefined) {
+    if (value !== '') log('warn', 'translate_lookup_default', { source, field, value });
+    return defaultValue;
+  }
   if (value === '') return null;
   throw new Error(`Unknown lookup value "${value}" for field "${field}"`);
 }
 
-function resolveCompound(row: Row, mapping: FieldMapping): string | null {
+function resolveCompound(row: Row, mapping: FieldMapping, source: string): string | null {
   const fields = mapping.fields ?? [];
   const transform = mapping.compound_transform;
   if (!transform) return mapping.default ?? null;
@@ -413,15 +434,15 @@ function resolveCompound(row: Row, mapping: FieldMapping): string | null {
   const transformed = applyCompound(transform, values);
   if (transformed === null) return mapping.default ?? null;
   if (mapping.lookup) {
-    return resolveLookup(transformed, mapping.lookup, mapping.default, fields.join(','));
+    return resolveLookup(transformed, mapping.lookup, mapping.default, fields.join(','), source);
   }
   return transformed;
 }
 
-function resolveScalar(row: Row, mapping: FieldMapping): string | null {
+function resolveScalar(row: Row, mapping: FieldMapping, source: string): string | null {
   if (mapping.constant !== undefined) return mapping.constant;
 
-  if (mapping.compound_transform) return resolveCompound(row, mapping);
+  if (mapping.compound_transform) return resolveCompound(row, mapping, source);
 
   const field = mapping.field;
   if (!field) return mapping.default ?? null;
@@ -430,7 +451,9 @@ function resolveScalar(row: Row, mapping: FieldMapping): string | null {
   const transformed = mapping.transform ? applyScalar(mapping.transform, raw) : raw;
   if (transformed === null) return mapping.default ?? null;
 
-  if (mapping.lookup) return resolveLookup(transformed, mapping.lookup, mapping.default, field);
+  if (mapping.lookup) {
+    return resolveLookup(transformed, mapping.lookup, mapping.default, field, source);
+  }
 
   return transformed === '' ? (mapping.default ?? null) : transformed;
 }
@@ -443,87 +466,94 @@ function resolveArray(row: Row, mapping: FieldMapping): string[] {
   return applyArray(mapping.array_transform, value);
 }
 
+// Module-level (not closures over `row`/`mapping` re-created per buildRecord call): buildRecord
+// runs once per parsed row, so per-row closure allocation is real overhead at FAA's ~300k-row
+// scale. Each helper takes the row/mapping it needs explicitly instead of capturing them.
+type FieldMap = Record<string, FieldMapping>;
+
+function scalarField(mapping: FieldMap, row: Row, key: string, source: string): string | null {
+  const fm = mapping[key];
+  if (!fm) return null;
+  return resolveScalar(row, fm, source);
+}
+
+function arrField(mapping: FieldMap, row: Row, key: string, source: string): string[] {
+  const fm = mapping[key];
+  if (!fm) return [];
+  if (fm.array_transform) return resolveArray(row, fm);
+  const v = scalarField(mapping, row, key, source);
+  return v ? [v] : [];
+}
+
+function numField(mapping: FieldMap, row: Row, key: string, source: string): number | null {
+  const v = scalarField(mapping, row, key, source);
+  if (v === null) return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+
+interface PartyFields {
+  name: string | null;
+  kind: string | null;
+  state: string | null;
+  country: string | null;
+}
+
+// owner/operator/legal_owner are all the same four sub-fields, keyed by prefix.
+function partyFields(mapping: FieldMap, row: Row, prefix: string, source: string): PartyFields {
+  return {
+    name: scalarField(mapping, row, `${prefix}.name`, source),
+    kind: scalarField(mapping, row, `${prefix}.kind`, source),
+    state: scalarField(mapping, row, `${prefix}.state`, source),
+    country: scalarField(mapping, row, `${prefix}.country`, source),
+  };
+}
+
 function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown {
   const m = config.mapping;
-
-  function scalar(key: string): string | null {
-    const fm = m[key];
-    if (!fm) return null;
-    return resolveScalar(row, fm);
-  }
-
-  function arr(key: string): string[] {
-    const fm = m[key];
-    if (!fm) return [];
-    if (fm.array_transform) return resolveArray(row, fm);
-    const v = scalar(key);
-    return v ? [v] : [];
-  }
-
-  function num(key: string): number | null {
-    const v = scalar(key);
-    if (v === null) return null;
-    const n = Number(v);
-    return Number.isNaN(n) ? null : n;
-  }
-
+  const s = config.id;
   return {
     source: config.id,
     source_id: sourceId,
-    registration: scalar('registration'),
-    icao_hex: scalar('icao_hex'),
-    icao_type_code: scalar('icao_type_code'),
-    status: scalar('status') ?? 'other',
-    country: scalar('country') ?? config.country,
-    manufacturer: scalar('manufacturer'),
-    model: scalar('model'),
-    serial_number: scalar('serial_number'),
-    year_manufactured: num('year_manufactured'),
-    airframe_type: scalar('airframe_type'),
-    category: scalar('category'),
-    build_certification: scalar('build_certification'),
-    airworthiness_class: scalar('airworthiness_class'),
-    operating_environment: scalar('operating_environment'),
-    operational_classes: arr('operational_classes'),
+    registration: scalarField(m, row, 'registration', s),
+    icao_hex: scalarField(m, row, 'icao_hex', s),
+    icao_type_code: scalarField(m, row, 'icao_type_code', s),
+    status: scalarField(m, row, 'status', s) ?? 'other',
+    country: scalarField(m, row, 'country', s) ?? config.country,
+    manufacturer: scalarField(m, row, 'manufacturer', s),
+    model: scalarField(m, row, 'model', s),
+    serial_number: scalarField(m, row, 'serial_number', s),
+    year_manufactured: numField(m, row, 'year_manufactured', s),
+    airframe_type: scalarField(m, row, 'airframe_type', s),
+    category: scalarField(m, row, 'category', s),
+    build_certification: scalarField(m, row, 'build_certification', s),
+    airworthiness_class: scalarField(m, row, 'airworthiness_class', s),
+    operating_environment: scalarField(m, row, 'operating_environment', s),
+    operational_classes: arrField(m, row, 'operational_classes', s),
     engine: {
-      manufacturer: scalar('engine.manufacturer'),
-      model: scalar('engine.model'),
-      type: scalar('engine.type'),
-      count: num('engine.count'),
-      horsepower: num('engine.horsepower'),
-      thrust_lbs: num('engine.thrust_lbs'),
+      manufacturer: scalarField(m, row, 'engine.manufacturer', s),
+      model: scalarField(m, row, 'engine.model', s),
+      type: scalarField(m, row, 'engine.type', s),
+      count: numField(m, row, 'engine.count', s),
+      horsepower: numField(m, row, 'engine.horsepower', s),
+      thrust_lbs: numField(m, row, 'engine.thrust_lbs', s),
     },
-    owner: {
-      name: scalar('owner.name'),
-      kind: scalar('owner.kind'),
-      state: scalar('owner.state'),
-      country: scalar('owner.country'),
-    },
-    operator: {
-      name: scalar('operator.name'),
-      kind: scalar('operator.kind'),
-      state: scalar('operator.state'),
-      country: scalar('operator.country'),
-    },
-    legal_owner: {
-      name: scalar('legal_owner.name'),
-      kind: scalar('legal_owner.kind'),
-      state: scalar('legal_owner.state'),
-      country: scalar('legal_owner.country'),
-    },
-    idera_authorised_party: scalar('idera_authorised_party'),
-    certification_date: scalar('certification_date'),
-    airworthiness_date: scalar('airworthiness_date'),
-    expiration_date: scalar('expiration_date'),
-    last_action_date: scalar('last_action_date'),
-    cruise_speed_ktas: num('cruise_speed_ktas'),
-    max_takeoff_weight_kg: num('max_takeoff_weight_kg'),
-    seats: num('seats'),
-    max_passengers: num('max_passengers'),
-    min_crew: num('min_crew'),
-    airworthiness_review_date: scalar('airworthiness_review_date'),
-    cancellation_reason: scalar('cancellation_reason'),
-    lien_status: scalar('lien_status'),
-    interdiction_code: scalar('interdiction_code'),
+    owner: partyFields(m, row, 'owner', s),
+    operator: partyFields(m, row, 'operator', s),
+    legal_owner: partyFields(m, row, 'legal_owner', s),
+    idera_authorised_party: scalarField(m, row, 'idera_authorised_party', s),
+    certification_date: scalarField(m, row, 'certification_date', s),
+    airworthiness_date: scalarField(m, row, 'airworthiness_date', s),
+    expiration_date: scalarField(m, row, 'expiration_date', s),
+    last_action_date: scalarField(m, row, 'last_action_date', s),
+    cruise_speed_ktas: numField(m, row, 'cruise_speed_ktas', s),
+    max_takeoff_weight_kg: numField(m, row, 'max_takeoff_weight_kg', s),
+    seats: numField(m, row, 'seats', s),
+    max_passengers: numField(m, row, 'max_passengers', s),
+    min_crew: numField(m, row, 'min_crew', s),
+    airworthiness_review_date: scalarField(m, row, 'airworthiness_review_date', s),
+    cancellation_reason: scalarField(m, row, 'cancellation_reason', s),
+    lien_status: scalarField(m, row, 'lien_status', s),
+    interdiction_code: scalarField(m, row, 'interdiction_code', s),
   };
 }

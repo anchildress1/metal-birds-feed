@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { describe, it, expect, beforeAll, spyOn } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
@@ -903,9 +903,20 @@ describe('engine — negative and edge cases', () => {
     // 'valueOf' is an inherited Object.prototype member; without hasOwn the lookup returns that
     // function, owner.kind becomes a Function, and the row fails schema validation.
     const files = new Map([['primary', Buffer.from('ID,REG,KIND\n1,N1,valueOf\n', 'utf8')]]);
-    const { records: r, stats } = await translate(config, files);
-    expect(stats.failed).toBe(0);
-    expect(r.get('1')?.owner.kind).toBeNull();
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { records: r, stats } = await translate(config, files);
+      expect(stats.failed).toBe(0);
+      expect(r.get('1')?.owner.kind).toBeNull();
+      // An unrecognized value silently absorbed by a declared default must still be visible in
+      // the run log — otherwise a source drifting to a new/unmapped code blends into "other"
+      // with zero signal, the one gap this engine's other bounded-skip mechanisms don't have.
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=translate_lookup_default');
+      expect(logged).toContain('value=valueOf');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('fails the run when a declared join matches zero rows', async () => {
