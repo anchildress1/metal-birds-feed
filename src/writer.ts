@@ -138,8 +138,10 @@ export class R2ArtifactWriter {
         S3_RETRY
       );
       return true;
-    } catch {
-      log('warn', 'artifact_missing_on_hash_match', { source });
+    } catch (err) {
+      // Carry the error: a 404 and an R2 outage are indistinguishable by outcome here, so the
+      // message is the only thing telling an operator which one they are triaging.
+      log('warn', 'artifact_missing_on_hash_match', { source, msg: errorMessage(err) });
       return false;
     }
   }
