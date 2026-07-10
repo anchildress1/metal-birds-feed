@@ -202,6 +202,71 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('rejects a primary that does not match a download.entries alias', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_bad_primary.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: REGISTER.CSV\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/primary and joins\[\].file must match/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a joins[].file that does not match a download.entries alias', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_bad_join_file.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, side: s.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: SIDE\n    key: K\n    on: K\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/primary and joins\[\].file must match/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a columns key that does not match primary or a joins[].file value', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_bad_columns_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\ncolumns:\n  regsiter: [REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/columns keys must match primary/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects allowed_ragged_rows on a non-csv format', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_ragged_non_csv.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/allowed_ragged_rows only applies to format/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects duplicate joins[].name values', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_dup_join_names.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, a: a.txt, b: b.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: a\n    key: K\n    on: K\n  - name: side\n    file: b\n    key: K\n    on: K\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/joins\[\].name values must be unique/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects an unknown top-level key instead of silently discarding it', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_unknown_key.yaml');
     writeFileSync(

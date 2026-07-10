@@ -187,7 +187,39 @@ const SourceConfigSchema = z
     {
       message: 'pdf.column_pos length must match columns[primary] length',
     }
-  );
+  )
+  // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's
+  // `files.get(config.primary)`), which is keyed by download.entries' own keys — a mismatched
+  // alias here only surfaces as a runtime "not found in downloaded files" error after a full
+  // download, instead of a config-time one.
+  .refine(
+    (c) => {
+      const aliases = new Set(Object.keys(c.download.entries));
+      return aliases.has(c.primary) && c.joins.every((j) => aliases.has(j.file));
+    },
+    { message: 'primary and joins[].file must match a download.entries alias' }
+  )
+  // columns is keyed by the same aliases (config.columns?.[config.primary], ?.[join.file]) — an
+  // unmatched key is never read, so its explicit column list silently falls back to
+  // header-inferred parsing instead of erroring.
+  .refine(
+    (c) => {
+      const aliases = new Set([c.primary, ...c.joins.map((j) => j.file)]);
+      return Object.keys(c.columns ?? {}).every((k) => aliases.has(k));
+    },
+    { message: 'columns keys must match primary or a joins[].file value' }
+  )
+  // parsePrimary/buildJoinMaps only ever forward allowed_ragged_rows into parseCSV — setting it
+  // on any other format is a silent no-op with zero ragged-row protection.
+  .refine((c) => c.allowed_ragged_rows === undefined || c.format === 'csv', {
+    message: 'allowed_ragged_rows only applies to format "csv"',
+  })
+  // buildJoinMaps builds `new Map([join.name, index])` entries — a duplicated name silently
+  // collapses to whichever join was resolved last, and mergeJoins then merges that one join's
+  // data under both declared names with no error at any point.
+  .refine((c) => new Set(c.joins.map((j) => j.name)).size === c.joins.length, {
+    message: 'joins[].name values must be unique',
+  });
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 
