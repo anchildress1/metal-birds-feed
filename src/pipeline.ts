@@ -60,7 +60,13 @@ export async function run(sourceId: string): Promise<RunResult> {
     config.cadence_days !== undefined &&
     hasCurrentArtifactState &&
     !dryRun &&
-    shouldSkip(priorState, config.cadence_days, new Date())
+    shouldSkip(priorState, config.cadence_days, new Date()) &&
+    // write()'s self-heal path (see writer.ts) only runs when write() is actually called —
+    // honoring a cadence skip on state alone would leave an externally deleted artifact 404ing
+    // for consumers for up to the full cadence window, silently reporting "cadence_skip" as if
+    // nothing were wrong. Checked last so it only costs a HEAD request when every cheaper
+    // condition already says this run would otherwise be skipped.
+    (await writer.artifactExists(sourceId))
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
     return {

@@ -126,7 +126,9 @@ export class R2ArtifactWriter {
   // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.
   // HEAD 404s surface as generic errors (not NoSuchKey, which is GET-only), so any non-transient
   // failure reads as "absent" — the false-negative cost is one redundant PUT, never a lost one.
-  private async artifactExists(source: string): Promise<boolean> {
+  // Public: pipeline.ts's cadence gate also needs this, to avoid honoring a cadence skip for a
+  // source whose artifact was deleted independently of its state (see pipeline.ts's run()).
+  async artifactExists(source: string): Promise<boolean> {
     if (this.dryRun) return true;
     try {
       await retry(
