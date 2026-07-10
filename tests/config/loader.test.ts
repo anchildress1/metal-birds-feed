@@ -54,7 +54,7 @@ describe('loadSourceConfig', () => {
       field: 'MARK',
       pattern: '^\\d+ rows selected\\.$',
     });
-    expect(config.allowed_ragged_rows).toBe(1);
+    expect(config.allowed_ragged_rows).toEqual({ carscurr: 1, carsownr: 1 });
     expect(config.mapping['airframe_type']).toMatchObject({
       compound_transform: 'tc_airframe',
       fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES'],
@@ -235,34 +235,49 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\ncolumns:\n  regsiter: [REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/columns keys must match primary/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/must match primary or a joins\[\]\.file value/i);
     } finally {
       unlinkSync(tmp);
     }
   });
 
-  it('rejects allowed_ragged_rows on a non-csv format with no joins', () => {
+  it('rejects a ragged budget on a non-csv primary', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_ragged_non_csv.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: { register: 1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/allowed_ragged_rows only applies to format/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /allowed_ragged_rows\[primary\] only applies to format/i
+      );
     } finally {
       unlinkSync(tmp);
     }
   });
 
   // buildJoinMaps parses joins as CSV regardless of the primary's format, so the budget is live.
-  it('accepts allowed_ragged_rows on a non-csv format that declares joins', () => {
+  it('accepts a ragged budget on a join of a non-csv-primary source', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_ragged_join.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods, extra: extra.csv }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: 1\njoins:\n  - name: ex\n    file: extra\n    on: ID\n    key: ID\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods, extra: extra.csv }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: { extra: 1 }\njoins:\n  - name: ex\n    file: extra\n    on: ID\n    key: ID\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(loadSourceConfig(tmp).allowed_ragged_rows).toBe(1);
+      expect(loadSourceConfig(tmp).allowed_ragged_rows).toEqual({ extra: 1 });
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a ragged budget keyed to an unknown file alias', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_ragged_bad_key.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: r.csv }\nprimary: register\ndelimiter: ','\nallowed_ragged_rows: { nope: 1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/must match primary or a joins\[\]\.file value/i);
     } finally {
       unlinkSync(tmp);
     }

@@ -145,7 +145,7 @@ const SourceConfigSchema = z
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
     skip_rows: z.number().int().nonnegative().optional(),
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
-    allowed_ragged_rows: z.number().int().nonnegative().optional(),
+    allowed_ragged_rows: z.record(z.string(), z.number().int().nonnegative()).optional(),
     allowed_missing_source_id_rows: z
       .strictObject({
         max: z.number().int().nonnegative(),
@@ -199,21 +199,21 @@ const SourceConfigSchema = z
     },
     { message: 'primary and joins[].file must match a download.entries alias' }
   )
-  // columns is keyed by the same aliases (config.columns?.[config.primary], ?.[join.file]) — an
-  // unmatched key is never read, so its explicit column list silently falls back to
-  // header-inferred parsing instead of erroring.
+  // columns and allowed_ragged_rows are both keyed by parsed-file alias (?.[config.primary],
+  // ?.[join.file]) — an unmatched key is never read, so it silently degrades to the default
+  // (header-inferred parsing / a zero ragged budget) instead of erroring.
   .refine(
     (c) => {
       const aliases = new Set([c.primary, ...c.joins.map((j) => j.file)]);
-      return Object.keys(c.columns ?? {}).every((k) => aliases.has(k));
+      const keys = [...Object.keys(c.columns ?? {}), ...Object.keys(c.allowed_ragged_rows ?? {})];
+      return keys.every((k) => aliases.has(k));
     },
-    { message: 'columns keys must match primary or a joins[].file value' }
+    { message: 'columns and allowed_ragged_rows keys must match primary or a joins[].file value' }
   )
-  // allowed_ragged_rows only ever reaches parseCSV: via parsePrimary when format is csv, and via
-  // buildJoinMaps, which parses every join as CSV whatever the primary's format. Absent both, it
-  // is a silent no-op with zero ragged-row protection.
-  .refine((c) => c.allowed_ragged_rows === undefined || c.format === 'csv' || c.joins.length > 0, {
-    message: 'allowed_ragged_rows only applies to format "csv" or to a source with joins',
+  // Joins are always parsed as CSV, but the primary only is when format says so — a ragged budget
+  // on a non-CSV primary is a no-op with zero ragged-row protection.
+  .refine((c) => c.allowed_ragged_rows?.[c.primary] === undefined || c.format === 'csv', {
+    message: 'allowed_ragged_rows[primary] only applies to format "csv"',
   })
   // buildJoinMaps builds `new Map([join.name, index])` entries — a duplicated name silently
   // collapses to whichever join was resolved last, and mergeJoins then merges that one join's

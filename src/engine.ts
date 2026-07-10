@@ -24,7 +24,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       trim: config.trim_all,
       columns: config.columns?.[config.primary],
       skip_rows: config.skip_rows,
-      allowed_ragged_rows: config.allowed_ragged_rows,
+      allowed_ragged_rows: config.allowed_ragged_rows?.[config.primary],
     });
   }
   if (config.format === 'xls') {
@@ -334,7 +334,7 @@ async function buildJoinMaps(
         delimiter: config.delimiter,
         trim: config.trim_all,
         columns: config.columns?.[join.file],
-        allowed_ragged_rows: config.allowed_ragged_rows,
+        allowed_ragged_rows: config.allowed_ragged_rows?.[join.file],
       });
       const index = new Map<string, Row>();
       for (const row of rows) {
