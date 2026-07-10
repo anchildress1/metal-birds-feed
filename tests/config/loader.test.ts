@@ -241,7 +241,7 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  it('rejects allowed_ragged_rows on a non-csv format', () => {
+  it('rejects allowed_ragged_rows on a non-csv format with no joins', () => {
     const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_ragged_non_csv.yaml');
     writeFileSync(
       tmp,
@@ -249,6 +249,20 @@ describe('loadSourceConfig', () => {
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/allowed_ragged_rows only applies to format/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  // buildJoinMaps parses joins as CSV regardless of the primary's format, so the budget is live.
+  it('accepts allowed_ragged_rows on a non-csv format that declares joins', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_ragged_join.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods, extra: extra.csv }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: 1\njoins:\n  - name: ex\n    file: extra\n    on: ID\n    key: ID\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(loadSourceConfig(tmp).allowed_ragged_rows).toBe(1);
     } finally {
       unlinkSync(tmp);
     }

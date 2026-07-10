@@ -209,10 +209,11 @@ const SourceConfigSchema = z
     },
     { message: 'columns keys must match primary or a joins[].file value' }
   )
-  // parsePrimary/buildJoinMaps only ever forward allowed_ragged_rows into parseCSV — setting it
-  // on any other format is a silent no-op with zero ragged-row protection.
-  .refine((c) => c.allowed_ragged_rows === undefined || c.format === 'csv', {
-    message: 'allowed_ragged_rows only applies to format "csv"',
+  // allowed_ragged_rows only ever reaches parseCSV: via parsePrimary when format is csv, and via
+  // buildJoinMaps, which parses every join as CSV whatever the primary's format. Absent both, it
+  // is a silent no-op with zero ragged-row protection.
+  .refine((c) => c.allowed_ragged_rows === undefined || c.format === 'csv' || c.joins.length > 0, {
+    message: 'allowed_ragged_rows only applies to format "csv" or to a source with joins',
   })
   // buildJoinMaps builds `new Map([join.name, index])` entries — a duplicated name silently
   // collapses to whichever join was resolved last, and mergeJoins then merges that one join's
