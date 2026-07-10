@@ -7,7 +7,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
 import { buildSqlite, hashRecords } from './db.js';
-import { log } from './logger.js';
+import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
 
@@ -25,8 +25,7 @@ export const isTransientS3Error = (err: unknown): boolean => {
 
 const S3_RETRY: RetryOptions = {
   isRetryable: isTransientS3Error,
-  onRetry: (attempt, err) =>
-    log('warn', 's3_retry', { attempt, msg: err instanceof Error ? err.message : String(err) }),
+  onRetry: (attempt, err) => log('warn', 's3_retry', { attempt, msg: errorMessage(err) }),
 };
 
 const S3_MAX_ATTEMPTS = 5;
@@ -178,7 +177,7 @@ export class R2ArtifactWriter {
       if (err instanceof NoSuchKey) return null;
       log('error', 'state_load_failed', {
         source,
-        msg: err instanceof Error ? err.message : String(err),
+        msg: errorMessage(err),
       });
       throw err;
     }

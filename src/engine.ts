@@ -11,7 +11,7 @@ import {
   type Row,
 } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
-import { log } from './logger.js';
+import { log, errorMessage } from './logger.js';
 
 // Dispatches the primary-file parse based on `config.format`. Each branch routes to the parser for
 // that format; the hucre spreadsheet path (ods/xlsx) is the fallthrough. Joins always read CSV —
@@ -304,7 +304,7 @@ function translateRow(
       source: config.id,
       row: i + 2,
       source_id: rawId,
-      msg: err instanceof Error ? err.message : String(err),
+      msg: errorMessage(err),
     });
     return { status: 'failed' };
   }

@@ -22,7 +22,10 @@ const mockLog = mock();
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
 void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
-void mock.module('../src/logger.js', () => ({ log: mockLog }));
+void mock.module('../src/logger.js', () => ({
+  log: mockLog,
+  errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
 void mock.module('../src/writer.js', () => ({
   R2ArtifactWriter: class {
     constructor(...args: unknown[]) {
