@@ -276,13 +276,28 @@ function translateRow(
       return { status: 'failed' };
     }
 
-    // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a
-    // balloon under the same mark). Keep whichever row is actually newer instead of trusting
-    // file position — resolve via status (a cancellation never outranks a live record), falling
-    // back to the most recent known date. A collision with neither signal isn't a reissue; it
-    // means the source_id assumption is wrong and last-wins would silently drop upstream data.
     const incumbent = priorRow && records.get(rawId);
     if (incumbent) {
+      // Raw rows can differ in a field the mapping never surfaces (e.g. ANAC's OPERADORES lists a
+      // second party's UF differently between publishes) while mapping to the identical canonical
+      // record. The raw-row exact-dup check above missed this; check the mapped record too before
+      // falling to recency resolution, which would otherwise fail on a collision that isn't one.
+      if (Bun.deepEquals(parsed.data, incumbent)) {
+        log('warn', 'translate_skip', {
+          source: config.id,
+          row: i + 2,
+          source_id: rawId,
+          reason:
+            'exact duplicate row (canonical record identical; raw fields differ outside the schema)',
+        });
+        return { status: 'skipped', reason: 'duplicate' };
+      }
+
+      // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a
+      // balloon under the same mark). Keep whichever row is actually newer instead of trusting
+      // file position — resolve via status (a cancellation never outranks a live record), falling
+      // back to the most recent known date. A collision with neither signal isn't a reissue; it
+      // means the source_id assumption is wrong and last-wins would silently drop upstream data.
       const resolution = resolveRecency(parsed.data, incumbent);
       if (!resolution) {
         log('error', 'translate_duplicate_id', {
