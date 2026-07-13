@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, spyOn } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceState } from '../src/cadence.js';
@@ -384,6 +384,36 @@ describe('R2ArtifactWriter — state', () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     expect(await writer.readState('faa')).toEqual(state);
     expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('R2ArtifactWriter — artifactExists', () => {
+  it('returns true when HEAD resolves', async () => {
+    mockSend.mockResolvedValueOnce({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.artifactExists('faa')).toBe(true);
+  });
+
+  it('short-circuits to true in dry-run without a HEAD', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, true);
+    expect(await writer.artifactExists('faa')).toBe(true);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('returns false and logs the underlying error when HEAD fails', async () => {
+    mockSend.mockRejectedValueOnce(s3Error('Access Denied', 403));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await writer.artifactExists('faa')).toBe(false);
+      // A 404 and an R2 outage both land here — without the message an operator can't tell them
+      // apart, and a transport failure reads as a benign missing artifact.
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=artifact_missing_on_hash_match');
+      expect(logged).toContain('Access Denied');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 });
 

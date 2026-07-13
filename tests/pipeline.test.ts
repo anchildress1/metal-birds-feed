@@ -16,12 +16,16 @@ const mockR2Write = mock();
 const mockR2Constructor = mock();
 const mockReadState = mock();
 const mockWriteState = mock();
+const mockArtifactExists = mock();
 const mockLog = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
 void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
-void mock.module('../src/logger.js', () => ({ log: mockLog }));
+void mock.module('../src/logger.js', () => ({
+  log: mockLog,
+  errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
 void mock.module('../src/writer.js', () => ({
   R2ArtifactWriter: class {
     constructor(...args: unknown[]) {
@@ -31,6 +35,7 @@ void mock.module('../src/writer.js', () => ({
     write = mockR2Write;
     readState = mockReadState;
     writeState = mockWriteState;
+    artifactExists = mockArtifactExists;
   },
 }));
 
@@ -71,6 +76,7 @@ beforeEach(() => {
   mockR2Constructor.mockReset();
   mockReadState.mockReset();
   mockWriteState.mockReset();
+  mockArtifactExists.mockReset();
   mockLog.mockReset();
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
@@ -86,6 +92,7 @@ beforeEach(() => {
   });
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
+  mockArtifactExists.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -149,6 +156,31 @@ describe('run', () => {
     expect(result.skipped).toBe(true);
     expect(mockDownload).not.toHaveBeenCalled();
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('does not honor a cadence skip when the artifact is missing (self-heal)', async () => {
+    // Otherwise-skippable per cadence, but the artifact object itself is gone (e.g. deleted
+    // independently of its state) — writer.write()'s self-heal path only runs when write() is
+    // actually called, so honoring the skip here would leave the artifact 404ing for consumers
+    // until the cadence window passes.
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({
+      ...CONFIG,
+      cadence_days: 30,
+    });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+    mockArtifactExists.mockResolvedValueOnce(false);
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip cadence-gated sources when prior state has no content hash', async () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { describe, it, expect, beforeAll, spyOn } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
@@ -903,9 +903,20 @@ describe('engine — negative and edge cases', () => {
     // 'valueOf' is an inherited Object.prototype member; without hasOwn the lookup returns that
     // function, owner.kind becomes a Function, and the row fails schema validation.
     const files = new Map([['primary', Buffer.from('ID,REG,KIND\n1,N1,valueOf\n', 'utf8')]]);
-    const { records: r, stats } = await translate(config, files);
-    expect(stats.failed).toBe(0);
-    expect(r.get('1')?.owner.kind).toBeNull();
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { records: r, stats } = await translate(config, files);
+      expect(stats.failed).toBe(0);
+      expect(r.get('1')?.owner.kind).toBeNull();
+      // An unrecognized value silently absorbed by a declared default must still be visible in
+      // the run log — otherwise a source drifting to a new/unmapped code blends into "other"
+      // with zero signal, the one gap this engine's other bounded-skip mechanisms don't have.
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=translate_lookup_default');
+      expect(logged).toContain('value=valueOf');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('fails the run when a declared join matches zero rows', async () => {
@@ -1287,14 +1298,43 @@ describe('engine — negative and edge cases', () => {
       registration: 'REG',
       mapping: { registration: { field: 'REG' } },
     };
-    // EXTRA is not mapped, so both rows produce identical canonical records. With no status or
-    // date signal to tell them apart, this isn't a reissue — it's an ambiguous id collision, and
-    // guessing via file order would silently drop upstream data. It must fail, not guess.
-    const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
+    // REG differs, so the canonical records genuinely disagree. With no status or date signal to
+    // tell them apart, this isn't a reissue — it's an ambiguous id collision, and guessing via
+    // file order would silently drop upstream data. It must fail, not guess.
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
     const { records, stats } = await translate(config, files);
     expect(stats.failed).toBe(1);
     // The first row still succeeded before the second one collided with it.
     expect(records.size).toBe(1);
+  });
+
+  it('skips a duplicate whose canonical record matches despite differing raw fields', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-canonical-match',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: { registration: { field: 'REG' } },
+    };
+    // EXTRA is not mapped, so both rows produce identical canonical records even though the raw
+    // rows differ (mirrors ANAC's RAB: a nested field the mapping never reads changes between
+    // publishes). The raw-row exact-dup check misses this since EXTRA differs; the canonical
+    // check must catch it instead of falling through to a spurious "no distinguishing signal"
+    // failure — there is nothing ambiguous about two rows that map to the same output.
+    const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(stats.skipped).toBe(1);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
   });
 
   it('does not let duplicate skips consume the missing-source_id budget', async () => {

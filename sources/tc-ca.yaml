@@ -99,9 +99,11 @@ allowed_missing_source_id_rows:
   field: MARK
   pattern: '^\d+ rows selected\.$'
 
-# The same footer is the export's only ragged row (one cell vs the declared column count);
-# any other width mismatch is silent field loss and must fail the parse.
-allowed_ragged_rows: 1
+# Both exports carry the same footer, and it is each one's only ragged row (one cell vs the
+# declared column count); any other width mismatch is silent field loss and must fail the parse.
+allowed_ragged_rows:
+  carscurr: 1
+  carsownr: 1
 
 joins:
   - name: ownr
