@@ -305,7 +305,7 @@ describe('main', () => {
 
     await main();
 
-    expect(mockDownload.mock.calls.length).toBe(yamlCount);
+    expect(mockDownload.mock.calls).toHaveLength(yamlCount);
   });
 
   it('opens a staleness issue when source is overdue and token is present', async () => {
