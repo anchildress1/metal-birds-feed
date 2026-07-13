@@ -3,6 +3,11 @@ import { dirname, join } from 'node:path';
 
 export type LogLevel = 'info' | 'warn' | 'error';
 
+// Every catch site that logs an error's message needs this same narrowing — `unknown` catch
+// values aren't always Error instances (a rejected fetch, a thrown string/object).
+export const errorMessage = (err: unknown): string =>
+  err instanceof Error ? err.message : String(err);
+
 const LOG_PATH = join(process.cwd(), 'logs', 'pipeline.log');
 const ESCAPED_QUOTE = String.raw`\"`;
 let logDirReady = false;

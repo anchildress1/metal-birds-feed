@@ -25,18 +25,21 @@ const lowercase = (value: string): string => value.trim().toLowerCase();
 
 const uppercase = (value: string): string => value.trim().toUpperCase();
 
+// Number(), not parseInt/parseFloat: parse* silently accept a numeric prefix and ignore the rest
+// ("1,800" -> 1, "180 HP" -> 180), which would corrupt a thousands-separated or unit-suffixed
+// upstream cell into a plausible-looking but wrong value instead of nulling it.
 const intOrNull = (value: string): string | null => {
   const v = value.trim();
   if (v.length === 0) return null;
-  const n = Number.parseInt(v, 10);
-  return Number.isNaN(n) ? null : String(n);
+  const n = Number(v);
+  return Number.isFinite(n) ? String(Math.trunc(n)) : null;
 };
 
 const floatOrNull = (value: string): string | null => {
   const v = value.trim();
   if (v.length === 0) return null;
-  const n = Number.parseFloat(v);
-  return Number.isNaN(n) ? null : String(n);
+  const n = Number(v);
+  return Number.isFinite(n) ? String(n) : null;
 };
 
 const validateAndFormatYMD = (y: string, m: string, d: string): string | null => {
@@ -362,6 +365,8 @@ const focaDateArrayOrNull = (value: string): string | null => {
     return null;
   }
   if (!Array.isArray(parsed) || parsed.length !== 3) return null;
+  // Array.isArray narrows `unknown` to `any[]` (a lib.es5.d.ts quirk, not `unknown[]`) — this cast
+  // re-narrows to `unknown[]` so the destructure below can't silently propagate `any`.
   const ymd = parsed as unknown[];
   const y = ymd[0];
   const m = ymd[1];

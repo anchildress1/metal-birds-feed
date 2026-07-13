@@ -6,7 +6,7 @@ import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
 import { R2ArtifactWriter } from './writer.js';
-import { log } from './logger.js';
+import { log, errorMessage } from './logger.js';
 import {
   shouldSkip,
   buildStalenessEntry,
@@ -60,7 +60,13 @@ export async function run(sourceId: string): Promise<RunResult> {
     config.cadence_days !== undefined &&
     hasCurrentArtifactState &&
     !dryRun &&
-    shouldSkip(priorState, config.cadence_days, new Date())
+    shouldSkip(priorState, config.cadence_days, new Date()) &&
+    // write()'s self-heal path (see writer.ts) only runs when write() is actually called —
+    // honoring a cadence skip on state alone would leave an externally deleted artifact 404ing
+    // for consumers for up to the full cadence window, silently reporting "cadence_skip" as if
+    // nothing were wrong. Checked last so it only costs a HEAD request when every cheaper
+    // condition already says this run would otherwise be skipped.
+    (await writer.artifactExists(sourceId))
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
     return {
@@ -190,7 +196,7 @@ const closeStalenessIssues = async (source: string, token: string, repo: string)
     if (r.status === 'rejected')
       log('error', 'staleness_close_failed', {
         source,
-        msg: r.reason instanceof Error ? r.reason.message : String(r.reason),
+        msg: errorMessage(r.reason),
       });
     else if (!r.value.ok)
       log('error', 'staleness_close_failed', { source, status: r.value.status });
@@ -218,13 +224,16 @@ const justChanged = (value: RunResult, dryRun: boolean): boolean =>
   value.new_state !== null &&
   value.new_state.last_content_change === value.new_state.last_run;
 
-const closeWithLogging = (source: string, token: string, repo: string): Promise<void> =>
-  closeStalenessIssues(source, token, repo).catch((err) =>
+const closeWithLogging = async (source: string, token: string, repo: string): Promise<void> => {
+  try {
+    await closeStalenessIssues(source, token, repo);
+  } catch (err) {
     log('error', 'staleness_close_error', {
       source,
-      msg: err instanceof Error ? err.message : String(err),
-    })
-  );
+      msg: errorMessage(err),
+    });
+  }
+};
 
 interface Failure {
   source: string;
@@ -251,7 +260,7 @@ const processResults = (
 
   for (const [i, result] of results.entries()) {
     if (result.status === 'rejected') {
-      const msg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      const msg = errorMessage(result.reason);
       log('error', 'pipeline_failed', { source: sources[i], msg });
       failures.push({ source: sources[i] ?? 'unknown', msg });
       continue;

@@ -724,13 +724,14 @@ describe('parseJson', () => {
 
 const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
 const mvBuf = (): Buffer => readFileSync(MV_PDF);
-// Mirrors sources/mv-caa.yaml: rotated grid, fields on y, records anchored on the 8Q mark.
+// Mirrors sources/mv-caa.yaml: standard row-per-aircraft grid, fields on x, records anchored on
+// the 8Q mark along y.
 const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
-  field_axis: 'y',
+  field_axis: 'x',
   anchor_pattern: '^8Q-[A-Z]{3}$',
   column_pos: [
-    746.8, 713, 685.5, 616.1, 551.8, 467.8, 383.8, 299.8, 217.9, 205.7, 184.5, 157, 87.6, 66, 40.7,
-    27,
+    789.7, 754.5, 725.3, 652.3, 584.6, 496.3, 408, 319.7, 233.6, 220.8, 198, 170.1, 96.7, 74, 47.4,
+    33,
   ],
   columns: [
     'status',
