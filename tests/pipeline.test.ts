@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from 'bun:test';
-import { readFileSync, rmSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
@@ -68,6 +68,7 @@ beforeEach(() => {
   process.env['MBF_R2_SECRET_ACCESS_KEY'] = 'secret';
   process.env['MBF_R2_BUCKET_NAME'] = 'bucket';
   process.env['DRY_RUN'] = 'true';
+  delete process.env['REFRESH_SOURCE'];
 
   mockLoadSourceConfig.mockReset();
   mockDownload.mockReset();
@@ -300,9 +301,11 @@ describe('main', () => {
   it('falls back to every sources/*.yaml file when REFRESH_SOURCE is unset', async () => {
     // No REFRESH_SOURCE set — resolveSources must read the real sources/ directory instead of
     // running a single hardcoded source, fanning out across every real config in the repo.
+    const yamlCount = readdirSync('sources').filter((f) => f.endsWith('.yaml')).length;
+
     await main();
 
-    expect(mockDownload.mock.calls.length).toBeGreaterThan(1);
+    expect(mockDownload.mock.calls.length).toBe(yamlCount);
   });
 
   it('opens a staleness issue when source is overdue and token is present', async () => {
