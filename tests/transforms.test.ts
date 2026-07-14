@@ -31,6 +31,12 @@ describe('applyScalar', () => {
     it('returns null for non-numeric', () => expect(applyScalar('int_or_null', 'abc')).toBeNull());
     it('truncates decimal', () => expect(applyScalar('int_or_null', '2.9')).toBe('2'));
     it('handles whitespace', () => expect(applyScalar('int_or_null', ' 42 ')).toBe('42'));
+    // Number.parseInt would silently stop at the comma and return 1 — a wrong value that looks
+    // plausible — instead of nulling a field parse* can't actually make sense of.
+    it('returns null instead of a truncated prefix for a thousands-separated value', () =>
+      expect(applyScalar('int_or_null', '1,800')).toBeNull());
+    it('returns null instead of a truncated prefix for a unit-suffixed value', () =>
+      expect(applyScalar('int_or_null', '180 HP')).toBeNull());
   });
 
   describe('float_or_null', () => {
@@ -39,6 +45,8 @@ describe('applyScalar', () => {
     it('returns null for non-numeric', () =>
       expect(applyScalar('float_or_null', 'N/A')).toBeNull());
     it('preserves decimals', () => expect(applyScalar('float_or_null', '3.14')).toBe('3.14'));
+    it('returns null instead of a truncated prefix for a thousands-separated value', () =>
+      expect(applyScalar('float_or_null', '1,800')).toBeNull());
   });
 
   describe('date_yyyymmdd_or_null', () => {

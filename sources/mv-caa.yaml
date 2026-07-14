@@ -25,30 +25,31 @@ primary: register
 delimiter: ','
 format: pdf
 
-# The register is a single positioned table rotated 90°: each aircraft is one x-column, each
-# field is a y-band. `column_pos` are the value-band y-centers (paired by index with `columns`),
-# ordered top-of-page (highest y) to bottom; records are anchored on the 8Q-XXX nationality mark.
+# A standard row-per-aircraft table: each aircraft is one y-row, each field is an x-band.
+# `column_pos` are the value-band x-centers (paired by index with `columns`), ordered left-of-page
+# (lowest x) to right; records are anchored on the 8Q-XXX nationality mark. Re-derived 2026-07-13
+# after the register dropped its prior 90°-rotated layout — same field order, opposite axis.
 # See PdfConfig in src/types/config.ts for the extraction model.
 pdf:
-  field_axis: y
+  field_axis: x
   anchor_pattern: '^8Q-[A-Z]{3}$'
   column_pos:
-    - 746.8 # status
-    - 713 # date_revision
-    - 685.5 # date_issue
-    - 616.1 # idera
-    - 551.8 # mortgage
-    - 467.8 # other_specifics
-    - 383.8 # basis
-    - 299.8 # legal_owner
-    - 217.9 # owner (registered)
-    - 205.7 # year
-    - 184.5 # serial
-    - 157 # mtow
-    - 87.6 # mfg
-    - 66 # mark
-    - 40.7 # cert_no
-    - 27 # sn
+    - 789.7 # status
+    - 754.5 # date_revision
+    - 725.3 # date_issue
+    - 652.3 # idera
+    - 584.6 # mortgage
+    - 496.3 # other_specifics
+    - 408 # basis
+    - 319.7 # legal_owner
+    - 233.6 # owner (registered)
+    - 220.8 # year
+    - 198 # serial
+    - 170.1 # mtow
+    - 96.7 # mfg
+    - 74 # mark
+    - 47.4 # cert_no
+    - 33 # sn
 
 columns:
   register:

@@ -33,7 +33,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Coverage thresholds (`bunfig.toml`): 85% lines/functions/statements. Do not lower. Branch coverage is not enforced — `bun test` cannot threshold branches (line/function/statement only).
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground-truth. Change only with schema or config change.
-- `src/pipeline.ts` excluded from coverage (untestable entry point).
+- `src/pipeline.ts` holds real business logic (cadence gating, staleness-issue open/close, failure-summary rendering) and is covered like any other module via `mock.module` on its dependencies (`tests/pipeline.test.ts`). Only the top-level `if (isCliEntryPoint())` bootstrap is inherently untested — it only runs when the file is invoked as a script, not imported.
 - Local-validation test files removed before commit.
 
 ## Source onboarding (PRD §CC.x — read it first)
@@ -60,7 +60,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Single-file (non-zip) download: `download.format: file` with exactly one `entries` alias.
 - Banner/metadata rows that aren't real records: `source_id_transform` returning `null` for non-records; pair with `allowed_missing_source_id_rows` to bound skip.
 - Headerful files using explicit `columns`: `skip_rows: 1` discards the file's own header so `columns` overrides cleanly. The parser asserts the discarded header's cell count equals `columns` length (csv + sheet paths) — width drift means an upstream column add/remove that positional mapping would silently shuffle.
-- Ragged CSV rows (cell count ≠ header) fail the parse: short rows silently null trailing fields, long rows silently drop cells. Known non-tabular rows (e.g. an Oracle "N rows selected." trailer): bound with `allowed_ragged_rows` (default 0).
+- Ragged CSV rows (cell count ≠ header) fail the parse: short rows silently null trailing fields, long rows silently drop cells. Known non-tabular rows (e.g. an Oracle "N rows selected." trailer): bound with `allowed_ragged_rows`, a per-file budget keyed by download-entry alias exactly like `columns` (default 0 for every unlisted file). Joins always parse as CSV; the primary only does when `format: csv`, so a budget on a non-CSV primary is a load-time error.
 - Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. Multi-table pages: `sheet:` (name or index, same as xls) — SheetJS names them `Sheet1`, `Sheet2`, ... in order.
 - Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't write a wrong-size private artifact silently.
 - PDF cover/preface pages (text, zero anchors by design): `pdf.allowed_anchorless_pages` (default 0) bounds how many text-bearing pages may yield no `anchor_pattern` matches. Beyond the budget the parse fails naming the pages (a drifted register page drops its fleet slice and PDF sources can't use `record_count`); zero rows overall always fails regardless of budget. Declare cover pages explicitly — position-based tolerance would silently forgive a drifted first page.
@@ -76,6 +76,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - The artifact PUT is gated on `content_hash` (sha256 over the sorted record set, in `db.ts`): unchanged set → no PUT. Registry data (`source_id`/`registration`/`icao_hex`) lives inside the SQLite, never in an R2 key — so it carries no key-escaping constraint.
 - FAA `UNIQUE ID` = `source_id`, never N-number. N-numbers are reissued; UNIQUE ID is permanent.
 - Duplicate `source_id` within a source: byte-identical rows are skipped. Differing rows resolve by recency (`resolveRecency` in `src/engine.ts`) only when a signal exists — a `cancelled` status never outranks a live one, checked before date; failing that, the row with the most recent known date wins. A collision with neither signal fails the row instead of guessing via file order — silently picking one would drop upstream data.
+- A mapping `lookup` with a declared `default`: an unrecognized value doesn't fail the row (the schema still represents it via the default), but `resolveLookup` logs `translate_lookup_default` — matching every other bounded mechanism in the engine (missing-id budget, ragged-row budget, anchorless-page budget), an unrecognized code should be visible, not silently blended into the default forever.
 
 ## Distribution model
 

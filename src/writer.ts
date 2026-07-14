@@ -7,7 +7,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
 import { buildSqlite, hashRecords } from './db.js';
-import { log } from './logger.js';
+import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
 
@@ -25,8 +25,7 @@ export const isTransientS3Error = (err: unknown): boolean => {
 
 const S3_RETRY: RetryOptions = {
   isRetryable: isTransientS3Error,
-  onRetry: (attempt, err) =>
-    log('warn', 's3_retry', { attempt, msg: err instanceof Error ? err.message : String(err) }),
+  onRetry: (attempt, err) => log('warn', 's3_retry', { attempt, msg: errorMessage(err) }),
 };
 
 const S3_MAX_ATTEMPTS = 5;
@@ -126,7 +125,9 @@ export class R2ArtifactWriter {
   // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.
   // HEAD 404s surface as generic errors (not NoSuchKey, which is GET-only), so any non-transient
   // failure reads as "absent" — the false-negative cost is one redundant PUT, never a lost one.
-  private async artifactExists(source: string): Promise<boolean> {
+  // Public: pipeline.ts's cadence gate also needs this, to avoid honoring a cadence skip for a
+  // source whose artifact was deleted independently of its state (see pipeline.ts's run()).
+  async artifactExists(source: string): Promise<boolean> {
     if (this.dryRun) return true;
     try {
       await retry(
@@ -137,8 +138,10 @@ export class R2ArtifactWriter {
         S3_RETRY
       );
       return true;
-    } catch {
-      log('warn', 'artifact_missing_on_hash_match', { source });
+    } catch (err) {
+      // Carry the error: a 404 and an R2 outage are indistinguishable by outcome here, so the
+      // message is the only thing telling an operator which one they are triaging.
+      log('warn', 'artifact_missing_on_hash_match', { source, msg: errorMessage(err) });
       return false;
     }
   }
@@ -176,7 +179,7 @@ export class R2ArtifactWriter {
       if (err instanceof NoSuchKey) return null;
       log('error', 'state_load_failed', {
         source,
-        msg: err instanceof Error ? err.message : String(err),
+        msg: errorMessage(err),
       });
       throw err;
     }
