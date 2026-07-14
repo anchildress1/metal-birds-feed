@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.0.12](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.11...v0.0.12) (2026-07-14)
+
+
+### Features
+
+* **es-aesa:** onboard AESA Spain aircraft register ([#59](https://github.com/anchildress1/metal-birds-feed/issues/59)) ([f61cfd3](https://github.com/anchildress1/metal-birds-feed/commit/f61cfd3d862a6804ec8b9e11dbb2d5d2239c8f1c))
+
+
+### Bug Fixes
+
+* fail ambiguous source_id collisions instead of guessing by recency ([#63](https://github.com/anchildress1/metal-birds-feed/issues/63)) ([cc36c40](https://github.com/anchildress1/metal-birds-feed/commit/cc36c40a7515ad2f2111e33a4a6842d9e99eb727))
+* log when a lookup default silently absorbs an unrecognized value ([14607fe](https://github.com/anchildress1/metal-birds-feed/commit/14607fea36b45e6b8965529b1c873f11b0468c02))
+* remove stale pipeline.ts coverage exclusion, close its real gaps ([#65](https://github.com/anchildress1/metal-birds-feed/issues/65)) ([6f57b04](https://github.com/anchildress1/metal-birds-feed/commit/6f57b04bbc49aaa227e1dda59c0361a22df5ec14))
+* replace reissued duplicate source_id rows instead of failing ([#61](https://github.com/anchildress1/metal-birds-feed/issues/61)) ([268c838](https://github.com/anchildress1/metal-birds-feed/commit/268c8382191f5d899980a0a29ea325098eddca5d))
+* repo-wide review — parsing, config validation, cadence, hot-path perf ([#66](https://github.com/anchildress1/metal-birds-feed/issues/66)) ([14607fe](https://github.com/anchildress1/metal-birds-feed/commit/14607fea36b45e6b8965529b1c873f11b0468c02))
+
 ## [0.0.11](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.10...v0.0.11) (2026-07-07)
 
 
