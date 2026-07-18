@@ -9,7 +9,7 @@
     "migrate": "wrangler d1 execute mbf-enrichment --remote --file=migrations/0001_create_enrichment.sql"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250620.0",
-    "wrangler": "^4.20.0"
+    "@cloudflare/workers-types": "4.20260702.1",
+    "wrangler": "4.112.0"
   }
 }

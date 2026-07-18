@@ -82,8 +82,8 @@ clean:
 # of the deploy path so a routine deploy never touches data. Needs wrangler auth (wrangler login or
 # CLOUDFLARE_API_TOKEN) and the real database_id in worker/wrangler.toml.
 worker-migrate:
-	cd $(WORKER_DIR) && $(BUN) install && $(BUNX) wrangler d1 execute mbf-enrichment --remote --file=migrations/0001_create_enrichment.sql
+	cd $(WORKER_DIR) && $(BUN) install --frozen-lockfile && $(BUNX) wrangler d1 execute mbf-enrichment --remote --file=migrations/0001_create_enrichment.sql
 
 # Deploy the enrichment Worker. Mirrors .github/workflows/deploy-worker.yml for local pushes.
 deploy:
-	cd $(WORKER_DIR) && $(BUN) install && $(BUNX) wrangler deploy
+	cd $(WORKER_DIR) && $(BUN) install --frozen-lockfile && $(BUNX) wrangler deploy
