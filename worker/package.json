@@ -1,0 +1,15 @@
+{
+  "name": "metal-birds-enrich-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 execute mbf-enrichment --remote --file=migrations/0001_create_enrichment.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250620.0",
+    "wrangler": "^4.20.0"
+  }
+}

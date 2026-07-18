@@ -1,0 +1,16 @@
+name = "metal-birds-enrich"
+main = "index.ts"
+compatibility_date = "2026-07-01"
+workers_dev = false
+
+# D1 binding. Create the database first (see README.md), then set database_id — locally by pasting
+# it here, or in CI via `wrangler deploy --var`/a secret-substituted config. The binding name "DB"
+# is what worker/index.ts reads as env.DB.
+[[d1_databases]]
+binding = "DB"
+database_name = "mbf-enrichment"
+database_id = "REPLACE_WITH_DATABASE_ID"
+
+# ENRICH_TOKEN is a secret, never committed. Set it with:
+#   wrangler secret put ENRICH_TOKEN
+# The same value goes into metal-birds-watch's backend env as the bearer token it sends.
