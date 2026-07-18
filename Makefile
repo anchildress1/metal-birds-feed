@@ -1,7 +1,8 @@
-.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean
+.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean deploy worker-migrate
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
+WORKER_DIR := worker
 
 install:
 	$(BUN) install && $(BUNX) lefthook install
@@ -76,3 +77,13 @@ commitlint:
 
 clean:
 	rm -rf dist coverage node_modules
+
+# One-time D1 setup: create the enrichment table. Idempotent (CREATE IF NOT EXISTS), but kept out
+# of the deploy path so a routine deploy never touches data. Needs wrangler auth (wrangler login or
+# CLOUDFLARE_API_TOKEN) and the real database_id in worker/wrangler.toml.
+worker-migrate:
+	cd $(WORKER_DIR) && $(BUN) install && $(BUNX) wrangler d1 execute mbf-enrichment --remote --file=migrations/0001_create_enrichment.sql
+
+# Deploy the enrichment Worker. Mirrors .github/workflows/deploy-worker.yml for local pushes.
+deploy:
+	cd $(WORKER_DIR) && $(BUN) install && $(BUNX) wrangler deploy
