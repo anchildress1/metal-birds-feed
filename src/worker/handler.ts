@@ -68,7 +68,9 @@ export class HttpError extends Error {
 const timingSafeEqual = (a: string, b: string): boolean => {
   if (a.length !== b.length) return false;
   let mismatch = 0;
-  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  // Indices are always in range (equal lengths, i < length), so codePointAt never returns
+  // undefined; the ?? 0 only satisfies the type.
+  for (let i = 0; i < a.length; i++) mismatch |= (a.codePointAt(i) ?? 0) ^ (b.codePointAt(i) ?? 0);
   return mismatch === 0;
 };
 
