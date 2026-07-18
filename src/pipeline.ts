@@ -6,6 +6,7 @@ import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
 import { R2ArtifactWriter } from './writer.js';
+import { writeEnrichmentSql } from './enrichment.js';
 import { log, errorMessage } from './logger.js';
 import {
   shouldSkip,
@@ -92,6 +93,10 @@ export async function run(sourceId: string): Promise<RunResult> {
   }
 
   const writeStats = await writer.write(records, sourceId, priorState);
+
+  // Regenerate the enrichment dump only when the record set actually changed, mirroring the R2 PUT
+  // skip — an unchanged source needs no re-import. No-op unless MBF_ENRICH_SQL_DIR is set.
+  if (writeStats.changed && !dryRun) await writeEnrichmentSql(sourceId, records);
 
   let newState: SourceState | null = priorState;
   if (!dryRun) {
