@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 import type { Aircraft } from './schema.js';
+import type { EnrichmentFields } from './enrichment-fields.js';
 import { latestKnownDate } from './recency.js';
 import { log, errorMessage } from './logger.js';
 
@@ -9,38 +10,7 @@ import { log, errorMessage } from './logger.js';
 // canonical record still carries (certification/airworthiness dates, legal_owner, lien/interdiction
 // codes, operational classes) — none of that describes the aircraft to a spotter. PII beyond
 // owner/operator name/state/country is already absent from the schema. `source` is provenance.
-export interface EnrichmentRow {
-  icao_hex: string;
-  registration: string;
-  icao_type_code: string | null;
-  status: string;
-  country: string;
-  manufacturer: string | null;
-  model: string | null;
-  serial_number: string | null;
-  year_manufactured: number | null;
-  airframe_type: string | null;
-  category: string | null;
-  engine_manufacturer: string | null;
-  engine_model: string | null;
-  engine_type: string | null;
-  engine_count: number | null;
-  engine_horsepower: number | null;
-  engine_thrust_lbs: number | null;
-  seats: number | null;
-  max_passengers: number | null;
-  cruise_speed_ktas: number | null;
-  max_takeoff_weight_kg: number | null;
-  owner_name: string | null;
-  owner_kind: string | null;
-  owner_state: string | null;
-  owner_country: string | null;
-  operator_name: string | null;
-  operator_kind: string | null;
-  operator_state: string | null;
-  operator_country: string | null;
-  source: string;
-}
+export type EnrichmentRow = EnrichmentFields;
 
 const COLUMNS = [
   'icao_hex',

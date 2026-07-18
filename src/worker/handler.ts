@@ -3,47 +3,17 @@
 // suite. serve.ts injects the D1-backed RunQuery and the rate-limit CheckLimit; the decisions live
 // here.
 
+import type { EnrichmentFields } from '../enrichment-fields.js';
+
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
 // D1 caps bound parameters at 100 per query, so a request is split into IN-lists of at most this
 // many hexes and the row groups are merged. Keeps the ≤500 request contract callable.
 const D1_MAX_PARAMS = 100;
 
-// Mirrors the enrichment table (worker/migrations). The query is SELECT *, so this stays the single
-// typed description of a row; adding a column to the table + producer surfaces it here without
-// editing a hand-maintained SELECT list.
-export interface EnrichmentRecord {
-  icao_hex: string;
-  registration: string;
-  icao_type_code: string | null;
-  status: string;
-  country: string;
-  manufacturer: string | null;
-  model: string | null;
-  serial_number: string | null;
-  year_manufactured: number | null;
-  airframe_type: string | null;
-  category: string | null;
-  engine_manufacturer: string | null;
-  engine_model: string | null;
-  engine_type: string | null;
-  engine_count: number | null;
-  engine_horsepower: number | null;
-  engine_thrust_lbs: number | null;
-  seats: number | null;
-  max_passengers: number | null;
-  cruise_speed_ktas: number | null;
-  max_takeoff_weight_kg: number | null;
-  owner_name: string | null;
-  owner_kind: string | null;
-  owner_state: string | null;
-  owner_country: string | null;
-  operator_name: string | null;
-  operator_kind: string | null;
-  operator_state: string | null;
-  operator_country: string | null;
-  source: string;
-}
+// The query is SELECT *, so the shared row shape is the single typed description of a returned row;
+// adding a column to the table + producer surfaces it here without editing a hand-maintained SELECT.
+export type EnrichmentRecord = EnrichmentFields;
 
 export type RunQuery = (sql: string, params: string[]) => Promise<EnrichmentRecord[]>;
 export type CheckLimit = () => Promise<boolean>;
