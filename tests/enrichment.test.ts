@@ -67,12 +67,24 @@ describe('toEnrichmentRows', () => {
     expect(rows[0]?.icao_hex).toBe('a1b2c3');
   });
 
-  it('maps nested owner/operator names into flat columns', () => {
+  it('maps nested owner/operator/engine and descriptive fields into flat columns', () => {
     const [row] = toEnrichmentRows(
       mapOf(
         make('1', 'a1b2c3', {
-          owner: { name: 'Jane Doe', kind: null, state: null, country: 'US' },
-          operator: { name: 'Acme Air', kind: null, state: null, country: null },
+          icao_type_code: 'C172',
+          year_manufactured: 1998,
+          seats: 4,
+          category: 'standard',
+          engine: {
+            manufacturer: 'LYCOMING',
+            model: 'O-320',
+            type: 'reciprocating',
+            count: 1,
+            horsepower: 160,
+            thrust_lbs: null,
+          },
+          owner: { name: 'Jane Doe', kind: 'individual', state: 'TX', country: 'US' },
+          operator: { name: 'Acme Air', kind: 'corporation', state: null, country: 'US' },
           airframe_type: 'fixed-wing-single-engine',
         })
       )
@@ -80,10 +92,23 @@ describe('toEnrichmentRows', () => {
     expect(row).toMatchObject({
       icao_hex: 'a1b2c3',
       registration: 'N1',
+      icao_type_code: 'C172',
+      year_manufactured: 1998,
+      seats: 4,
+      category: 'standard',
+      airframe_type: 'fixed-wing-single-engine',
+      engine_manufacturer: 'LYCOMING',
+      engine_model: 'O-320',
+      engine_type: 'reciprocating',
+      engine_count: 1,
+      engine_horsepower: 160,
       owner_name: 'Jane Doe',
+      owner_kind: 'individual',
+      owner_state: 'TX',
       owner_country: 'US',
       operator_name: 'Acme Air',
-      airframe_type: 'fixed-wing-single-engine',
+      operator_kind: 'corporation',
+      operator_country: 'US',
       status: 'valid',
       source: 'faa',
     });
@@ -130,6 +155,10 @@ describe('sqlLiteral', () => {
     expect(sqlLiteral(null)).toBe('NULL');
   });
 
+  it('renders numbers unquoted', () => {
+    expect(sqlLiteral(1998)).toBe('1998');
+  });
+
   it('quotes strings', () => {
     expect(sqlLiteral('N12345')).toBe("'N12345'");
   });
@@ -144,13 +173,33 @@ describe('buildEnrichmentSql', () => {
     Array.from({ length: n }, (_, i) => ({
       icao_hex: i.toString(16).padStart(6, '0'),
       registration: `N${i}`,
-      airframe_type: null,
+      icao_type_code: 'C172',
+      status: 'valid',
+      country: 'US',
       manufacturer: 'CESSNA',
       model: '172',
+      serial_number: null,
+      year_manufactured: 1998,
+      airframe_type: null,
+      category: null,
+      engine_manufacturer: null,
+      engine_model: null,
+      engine_type: null,
+      engine_count: 1,
+      engine_horsepower: 160,
+      engine_thrust_lbs: null,
+      seats: 4,
+      max_passengers: 3,
+      cruise_speed_ktas: 122,
+      max_takeoff_weight_kg: null,
       owner_name: null,
+      owner_kind: null,
+      owner_state: null,
       owner_country: null,
       operator_name: null,
-      status: 'valid',
+      operator_kind: null,
+      operator_state: null,
+      operator_country: null,
       source: 'faa',
     }));
 
@@ -162,8 +211,14 @@ describe('buildEnrichmentSql', () => {
   it('emits INSERT with every column', () => {
     const sql = buildEnrichmentSql('faa', rowsFor(1));
     expect(sql).toContain(
-      'INSERT INTO enrichment (icao_hex, registration, airframe_type, manufacturer, model, owner_name, owner_country, operator_name, status, source) VALUES'
+      'INSERT INTO enrichment (icao_hex, registration, icao_type_code, status, country, manufacturer, model, serial_number, year_manufactured, airframe_type, category, engine_manufacturer, engine_model, engine_type, engine_count, engine_horsepower, engine_thrust_lbs, seats, max_passengers, cruise_speed_ktas, max_takeoff_weight_kg, owner_name, owner_kind, owner_state, owner_country, operator_name, operator_kind, operator_state, operator_country, source) VALUES'
     );
+  });
+
+  it('renders numeric columns bare (unquoted)', () => {
+    const sql = buildEnrichmentSql('faa', rowsFor(1));
+    expect(sql).toContain('1998'); // year_manufactured
+    expect(sql).not.toContain("'1998'");
   });
 
   it('guards the upsert so a cancelled row cannot overwrite a live one', () => {

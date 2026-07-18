@@ -19,7 +19,7 @@ database_id = "REPLACE_WITH_DATABASE_ID"
 # ENRICH_TOKEN is a UUID secret, never committed. Generate one (`uuidgen`, or
 # `crypto.randomUUID()`) and set it with:
 #   wrangler secret put ENRICH_TOKEN
-# The same UUID goes into metal-birds-watch's backend env as the bearer token it sends.
+# The same UUID goes into the consumer application's backend env as the bearer token it sends.
 
 # Global rate limit (GA `ratelimit` binding). The endpoint has one legitimate, cache-fronted
 # consumer, so a single shared key caps a leaked token to 120 requests / 60s — enough headroom for

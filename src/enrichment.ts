@@ -4,32 +4,74 @@ import type { Aircraft } from './schema.js';
 import { latestKnownDate } from './recency.js';
 import { log, errorMessage } from './logger.js';
 
-// The minimal, hex-addressable slice of a record that metal-birds-watch renders in a plane popup:
-// registration, type, and owner. PII beyond owner/operator name+country is already absent from the
-// canonical schema, so nothing is dropped here that the artifact still carries.
+// The descriptive, hex-addressable slice of a record a consumer application renders for a plane:
+// identity, airframe, engine, performance, and ownership. Excludes registry-admin bookkeeping the
+// canonical record still carries (certification/airworthiness dates, legal_owner, lien/interdiction
+// codes, operational classes) — none of that describes the aircraft to a spotter. PII beyond
+// owner/operator name/state/country is already absent from the schema. `source` is provenance.
 export interface EnrichmentRow {
   icao_hex: string;
   registration: string;
-  airframe_type: string | null;
+  icao_type_code: string | null;
+  status: string;
+  country: string;
   manufacturer: string | null;
   model: string | null;
+  serial_number: string | null;
+  year_manufactured: number | null;
+  airframe_type: string | null;
+  category: string | null;
+  engine_manufacturer: string | null;
+  engine_model: string | null;
+  engine_type: string | null;
+  engine_count: number | null;
+  engine_horsepower: number | null;
+  engine_thrust_lbs: number | null;
+  seats: number | null;
+  max_passengers: number | null;
+  cruise_speed_ktas: number | null;
+  max_takeoff_weight_kg: number | null;
   owner_name: string | null;
+  owner_kind: string | null;
+  owner_state: string | null;
   owner_country: string | null;
   operator_name: string | null;
-  status: string;
+  operator_kind: string | null;
+  operator_state: string | null;
+  operator_country: string | null;
   source: string;
 }
 
 const COLUMNS = [
   'icao_hex',
   'registration',
-  'airframe_type',
+  'icao_type_code',
+  'status',
+  'country',
   'manufacturer',
   'model',
+  'serial_number',
+  'year_manufactured',
+  'airframe_type',
+  'category',
+  'engine_manufacturer',
+  'engine_model',
+  'engine_type',
+  'engine_count',
+  'engine_horsepower',
+  'engine_thrust_lbs',
+  'seats',
+  'max_passengers',
+  'cruise_speed_ktas',
+  'max_takeoff_weight_kg',
   'owner_name',
+  'owner_kind',
+  'owner_state',
   'owner_country',
   'operator_name',
-  'status',
+  'operator_kind',
+  'operator_state',
+  'operator_country',
   'source',
 ] as const;
 
@@ -59,23 +101,46 @@ export const toEnrichmentRows = (records: Map<string, Aircraft>): EnrichmentRow[
   return [...byHex.entries()].map(([icao_hex, r]) => ({
     icao_hex,
     registration: r.registration,
-    airframe_type: r.airframe_type,
+    icao_type_code: r.icao_type_code,
+    status: r.status,
+    country: r.country,
     manufacturer: r.manufacturer,
     model: r.model,
+    serial_number: r.serial_number,
+    year_manufactured: r.year_manufactured,
+    airframe_type: r.airframe_type,
+    category: r.category,
+    engine_manufacturer: r.engine.manufacturer,
+    engine_model: r.engine.model,
+    engine_type: r.engine.type,
+    engine_count: r.engine.count,
+    engine_horsepower: r.engine.horsepower,
+    engine_thrust_lbs: r.engine.thrust_lbs,
+    seats: r.seats,
+    max_passengers: r.max_passengers,
+    cruise_speed_ktas: r.cruise_speed_ktas,
+    max_takeoff_weight_kg: r.max_takeoff_weight_kg,
     owner_name: r.owner.name,
+    owner_kind: r.owner.kind,
+    owner_state: r.owner.state,
     owner_country: r.owner.country,
     operator_name: r.operator.name,
-    status: r.status,
+    operator_kind: r.operator.kind,
+    operator_state: r.operator.state,
+    operator_country: r.operator.country,
     source: r.source,
   }));
 };
 
 // Values originate from the validated canonical schema, not user input; single-quote doubling is
 // the only escaping a SQLite text literal requires. Emitting literals (not bound parameters) lets a
-// single INSERT carry a full chunk without hitting D1's per-query bound-parameter ceiling. Every
-// enrichment column is text-or-null, so this handles exactly those two cases.
-export const sqlLiteral = (value: string | null): string =>
-  value === null ? 'NULL' : `'${value.replaceAll("'", "''")}'`;
+// single INSERT carry a full chunk without hitting D1's per-query bound-parameter ceiling. Numbers
+// (year, engine count, weights, speeds) render bare; text is quoted.
+export const sqlLiteral = (value: string | number | null): string => {
+  if (value === null) return 'NULL';
+  if (typeof value === 'number') return String(value);
+  return `'${value.replaceAll("'", "''")}'`;
+};
 
 const CHUNK_SIZE = 500;
 

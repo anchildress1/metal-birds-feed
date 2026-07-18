@@ -19,25 +19,50 @@ Content-Type: application/json
 {
   "a1b2c3": {
     "registration": "N12345",
-    "airframe_type": "fixed_wing",
+    "icao_type_code": "C172",
+    "status": "valid",
+    "country": "US",
     "manufacturer": "CESSNA",
     "model": "172S",
+    "serial_number": "172S1234",
+    "year_manufactured": 2004,
+    "airframe_type": "fixed-wing-single-engine",
+    "category": "standard",
+    "engine_manufacturer": "LYCOMING",
+    "engine_model": "IO-360",
+    "engine_type": "reciprocating",
+    "engine_count": 1,
+    "engine_horsepower": 180,
+    "engine_thrust_lbs": null,
+    "seats": 4,
+    "max_passengers": 3,
+    "cruise_speed_ktas": 124,
+    "max_takeoff_weight_kg": 1157,
     "owner_name": "…",
+    "owner_kind": "individual",
+    "owner_state": "TX",
     "owner_country": "US",
     "operator_name": null,
-    "status": "valid"
+    "operator_kind": null,
+    "operator_state": null,
+    "operator_country": null,
+    "source": "faa"
   }
 }
 ```
 
+The value is the descriptive aircraft slice: identity, airframe, engine, performance, and ownership.
+It excludes registry-admin bookkeeping the canonical record still carries (certification/
+airworthiness dates, legal_owner, lien/interdiction codes, operational classes) — none of that
+describes the aircraft to a spotter. Photos are not in the feed; a consumer sources those elsewhere.
 Hexes with no match are simply absent from the map. Errors: `401` (bad/missing token), `429`
 (rate limit — 120 req / 60s, shared across the single consumer), `400` (malformed body/hex),
 `404`/`405` (wrong path/method). Auth is checked before routing, so an unauthenticated caller can't
 map the route surface. The `RATE_LIMITER` binding is declared in `wrangler.toml` and deploys with
 the Worker — no separate setup.
 
-`metal-birds-watch` calls this **server-side** from its backend, so the raw response never reaches a
-browser and no CORS is exposed.
+The consumer application calls this **server-side** from its backend, so the raw response never
+reaches a browser and no CORS is exposed.
 
 ## Data flow
 
@@ -65,7 +90,7 @@ is guarded so a cancelled row can't overwrite a live one regardless of import or
 cd worker
 bun install                                    # pulls wrangler + workers-types
 bunx wrangler d1 create mbf-enrichment         # copy the database_id into wrangler.toml
-bunx wrangler secret put ENRICH_TOKEN          # paste a UUID (uuidgen); same value into watch's env
+bunx wrangler secret put ENRICH_TOKEN          # paste a UUID (uuidgen); same value into consumer env
 cd .. && make worker-migrate                   # create the enrichment table (idempotent)
 make deploy                                     # or let CI do it (below)
 ```

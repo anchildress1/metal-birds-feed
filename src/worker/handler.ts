@@ -9,16 +9,40 @@ const MAX_HEXES = 500;
 // many hexes and the row groups are merged. Keeps the ≤500 request contract callable.
 const D1_MAX_PARAMS = 100;
 
+// Mirrors the enrichment table (worker/migrations). The query is SELECT *, so this stays the single
+// typed description of a row; adding a column to the table + producer surfaces it here without
+// editing a hand-maintained SELECT list.
 export interface EnrichmentRecord {
   icao_hex: string;
   registration: string;
-  airframe_type: string | null;
+  icao_type_code: string | null;
+  status: string;
+  country: string;
   manufacturer: string | null;
   model: string | null;
+  serial_number: string | null;
+  year_manufactured: number | null;
+  airframe_type: string | null;
+  category: string | null;
+  engine_manufacturer: string | null;
+  engine_model: string | null;
+  engine_type: string | null;
+  engine_count: number | null;
+  engine_horsepower: number | null;
+  engine_thrust_lbs: number | null;
+  seats: number | null;
+  max_passengers: number | null;
+  cruise_speed_ktas: number | null;
+  max_takeoff_weight_kg: number | null;
   owner_name: string | null;
+  owner_kind: string | null;
+  owner_state: string | null;
   owner_country: string | null;
   operator_name: string | null;
-  status: string;
+  operator_kind: string | null;
+  operator_state: string | null;
+  operator_country: string | null;
+  source: string;
 }
 
 export type RunQuery = (sql: string, params: string[]) => Promise<EnrichmentRecord[]>;
@@ -72,8 +96,7 @@ export const parseHexes = (body: unknown): string[] => {
 };
 
 export const buildSelect = (count: number): string =>
-  'SELECT icao_hex, registration, airframe_type, manufacturer, model, owner_name, owner_country, operator_name, status ' +
-  `FROM enrichment WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
+  `SELECT * FROM enrichment WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
 export const toResponseMap = (
   rows: EnrichmentRecord[]
