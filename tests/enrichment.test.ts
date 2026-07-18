@@ -275,6 +275,16 @@ describe('writeEnrichmentSql', () => {
     expect(sql).toContain("'a1b2c3'");
   });
 
+  it('refuses to write outside the sandbox root when source would traverse', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'mbf-enrich-'));
+    created.push(parent);
+    const root = join(parent, 'sql');
+    process.env['MBF_ENRICH_SQL_DIR'] = root;
+    await writeEnrichmentSql('../escape', mapOf(make('1', 'a1b2c3')));
+    // The traversal is rejected before any write — nothing lands beside the sandbox root.
+    await expect(readFile(join(parent, 'escape.sql'), 'utf8')).rejects.toThrow();
+  });
+
   it('logs and does not throw when the target dir cannot be created', async () => {
     // Point at a path whose parent is a file, so mkdir fails — the best-effort guard must swallow it.
     const dir = await mkdtemp(join(tmpdir(), 'mbf-enrich-'));

@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 import type { Aircraft } from './schema.js';
 import { latestKnownDate } from './recency.js';
 import { log, errorMessage } from './logger.js';
@@ -179,9 +179,18 @@ export const writeEnrichmentSql = async (
   const dir = process.env['MBF_ENRICH_SQL_DIR']?.trim();
   if (!dir) return;
   try {
+    // MBF_ENRICH_SQL_DIR is the operator-chosen sandbox root (relative paths are fine — the README
+    // uses them). Enforce that `<source>.sql` resolves inside it, so a traversal in `source` can't
+    // escape and write elsewhere (AGENTS: no `..` in path inputs; enforce containment after resolve).
+    const root = resolve(dir);
+    const path = resolve(root, `${source}.sql`);
+    if (!path.startsWith(root + sep)) {
+      log('error', 'enrichment_sql_failed', { source, reason: 'path_escape' });
+      return;
+    }
     const rows = toEnrichmentRows(records);
-    await mkdir(dir, { recursive: true });
-    await writeFile(resolve(dir, `${source}.sql`), buildEnrichmentSql(source, rows));
+    await mkdir(root, { recursive: true });
+    await writeFile(path, buildEnrichmentSql(source, rows));
     log('info', 'enrichment_sql_written', { source, rows: rows.length });
   } catch (err) {
     log('error', 'enrichment_sql_failed', { source, msg: errorMessage(err) });
