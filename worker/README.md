@@ -49,10 +49,15 @@ refresh pipeline (src/enrichment.ts)          this Worker
               └─ wrangler d1 execute --file  ──────────────┘
 ```
 
-The pipeline emits one `<source>.sql` dump per changed source (a `DELETE … WHERE source=` plus
-chunked `INSERT OR REPLACE`). `wrangler d1 execute --file` loads it — the intended D1 bulk path, so
-no per-row HTTP and no bound-parameter ceiling. R2 remains the source of truth; D1 is a derived,
-rebuildable cache.
+The pipeline emits one `<source>.sql` dump on every non-dry run (a `DELETE … WHERE source=` plus a
+chunked guarded upsert). Emitting unconditionally — not only when the artifact changed — is what
+makes the first D1 load work against already-current R2 sources and lets a failed emit self-heal on
+the next run. `wrangler d1 execute --file` loads it — the intended D1 bulk path, so no per-row HTTP
+and no bound-parameter ceiling. R2 remains the source of truth; D1 is a derived, rebuildable cache.
+
+Records sharing an `icao_hex` collapse to one row: within a source the winner is chosen at emit
+time (a cancelled record never shadows a live one, then most-recent date); across sources the upsert
+is guarded so a cancelled row can't overwrite a live one regardless of import order.
 
 ## First-time setup
 

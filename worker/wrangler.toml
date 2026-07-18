@@ -1,7 +1,12 @@
 name = "metal-birds-enrich"
 main = "index.ts"
 compatibility_date = "2026-07-01"
-workers_dev = false
+
+# A fresh deploy needs a reachable URL. workers_dev gives the *.workers.dev endpoint; the security
+# boundary is the bearer token + rate limit, not URL secrecy, so exposing it is fine. To serve on
+# your own domain instead, set workers_dev = false and add a route, e.g.:
+#   routes = [{ pattern = "enrich.example.com", custom_domain = true }]
+workers_dev = true
 
 # D1 binding. Create the database first (see README.md), then set database_id — locally by pasting
 # it here, or in CI via `wrangler deploy --var`/a secret-substituted config. The binding name "DB"

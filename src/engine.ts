@@ -11,6 +11,7 @@ import {
   type Row,
 } from './parser.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
+import { latestKnownDate } from './recency.js';
 import { log, errorMessage } from './logger.js';
 
 // Dispatches the primary-file parse based on `config.format`. Each branch routes to the parser for
@@ -170,19 +171,6 @@ type RowOutcome =
   | { status: 'ok'; id: string; record: Aircraft; row: Row }
   | { status: 'skipped'; reason: 'missing_id' | 'duplicate' }
   | { status: 'failed' };
-
-const RECENCY_DATE_FIELDS = [
-  'certification_date',
-  'airworthiness_date',
-  'expiration_date',
-  'last_action_date',
-] as const;
-
-const latestKnownDate = (record: Aircraft): string | null =>
-  RECENCY_DATE_FIELDS.map((f) => record[f])
-    .filter((d): d is string => d !== null)
-    .sort((a, b) => a.localeCompare(b))
-    .at(-1) ?? null;
 
 type RecencyReason = 'cancelled_status' | 'newer_date';
 

@@ -92,6 +92,37 @@ describe('toEnrichmentRows', () => {
   it('returns an empty array for an empty record set', () => {
     expect(toEnrichmentRows(new Map())).toEqual([]);
   });
+
+  it('collapses records sharing a hex to one row, dropping a cancelled shadow of a live one', () => {
+    const rows = toEnrichmentRows(
+      mapOf(
+        make('1', 'a1b2c3', { status: 'cancelled', registration: 'OLD' }),
+        make('2', 'a1b2c3', { status: 'valid', registration: 'NEW' })
+      )
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ registration: 'NEW', status: 'valid' });
+  });
+
+  it('keeps the most recent record when both share a hex and neither is cancelled', () => {
+    const rows = toEnrichmentRows(
+      mapOf(
+        make('1', 'a1b2c3', { registration: 'OLD', last_action_date: '2020-01-01' }),
+        make('2', 'a1b2c3', { registration: 'NEW', last_action_date: '2024-06-01' })
+      )
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.registration).toBe('NEW');
+  });
+
+  it('is import-order-independent on a hex collision', () => {
+    const a = make('1', 'a1b2c3', { status: 'cancelled', registration: 'OLD' });
+    const b = make('2', 'a1b2c3', { status: 'valid', registration: 'NEW' });
+    const forward = toEnrichmentRows(mapOf(a, b));
+    const reverse = toEnrichmentRows(mapOf(b, a));
+    expect(forward).toEqual(reverse);
+    expect(forward[0]?.registration).toBe('NEW');
+  });
 });
 
 describe('sqlLiteral', () => {
@@ -128,16 +159,24 @@ describe('buildEnrichmentSql', () => {
     expect(sql.startsWith("DELETE FROM enrichment WHERE source = 'faa';")).toBe(true);
   });
 
-  it('emits INSERT OR REPLACE with every column', () => {
+  it('emits INSERT with every column', () => {
     const sql = buildEnrichmentSql('faa', rowsFor(1));
     expect(sql).toContain(
-      'INSERT OR REPLACE INTO enrichment (icao_hex, registration, airframe_type, manufacturer, model, owner_name, owner_country, operator_name, status, source) VALUES'
+      'INSERT INTO enrichment (icao_hex, registration, airframe_type, manufacturer, model, owner_name, owner_country, operator_name, status, source) VALUES'
+    );
+  });
+
+  it('guards the upsert so a cancelled row cannot overwrite a live one', () => {
+    const sql = buildEnrichmentSql('faa', rowsFor(1));
+    expect(sql).toContain('ON CONFLICT(icao_hex) DO UPDATE SET');
+    expect(sql).toContain(
+      "WHERE excluded.status <> 'cancelled' OR enrichment.status = 'cancelled'"
     );
   });
 
   it('chunks rows past the batch size into multiple INSERT statements', () => {
     const sql = buildEnrichmentSql('faa', rowsFor(501));
-    const inserts = sql.match(/INSERT OR REPLACE/g) ?? [];
+    const inserts = sql.match(/INSERT INTO enrichment/g) ?? [];
     expect(inserts).toHaveLength(2);
   });
 

@@ -151,6 +151,19 @@ describe('route', () => {
     expect(res.body).toMatchObject({ a1b2c3: { registration: 'N1' } });
   });
 
+  it('splits >100 hexes into ≤100-param queries and merges the groups', async () => {
+    const hexes = Array.from({ length: 250 }, (_, i) => i.toString(16).padStart(6, '0'));
+    const calls: number[] = [];
+    const chunked: RunQuery = (_sql, params) => {
+      calls.push(params.length);
+      return Promise.resolve(params.map((h) => rec(h, `N-${h}`)));
+    };
+    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes }, pass, chunked);
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([100, 100, 50]); // no query exceeds D1's 100-param ceiling
+    expect(Object.keys(res.body as object)).toHaveLength(250);
+  });
+
   it('collapses an unexpected query failure into a generic 500', async () => {
     const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['a1b2c3'] }, pass, boom);
     expect(res.status).toBe(500);

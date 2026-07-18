@@ -94,9 +94,12 @@ export async function run(sourceId: string): Promise<RunResult> {
 
   const writeStats = await writer.write(records, sourceId, priorState);
 
-  // Regenerate the enrichment dump only when the record set actually changed, mirroring the R2 PUT
-  // skip — an unchanged source needs no re-import. No-op unless MBF_ENRICH_SQL_DIR is set.
-  if (writeStats.changed && !dryRun) await writeEnrichmentSql(sourceId, records);
+  // Emit the enrichment dump every non-dry run, not only when the artifact changed: existing R2
+  // sources return changed=false, so a change-gated emit would never produce the first D1 load, and
+  // a swallowed transient failure would be permanently suppressed once state advanced. Re-emitting
+  // the current record set is idempotent (guarded upsert) and self-heals a prior failed emit.
+  // No-op unless MBF_ENRICH_SQL_DIR is set.
+  if (!dryRun) await writeEnrichmentSql(sourceId, records);
 
   let newState: SourceState | null = priorState;
   if (!dryRun) {

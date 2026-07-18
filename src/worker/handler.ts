@@ -5,6 +5,9 @@
 
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
+// D1 caps bound parameters at 100 per query, so a request is split into IN-lists of at most this
+// many hexes and the row groups are merged. Keeps the ≤500 request contract callable.
+const D1_MAX_PARAMS = 100;
 
 export interface EnrichmentRecord {
   icao_hex: string;
@@ -98,8 +101,11 @@ const handleEnrich = async (
   if (!(await checkLimit())) throw new HttpError(429, 'rate limited');
   const hexes = parseHexes(body);
   if (hexes.length === 0) return { status: 200, body: {} };
-  const rows = await runQuery(buildSelect(hexes.length), hexes);
-  return { status: 200, body: toResponseMap(rows) };
+  const chunks: string[][] = [];
+  for (let i = 0; i < hexes.length; i += D1_MAX_PARAMS)
+    chunks.push(hexes.slice(i, i + D1_MAX_PARAMS));
+  const groups = await Promise.all(chunks.map((c) => runQuery(buildSelect(c.length), c)));
+  return { status: 200, body: toResponseMap(groups.flat()) };
 };
 
 // The single entry serve.ts calls. Converts thrown HttpErrors into status codes and swallows
