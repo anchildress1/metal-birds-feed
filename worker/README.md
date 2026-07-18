@@ -1,9 +1,9 @@
 # Enrichment Worker 🛩️
 
-Private point-lookup endpoint that turns an OpenSky `icao24` hex into aircraft details
-(registration, type, owner) for [metal-birds-watch](../../metal-birds-watch). Single consumer,
-bearer-token gated, no bulk or query surface — it answers "what is this hex the user already sees,"
-never "hand over the dataset."
+Private, authenticated point-lookup endpoint that turns an OpenSky `icao24` hex into aircraft
+details (registration, type, owner). Single consumer, gated by a UUID bearer secret, no bulk
+or query surface — it answers "what is this hex the user already sees," never "hand over the dataset."
+It is a private API, not a public one: every request must present the secret.
 
 ## Contract
 
@@ -65,7 +65,7 @@ is guarded so a cancelled row can't overwrite a live one regardless of import or
 cd worker
 bun install                                    # pulls wrangler + workers-types
 bunx wrangler d1 create mbf-enrichment         # copy the database_id into wrangler.toml
-bunx wrangler secret put ENRICH_TOKEN          # same value goes into watch's backend env
+bunx wrangler secret put ENRICH_TOKEN          # paste a UUID (uuidgen); same value into watch's env
 cd .. && make worker-migrate                   # create the enrichment table (idempotent)
 make deploy                                     # or let CI do it (below)
 ```

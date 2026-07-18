@@ -5,7 +5,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Hard prohibitions
 
 - PII allowed: `owner.{name,kind,state,country}` + `operator.{name,kind,state,country}`. Drop street/street2/city/postal-code/county/region/care-of at the mapping config.
-- No public read API. R2 artifact access is private-operator-binding only. The one sanctioned egress is the enrichment lookup Worker (`worker/`): bearer-token-gated, rate-limited, point-lookup (`icao_hex` → minimal registration/type/owner slice), server-side, single authorized consumer (metal-birds-watch). No bulk, enumeration, query surface, or full-artifact access; no unauthenticated read path. Any other read API stays prohibited (PRD §CC.4 — reconcile to this carve-out).
+- No _public_ (unauthenticated) read API. A private, authenticated API is allowed: the enrichment lookup Worker (`worker/`) is gated by a UUID bearer secret, rate-limited, point-lookup (`icao_hex` → minimal registration/type/owner slice), server-side, single authorized consumer (metal-birds-watch). Not a public surface — no unauthenticated access, bulk, enumeration, query surface, or full-artifact access. Direct R2 artifact access stays private-operator-binding only. (PRD §CC.4 "no public read API" = no _unauthenticated_ one; this private API complies.)
 - No commercial operator deployment. CC BY-NC + Private-use sources require non-commercial use (PRD §CC.3).
 - No public output distribution. Normalized artifacts are private to Ashley-operated applications only; forks self-host their own artifacts.
 - No `..` in path inputs. Resolve to absolute, enforce sandbox-root containment after resolution, default deny on validation failure.
@@ -81,7 +81,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Distribution model
 
 - Source-available code (Polyform Shield 1.0.0 + Supplemental Terms). Forks self-host against own R2 + own per-source source-use assessment.
-- Normalized output is private to Ashley-operated applications only, plus the enrichment lookup Worker's gated point-lookup slice served to explicitly authorized consumer apps (metal-birds-watch), server-side. No public (unauthenticated) API, public download, public query surface, or public dataset publication — the Worker is authenticated, rate-limited, and single-consumer, not public.
+- Normalized output is private to Ashley-operated applications only, plus the enrichment lookup Worker's gated point-lookup slice served to explicitly authorized consumer apps (metal-birds-watch), server-side. No public (unauthenticated) API, public download, public query surface, or public dataset publication — the Worker is authenticated by a UUID bearer secret, rate-limited, and single-consumer, not public.
 - Operator deployment must remain non-commercial for lifetime of any Private-use source ingested.
 
 ## GitHub Actions

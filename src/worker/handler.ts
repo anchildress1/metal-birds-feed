@@ -48,8 +48,8 @@ const timingSafeEqual = (a: string, b: string): boolean => {
   return mismatch === 0;
 };
 
-// Single-consumer private endpoint: a shared bearer token is the whole gate. A missing server-side
-// token is a 500 (misconfiguration), never an open door.
+// Single-consumer private endpoint: a shared UUID bearer secret is the whole gate. A missing
+// server-side token is a 500 (misconfiguration), never an open door.
 export const authorize = (header: string | null, token: string | undefined): void => {
   if (!token) throw new HttpError(500, 'server misconfigured');
   if (header === null || !timingSafeEqual(header, `Bearer ${token}`))
