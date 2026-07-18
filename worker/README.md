@@ -30,8 +30,11 @@ Content-Type: application/json
 }
 ```
 
-Hexes with no match are simply absent from the map. Errors: `401` (bad/missing token), `400`
-(malformed body/hex), `404`/`405` (wrong path/method).
+Hexes with no match are simply absent from the map. Errors: `401` (bad/missing token), `429`
+(rate limit — 120 req / 60s, shared across the single consumer), `400` (malformed body/hex),
+`404`/`405` (wrong path/method). Auth is checked before routing, so an unauthenticated caller can't
+map the route surface. The `RATE_LIMITER` binding is declared in `wrangler.toml` and deploys with
+the Worker — no separate setup.
 
 `metal-birds-watch` calls this **server-side** from its backend, so the raw response never reaches a
 browser and no CORS is exposed.

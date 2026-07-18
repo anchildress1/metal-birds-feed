@@ -8,6 +8,7 @@ import {
   HttpError,
   type EnrichmentRecord,
   type RunQuery,
+  type CheckLimit,
 } from '../../src/worker/handler.js';
 
 const rec = (hex: string, reg: string): EnrichmentRecord => ({
@@ -98,20 +99,38 @@ describe('toResponseMap', () => {
 describe('route', () => {
   const ok: RunQuery = () => Promise.resolve([rec('a1b2c3', 'N1')]);
   const boom: RunQuery = () => Promise.reject(new Error('d1 down'));
+  const pass: CheckLimit = () => Promise.resolve(true);
+  const deny: CheckLimit = () => Promise.resolve(false);
 
   it('404s an unknown path', async () => {
-    const res = await route('POST', '/other', 'Bearer t', 't', { hexes: [] }, ok);
+    const res = await route('POST', '/other', 'Bearer t', 't', { hexes: [] }, pass, ok);
     expect(res.status).toBe(404);
   });
 
   it('405s a non-POST method', async () => {
-    const res = await route('GET', '/enrich', 'Bearer t', 't', undefined, ok);
+    const res = await route('GET', '/enrich', 'Bearer t', 't', undefined, pass, ok);
     expect(res.status).toBe(405);
   });
 
-  it('401s before touching the body when auth fails', async () => {
-    const res = await route('POST', '/enrich', 'Bearer nope', 't', { hexes: ['a1b2c3'] }, ok);
+  it('authorizes before routing — a bad token on any path is 401, not 404', async () => {
+    const res = await route('POST', '/other', 'Bearer nope', 't', { hexes: ['a1b2c3'] }, pass, ok);
     expect(res.status).toBe(401);
+  });
+
+  it('401s before touching the body when auth fails', async () => {
+    const res = await route('POST', '/enrich', 'Bearer nope', 't', { hexes: ['a1b2c3'] }, pass, ok);
+    expect(res.status).toBe(401);
+  });
+
+  it('429s when the rate limit is exceeded, without querying', async () => {
+    let called = false;
+    const spy: RunQuery = () => {
+      called = true;
+      return Promise.resolve([]);
+    };
+    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['a1b2c3'] }, deny, spy);
+    expect(res.status).toBe(429);
+    expect(called).toBe(false);
   });
 
   it('returns an empty map for zero hexes without querying', async () => {
@@ -120,26 +139,26 @@ describe('route', () => {
       called = true;
       return Promise.resolve([]);
     };
-    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: [] }, spy);
+    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: [] }, pass, spy);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({});
     expect(called).toBe(false);
   });
 
   it('returns the enrichment map on a hit', async () => {
-    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['a1b2c3'] }, ok);
+    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['a1b2c3'] }, pass, ok);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ a1b2c3: { registration: 'N1' } });
   });
 
   it('collapses an unexpected query failure into a generic 500', async () => {
-    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['a1b2c3'] }, boom);
+    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['a1b2c3'] }, pass, boom);
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: 'internal error' });
   });
 
   it('surfaces a 400 for a malformed body', async () => {
-    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['nope'] }, ok);
+    const res = await route('POST', '/enrich', 'Bearer t', 't', { hexes: ['nope'] }, pass, ok);
     expect(res.status).toBe(400);
   });
 });

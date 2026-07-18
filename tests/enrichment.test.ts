@@ -99,10 +99,6 @@ describe('sqlLiteral', () => {
     expect(sqlLiteral(null)).toBe('NULL');
   });
 
-  it('renders numbers unquoted', () => {
-    expect(sqlLiteral(172)).toBe('172');
-  });
-
   it('quotes strings', () => {
     expect(sqlLiteral('N12345')).toBe("'N12345'");
   });

@@ -56,12 +56,10 @@ export const toEnrichmentRows = (records: Map<string, Aircraft>): EnrichmentRow[
 
 // Values originate from the validated canonical schema, not user input; single-quote doubling is
 // the only escaping a SQLite text literal requires. Emitting literals (not bound parameters) lets a
-// single INSERT carry a full chunk without hitting D1's per-query bound-parameter ceiling.
-export const sqlLiteral = (value: string | number | null): string => {
-  if (value === null) return 'NULL';
-  if (typeof value === 'number') return String(value);
-  return `'${value.replaceAll("'", "''")}'`;
-};
+// single INSERT carry a full chunk without hitting D1's per-query bound-parameter ceiling. Every
+// enrichment column is text-or-null, so this handles exactly those two cases.
+export const sqlLiteral = (value: string | null): string =>
+  value === null ? 'NULL' : `'${value.replaceAll("'", "''")}'`;
 
 const CHUNK_SIZE = 500;
 

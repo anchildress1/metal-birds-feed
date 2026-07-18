@@ -1,36 +1,7 @@
-import { route, type EnrichmentRecord, type RunQuery } from '../src/worker/handler.js';
+import { createFetch, type Env } from '../src/worker/serve.js';
 
-export interface Env {
-  DB: D1Database;
-  ENRICH_TOKEN: string;
-}
-
+// Thin Cloudflare-runtime shell. All orchestration lives in serve.ts (structural binding types,
+// unit-tested); the runtime binds the real D1Database and RateLimit bindings, which satisfy Env.
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const runQuery: RunQuery = async (sql, params) => {
-      const { results } = await env.DB.prepare(sql)
-        .bind(...params)
-        .all<EnrichmentRecord>();
-      return results;
-    };
-
-    let body: unknown;
-    if (request.method === 'POST') {
-      try {
-        body = await request.json();
-      } catch {
-        body = undefined;
-      }
-    }
-
-    const result = await route(
-      request.method,
-      new URL(request.url).pathname,
-      request.headers.get('authorization'),
-      env.ENRICH_TOKEN,
-      body,
-      runQuery
-    );
-    return Response.json(result.body, { status: result.status });
-  },
+  fetch: (request: Request, env: Env): Promise<Response> => createFetch(request, env),
 };

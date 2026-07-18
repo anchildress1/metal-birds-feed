@@ -14,3 +14,15 @@ database_id = "REPLACE_WITH_DATABASE_ID"
 # ENRICH_TOKEN is a secret, never committed. Set it with:
 #   wrangler secret put ENRICH_TOKEN
 # The same value goes into metal-birds-watch's backend env as the bearer token it sends.
+
+# Global rate limit (GA `ratelimit` binding). The endpoint has one legitimate, cache-fronted
+# consumer, so a single shared key caps a leaked token to 120 requests / 60s — enough headroom for
+# real batched grid lookups, far below what dataset enumeration needs. namespace_id is any account-
+# unique integer.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60
