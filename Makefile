@@ -1,4 +1,4 @@
-.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean serve deploy
+.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean serve build-feed deploy
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
@@ -79,15 +79,35 @@ commitlint:
 	$(BUNX) commitlint --edit $(COMMIT_MSG_FILE)
 
 clean:
-	rm -rf dist coverage node_modules
+	rm -rf dist coverage node_modules feed.sqlite
 
 # Run the feed service locally against a built feed.sqlite (set MBF_FEED_DB_PATH).
 serve:
 	$(BUN) run src/service/server.ts
 
-# Deploy the feed service to Cloud Run. Bakes ./feed.sqlite into the image, so build it first —
-# `MBF_FEED_DB_OUT=feed.sqlite bun run src/pipeline.ts`. Needs gcloud auth + project; set FEED_TOKEN
-# as a Cloud Run secret separately. Cloud Run accepts the request; FEED_TOKEN remains the sole
-# application authentication gate and occupies the Authorization header.
-deploy:
-	gcloud run deploy $(SERVICE_NAME) --source . --region $(REGION) --allow-unauthenticated --max-instances=1
+# Build a fresh consolidated database from every durable R2 feed slice. Loads .env when present;
+# CI supplies the same credentials directly. Phony by design — a prior local file is never trusted.
+build-feed: build
+	@set -eu; \
+		if [ -f "$(ENV_FILE)" ]; then \
+			case "$(ENV_FILE)" in /*) feed_env_source="$(ENV_FILE)" ;; *) feed_env_source="./$(ENV_FILE)" ;; esac; \
+			set -a; . "$$feed_env_source"; set +a; \
+		fi; \
+		: $${MBF_R2_ACCOUNT_ID:?MBF_R2_ACCOUNT_ID is required}; \
+		: $${MBF_R2_ACCESS_KEY_ID:?MBF_R2_ACCESS_KEY_ID is required}; \
+		: $${MBF_R2_SECRET_ACCESS_KEY:?MBF_R2_SECRET_ACCESS_KEY is required}; \
+		: $${MBF_R2_BUCKET_NAME:?MBF_R2_BUCKET_NAME is required}; \
+		rm -f feed.sqlite; \
+		MBF_FEED_DB_OUT=feed.sqlite $(BUN) run dist/publish-feed.js; \
+		test -s feed.sqlite
+
+# Build immediately before deploying so Cloud Run can never receive an ambient stale database.
+# FEED_TOKEN stays bound from Google Secret Manager; application auth owns Authorization.
+deploy: build-feed
+	@set -eu; \
+		if [ -f "$(ENV_FILE)" ]; then \
+			case "$(ENV_FILE)" in /*) deploy_env_source="$(ENV_FILE)" ;; *) deploy_env_source="./$(ENV_FILE)" ;; esac; \
+			set -a; . "$$deploy_env_source"; set +a; \
+		fi; \
+		: $${GCP_PROJECT_ID:?GCP_PROJECT_ID is required}; \
+		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --quiet

@@ -213,7 +213,7 @@ interface GitHubCtx {
   repo: string | undefined;
 }
 
-const resolveAllSources = (): string[] =>
+export const resolveAllSources = (): string[] =>
   readdirSync('sources')
     .filter((f) => f.endsWith('.yaml'))
     .map((f) => f.replace(/\.yaml$/, ''))

@@ -96,8 +96,8 @@ A private, authenticated point-lookup API for an authorized consumer application
 
 - **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership). ≤ 500 hexes; misses omitted.
 - Gated by a UUID bearer secret (`FEED_TOKEN`) and rate-limited — a private API, not a public one. Every request presents the secret.
-- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image, so a refresh is a redeploy (registry cadence is monthly).
-- The pipeline builds the DB from the per-source `_feed` slices when `MBF_FEED_DB_OUT` is set; `make deploy` bakes it into the Cloud Run image. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
+- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image; every successful non-dry refresh on the default branch rebuilds and redeploys it.
+- `make build-feed` rebuilds the DB from every durable per-source `_feed` slice in R2. `make deploy` always runs that build first, so an ambient stale `feed.sqlite` is never deployed. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
 ## Setup
 
@@ -119,11 +119,14 @@ make install
 | `make build`        | Compile TypeScript to `dist/`                     |
 | `make bootstrap`    | One-shot local initial load (reads `.env`)        |
 | `make serve`        | Run the feed service locally (`MBF_FEED_DB_PATH`) |
-| `make deploy`       | Deploy the feed service to Cloud Run              |
+| `make build-feed`   | Rebuild `feed.sqlite` from every R2 feed slice    |
+| `make deploy`       | Rebuild and deploy the feed service to Cloud Run  |
 | `make secret-scan`  | Scan for accidentally committed secrets           |
 | `make clean`        | Remove build artifacts                            |
 
-## Required Secrets (GitHub Actions)
+## Required GitHub Actions Configuration
+
+### Secrets
 
 | Secret                     | Purpose                     |
 | -------------------------- | --------------------------- |
@@ -132,6 +135,18 @@ make install
 | `MBF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
 | `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
 | `SONAR_TOKEN`              | SonarCloud analysis token   |
+
+### Variables
+
+| Variable                         | Purpose                                      |
+| -------------------------------- | -------------------------------------------- |
+| `GCP_PROJECT_ID`                 | Cloud Run project                            |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | GitHub Workload Identity Federation provider |
+| `GCP_SERVICE_ACCOUNT`            | Federated Cloud Run deployer service account |
+| `GCP_RUN_REGION`                 | Cloud Run region (default `us-central1`)     |
+| `GCP_RUN_SERVICE`                | Service name (default `metal-birds-feed`)    |
+
+`FEED_TOKEN` remains a Google Secret Manager binding on the Cloud Run service. The workflow never copies the token into GitHub.
 
 ## Sources
 
