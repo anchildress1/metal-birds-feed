@@ -172,12 +172,25 @@ type RowOutcome =
   | { status: 'skipped'; reason: 'missing_id' | 'duplicate' }
   | { status: 'failed' };
 
-type RecencyReason = 'cancelled_status' | 'newer_date';
+type RecencyReason = 'cancelled_status' | 'newer_date' | 'more_complete';
+
+// Counts populated primitive leaves in a canonical record: null, undefined, and '' count as absent;
+// nested objects and arrays recurse. Used as the last recency tiebreak so a richer row wins over a
+// sparser one for the same source_id (ANAC's RAB lists some marks twice, one entry with an
+// undisclosed operator UF/kind and one fully populated) — the info-density goal in AGENTS.md.
+const populatedLeafCount = (value: unknown): number => {
+  if (value === null || value === undefined || value === '') return 0;
+  if (Array.isArray(value)) return value.reduce((n: number, v) => n + populatedLeafCount(v), 0);
+  if (typeof value === 'object')
+    return Object.values(value).reduce((n: number, v) => n + populatedLeafCount(v), 0);
+  return 1;
+};
 
 // Resolves two rows sharing a reissued source_id within one source's file: a cancelled row never
-// outranks a live one; otherwise the more recent known date wins. Returns null when neither status
-// nor date distinguishes them — that's not a reissue signal, it's an ambiguous id collision the
-// caller must fail on rather than guess via file order.
+// outranks a live one; otherwise the more recent known date wins; failing that, the more complete
+// record wins. Returns null only when status, date, and field-completeness are all equal — that's
+// not a reissue signal, it's an ambiguous id collision the caller must fail on rather than guess
+// via file order.
 function resolveRecency(
   candidate: Aircraft,
   incumbent: Aircraft
@@ -194,6 +207,15 @@ function resolveRecency(
     return {
       winner: (candidateDate ?? '') > (incumbentDate ?? '') ? 'candidate' : 'incumbent',
       reason: 'newer_date',
+    };
+  }
+
+  const candidateFields = populatedLeafCount(candidate);
+  const incumbentFields = populatedLeafCount(incumbent);
+  if (candidateFields !== incumbentFields) {
+    return {
+      winner: candidateFields > incumbentFields ? 'candidate' : 'incumbent',
+      reason: 'more_complete',
     };
   }
 
