@@ -37,6 +37,16 @@ describe('parseCSV', () => {
     expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA', MODEL: '172' }]);
   });
 
+  it('strips a leading UTF-8 BOM so the first header cell is not renamed (FAA ACFTREF drift)', async () => {
+    // FAA added a UTF-8 BOM (EF BB BF) to its releases. Under latin1 those bytes would decode to
+    // `ï»¿CODE`, so `key: CODE` finds no column and the ACFTREF join matches 0 rows. The strip must
+    // leave the header clean.
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    const rows = await parseCSV(Buffer.concat([bom, buf('CODE,MFR\n001,CESSNA\n')]), opts());
+    expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA' }]);
+    expect(Object.keys(rows[0])[0]).toBe('CODE');
+  });
+
   it('preserves stray double-quote inside an unquoted field (FAA ACFTREF quirk)', async () => {
     // Mirrors the real-world FAA failure: MODEL value `BABY ACE "` triggers
     // INVALID_OPENING_QUOTE under default csv-parse settings.
