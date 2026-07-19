@@ -217,7 +217,7 @@ export const resolveAllSources = (): string[] =>
   readdirSync('sources')
     .filter((f) => f.endsWith('.yaml'))
     .map((f) => f.replace(/\.yaml$/, ''))
-    .sort();
+    .sort((a, b) => a.localeCompare(b));
 
 const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
