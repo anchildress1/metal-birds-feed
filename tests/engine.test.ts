@@ -1359,6 +1359,47 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.owner.state).toBe('CA');
   });
 
+  it.each([
+    {
+      label: 'richer conflicting row first',
+      rows: '1,N1,Alice,CA\n1,N1,Bob,\n',
+      owner: 'Alice',
+    },
+    {
+      label: 'richer conflicting row second',
+      rows: '1,N1,Bob,\n1,N1,Alice,CA\n',
+      owner: 'Bob',
+    },
+  ])('fails unequal-completeness duplicates with conflicting values: $label', async (input) => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-completeness-conflict',
+      label: 'synthetic',
+      country: 'US',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        'owner.name': { field: 'NAME' },
+        'owner.state': { field: 'ST' },
+      },
+    };
+    const files = new Map([['primary', Buffer.from(`ID,REG,NAME,ST\n${input.rows}`, 'utf8')]]);
+
+    const { records, stats } = await translate(config, files);
+
+    expect(stats.failed).toBe(1);
+    expect(stats.duplicateSkipped).toBe(0);
+    expect(records.size).toBe(1);
+    expect(records.get('1')?.owner.name).toBe(input.owner);
+  });
+
   it('skips a duplicate whose canonical record matches despite differing raw fields', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-canonical-match',
