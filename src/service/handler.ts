@@ -1,21 +1,17 @@
-// Pure request logic for the enrichment Worker, kept out of the Cloudflare-runtime entry (worker/
-// index.ts → src/worker/serve.ts) so it typechecks, lints, and is unit-tested in the main Bun
-// suite. serve.ts injects the D1-backed RunQuery and the rate-limit CheckLimit; the decisions live
-// here.
+// Pure request logic for the feed service, kept out of the Bun.serve runtime entry
+// (src/service/server.ts) so it typechecks, lints, and is unit-tested in the main Bun suite. The
+// server injects a SQLite-backed RunQuery and the rate-limit CheckLimit; the decisions live here.
 
-import type { EnrichmentFields } from '../enrichment-fields.js';
+import type { FeedRow } from '../feed-row.js';
+
+// Re-exported so the service + tests import the row shape from one place; the query is SELECT *, so
+// FeedRow is the single typed description of a returned row.
+export type { FeedRow };
 
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
-// D1 caps bound parameters at 100 per query, so a request is split into IN-lists of at most this
-// many hexes and the row groups are merged. Keeps the ≤500 request contract callable.
-const D1_MAX_PARAMS = 100;
 
-// The query is SELECT *, so the shared row shape is the single typed description of a returned row;
-// adding a column to the table + producer surfaces it here without editing a hand-maintained SELECT.
-export type EnrichmentRecord = EnrichmentFields;
-
-export type RunQuery = (sql: string, params: string[]) => Promise<EnrichmentRecord[]>;
+export type RunQuery = (sql: string, params: string[]) => Promise<FeedRow[]>;
 export type CheckLimit = () => Promise<boolean>;
 
 export interface RouteResult {
@@ -68,17 +64,15 @@ export const parseHexes = (body: unknown): string[] => {
 };
 
 export const buildSelect = (count: number): string =>
-  `SELECT * FROM enrichment WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
+  `SELECT * FROM feed WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
-export const toResponseMap = (
-  rows: EnrichmentRecord[]
-): Record<string, Omit<EnrichmentRecord, 'icao_hex'>> => {
-  const out: Record<string, Omit<EnrichmentRecord, 'icao_hex'>> = {};
+export const toResponseMap = (rows: FeedRow[]): Record<string, Omit<FeedRow, 'icao_hex'>> => {
+  const out: Record<string, Omit<FeedRow, 'icao_hex'>> = {};
   for (const { icao_hex, ...rest } of rows) out[icao_hex] = rest;
   return out;
 };
 
-const handleEnrich = async (
+const handleFeed = async (
   method: string,
   path: string,
   authHeader: string | null,
@@ -91,19 +85,18 @@ const handleEnrich = async (
   // runs only after a valid token hits the real endpoint, so an unauthenticated flood can't drain
   // the shared budget out from under the legitimate consumer.
   authorize(authHeader, token);
-  if (path !== '/enrich') throw new HttpError(404, 'not found');
+  if (path !== '/feed') throw new HttpError(404, 'not found');
   if (method !== 'POST') throw new HttpError(405, 'method not allowed');
   if (!(await checkLimit())) throw new HttpError(429, 'rate limited');
   const hexes = parseHexes(body);
   if (hexes.length === 0) return { status: 200, body: {} };
-  const chunks: string[][] = [];
-  for (let i = 0; i < hexes.length; i += D1_MAX_PARAMS)
-    chunks.push(hexes.slice(i, i + D1_MAX_PARAMS));
-  const groups = await Promise.all(chunks.map((c) => runQuery(buildSelect(c.length), c)));
-  return { status: 200, body: toResponseMap(groups.flat()) };
+  // SQLite's variable limit (>=999) comfortably exceeds MAX_HEXES, so one IN-query suffices — no
+  // chunking (unlike D1's 100-parameter cap).
+  const rows = await runQuery(buildSelect(hexes.length), hexes);
+  return { status: 200, body: toResponseMap(rows) };
 };
 
-// The single entry serve.ts calls. Converts thrown HttpErrors into status codes and swallows
+// The single entry server.ts calls. Converts thrown HttpErrors into status codes and swallows
 // anything unexpected as a generic 500 so a stack trace never reaches the caller.
 export const route = async (
   method: string,
@@ -115,7 +108,7 @@ export const route = async (
   runQuery: RunQuery
 ): Promise<RouteResult> => {
   try {
-    return await handleEnrich(method, path, authHeader, token, body, checkLimit, runQuery);
+    return await handleFeed(method, path, authHeader, token, body, checkLimit, runQuery);
   } catch (err) {
     if (err instanceof HttpError) return { status: err.status, body: { error: err.message } };
     return { status: 500, body: { error: 'internal error' } };

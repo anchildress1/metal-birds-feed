@@ -1,8 +1,9 @@
-// One typed description of the enrichment row shape, shared by the producer (enrichment.ts, which
-// writes it as SQL) and the Worker (handler.ts, which reads it back via SELECT *). Type-only with no
-// runtime imports, so pulling it into the Worker bundle adds nothing. Mirrors the enrichment table
-// (worker/migrations); adding a column there + in the producer's COLUMNS list surfaces here.
-export interface EnrichmentFields {
+// One typed description of the feed row shape, shared by the producer (feed.ts, which
+// builds it) and the service (handler.ts, which reads it back via SELECT *). Type-only with no
+// runtime imports, so it stays a shared shape without coupling the service to the pipeline. Mirrors
+// the feed table built in feed.ts; adding a column there + in the producer's COLUMNS list surfaces
+// here.
+export interface FeedRow {
   icao_hex: string;
   registration: string;
   icao_type_code: string | null;

@@ -1,7 +1,7 @@
 import type { Aircraft } from './schema.js';
 
 // Type-only import above means this module has no runtime dependencies, so importing it from both
-// engine.ts and enrichment.ts stays safe under mock.module (a partial engine mock can't erase it).
+// engine.ts and feed.ts stays safe under mock.module (a partial engine mock can't erase it).
 export const RECENCY_DATE_FIELDS = [
   'certification_date',
   'airworthiness_date',

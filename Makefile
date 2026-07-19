@@ -1,8 +1,11 @@
-.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean deploy worker-migrate
+.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean serve deploy
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
-WORKER_DIR := worker
+
+# Cloud Run feed service.
+SERVICE_NAME ?= metal-birds-feed
+REGION ?= us-central1
 
 install:
 	$(BUN) install && $(BUNX) lefthook install
@@ -78,12 +81,12 @@ commitlint:
 clean:
 	rm -rf dist coverage node_modules
 
-# One-time D1 setup: create the enrichment table. Idempotent (CREATE IF NOT EXISTS), but kept out
-# of the deploy path so a routine deploy never touches data. Needs wrangler auth (wrangler login or
-# CLOUDFLARE_API_TOKEN) and the real database_id in worker/wrangler.toml.
-worker-migrate:
-	cd $(WORKER_DIR) && $(BUN) install --frozen-lockfile && $(BUNX) wrangler d1 execute mbf-enrichment --remote --file=migrations/0001_create_enrichment.sql
+# Run the feed service locally against a built feed.sqlite (set MBF_FEED_DB_PATH).
+serve:
+	$(BUN) run src/service/server.ts
 
-# Deploy the enrichment Worker. Mirrors .github/workflows/deploy-worker.yml for local pushes.
+# Deploy the feed service to Cloud Run. Bakes ./feed.sqlite into the image, so build it first —
+# `MBF_FEED_DB_OUT=feed.sqlite bun run src/pipeline.ts`. Needs gcloud auth + project; set FEED_TOKEN
+# as a Cloud Run secret separately.
 deploy:
-	cd $(WORKER_DIR) && $(BUN) install --frozen-lockfile && $(BUNX) wrangler deploy
+	gcloud run deploy $(SERVICE_NAME) --source . --region $(REGION) --no-allow-unauthenticated

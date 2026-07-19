@@ -4,10 +4,7 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  // worker/ is a standalone Cloudflare deployable with its own tsconfig + workers-types; its
-  // Cloudflare-runtime entry is not part of this typed-lint project. Its business logic lives in
-  // src/worker/ and is linted here like any other source.
-  { ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'worker/**'] },
+  { ignores: ['dist/**', 'coverage/**', 'node_modules/**'] },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {
