@@ -47,21 +47,28 @@ const readJsonBody = async (request: Request): Promise<unknown> => {
   const decoder = new TextDecoder();
   let totalBytes = 0;
   let text = '';
-  while (true) {
-    // Sequential by design: each stream read depends on the previous chunk and enforces the cap
-    // before retaining more request data.
-    const result: unknown = await reader.read();
-    if (typeof result !== 'object' || result === null)
-      throw new Error('request body stream returned an invalid result');
-    if (Reflect.get(result, 'done') === true) break;
-    const chunk: unknown = Reflect.get(result, 'value');
-    if (!(chunk instanceof Uint8Array))
-      throw new Error('request body stream returned an invalid chunk');
-    totalBytes += chunk.byteLength;
-    if (totalBytes > MAX_BODY_BYTES) throw new HttpError(413, 'request body too large');
-    text += decoder.decode(chunk, { stream: true });
+  try {
+    while (true) {
+      // Sequential by design: each stream read depends on the previous chunk and enforces the cap
+      // before retaining more request data.
+      const result: unknown = await reader.read();
+      if (typeof result !== 'object' || result === null)
+        throw new Error('request body stream returned an invalid result');
+      if (Reflect.get(result, 'done') === true) break;
+      const chunk: unknown = Reflect.get(result, 'value');
+      if (!(chunk instanceof Uint8Array))
+        throw new Error('request body stream returned an invalid chunk');
+      totalBytes += chunk.byteLength;
+      if (totalBytes > MAX_BODY_BYTES) throw new HttpError(413, 'request body too large');
+      text += decoder.decode(chunk, { stream: true });
+    }
+    text += decoder.decode();
+  } finally {
+    // Release the stream on every exit — a 413 cap breach or stream error would otherwise leave the
+    // reader (and its underlying connection) open until GC. cancel() on a fully-drained stream is a
+    // harmless no-op.
+    await reader.cancel().catch(() => {});
   }
-  text += decoder.decode();
   try {
     return JSON.parse(text) as unknown;
   } catch {
