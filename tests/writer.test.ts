@@ -430,18 +430,30 @@ describe('isTransientS3Error', () => {
 });
 
 describe('R2ArtifactWriter — feed intermediates', () => {
-  it('reports that the per-source slice exists when HEAD resolves', async () => {
-    mockSend.mockResolvedValueOnce({});
+  it('reports the slice exists when it reads back as valid JSON', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: () => Promise.resolve('[{"icao_hex":"a1b2c3"}]') },
+    });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
 
     expect(await writer.feedRowsExist('faa')).toBe(true);
     const command = mockSend.mock.calls[0]?.[0] as { _kind: string; input: { Key: string } };
-    expect(command._kind).toBe('head');
+    expect(command._kind).toBe('get');
     expect(command.input.Key).toBe('aircraft/_feed/faa.json');
   });
 
-  it('reports a missing per-source slice and logs the failed HEAD', async () => {
-    mockSend.mockRejectedValueOnce(s3Error('Not Found', 404));
+  it('reports an absent slice as missing so it self-heals', async () => {
+    mockSend.mockRejectedValue(noSuchKey());
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).feedRowsExist('faa')).toBe(false);
+  });
+
+  it('reports a present-but-corrupt slice as missing so it self-heals', async () => {
+    mockSend.mockResolvedValue({ Body: { transformToString: () => Promise.resolve('{not json') } });
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).feedRowsExist('faa')).toBe(false);
+  });
+
+  it('reports missing and logs when the slice read fails hard', async () => {
+    mockSend.mockRejectedValue(s3Error('Not Found', 404));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {

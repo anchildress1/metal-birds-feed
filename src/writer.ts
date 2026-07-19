@@ -147,19 +147,15 @@ export class R2ArtifactWriter {
     }
   }
 
-  // Cadence skips are only safe when both durable outputs exist. A missing feed slice must force a
-  // source refresh, otherwise the consolidated service DB stays incomplete until the next cadence.
+  // Cadence skips are only safe when the feed slice both exists and is usable. A HEAD would pass a
+  // present-but-corrupt-JSON slice, which `readFeedRows` later treats as absent — so `publishFeed`
+  // fails closed every run while nothing regenerates the slice until cadence expiry. Read+parse here
+  // (via readFeedRows, which returns null for absent OR corrupt) so the self-heal path covers a bad
+  // intermediate, not only a missing one. R2 egress is free, so the extra GET costs one cheap op.
   async feedRowsExist(source: string): Promise<boolean> {
     if (this.dryRun) return true;
     try {
-      await retry(
-        () =>
-          this.client.send(
-            new HeadObjectCommand({ Bucket: this.bucket, Key: `aircraft/_feed/${source}.json` })
-          ),
-        S3_RETRY
-      );
-      return true;
+      return (await this.readFeedRows(source)) !== null;
     } catch (err) {
       log('warn', 'feed_rows_missing_on_cadence_skip', { source, msg: errorMessage(err) });
       return false;
