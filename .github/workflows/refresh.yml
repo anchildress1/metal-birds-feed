@@ -111,11 +111,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    env:
-      MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
-      MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
-      MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
-      MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
 
     steps:
       - name: Checkout code
@@ -131,6 +126,11 @@ jobs:
 
       - name: Build feed and detect change
         id: feed
+        env:
+          MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+          MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+          MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+          MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
         run: make build-feed
 
       - name: Authenticate to Google Cloud
@@ -160,4 +160,8 @@ jobs:
         if: steps.feed.outputs.changed == 'true'
         env:
           FEED_HASH: ${{ steps.feed.outputs.hash }}
+          MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+          MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+          MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+          MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
         run: bun run dist/mark-deployed.js "$FEED_HASH"

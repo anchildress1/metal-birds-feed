@@ -13,4 +13,5 @@ ENV PORT=8080 MBF_FEED_DB_PATH=/app/feed.sqlite
 EXPOSE 8080
 
 # FEED_TOKEN (a UUID) gates every request — set it as a Cloud Run secret/env var.
+USER bun
 CMD ["bun", "run", "src/service/server.ts"]
