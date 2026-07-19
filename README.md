@@ -7,9 +7,9 @@
 
 </div>
 
-Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2 for
-fast, indexed tail-number and ICAO hex lookups. Inspired by
-[metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
+Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
+serves fast tail-number and ICAO hex lookups from a private [feed service](#feed-service) on
+Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + private operator
 artifacts. The normalized output is for Ashley's own applications only, stored in a
@@ -86,8 +86,18 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
 | `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                        |
+| `aircraft/_feed/<source>.json`  | Per-source feed slice (hex-collapsed descriptive columns) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                                                  |
 
 One queryable artifact per source — filter or point-lookup on any column (every canonical field is its own typed column). Rebuilt and re-uploaded whole only when the record set's content hash changes.
+
+## Feed Service
+
+A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table indexed by `icao_hex`, so a lookup is one `WHERE icao_hex IN (...)` on one table, never a union across per-country files.
+
+- **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership). ≤ 500 hexes; misses omitted.
+- Gated by a UUID bearer secret (`FEED_TOKEN`) and rate-limited — a private API, not a public one. Every request presents the secret.
+- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image, so a refresh is a redeploy (registry cadence is monthly).
+- The pipeline builds the DB from the per-source `_feed` slices when `MBF_FEED_DB_OUT` is set; `make deploy` bakes it into the Cloud Run image. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
 ## Setup
 
@@ -98,18 +108,20 @@ make install
 
 ## Available Commands
 
-| Command             | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `make install`      | Install dependencies and git hooks             |
-| `make format`       | Format code with Prettier                      |
-| `make format-check` | Check formatting (non-destructive, used in CI) |
-| `make lint`         | Run ESLint                                     |
-| `make typecheck`    | TypeScript type check                          |
-| `make test`         | Run unit tests with coverage                   |
-| `make build`        | Compile TypeScript to `dist/`                  |
-| `make bootstrap`    | One-shot local initial load (reads `.env`)     |
-| `make secret-scan`  | Scan for accidentally committed secrets        |
-| `make clean`        | Remove build artifacts                         |
+| Command             | Description                                       |
+| ------------------- | ------------------------------------------------- |
+| `make install`      | Install dependencies and git hooks                |
+| `make format`       | Format code with Prettier                         |
+| `make format-check` | Check formatting (non-destructive, used in CI)    |
+| `make lint`         | Run ESLint                                        |
+| `make typecheck`    | TypeScript type check                             |
+| `make test`         | Run unit tests with coverage                      |
+| `make build`        | Compile TypeScript to `dist/`                     |
+| `make bootstrap`    | One-shot local initial load (reads `.env`)        |
+| `make serve`        | Run the feed service locally (`MBF_FEED_DB_PATH`) |
+| `make deploy`       | Deploy the feed service to Cloud Run              |
+| `make secret-scan`  | Scan for accidentally committed secrets           |
+| `make clean`        | Remove build artifacts                            |
 
 ## Required Secrets (GitHub Actions)
 

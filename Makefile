@@ -90,4 +90,4 @@ serve:
 # as a Cloud Run secret separately. Cloud Run accepts the request; FEED_TOKEN remains the sole
 # application authentication gate and occupies the Authorization header.
 deploy:
-	gcloud run deploy $(SERVICE_NAME) --source . --region $(REGION) --allow-unauthenticated
+	gcloud run deploy $(SERVICE_NAME) --source . --region $(REGION) --allow-unauthenticated --max-instances=1
