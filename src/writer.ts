@@ -7,6 +7,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
+import { FeedRowsSchema } from './feed.js';
 import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
@@ -222,14 +223,28 @@ export class R2ArtifactWriter {
       );
       const body = await res.Body?.transformToString();
       if (!body) return null;
+      let json: unknown;
       try {
-        return JSON.parse(body) as FeedRow[];
+        json = JSON.parse(body);
       } catch {
         // Present-but-corrupt slice reads as absent (parity with readState): publishFeed then fails
         // closed on the named source rather than crashing the whole Promise.all on a raw parse error.
         log('error', 'feed_rows_parse_failed', { source, reason: 'invalid_json' });
         return null;
       }
+      // Valid JSON isn't enough: a wrong-shape slice (bare object, row missing a NOT NULL column,
+      // scalar rows) would crash consolidation on merge/hash/insert. Reject it as absent so the
+      // cadence self-heal regenerates the slice instead.
+      const parsed = FeedRowsSchema.safeParse(json);
+      if (!parsed.success) {
+        log('error', 'feed_rows_parse_failed', {
+          source,
+          reason: 'schema_invalid',
+          msg: parsed.error.message,
+        });
+        return null;
+      }
+      return parsed.data;
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
       log('error', 'feed_rows_load_failed', { source, msg: errorMessage(err) });

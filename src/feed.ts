@@ -1,5 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
+import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { latestKnownDate } from './recency.js';
@@ -162,6 +163,21 @@ const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
 
 const COLUMN_DEFS = COLUMNS.map((c) => `${c} ${COLUMN_TYPES[c]}`).join(',\n  ');
 const DDL = `CREATE TABLE feed (\n  ${COLUMN_DEFS}\n);`;
+
+// Structural validator for a feed slice read back from R2, derived from the same COLUMN_TYPES the
+// table is built from: NOT NULL columns must be present strings, INTEGER/REAL a number or null, TEXT
+// a string or null. A slice that is valid JSON but not a well-formed FeedRow[] (a bare object, a row
+// missing a required column, a scalar where a row belongs) is rejected at the read boundary so it
+// self-heals, instead of passing through and crashing consolidation on a bad row.
+const columnSchema = (type: string): z.ZodTypeAny => {
+  if (type.includes('NOT NULL') || type.includes('PRIMARY KEY')) return z.string();
+  if (type.startsWith('INTEGER') || type.startsWith('REAL')) return z.number().nullable();
+  return z.string().nullable();
+};
+
+export const FeedRowsSchema = z.array(
+  z.object(Object.fromEntries(COLUMNS.map((c) => [c, columnSchema(COLUMN_TYPES[c])])))
+) as unknown as z.ZodType<FeedRow[]>;
 
 // The consolidated, single-table lookup DB the service serves: one row per icao_hex across every
 // source, queried as `SELECT * FROM feed WHERE icao_hex IN (...)` — no per-country union. Built

@@ -1,7 +1,41 @@
 import { describe, it, expect, mock, beforeEach, spyOn } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
+import type { FeedRow } from '../src/feed-row.js';
 import type { SourceState } from '../src/cadence.js';
+
+const FEED_ROW: FeedRow = {
+  icao_hex: 'a1b2c3',
+  registration: 'N1',
+  icao_type_code: null,
+  status: 'valid',
+  country: 'US',
+  manufacturer: null,
+  model: null,
+  serial_number: null,
+  year_manufactured: null,
+  airframe_type: null,
+  category: null,
+  engine_manufacturer: null,
+  engine_model: null,
+  engine_type: null,
+  engine_count: null,
+  engine_horsepower: null,
+  engine_thrust_lbs: null,
+  seats: null,
+  max_passengers: null,
+  cruise_speed_ktas: null,
+  max_takeoff_weight_kg: null,
+  owner_name: null,
+  owner_kind: null,
+  owner_state: null,
+  owner_country: null,
+  operator_name: null,
+  operator_kind: null,
+  operator_state: null,
+  operator_country: null,
+  source: 'faa',
+};
 
 const mockSend = mock();
 const s3ClientConfig: { value: unknown } = { value: undefined };
@@ -430,9 +464,9 @@ describe('isTransientS3Error', () => {
 });
 
 describe('R2ArtifactWriter — feed intermediates', () => {
-  it('reports the slice exists when it reads back as valid JSON', async () => {
+  it('reports the slice exists when it reads back as a well-formed FeedRow[]', async () => {
     mockSend.mockResolvedValueOnce({
-      Body: { transformToString: () => Promise.resolve('[{"icao_hex":"a1b2c3"}]') },
+      Body: { transformToString: () => Promise.resolve(JSON.stringify([FEED_ROW])) },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
 
@@ -440,6 +474,13 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     const command = mockSend.mock.calls[0]?.[0] as { _kind: string; input: { Key: string } };
     expect(command._kind).toBe('get');
     expect(command.input.Key).toBe('aircraft/_feed/faa.json');
+  });
+
+  it('reports a structurally-invalid slice as missing so it self-heals', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve('[{"icao_hex":"a1b2c3"}]') },
+    });
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).feedRowsExist('faa')).toBe(false);
   });
 
   it('reports an absent slice as missing so it self-heals', async () => {
@@ -482,13 +523,20 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     expect(String(put?.input.Body)).toContain('a1b2c3');
   });
 
-  it('reads the per-source slice back', async () => {
+  it('reads a well-formed per-source slice back', async () => {
     mockSend.mockResolvedValue({
-      Body: { transformToString: () => Promise.resolve('[{"icao_hex":"a1b2c3"}]') },
+      Body: { transformToString: () => Promise.resolve(JSON.stringify([FEED_ROW])) },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const rows = await writer.readFeedRows('faa');
-    expect(rows).toEqual([{ icao_hex: 'a1b2c3' } as never]);
+    expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
+  });
+
+  it('treats a valid-JSON but wrong-shape slice as absent (structural validation)', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    for (const body of ['{}', '[{"icao_hex":"a1b2c3"}]', '[1,2,3]', '"a string"']) {
+      mockSend.mockResolvedValue({ Body: { transformToString: () => Promise.resolve(body) } });
+      expect(await writer.readFeedRows('faa')).toBeNull();
+    }
   });
 
   it('returns null when the slice is absent', async () => {
