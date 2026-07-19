@@ -5,7 +5,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Hard prohibitions
 
 - PII allowed: `owner.{name,kind,state,country}` + `operator.{name,kind,state,country}`. Drop street/street2/city/postal-code/county/region/care-of at the mapping config.
-- No public read API. Private operator R2 binding only (PRD §CC.4).
+- No _public_ (unauthenticated) read API. A private, authenticated API is allowed: the feed service (Cloud Run, `src/service/`) is gated by a UUID bearer secret (`FEED_TOKEN`), rate-limited, point-lookup (`POST /feed`, `icao_hex` → descriptive aircraft slice: identity, airframe, engine, performance, ownership — no registry-admin/legal/date bookkeeping), server-side, a single authorized consumer application. Not a public surface — no unauthenticated access, bulk, enumeration, query surface, or full-artifact access. It serves one consolidated `feed.sqlite` (built by the pipeline, baked into the image); direct R2 artifact access stays private-operator-binding only. (PRD §CC.4 "no public read API" = no _unauthenticated_ one; this private API complies.)
 - No commercial operator deployment. CC BY-NC + Private-use sources require non-commercial use (PRD §CC.3).
 - No public output distribution. Normalized artifacts are private to Ashley-operated applications only; forks self-host their own artifacts.
 - No `..` in path inputs. Resolve to absolute, enforce sandbox-root containment after resolution, default deny on validation failure.
@@ -81,7 +81,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Distribution model
 
 - Source-available code (Polyform Shield 1.0.0 + Supplemental Terms). Forks self-host against own R2 + own per-source source-use assessment.
-- Normalized output is private to Ashley-operated applications only. No public API, public download, public query surface, or public dataset publication.
+- Normalized output is private to Ashley-operated applications only, plus the feed service's gated point-lookup slice served to an explicitly authorized consumer application, server-side. No public (unauthenticated) API, public download, public query surface, or public dataset publication — the service is authenticated by a UUID bearer secret, rate-limited, and single-consumer, not public.
 - Operator deployment must remain non-commercial for lifetime of any Private-use source ingested.
 
 ## GitHub Actions

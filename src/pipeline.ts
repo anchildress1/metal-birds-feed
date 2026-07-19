@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
-import { R2ArtifactWriter } from './writer.js';
+import { R2ArtifactWriter, type R2Config } from './writer.js';
+import { toFeedRows, mergeFeedRows, buildFeedDb, type FeedRow } from './feed.js';
 import { log, errorMessage } from './logger.js';
 import {
   shouldSkip,
@@ -20,6 +21,13 @@ function requireEnv(name: string): string {
   if (!v) throw new Error(`Missing required environment variable: ${name}`);
   return v;
 }
+
+const r2ConfigFromEnv = (): R2Config => ({
+  accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
+  accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
+  secretAccessKey: requireEnv('MBF_R2_SECRET_ACCESS_KEY'),
+  bucketName: requireEnv('MBF_R2_BUCKET_NAME'),
+});
 
 function validateSourceId(sourceId: string): void {
   if (sourceId.includes('..') || sourceId.includes('/') || sourceId.includes('\\'))
@@ -42,15 +50,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   const config = loadSourceConfig(configPath);
 
   const dryRun = process.env['DRY_RUN'] === 'true';
-  const writer = new R2ArtifactWriter(
-    {
-      accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
-      accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
-      secretAccessKey: requireEnv('MBF_R2_SECRET_ACCESS_KEY'),
-      bucketName: requireEnv('MBF_R2_BUCKET_NAME'),
-    },
-    dryRun
-  );
+  const writer = new R2ArtifactWriter(r2ConfigFromEnv(), dryRun);
 
   // State is read for every source: cadence sources gate on last_run, all sources gate the artifact
   // PUT on content_hash (skip-if-unchanged).
@@ -92,6 +92,18 @@ export async function run(sourceId: string): Promise<RunResult> {
   }
 
   const writeStats = await writer.write(records, sourceId, priorState);
+
+  // Write this source's hex-collapsed feed slice as a build intermediate. main() reads every
+  // source's intermediate and merges them into the single consolidated DB — so a cadence-skipped
+  // source keeps its prior intermediate and stays in the consolidated output. Runs every non-dry
+  // run; the artifact, not this derived slice, is the durable output, so it is best-effort.
+  if (!dryRun) {
+    try {
+      await writer.writeFeedRows(sourceId, toFeedRows(records.values()));
+    } catch (err) {
+      log('error', 'feed_rows_failed', { source: sourceId, msg: errorMessage(err) });
+    }
+  }
 
   let newState: SourceState | null = priorState;
   if (!dryRun) {
@@ -313,6 +325,26 @@ const emitStaleness = async (
     );
 };
 
+// Rebuilds the single consolidated feed DB from every source's intermediate slice — so a
+// cadence-skipped source stays included via its prior intermediate — and writes it to
+// MBF_FEED_DB_OUT. The deploy step bakes that file into the Cloud Run image. Opt-in via the env var;
+// best-effort, since R2 remains the source of truth.
+const publishFeed = async (sources: string[], dryRun: boolean): Promise<void> => {
+  const out = process.env['MBF_FEED_DB_OUT']?.trim();
+  if (!out || dryRun) return;
+  try {
+    const writer = new R2ArtifactWriter(r2ConfigFromEnv(), false);
+    const groups = (await Promise.all(sources.map((s) => writer.readFeedRows(s)))).filter(
+      (g): g is FeedRow[] => g !== null
+    );
+    const rows = mergeFeedRows(groups);
+    await writeFile(out, buildFeedDb(rows));
+    log('info', 'feed_published', { rows: rows.length, sources: groups.length, out });
+  } catch (err) {
+    log('error', 'feed_publish_failed', { msg: errorMessage(err) });
+  }
+};
+
 export async function main(): Promise<void> {
   const sources = resolveSources();
   const results = await Promise.allSettled(sources.map(run));
@@ -332,6 +364,7 @@ export async function main(): Promise<void> {
   );
   await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
+  await publishFeed(sources, dryRun);
   await emitFailures(failures);
 
   if (failures.length > 0) process.exit(1);

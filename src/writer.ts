@@ -6,6 +6,7 @@ import {
   NoSuchKey,
 } from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
+import type { FeedRow } from './feed-row.js';
 import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
@@ -187,6 +188,31 @@ export class R2ArtifactWriter {
 
   async writeState(source: string, state: SourceState): Promise<void> {
     await this.put(`aircraft/_state/${source}.json`, JSON.stringify(state), 'application/json');
+  }
+
+  // Per-source feed slice, the build intermediate main() merges into the consolidated DB.
+  // Stored as JSON so consolidation reads it back without a SQLite round trip.
+  async writeFeedRows(source: string, rows: FeedRow[]): Promise<void> {
+    await this.put(`aircraft/_feed/${source}.json`, JSON.stringify(rows), 'application/json');
+  }
+
+  async readFeedRows(source: string): Promise<FeedRow[] | null> {
+    try {
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_feed/${source}.json` })
+          ),
+        S3_RETRY
+      );
+      const body = await res.Body?.transformToString();
+      if (!body) return null;
+      return JSON.parse(body) as FeedRow[];
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      log('error', 'feed_rows_load_failed', { source, msg: errorMessage(err) });
+      throw err;
+    }
   }
 
   private async put(key: string, body: Uint8Array | string, contentType: string): Promise<void> {

@@ -428,3 +428,35 @@ describe('isTransientS3Error', () => {
     expect(isTransientS3Error(undefined)).toBe(true);
   });
 });
+
+describe('R2ArtifactWriter — feed intermediates', () => {
+  it('writes the per-source slice JSON to aircraft/_feed/<source>.json', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    await writer.writeFeedRows('faa', [{ icao_hex: 'a1b2c3', registration: 'N1' } as never]);
+    const put = putCalls().find((c) => c.input.Key === 'aircraft/_feed/faa.json');
+    expect(put?.input.ContentType).toBe('application/json');
+    expect(String(put?.input.Body)).toContain('a1b2c3');
+  });
+
+  it('reads the per-source slice back', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve('[{"icao_hex":"a1b2c3"}]') },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const rows = await writer.readFeedRows('faa');
+    expect(rows).toEqual([{ icao_hex: 'a1b2c3' } as never]);
+  });
+
+  it('returns null when the slice is absent', async () => {
+    mockSend.mockRejectedValue(noSuchKey());
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readFeedRows('faa')).toBeNull();
+  });
+
+  it('returns null for an empty body', async () => {
+    mockSend.mockResolvedValue({ Body: { transformToString: () => Promise.resolve('') } });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readFeedRows('faa')).toBeNull();
+  });
+});
