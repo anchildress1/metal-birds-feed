@@ -5,7 +5,7 @@ import { loadServiceConfig } from '../../src/service/config.js';
 const TOKEN = '00000000-0000-4000-8000-000000000001';
 
 describe('loadServiceConfig', () => {
-  it('loads secure defaults with a valid UUID token', () => {
+  it('loads secure defaults with a valid token', () => {
     expect(loadServiceConfig({ FEED_TOKEN: TOKEN })).toEqual({
       dbPath: resolve('feed.sqlite'),
       port: 8080,
@@ -66,11 +66,15 @@ describe('loadServiceConfig', () => {
   it.each([
     { label: 'missing', token: undefined },
     { label: 'empty', token: '' },
-    { label: 'non-UUID', token: 'secret' },
-    { label: 'nil UUID', token: '00000000-0000-0000-0000-000000000000' },
-    { label: 'invalid variant', token: '00000000-0000-4000-7000-000000000001' },
+    { label: 'blank', token: '   ' },
+    { label: 'too short', token: 'deadbeef' },
   ])('rejects a $label token', ({ token }) => {
-    expect(() => loadServiceConfig({ FEED_TOKEN: token })).toThrow('FEED_TOKEN must be a UUID');
+    expect(() => loadServiceConfig({ FEED_TOKEN: token })).toThrow('FEED_TOKEN must be set');
+  });
+
+  it('accepts any sufficiently long secret, not only a UUID', () => {
+    const token = 'not-a-uuid-but-plenty-of-entropy';
+    expect(loadServiceConfig({ FEED_TOKEN: token }).token).toBe(token);
   });
 
   it.each(['0', '-1', '1.5', 'Infinity', 'NaN', 'nope', '', '9007199254740992'])(

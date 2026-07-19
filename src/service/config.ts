@@ -1,6 +1,10 @@
 import { resolve, sep } from 'node:path';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// A bearer secret's strength is entropy, not shape — a UUID and any random 32-hex string carry the
+// same protection, so we don't police the format (that would only reject good secrets and block
+// rotation to a non-UUID). Fail fast at startup on the one thing that is a real misconfiguration:
+// an absent or trivially short token.
+const MIN_TOKEN_LENGTH = 16;
 
 export interface ServiceConfig {
   dbPath: string;
@@ -40,7 +44,8 @@ export const loadServiceConfig = (
   root = process.cwd()
 ): ServiceConfig => {
   const token = env['FEED_TOKEN']?.trim();
-  if (!token || !UUID_RE.test(token)) throw new Error('FEED_TOKEN must be a UUID');
+  if (!token || token.length < MIN_TOKEN_LENGTH)
+    throw new Error(`FEED_TOKEN must be set (at least ${MIN_TOKEN_LENGTH} characters)`);
 
   return {
     dbPath: databasePath(env['MBF_FEED_DB_PATH'], root),
