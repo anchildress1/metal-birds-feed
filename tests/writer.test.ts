@@ -490,4 +490,10 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     expect(await writer.readFeedRows('faa')).toBeNull();
   });
+
+  it('treats corrupt JSON as absent (parity with readState)', async () => {
+    mockSend.mockResolvedValue({ Body: { transformToString: () => Promise.resolve('{not json') } });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readFeedRows('faa')).toBeNull();
+  });
 });

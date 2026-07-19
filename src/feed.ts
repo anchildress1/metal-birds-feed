@@ -99,11 +99,12 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   }));
 };
 
-// Merge per-source slices into one row per icao_hex for the consolidated table. A non-cancelled row
-// is never replaced by a cancelled one; otherwise the first-seen wins (sources are enumerated
-// deterministically). The slice drops the date fields, so within-source recency is already resolved
-// in toFeedRows; a cross-source hex collision (one airframe in two registries) is rare and
-// transient.
+// Merge per-source slices into one row per icao_hex for the consolidated table. A live
+// (non-cancelled) incumbent is never overwritten; a cancelled incumbent is replaced by any later
+// row — so a live row always beats a cancelled one regardless of order, and among all-cancelled the
+// last-seen wins. Sources are enumerated in sorted order (resolveAllSources), so the result is
+// deterministic. The slice drops the date fields, so within-source recency is already resolved in
+// toFeedRows; a cross-source hex collision (one airframe in two registries) is rare and transient.
 export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
   const byHex = new Map<string, FeedRow>();
   for (const group of groups) {
@@ -148,7 +149,8 @@ const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
   source: 'TEXT NOT NULL',
 };
 
-const DDL = `CREATE TABLE feed (\n  ${COLUMNS.map((c) => `${c} ${COLUMN_TYPES[c]}`).join(',\n  ')}\n);`;
+const COLUMN_DEFS = COLUMNS.map((c) => `${c} ${COLUMN_TYPES[c]}`).join(',\n  ');
+const DDL = `CREATE TABLE feed (\n  ${COLUMN_DEFS}\n);`;
 
 // The consolidated, single-table lookup DB the service serves: one row per icao_hex across every
 // source, queried as `SELECT * FROM feed WHERE icao_hex IN (...)` — no per-country union. Built

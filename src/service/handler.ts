@@ -112,6 +112,9 @@ export const routeRequest = async (
     return await handleFeed(method, path, authHeader, token, loadBody, checkLimit, runQuery);
   } catch (err) {
     if (err instanceof HttpError) return { status: err.status, body: { error: err.message } };
+    // Log server-side (Cloud Run captures stderr) so an unexpected failure is diagnosable; the
+    // caller still gets only a generic 500, never a stack trace.
+    console.error('feed request failed', err);
     return { status: 500, body: { error: 'internal error' } };
   }
 };

@@ -226,7 +226,14 @@ export class R2ArtifactWriter {
       );
       const body = await res.Body?.transformToString();
       if (!body) return null;
-      return JSON.parse(body) as FeedRow[];
+      try {
+        return JSON.parse(body) as FeedRow[];
+      } catch {
+        // Present-but-corrupt slice reads as absent (parity with readState): publishFeed then fails
+        // closed on the named source rather than crashing the whole Promise.all on a raw parse error.
+        log('error', 'feed_rows_parse_failed', { source, reason: 'invalid_json' });
+        return null;
+      }
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
       log('error', 'feed_rows_load_failed', { source, msg: errorMessage(err) });
