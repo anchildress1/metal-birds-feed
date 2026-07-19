@@ -1,5 +1,13 @@
 import type { Database } from 'bun:sqlite';
-import { route, type FeedRow, type RunQuery, type CheckLimit } from './handler.js';
+import {
+  HttpError,
+  routeRequest,
+  type FeedRow,
+  type RunQuery,
+  type CheckLimit,
+} from './handler.js';
+
+const MAX_BODY_BYTES = 16_384;
 
 // Fixed-window in-process limiter. The endpoint has a single legitimate consumer, so one global
 // window is enough to cap a leaked token; `now` is injected for testability. Per-instance under
@@ -29,28 +37,52 @@ export const makeRunQuery =
   (sql, params) =>
     Promise.resolve(db.query(sql).all(...params) as FeedRow[]);
 
-// Adapts a runtime Request to the pure router: read the body (best-effort JSON on POST), route, and
-// serialize. Kept here (not in the Bun.serve entry) so it is unit-tested with a plain Request.
+const readJsonBody = async (request: Request): Promise<unknown> => {
+  if (request.body === null) return undefined;
+  const declaredLength = Number(request.headers.get('content-length') ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES)
+    throw new HttpError(413, 'request body too large');
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let totalBytes = 0;
+  let text = '';
+  while (true) {
+    // Sequential by design: each stream read depends on the previous chunk and enforces the cap
+    // before retaining more request data.
+    const result: unknown = await reader.read();
+    if (typeof result !== 'object' || result === null)
+      throw new Error('request body stream returned an invalid result');
+    if (Reflect.get(result, 'done') === true) break;
+    const chunk: unknown = Reflect.get(result, 'value');
+    if (!(chunk instanceof Uint8Array))
+      throw new Error('request body stream returned an invalid chunk');
+    totalBytes += chunk.byteLength;
+    if (totalBytes > MAX_BODY_BYTES) throw new HttpError(413, 'request body too large');
+    text += decoder.decode(chunk, { stream: true });
+  }
+  text += decoder.decode();
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return undefined;
+  }
+};
+
+// The router performs auth, route, method, and rate-limit checks before invoking the lazy body
+// reader. The reader then applies a byte cap while streaming, so chunked requests cannot bypass it.
 export const serveRequest = async (
   request: Request,
   token: string | undefined,
   checkLimit: CheckLimit,
   runQuery: RunQuery
 ): Promise<Response> => {
-  let body: unknown;
-  if (request.method === 'POST') {
-    try {
-      body = await request.json();
-    } catch {
-      body = undefined;
-    }
-  }
-  const result = await route(
+  const result = await routeRequest(
     request.method,
     new URL(request.url).pathname,
     request.headers.get('authorization'),
     token,
-    body,
+    () => readJsonBody(request),
     checkLimit,
     runQuery
   );

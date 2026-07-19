@@ -87,6 +87,7 @@ serve:
 
 # Deploy the feed service to Cloud Run. Bakes ./feed.sqlite into the image, so build it first —
 # `MBF_FEED_DB_OUT=feed.sqlite bun run src/pipeline.ts`. Needs gcloud auth + project; set FEED_TOKEN
-# as a Cloud Run secret separately.
+# as a Cloud Run secret separately. Cloud Run accepts the request; FEED_TOKEN remains the sole
+# application authentication gate and occupies the Authorization header.
 deploy:
-	gcloud run deploy $(SERVICE_NAME) --source . --region $(REGION) --no-allow-unauthenticated
+	gcloud run deploy $(SERVICE_NAME) --source . --region $(REGION) --allow-unauthenticated

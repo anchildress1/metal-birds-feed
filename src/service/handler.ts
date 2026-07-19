@@ -13,6 +13,7 @@ const MAX_HEXES = 500;
 
 export type RunQuery = (sql: string, params: string[]) => Promise<FeedRow[]>;
 export type CheckLimit = () => Promise<boolean>;
+export type LoadBody = () => Promise<unknown>;
 
 export interface RouteResult {
   status: number;
@@ -77,7 +78,7 @@ const handleFeed = async (
   path: string,
   authHeader: string | null,
   token: string | undefined,
-  body: unknown,
+  loadBody: LoadBody,
   checkLimit: CheckLimit,
   runQuery: RunQuery
 ): Promise<RouteResult> => {
@@ -88,7 +89,7 @@ const handleFeed = async (
   if (path !== '/feed') throw new HttpError(404, 'not found');
   if (method !== 'POST') throw new HttpError(405, 'method not allowed');
   if (!(await checkLimit())) throw new HttpError(429, 'rate limited');
-  const hexes = parseHexes(body);
+  const hexes = parseHexes(await loadBody());
   if (hexes.length === 0) return { status: 200, body: {} };
   // SQLite's variable limit (>=999) comfortably exceeds MAX_HEXES, so one IN-query suffices — no
   // chunking (unlike D1's 100-parameter cap).
@@ -98,7 +99,25 @@ const handleFeed = async (
 
 // The single entry server.ts calls. Converts thrown HttpErrors into status codes and swallows
 // anything unexpected as a generic 500 so a stack trace never reaches the caller.
-export const route = async (
+export const routeRequest = async (
+  method: string,
+  path: string,
+  authHeader: string | null,
+  token: string | undefined,
+  loadBody: LoadBody,
+  checkLimit: CheckLimit,
+  runQuery: RunQuery
+): Promise<RouteResult> => {
+  try {
+    return await handleFeed(method, path, authHeader, token, loadBody, checkLimit, runQuery);
+  } catch (err) {
+    if (err instanceof HttpError) return { status: err.status, body: { error: err.message } };
+    return { status: 500, body: { error: 'internal error' } };
+  }
+};
+
+// Convenience wrapper for callers and unit tests that already hold a parsed body.
+export const route = (
   method: string,
   path: string,
   authHeader: string | null,
@@ -106,11 +125,5 @@ export const route = async (
   body: unknown,
   checkLimit: CheckLimit,
   runQuery: RunQuery
-): Promise<RouteResult> => {
-  try {
-    return await handleFeed(method, path, authHeader, token, body, checkLimit, runQuery);
-  } catch (err) {
-    if (err instanceof HttpError) return { status: err.status, body: { error: err.message } };
-    return { status: 500, body: { error: 'internal error' } };
-  }
-};
+): Promise<RouteResult> =>
+  routeRequest(method, path, authHeader, token, () => Promise.resolve(body), checkLimit, runQuery);

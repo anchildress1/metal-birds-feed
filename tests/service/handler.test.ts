@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, mock } from 'bun:test';
 import {
   authorize,
   parseHexes,
   buildSelect,
   toResponseMap,
   route,
+  routeRequest,
   HttpError,
   type FeedRow,
   type RunQuery,
@@ -194,5 +195,26 @@ describe('route', () => {
   it('surfaces a 400 for a malformed body', async () => {
     const res = await route('POST', '/feed', 'Bearer t', 't', { hexes: ['nope'] }, pass, ok);
     expect(res.status).toBe(400);
+  });
+
+  it.each([
+    { label: 'bad auth', method: 'POST', path: '/feed', header: 'Bearer nope', limit: pass },
+    { label: 'wrong method', method: 'GET', path: '/feed', header: 'Bearer t', limit: pass },
+    { label: 'rate limited', method: 'POST', path: '/feed', header: 'Bearer t', limit: deny },
+  ])('does not load the body when request preflight fails: $label', async (input) => {
+    const loadBody = mock(() => Promise.resolve({ hexes: ['a1b2c3'] }));
+
+    await routeRequest(input.method, input.path, input.header, 't', loadBody, input.limit, ok);
+
+    expect(loadBody).not.toHaveBeenCalled();
+  });
+
+  it('loads the body once after request preflight succeeds', async () => {
+    const loadBody = mock(() => Promise.resolve({ hexes: ['a1b2c3'] }));
+
+    const res = await routeRequest('POST', '/feed', 'Bearer t', 't', loadBody, pass, ok);
+
+    expect(res.status).toBe(200);
+    expect(loadBody).toHaveBeenCalledTimes(1);
   });
 });

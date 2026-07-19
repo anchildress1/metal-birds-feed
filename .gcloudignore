@@ -1,0 +1,7 @@
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+
+# The generated database is intentionally untracked but required by Dockerfile.
+!feed.sqlite
