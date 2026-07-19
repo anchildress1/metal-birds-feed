@@ -1,6 +1,6 @@
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { readdirSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
@@ -66,7 +66,8 @@ export async function run(sourceId: string): Promise<RunResult> {
     // for consumers for up to the full cadence window, silently reporting "cadence_skip" as if
     // nothing were wrong. Checked last so it only costs a HEAD request when every cheaper
     // condition already says this run would otherwise be skipped.
-    (await writer.artifactExists(sourceId))
+    (await writer.artifactExists(sourceId)) &&
+    (await writer.feedRowsExist(sourceId))
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
     return {
@@ -93,17 +94,9 @@ export async function run(sourceId: string): Promise<RunResult> {
 
   const writeStats = await writer.write(records, sourceId, priorState);
 
-  // Write this source's hex-collapsed feed slice as a build intermediate. main() reads every
-  // source's intermediate and merges them into the single consolidated DB — so a cadence-skipped
-  // source keeps its prior intermediate and stays in the consolidated output. Runs every non-dry
-  // run; the artifact, not this derived slice, is the durable output, so it is best-effort.
-  if (!dryRun) {
-    try {
-      await writer.writeFeedRows(sourceId, toFeedRows(records.values()));
-    } catch (err) {
-      log('error', 'feed_rows_failed', { source: sourceId, msg: errorMessage(err) });
-    }
-  }
+  // State advances only after both durable outputs exist. Otherwise cadence gating could suppress
+  // recovery from a missing feed slice for the full source cadence.
+  if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(records.values()));
 
   let newState: SourceState | null = priorState;
   if (!dryRun) {
@@ -220,13 +213,15 @@ interface GitHubCtx {
   repo: string | undefined;
 }
 
+const resolveAllSources = (): string[] =>
+  readdirSync('sources')
+    .filter((f) => f.endsWith('.yaml'))
+    .map((f) => f.replace(/\.yaml$/, ''))
+    .sort();
+
 const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
-  return sourceEnv
-    ? [sourceEnv]
-    : readdirSync('sources')
-        .filter((f) => f.endsWith('.yaml'))
-        .map((f) => f.replace(/\.yaml$/, ''));
+  return sourceEnv ? [sourceEnv] : resolveAllSources();
 };
 
 // Content just changed when this run's write stamped last_content_change to last_run.
@@ -325,23 +320,48 @@ const emitStaleness = async (
     );
 };
 
-// Rebuilds the single consolidated feed DB from every source's intermediate slice — so a
-// cadence-skipped source stays included via its prior intermediate — and writes it to
-// MBF_FEED_DB_OUT. The deploy step bakes that file into the Cloud Run image. Opt-in via the env var;
-// best-effort, since R2 remains the source of truth.
-const publishFeed = async (sources: string[], dryRun: boolean): Promise<void> => {
-  const out = process.env['MBF_FEED_DB_OUT']?.trim();
-  if (!out || dryRun) return;
+export const resolveFeedOutputPath = (input: string, root = resolve('.')): string => {
+  if (input.includes('..')) throw new Error('Path traversal rejected: MBF_FEED_DB_OUT');
+  const sandboxRoot = resolve(root);
+  const outputPath = resolve(sandboxRoot, input);
+  if (outputPath === sandboxRoot || !outputPath.startsWith(`${sandboxRoot}${sep}`))
+    throw new Error('Path escape rejected: MBF_FEED_DB_OUT');
+  return outputPath;
+};
+
+const writeFeedAtomically = async (path: string, bytes: Uint8Array): Promise<void> => {
+  const temporaryPath = `${path}.tmp-${process.pid}`;
   try {
+    await writeFile(temporaryPath, bytes);
+    await rename(temporaryPath, path);
+  } catch (err) {
+    try {
+      await rm(temporaryPath, { force: true });
+    } catch (cleanupErr) {
+      log('warn', 'feed_publish_cleanup_failed', { msg: errorMessage(cleanupErr) });
+    }
+    throw err;
+  }
+};
+
+// Rebuilds the consolidated DB from every configured source, even when REFRESH_SOURCE narrows the
+// refresh itself. Missing intermediates fail closed so a partial database is never deployable.
+export const publishFeed = async (sources: string[], dryRun: boolean): Promise<void> => {
+  const outputInput = process.env['MBF_FEED_DB_OUT']?.trim();
+  if (!outputInput || dryRun) return;
+  try {
+    const outputPath = resolveFeedOutputPath(outputInput);
     const writer = new R2ArtifactWriter(r2ConfigFromEnv(), false);
-    const groups = (await Promise.all(sources.map((s) => writer.readFeedRows(s)))).filter(
-      (g): g is FeedRow[] => g !== null
-    );
+    const loaded = await Promise.all(sources.map((source) => writer.readFeedRows(source)));
+    const missing = sources.filter((_, index) => loaded[index] === null);
+    if (missing.length > 0) throw new Error(`Missing feed rows for: ${missing.join(', ')}`);
+    const groups = loaded.filter((group): group is FeedRow[] => group !== null);
     const rows = mergeFeedRows(groups);
-    await writeFile(out, buildFeedDb(rows));
-    log('info', 'feed_published', { rows: rows.length, sources: groups.length, out });
+    await writeFeedAtomically(outputPath, buildFeedDb(rows));
+    log('info', 'feed_published', { rows: rows.length, sources: groups.length, out: outputPath });
   } catch (err) {
     log('error', 'feed_publish_failed', { msg: errorMessage(err) });
+    throw err;
   }
 };
 
@@ -364,10 +384,13 @@ export async function main(): Promise<void> {
   );
   await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
-  await publishFeed(sources, dryRun);
   await emitFailures(failures);
 
-  if (failures.length > 0) process.exit(1);
+  if (failures.length > 0) {
+    process.exit(1);
+    return;
+  }
+  await publishFeed(resolveAllSources(), dryRun);
 }
 
 const isCliEntryPoint = (): boolean =>

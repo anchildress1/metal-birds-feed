@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from 'bun:test';
-import { readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 
 const REAL_FETCH = globalThis.fetch;
@@ -17,6 +17,9 @@ const mockR2Constructor = mock();
 const mockReadState = mock();
 const mockWriteState = mock();
 const mockArtifactExists = mock();
+const mockFeedRowsExist = mock();
+const mockWriteFeedRows = mock();
+const mockReadFeedRows = mock();
 const mockLog = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
@@ -36,10 +39,13 @@ void mock.module('../src/writer.js', () => ({
     readState = mockReadState;
     writeState = mockWriteState;
     artifactExists = mockArtifactExists;
+    feedRowsExist = mockFeedRowsExist;
+    writeFeedRows = mockWriteFeedRows;
+    readFeedRows = mockReadFeedRows;
   },
 }));
 
-const { main, run } = await import('../src/pipeline.js');
+const { main, publishFeed, resolveFeedOutputPath, run } = await import('../src/pipeline.js');
 
 const CONFIG: SourceConfig = {
   id: 'faa',
@@ -78,6 +84,9 @@ beforeEach(() => {
   mockReadState.mockReset();
   mockWriteState.mockReset();
   mockArtifactExists.mockReset();
+  mockFeedRowsExist.mockReset();
+  mockWriteFeedRows.mockReset();
+  mockReadFeedRows.mockReset();
   mockLog.mockReset();
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
@@ -94,6 +103,9 @@ beforeEach(() => {
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
   mockArtifactExists.mockResolvedValue(true);
+  mockFeedRowsExist.mockResolvedValue(true);
+  mockWriteFeedRows.mockResolvedValue(undefined);
+  mockReadFeedRows.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -105,6 +117,7 @@ afterEach(() => {
   delete process.env['GITHUB_TOKEN'];
   delete process.env['GITHUB_REPOSITORY'];
   delete process.env['REFRESH_SOURCE'];
+  delete process.env['MBF_FEED_DB_OUT'];
   globalThis.fetch = REAL_FETCH;
 });
 
@@ -136,6 +149,16 @@ describe('run', () => {
 
     await expect(run('faa')).rejects.toThrow(/PUT failed/);
 
+    expect(mockWriteState).not.toHaveBeenCalled();
+  });
+
+  it('does not write state when the feed slice write fails', async () => {
+    process.env['DRY_RUN'] = 'false';
+    mockWriteFeedRows.mockRejectedValueOnce(new Error('feed PUT failed'));
+
+    await expect(run('faa')).rejects.toThrow('feed PUT failed');
+
+    expect(mockWriteFeedRows).toHaveBeenCalledTimes(1);
     expect(mockWriteState).not.toHaveBeenCalled();
   });
 
@@ -182,6 +205,25 @@ describe('run', () => {
     expect(result.skipped).toBe(false);
     expect(mockDownload).toHaveBeenCalledTimes(1);
     expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not honor a cadence skip when the feed slice is missing', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+    mockFeedRowsExist.mockResolvedValueOnce(false);
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockWriteFeedRows).toHaveBeenCalledTimes(1);
+    expect(mockWriteState).toHaveBeenCalledTimes(1);
   });
 
   it('does not skip cadence-gated sources when prior state has no content hash', async () => {
@@ -294,6 +336,92 @@ describe('run', () => {
     ];
     expect(state.last_content_change).toBe(priorChange);
     expect(state.last_run).not.toBe(priorChange);
+  });
+});
+
+describe('feed publication', () => {
+  const outputPath = join('tests', `.feed-${process.pid}.sqlite`);
+
+  afterEach(() => {
+    rmSync(outputPath, { force: true });
+    for (const file of readdirSync('tests').filter((name) =>
+      name.startsWith(`.feed-${process.pid}`)
+    ))
+      rmSync(join('tests', file), { force: true });
+  });
+
+  it('resolves relative and in-root absolute output paths inside the sandbox', () => {
+    const root = resolve('tests');
+
+    expect(resolveFeedOutputPath('feed.sqlite', root)).toBe(join(root, 'feed.sqlite'));
+    expect(resolveFeedOutputPath(join(root, 'feed.sqlite'), root)).toBe(join(root, 'feed.sqlite'));
+  });
+
+  it.each(['../feed.sqlite', '/tmp/feed.sqlite'])(
+    'rejects output path outside the sandbox: %s',
+    (path) => {
+      expect(() => resolveFeedOutputPath(path, resolve('tests'))).toThrow(/path/i);
+    }
+  );
+
+  it('refuses to publish when any configured source slice is missing', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    mockReadFeedRows.mockResolvedValueOnce([]).mockResolvedValueOnce(null);
+
+    await expect(publishFeed(['faa', 'tc-ca'], false)).rejects.toThrow(
+      'Missing feed rows for: tc-ca'
+    );
+
+    expect(mockReadFeedRows.mock.calls.map((call) => String(call[0]))).toEqual(['faa', 'tc-ca']);
+    expect(existsSync(outputPath)).toBe(false);
+  });
+
+  it('preserves the prior database and propagates a source read failure', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    writeFileSync(outputPath, 'prior database');
+    mockReadFeedRows.mockRejectedValueOnce(new Error('R2 unavailable'));
+
+    await expect(publishFeed(['faa'], false)).rejects.toThrow('R2 unavailable');
+
+    expect(readFileSync(outputPath, 'utf8')).toBe('prior database');
+    expect(mockLog).toHaveBeenCalledWith(
+      'error',
+      'feed_publish_failed',
+      expect.objectContaining({ msg: 'R2 unavailable' })
+    );
+  });
+
+  it('publishes all requested source slices atomically', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    mockReadFeedRows.mockResolvedValue([]);
+
+    await publishFeed(['faa', 'tc-ca'], false);
+
+    expect(mockReadFeedRows.mock.calls.map((call) => String(call[0]))).toEqual(['faa', 'tc-ca']);
+    expect(readFileSync(outputPath).subarray(0, 6).toString()).toBe('SQLite');
+    expect(
+      readdirSync('tests').some((name) => name.includes(`.feed-${process.pid}.sqlite.tmp-`))
+    ).toBe(false);
+  });
+
+  it('publishes every configured source when REFRESH_SOURCE narrows the refresh', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    mockReadFeedRows.mockResolvedValue([]);
+    const expectedSources = readdirSync('sources')
+      .filter((file) => file.endsWith('.yaml'))
+      .map((file) => file.replace(/\.yaml$/, ''))
+      .sort();
+
+    await main();
+
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockReadFeedRows.mock.calls.map((call) => String(call[0]))).toEqual(expectedSources);
+    expect(readFileSync(outputPath).subarray(0, 6).toString()).toBe('SQLite');
   });
 });
 

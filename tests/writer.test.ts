@@ -430,6 +430,37 @@ describe('isTransientS3Error', () => {
 });
 
 describe('R2ArtifactWriter — feed intermediates', () => {
+  it('reports that the per-source slice exists when HEAD resolves', async () => {
+    mockSend.mockResolvedValueOnce({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+    expect(await writer.feedRowsExist('faa')).toBe(true);
+    const command = mockSend.mock.calls[0]?.[0] as { _kind: string; input: { Key: string } };
+    expect(command._kind).toBe('head');
+    expect(command.input.Key).toBe('aircraft/_feed/faa.json');
+  });
+
+  it('reports a missing per-source slice and logs the failed HEAD', async () => {
+    mockSend.mockRejectedValueOnce(s3Error('Not Found', 404));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await writer.feedRowsExist('faa')).toBe(false);
+      expect(logSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
+        'event=feed_rows_missing_on_cadence_skip'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('short-circuits feed slice existence in dry-run mode', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, true);
+
+    expect(await writer.feedRowsExist('faa')).toBe(true);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
   it('writes the per-source slice JSON to aircraft/_feed/<source>.json', async () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);

@@ -147,6 +147,25 @@ export class R2ArtifactWriter {
     }
   }
 
+  // Cadence skips are only safe when both durable outputs exist. A missing feed slice must force a
+  // source refresh, otherwise the consolidated service DB stays incomplete until the next cadence.
+  async feedRowsExist(source: string): Promise<boolean> {
+    if (this.dryRun) return true;
+    try {
+      await retry(
+        () =>
+          this.client.send(
+            new HeadObjectCommand({ Bucket: this.bucket, Key: `aircraft/_feed/${source}.json` })
+          ),
+        S3_RETRY
+      );
+      return true;
+    } catch (err) {
+      log('warn', 'feed_rows_missing_on_cadence_skip', { source, msg: errorMessage(err) });
+      return false;
+    }
+  }
+
   async readState(source: string): Promise<SourceState | null> {
     try {
       const res = await retry(
