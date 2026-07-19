@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
+import { hashFeedRows } from '../src/feed.js';
 
 const REAL_FETCH = globalThis.fetch;
 const setFetch = (fn: unknown): void => {
@@ -20,6 +21,8 @@ const mockArtifactExists = mock();
 const mockFeedRowsExist = mock();
 const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
+const mockReadDeployedFeedHash = mock();
+const mockWriteDeployedFeedHash = mock();
 const mockLog = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
@@ -42,10 +45,13 @@ void mock.module('../src/writer.js', () => ({
     feedRowsExist = mockFeedRowsExist;
     writeFeedRows = mockWriteFeedRows;
     readFeedRows = mockReadFeedRows;
+    readDeployedFeedHash = mockReadDeployedFeedHash;
+    writeDeployedFeedHash = mockWriteDeployedFeedHash;
   },
 }));
 
-const { main, publishFeed, resolveFeedOutputPath, run } = await import('../src/pipeline.js');
+const { main, publishFeed, publishFeedForDeploy, markFeedDeployed, resolveFeedOutputPath, run } =
+  await import('../src/pipeline.js');
 
 const CONFIG: SourceConfig = {
   id: 'faa',
@@ -87,6 +93,8 @@ beforeEach(() => {
   mockFeedRowsExist.mockReset();
   mockWriteFeedRows.mockReset();
   mockReadFeedRows.mockReset();
+  mockReadDeployedFeedHash.mockReset();
+  mockWriteDeployedFeedHash.mockReset();
   mockLog.mockReset();
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
@@ -405,6 +413,52 @@ describe('feed publication', () => {
     expect(
       readdirSync('tests').some((name) => name.includes(`.feed-${process.pid}.sqlite.tmp-`))
     ).toBe(false);
+  });
+
+  it('returns the feed content hash on publish, and null when no output is configured', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    mockReadFeedRows.mockResolvedValue([]);
+
+    expect(await publishFeed(['faa'], false)).toBe(hashFeedRows([]));
+
+    delete process.env['MBF_FEED_DB_OUT'];
+    expect(await publishFeed(['faa'], false)).toBeNull();
+  });
+
+  it('reports the feed changed when it differs from the deployed marker', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    mockReadFeedRows.mockResolvedValue([]);
+    mockReadDeployedFeedHash.mockResolvedValue('f'.repeat(64));
+
+    expect(await publishFeedForDeploy(['faa'])).toEqual({ changed: true, hash: hashFeedRows([]) });
+  });
+
+  it('reports the feed unchanged when it matches the deployed marker', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['MBF_FEED_DB_OUT'] = outputPath;
+    mockReadFeedRows.mockResolvedValue([]);
+    mockReadDeployedFeedHash.mockResolvedValue(hashFeedRows([]));
+
+    expect(await publishFeedForDeploy(['faa'])).toEqual({ changed: false, hash: hashFeedRows([]) });
+  });
+
+  it('reports unchanged without consulting the marker when nothing is published', async () => {
+    delete process.env['MBF_FEED_DB_OUT'];
+
+    expect(await publishFeedForDeploy(['faa'])).toEqual({ changed: false, hash: null });
+    expect(mockReadDeployedFeedHash).not.toHaveBeenCalled();
+  });
+
+  it('records a deployed hash and rejects an empty one', async () => {
+    mockWriteDeployedFeedHash.mockResolvedValue(undefined);
+
+    await markFeedDeployed(HASH64);
+    expect(mockWriteDeployedFeedHash).toHaveBeenCalledWith(HASH64);
+
+    await expect(markFeedDeployed('   ')).rejects.toThrow('non-empty feed hash');
+    await expect(markFeedDeployed(undefined)).rejects.toThrow('non-empty feed hash');
   });
 
   it('publishes every configured source when REFRESH_SOURCE narrows the refresh', async () => {

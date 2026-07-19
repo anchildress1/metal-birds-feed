@@ -241,6 +241,37 @@ export class R2ArtifactWriter {
     }
   }
 
+  // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads
+  // it to decide whether a redeploy is warranted, and advances it only after a successful deploy.
+  async readDeployedFeedHash(): Promise<string | null> {
+    try {
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: 'aircraft/_feed/_deployed.json' })
+          ),
+        S3_RETRY
+      );
+      const body = await res.Body?.transformToString();
+      if (!body) return null;
+      try {
+        const parsed = JSON.parse(body) as { hash?: unknown };
+        return typeof parsed.hash === 'string' ? parsed.hash : null;
+      } catch {
+        log('error', 'deployed_feed_hash_parse_failed', { reason: 'invalid_json' });
+        return null;
+      }
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      log('error', 'deployed_feed_hash_load_failed', { msg: errorMessage(err) });
+      throw err;
+    }
+  }
+
+  async writeDeployedFeedHash(hash: string): Promise<void> {
+    await this.put('aircraft/_feed/_deployed.json', JSON.stringify({ hash }), 'application/json');
+  }
+
   private async put(key: string, body: Uint8Array | string, contentType: string): Promise<void> {
     if (this.dryRun) {
       log('info', 'dry_run_put', { key });

@@ -1,4 +1,4 @@
-.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean serve build-feed deploy
+.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean serve build-feed deploy-only deploy
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
@@ -101,13 +101,18 @@ build-feed: build
 		MBF_FEED_DB_OUT=feed.sqlite $(BUN) run dist/publish-feed.js; \
 		test -s feed.sqlite
 
-# Build immediately before deploying so Cloud Run can never receive an ambient stale database.
+# Deploy whatever feed.sqlite is on disk. Separate from build-feed so CI (which already built and
+# change-checked the DB) can deploy without a second build; `make deploy` chains both for operators.
 # FEED_TOKEN stays bound from Google Secret Manager; application auth owns Authorization.
-deploy: build-feed
+deploy-only:
 	@set -eu; \
 		if [ -f "$(ENV_FILE)" ]; then \
 			case "$(ENV_FILE)" in /*) deploy_env_source="$(ENV_FILE)" ;; *) deploy_env_source="./$(ENV_FILE)" ;; esac; \
 			set -a; . "$$deploy_env_source"; set +a; \
 		fi; \
 		: $${GCP_PROJECT_ID:?GCP_PROJECT_ID is required}; \
+		test -s feed.sqlite; \
 		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --quiet
+
+# Build immediately before deploying so Cloud Run can never receive an ambient stale database.
+deploy: build-feed deploy-only

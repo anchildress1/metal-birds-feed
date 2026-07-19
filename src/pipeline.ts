@@ -6,7 +6,7 @@ import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
 import { R2ArtifactWriter, type R2Config } from './writer.js';
-import { toFeedRows, mergeFeedRows, buildFeedDb, type FeedRow } from './feed.js';
+import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
 import { log, errorMessage } from './logger.js';
 import {
   shouldSkip,
@@ -346,9 +346,10 @@ const writeFeedAtomically = async (path: string, bytes: Uint8Array): Promise<voi
 
 // Rebuilds the consolidated DB from every configured source, even when REFRESH_SOURCE narrows the
 // refresh itself. Missing intermediates fail closed so a partial database is never deployable.
-export const publishFeed = async (sources: string[], dryRun: boolean): Promise<void> => {
+// Returns the feed content hash when it publishes (null when MBF_FEED_DB_OUT is unset or dry-run).
+export const publishFeed = async (sources: string[], dryRun: boolean): Promise<string | null> => {
   const outputInput = process.env['MBF_FEED_DB_OUT']?.trim();
-  if (!outputInput || dryRun) return;
+  if (!outputInput || dryRun) return null;
   try {
     const outputPath = resolveFeedOutputPath(outputInput);
     const writer = new R2ArtifactWriter(r2ConfigFromEnv(), false);
@@ -357,12 +358,43 @@ export const publishFeed = async (sources: string[], dryRun: boolean): Promise<v
     if (missing.length > 0) throw new Error(`Missing feed rows for: ${missing.join(', ')}`);
     const groups = loaded.filter((group): group is FeedRow[] => group !== null);
     const rows = mergeFeedRows(groups);
+    const hash = hashFeedRows(rows);
     await writeFeedAtomically(outputPath, buildFeedDb(rows));
-    log('info', 'feed_published', { rows: rows.length, sources: groups.length, out: outputPath });
+    log('info', 'feed_published', {
+      rows: rows.length,
+      sources: groups.length,
+      out: outputPath,
+      hash,
+    });
+    return hash;
   } catch (err) {
     log('error', 'feed_publish_failed', { msg: errorMessage(err) });
     throw err;
   }
+};
+
+export interface FeedDeployStatus {
+  changed: boolean;
+  hash: string | null;
+}
+
+// Publishes the feed, then reports whether it differs from the feed currently live on Cloud Run
+// (per the R2 marker) so the scheduled deploy runs on an actual content update, not on every cron
+// tick. Decoupled from per-source success: a failed source keeps its prior slice, so the feed only
+// reports "changed" when a source genuinely published new data this run.
+export const publishFeedForDeploy = async (sources: string[]): Promise<FeedDeployStatus> => {
+  const hash = await publishFeed(sources, false);
+  if (hash === null) return { changed: false, hash: null };
+  const deployed = await new R2ArtifactWriter(r2ConfigFromEnv(), false).readDeployedFeedHash();
+  return { changed: hash !== deployed, hash };
+};
+
+// Advances the deployed-feed marker; called only after a successful Cloud Run deploy so a failed
+// deploy never suppresses the next one.
+export const markFeedDeployed = async (hash: string | undefined): Promise<void> => {
+  const value = hash?.trim();
+  if (!value) throw new Error('markFeedDeployed requires a non-empty feed hash');
+  await new R2ArtifactWriter(r2ConfigFromEnv(), false).writeDeployedFeedHash(value);
 };
 
 export async function main(): Promise<void> {

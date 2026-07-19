@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
-import { toFeedRows, mergeFeedRows, buildFeedDb, type FeedRow } from '../src/feed.js';
+import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from '../src/feed.js';
 
 const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {}): Aircraft => ({
   source: 'faa',
@@ -178,5 +178,31 @@ describe('buildFeedDb', () => {
     } finally {
       db.close();
     }
+  });
+});
+
+describe('hashFeedRows', () => {
+  const rows = (): FeedRow[] => [
+    ...toFeedRows([make('1', 'a1b2c3')]),
+    ...toFeedRows([make('2', '4d5e6f', { registration: 'N2' })]),
+  ];
+
+  it('is stable for the same content', () => {
+    expect(hashFeedRows(rows())).toBe(hashFeedRows(rows()));
+  });
+
+  it('is independent of row order', () => {
+    const [a, b] = rows();
+    expect(hashFeedRows([a, b])).toBe(hashFeedRows([b, a]));
+  });
+
+  it('changes when any row content changes', () => {
+    const [a, b] = rows();
+    const mutated: FeedRow = { ...b, registration: 'N999' };
+    expect(hashFeedRows([a, mutated])).not.toBe(hashFeedRows([a, b]));
+  });
+
+  it('returns a stable digest for no rows', () => {
+    expect(hashFeedRows([])).toBe(hashFeedRows([]));
   });
 });

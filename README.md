@@ -87,6 +87,7 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 | `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
 | `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                        |
 | `aircraft/_feed/<source>.json`  | Per-source feed slice (hex-collapsed descriptive columns) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                                                  |
+| `aircraft/_feed/_deployed.json` | Content hash of the feed last deployed to Cloud Run — the scheduled deploy redeploys only when the freshly built feed differs from it                                                                                                                  |
 
 One queryable artifact per source — filter or point-lookup on any column (every canonical field is its own typed column). Rebuilt and re-uploaded whole only when the record set's content hash changes.
 
@@ -95,9 +96,10 @@ One queryable artifact per source — filter or point-lookup on any column (ever
 A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table indexed by `icao_hex`, so a lookup is one `WHERE icao_hex IN (...)` on one table, never a union across per-country files.
 
 - **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership). ≤ 500 hexes; misses omitted.
-- Gated by a UUID bearer secret (`FEED_TOKEN`) and rate-limited — a private API, not a public one. Every request presents the secret.
-- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image; every successful non-dry refresh on the default branch rebuilds and redeploys it.
-- `make build-feed` rebuilds the DB from every durable per-source `_feed` slice in R2. `make deploy` always runs that build first, so an ambient stale `feed.sqlite` is never deployed. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
+- Gated by a bearer secret (`FEED_TOKEN`, validated present and ≥ 16 chars at startup; a UUID is the convention) and rate-limited — a private API, not a public one. Every request presents the secret.
+- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image.
+- Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.
+- `make build-feed` rebuilds the DB from every durable per-source `_feed` slice in R2. `make deploy` runs that build first (so an ambient stale `feed.sqlite` is never deployed), then `make deploy-only` ships it. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
 ## Setup
 
@@ -120,6 +122,7 @@ make install
 | `make bootstrap`    | One-shot local initial load (reads `.env`)        |
 | `make serve`        | Run the feed service locally (`MBF_FEED_DB_PATH`) |
 | `make build-feed`   | Rebuild `feed.sqlite` from every R2 feed slice    |
+| `make deploy-only`  | Deploy the on-disk `feed.sqlite` to Cloud Run     |
 | `make deploy`       | Rebuild and deploy the feed service to Cloud Run  |
 | `make secret-scan`  | Scan for accidentally committed secrets           |
 | `make clean`        | Remove build artifacts                            |

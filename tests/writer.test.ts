@@ -497,3 +497,46 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     expect(await writer.readFeedRows('faa')).toBeNull();
   });
 });
+
+describe('R2ArtifactWriter — deployed feed hash', () => {
+  it('reads the deployed hash from aircraft/_feed/_deployed.json', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify({ hash: HASH64 })) },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readDeployedFeedHash()).toBe(HASH64);
+    const command = mockSend.mock.calls[0]?.[0] as { input: { Key: string } };
+    expect(command.input.Key).toBe('aircraft/_feed/_deployed.json');
+  });
+
+  it('returns null when the marker is absent', async () => {
+    mockSend.mockRejectedValue(noSuchKey());
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readDeployedFeedHash()).toBeNull();
+  });
+
+  it('returns null for an empty body', async () => {
+    mockSend.mockResolvedValue({ Body: { transformToString: () => Promise.resolve('') } });
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).toBeNull();
+  });
+
+  it('returns null when the marker lacks a string hash', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify({ hash: 7 })) },
+    });
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).toBeNull();
+  });
+
+  it('treats corrupt JSON as absent', async () => {
+    mockSend.mockResolvedValue({ Body: { transformToString: () => Promise.resolve('{not json') } });
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).toBeNull();
+  });
+
+  it('writes the marker JSON to aircraft/_feed/_deployed.json', async () => {
+    mockSend.mockResolvedValue({});
+    await new R2ArtifactWriter(R2_CONFIG, false).writeDeployedFeedHash(HASH64);
+    const put = putCalls().find((c) => c.input.Key === 'aircraft/_feed/_deployed.json');
+    expect(put?.input.ContentType).toBe('application/json');
+    expect(String(put?.input.Body)).toContain(HASH64);
+  });
+});

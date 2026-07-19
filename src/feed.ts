@@ -1,4 +1,5 @@
 import { Database } from 'bun:sqlite';
+import { createHash } from 'node:crypto';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { latestKnownDate } from './recency.js';
@@ -114,6 +115,16 @@ export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
     }
   }
   return [...byHex.values()];
+};
+
+// Stable content hash over the consolidated feed, mirroring db.ts's per-source hashRecords: sorted
+// by icao_hex (the row key) so merge/iteration order can't churn it. The scheduled deploy compares
+// this against the last-deployed hash to skip a redundant Cloud Run redeploy when nothing changed.
+export const hashFeedRows = (rows: FeedRow[]): string => {
+  const hash = createHash('sha256');
+  for (const row of [...rows].sort((a, b) => a.icao_hex.localeCompare(b.icao_hex)))
+    hash.update(`${row.icao_hex}\0${JSON.stringify(row)}\n`);
+  return hash.digest('hex');
 };
 
 const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
