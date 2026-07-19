@@ -324,7 +324,9 @@ const dedupeParties = (parties: Record<string, string>[]): Record<string, string
   const order: string[] = [];
   parties.forEach((party, index) => {
     const doc = (party.DOCUMENTO ?? '').trim();
-    const key = doc.length > 0 ? doc : ` anon-${index}`;
+    // Doc-less entries key on a per-index sentinel so they never merge. `anon-` can't collide with a
+    // real DOCUMENTO (CPF/CNPJ are digit/masked strings, never letter-prefixed).
+    const key = doc.length > 0 ? doc : `anon-${index}`;
     const existing = byDoc.get(key);
     if (existing === undefined) {
       byDoc.set(key, { ...party });
