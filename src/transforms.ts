@@ -307,6 +307,36 @@ const brAirframe = (value: string): string | null => {
 // No status column upstream; a populated cancellation date is the cancellation signal.
 const brStatus = (value: string): string => (value.trim().length > 0 ? 'cancelled' : 'valid');
 
+// "Indisponível" is the undisclosed-party sentinel -> null.
+const BR_UNDISCLOSED = 'Indisponível';
+
+const brFieldMeaningful = (value: unknown): boolean =>
+  typeof value === 'string' && value.trim().length > 0 && value.trim() !== BR_UNDISCLOSED;
+
+// ANAC's RAB sometimes lists the same legal party (same DOCUMENTO) twice within one array and
+// splits its detail across the copies — one carries the UF, the other leaves it "Indisponível".
+// That is a self-duplicate, not co-ownership: collapse same-DOCUMENTO entries into one, taking the
+// meaningful value per field, so party count reflects distinct parties and no populated value is
+// stranded on a sibling copy (mark PSORO's two rows differed only because of this). Entries with no
+// DOCUMENTO can't be matched, so they stay distinct.
+const dedupeParties = (parties: Record<string, string>[]): Record<string, string>[] => {
+  const byDoc = new Map<string, Record<string, string>>();
+  const order: string[] = [];
+  parties.forEach((party, index) => {
+    const doc = (party.DOCUMENTO ?? '').trim();
+    const key = doc.length > 0 ? doc : ` anon-${index}`;
+    const existing = byDoc.get(key);
+    if (existing === undefined) {
+      byDoc.set(key, { ...party });
+      order.push(key);
+      return;
+    }
+    for (const [field, value] of Object.entries(party))
+      if (!brFieldMeaningful(existing[field]) && brFieldMeaningful(value)) existing[field] = value;
+  });
+  return order.map((key) => byDoc.get(key) as Record<string, string>);
+};
+
 // owner/operator are JSON arrays packed into one CSV cell, sharing the {NOME, DOCUMENTO, UF}
 // shape — so these transforms serve both columns.
 const parseBrParties = (value: string): Record<string, string>[] | null => {
@@ -314,21 +344,20 @@ const parseBrParties = (value: string): Record<string, string>[] | null => {
   if (v.length === 0) return null;
   try {
     const parsed: unknown = JSON.parse(v);
-    return Array.isArray(parsed) ? (parsed as Record<string, string>[]) : null;
+    return Array.isArray(parsed) ? dedupeParties(parsed as Record<string, string>[]) : null;
   } catch {
     return null;
   }
 };
 
-// "Indisponível" is the undisclosed-party sentinel -> null.
 const brPartyName = (value: string): string | null => {
   const name = parseBrParties(value)?.[0]?.NOME?.trim();
-  return name && name !== 'Indisponível' ? name : null;
+  return name && name !== BR_UNDISCLOSED ? name : null;
 };
 
 const brPartyState = (value: string): string | null => {
   const uf = parseBrParties(value)?.[0]?.UF?.trim();
-  return uf && uf.length > 0 && uf !== 'Indisponível' ? uf : null;
+  return uf && uf.length > 0 && uf !== BR_UNDISCLOSED ? uf : null;
 };
 
 // kind from DOCUMENTO length, not digits: CPFs arrive pre-masked (e.g. "587XXXXXX00"), so 11 =
@@ -338,7 +367,7 @@ const brPartyKind = (value: string): string | null => {
   const parties = parseBrParties(value);
   if (!parties || parties.length === 0) return null;
   if (parties.length > 1) return 'co-owner';
-  if (parties[0]?.NOME?.trim() === 'Indisponível') return null;
+  if (parties[0]?.NOME?.trim() === BR_UNDISCLOSED) return null;
   const doc = String(parties[0]?.DOCUMENTO ?? '').trim();
   if (doc.length === 0) return null;
   if (doc.length === 14) return 'corporation';
