@@ -121,6 +121,12 @@ describe('toResponseMap', () => {
     const map = toResponseMap([rec('a1b2c3', 'N1')]); // rec() is source 'faa'
     expect(map['a1b2c3'].attribution).toContain('Federal Aviation Administration (FAA)');
   });
+
+  it('composes display-ready type and engine so the consumer never joins columns itself', () => {
+    const map = toResponseMap([rec('a1b2c3', 'N1')]); // rec() is CESSNA / 172, no engine columns
+    expect(map['a1b2c3'].type).toBe('CESSNA 172');
+    expect(map['a1b2c3'].engine).toBeNull();
+  });
 });
 
 describe('route', () => {

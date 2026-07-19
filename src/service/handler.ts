@@ -10,9 +10,14 @@ import { attributionFor } from './attributions.js';
 export type { FeedRow };
 
 // The descriptive slice as returned to the consumer: every FeedRow column except the hex key (which
-// becomes the map key), plus the source's exact attribution line so the caller renders credit
-// verbatim without holding its own source→notice map.
-export type FeedResponseRow = Omit<FeedRow, 'icao_hex'> & { attribution: string };
+// becomes the map key), plus display-ready fields the consumer renders verbatim without composing
+// anything itself — `type` and `engine` collapse the raw maker/model columns, and `attribution` is
+// the source's exact credit line.
+export type FeedResponseRow = Omit<FeedRow, 'icao_hex'> & {
+  type: string | null;
+  engine: string | null;
+  attribution: string;
+};
 
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
@@ -73,10 +78,20 @@ export const parseHexes = (body: unknown): string[] => {
 export const buildSelect = (count: number): string =>
   `SELECT * FROM feed WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
+// Joins the present parts of a compound display value (maker + model) with a space, or null when the
+// registry supplied neither — so the consumer renders the string as-is and never composes it itself.
+const compose = (...parts: (string | null)[]): string | null =>
+  parts.filter(Boolean).join(' ') || null;
+
 export const toResponseMap = (rows: FeedRow[]): Record<string, FeedResponseRow> => {
   const out: Record<string, FeedResponseRow> = {};
   for (const { icao_hex, ...rest } of rows)
-    out[icao_hex] = { ...rest, attribution: attributionFor(rest.source) };
+    out[icao_hex] = {
+      ...rest,
+      type: compose(rest.manufacturer, rest.model),
+      engine: compose(rest.engine_manufacturer, rest.engine_model),
+      attribution: attributionFor(rest.source),
+    };
   return out;
 };
 
