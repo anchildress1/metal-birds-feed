@@ -3,10 +3,16 @@
 // server injects a SQLite-backed RunQuery and the rate-limit CheckLimit; the decisions live here.
 
 import type { FeedRow } from '../feed-row.js';
+import { attributionFor } from './attributions.js';
 
 // Re-exported so the service + tests import the row shape from one place; the query is SELECT *, so
 // FeedRow is the single typed description of a returned row.
 export type { FeedRow };
+
+// The descriptive slice as returned to the consumer: every FeedRow column except the hex key (which
+// becomes the map key), plus the source's exact attribution line so the caller renders credit
+// verbatim without holding its own source→notice map.
+export type FeedResponseRow = Omit<FeedRow, 'icao_hex'> & { attribution: string };
 
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
@@ -67,9 +73,10 @@ export const parseHexes = (body: unknown): string[] => {
 export const buildSelect = (count: number): string =>
   `SELECT * FROM feed WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
-export const toResponseMap = (rows: FeedRow[]): Record<string, Omit<FeedRow, 'icao_hex'>> => {
-  const out: Record<string, Omit<FeedRow, 'icao_hex'>> = {};
-  for (const { icao_hex, ...rest } of rows) out[icao_hex] = rest;
+export const toResponseMap = (rows: FeedRow[]): Record<string, FeedResponseRow> => {
+  const out: Record<string, FeedResponseRow> = {};
+  for (const { icao_hex, ...rest } of rows)
+    out[icao_hex] = { ...rest, attribution: attributionFor(rest.source) };
   return out;
 };
 

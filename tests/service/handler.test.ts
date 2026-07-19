@@ -116,6 +116,11 @@ describe('toResponseMap', () => {
     expect(map['a1b2c3']).toMatchObject({ registration: 'N1' });
     expect(map['a1b2c3']).not.toHaveProperty('icao_hex');
   });
+
+  it("attaches the source's exact attribution line to each row", () => {
+    const map = toResponseMap([rec('a1b2c3', 'N1')]); // rec() is source 'faa'
+    expect(map['a1b2c3'].attribution).toContain('Federal Aviation Administration (FAA)');
+  });
 });
 
 describe('route', () => {
