@@ -146,7 +146,7 @@ make install
 | `GCP_PROJECT_ID`                 | Cloud Run project                            |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | GitHub Workload Identity Federation provider |
 | `GCP_SERVICE_ACCOUNT`            | Federated Cloud Run deployer service account |
-| `GCP_RUN_REGION`                 | Cloud Run region (default `us-central1`)     |
+| `GCP_RUN_REGION`                 | Cloud Run region (default `us-east1`)        |
 | `GCP_RUN_SERVICE`                | Service name (default `metal-birds-feed`)    |
 
 `FEED_TOKEN` remains a Google Secret Manager binding on the Cloud Run service. The workflow never copies the token into GitHub.

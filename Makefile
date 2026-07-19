@@ -5,9 +5,12 @@ BUNX := $(BUN) x
 
 # Cloud Run feed service.
 SERVICE_NAME ?= metal-birds-feed
-REGION ?= us-central1
+REGION ?= us-east1
 # Secret Manager secret holding FEED_TOKEN, bound into the service on every deploy (idempotent).
 FEED_SECRET ?= feed-token
+# Dedicated runtime service account (not the default compute SA) — least privilege: it only reads
+# the FEED_TOKEN secret. Resolved to <name>@<project>.iam.gserviceaccount.com at deploy time.
+RUN_SA ?= metal-birds-feed-run
 
 install:
 	$(BUN) install && $(BUNX) lefthook install
@@ -115,7 +118,7 @@ deploy-only:
 		fi; \
 		: $${GCP_PROJECT_ID:?GCP_PROJECT_ID is required}; \
 		test -s feed.sqlite; \
-		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --set-secrets FEED_TOKEN=$(FEED_SECRET):latest --quiet
+		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --service-account "$(RUN_SA)@$$GCP_PROJECT_ID.iam.gserviceaccount.com" --set-secrets FEED_TOKEN=$(FEED_SECRET):latest --quiet
 
 # Build immediately before deploying so Cloud Run can never receive an ambient stale database.
 deploy: build-feed deploy-only

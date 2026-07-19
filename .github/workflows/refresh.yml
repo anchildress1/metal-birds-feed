@@ -152,7 +152,7 @@ jobs:
         if: steps.feed.outputs.changed == 'true'
         env:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-          REGION: ${{ vars.GCP_RUN_REGION || 'us-central1' }}
+          REGION: ${{ vars.GCP_RUN_REGION || 'us-east1' }}
           SERVICE_NAME: ${{ vars.GCP_RUN_SERVICE || 'metal-birds-feed' }}
         run: make deploy-only
 
