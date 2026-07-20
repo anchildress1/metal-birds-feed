@@ -172,12 +172,41 @@ type RowOutcome =
   | { status: 'skipped'; reason: 'missing_id' | 'duplicate' }
   | { status: 'failed' };
 
-type RecencyReason = 'cancelled_status' | 'newer_date';
+type RecencyReason = 'cancelled_status' | 'newer_date' | 'strict_superset';
+
+const populatedLeafCount = (value: unknown): number => {
+  if (value === null || value === undefined || value === '') return 0;
+  if (Array.isArray(value)) return value.reduce((n: number, v) => n + populatedLeafCount(v), 0);
+  if (typeof value === 'object')
+    return Object.values(value).reduce((n: number, v) => n + populatedLeafCount(v), 0);
+  return 1;
+};
+
+// A richer duplicate is safe only when every populated value in the sparse record is preserved.
+// Counting fields alone would silently discard conflicting upstream values whenever one row also
+// happened to contain an extra field.
+const isPopulatedSubset = (sparse: unknown, rich: unknown): boolean => {
+  if (sparse === null || sparse === undefined || sparse === '') return true;
+  if (Array.isArray(sparse)) {
+    if (!Array.isArray(rich)) return false;
+    return sparse.every((value, index) => isPopulatedSubset(value, rich[index]));
+  }
+  if (typeof sparse === 'object') {
+    if (typeof rich !== 'object' || rich === null || Array.isArray(rich)) return false;
+    return Object.entries(sparse).every(([key, value]) =>
+      isPopulatedSubset(value, Reflect.get(rich, key))
+    );
+  }
+  return Object.is(sparse, rich);
+};
+
+const isStrictSuperset = (rich: Aircraft, sparse: Aircraft): boolean =>
+  populatedLeafCount(rich) > populatedLeafCount(sparse) && isPopulatedSubset(sparse, rich);
 
 // Resolves two rows sharing a reissued source_id within one source's file: a cancelled row never
-// outranks a live one; otherwise the more recent known date wins. Returns null when neither status
-// nor date distinguishes them — that's not a reissue signal, it's an ambiguous id collision the
-// caller must fail on rather than guess via file order.
+// outranks a live one; otherwise the more recent known date wins; failing that, a strict canonical
+// superset wins. Conflicting records are ambiguous collisions the caller must fail on rather than
+// guess via file order.
 function resolveRecency(
   candidate: Aircraft,
   incumbent: Aircraft
@@ -196,6 +225,11 @@ function resolveRecency(
       reason: 'newer_date',
     };
   }
+
+  if (isStrictSuperset(candidate, incumbent))
+    return { winner: 'candidate', reason: 'strict_superset' };
+  if (isStrictSuperset(incumbent, candidate))
+    return { winner: 'incumbent', reason: 'strict_superset' };
 
   return null;
 }
@@ -292,7 +326,8 @@ function translateRow(
           source: config.id,
           row: i + 2,
           source_id: rawId,
-          reason: 'no distinguishing signal (same status, same or absent recency dates)',
+          reason:
+            'no safe distinguishing signal (same status/date, neither record is a strict superset)',
         });
         return { status: 'failed' };
       }

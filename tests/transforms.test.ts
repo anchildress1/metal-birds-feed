@@ -646,6 +646,13 @@ describe('br_party_state', () => {
     expect(applyScalar('br_party_state', '[{"NOME":"X"}]')).toBeNull());
   it('collapses the Indisponível sentinel to null', () =>
     expect(applyScalar('br_party_state', '[{"NOME":"X","UF":"Indisponível"}]')).toBeNull());
+  it('merges a same-DOCUMENTO self-duplicate, keeping the meaningful UF (ANAC mark PSORO)', () =>
+    expect(
+      applyScalar(
+        'br_party_state',
+        '[{"DOCUMENTO":"07418547000150","UF":"Indisponível"},{"DOCUMENTO":"07418547000150","UF":"SP"}]'
+      )
+    ).toBe('SP'));
   it('returns null for an empty cell', () => expect(applyScalar('br_party_state', '')).toBeNull());
 });
 
@@ -665,6 +672,13 @@ describe('br_party_kind', () => {
         '[{"NOME":"A","DOCUMENTO":"11122233300"},{"NOME":"B","DOCUMENTO":"44455566600"}]'
       )
     ).toBe('co-owner'));
+  it('treats a same-DOCUMENTO self-duplicate as one corporation, not co-owner (ANAC mark PSORO)', () =>
+    expect(
+      applyScalar(
+        'br_party_kind',
+        '[{"DOCUMENTO":"07418547000150","UF":"Indisponível"},{"DOCUMENTO":"07418547000150","UF":"SP"}]'
+      )
+    ).toBe('corporation'));
   it('returns other for a non-CPF/CNPJ document length', () =>
     expect(applyScalar('br_party_kind', '[{"NOME":"X","DOCUMENTO":"123456789012"}]')).toBe(
       'other'

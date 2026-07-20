@@ -7,9 +7,9 @@
 
 </div>
 
-Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2 for
-fast, indexed tail-number and ICAO hex lookups. Inspired by
-[metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
+Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
+serves fast tail-number and ICAO hex lookups from a private [feed service](#feed-service) on
+Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + private operator
 artifacts. The normalized output is for Ashley's own applications only, stored in a
@@ -86,8 +86,20 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
 | `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                        |
+| `aircraft/_feed/<source>.json`  | Per-source feed slice (hex-collapsed descriptive columns) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                                                  |
+| `aircraft/_feed/_deployed.json` | Content hash of the feed last deployed to Cloud Run — the scheduled deploy redeploys only when the freshly built feed differs from it                                                                                                                  |
 
 One queryable artifact per source — filter or point-lookup on any column (every canonical field is its own typed column). Rebuilt and re-uploaded whole only when the record set's content hash changes.
+
+## Feed Service
+
+A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table indexed by `icao_hex`, so a lookup is one `WHERE icao_hex IN (...)` on one table, never a union across per-country files.
+
+- **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership). ≤ 500 hexes; misses omitted.
+- Gated by a bearer secret (`FEED_TOKEN`, validated present and ≥ 16 chars at startup; a UUID is the convention) and rate-limited — a private API, not a public one. Every request presents the secret.
+- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image.
+- Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.
+- `make build-feed` rebuilds the DB from every durable per-source `_feed` slice in R2. `make deploy` runs that build first (so an ambient stale `feed.sqlite` is never deployed), then `make deploy-only` ships it. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
 ## Setup
 
@@ -98,20 +110,26 @@ make install
 
 ## Available Commands
 
-| Command             | Description                                    |
-| ------------------- | ---------------------------------------------- |
-| `make install`      | Install dependencies and git hooks             |
-| `make format`       | Format code with Prettier                      |
-| `make format-check` | Check formatting (non-destructive, used in CI) |
-| `make lint`         | Run ESLint                                     |
-| `make typecheck`    | TypeScript type check                          |
-| `make test`         | Run unit tests with coverage                   |
-| `make build`        | Compile TypeScript to `dist/`                  |
-| `make bootstrap`    | One-shot local initial load (reads `.env`)     |
-| `make secret-scan`  | Scan for accidentally committed secrets        |
-| `make clean`        | Remove build artifacts                         |
+| Command             | Description                                       |
+| ------------------- | ------------------------------------------------- |
+| `make install`      | Install dependencies and git hooks                |
+| `make format`       | Format code with Prettier                         |
+| `make format-check` | Check formatting (non-destructive, used in CI)    |
+| `make lint`         | Run ESLint                                        |
+| `make typecheck`    | TypeScript type check                             |
+| `make test`         | Run unit tests with coverage                      |
+| `make build`        | Compile TypeScript to `dist/`                     |
+| `make bootstrap`    | One-shot local initial load (reads `.env`)        |
+| `make serve`        | Run the feed service locally (`MBF_FEED_DB_PATH`) |
+| `make build-feed`   | Rebuild `feed.sqlite` from every R2 feed slice    |
+| `make deploy-only`  | Deploy the on-disk `feed.sqlite` to Cloud Run     |
+| `make deploy`       | Rebuild and deploy the feed service to Cloud Run  |
+| `make secret-scan`  | Scan for accidentally committed secrets           |
+| `make clean`        | Remove build artifacts                            |
 
-## Required Secrets (GitHub Actions)
+## Required GitHub Actions Configuration
+
+### Secrets
 
 | Secret                     | Purpose                     |
 | -------------------------- | --------------------------- |
@@ -120,6 +138,18 @@ make install
 | `MBF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
 | `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
 | `SONAR_TOKEN`              | SonarCloud analysis token   |
+
+### Variables
+
+| Variable                         | Purpose                                      |
+| -------------------------------- | -------------------------------------------- |
+| `GCP_PROJECT_ID`                 | Cloud Run project                            |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | GitHub Workload Identity Federation provider |
+| `GCP_SERVICE_ACCOUNT`            | Federated Cloud Run deployer service account |
+| `GCP_RUN_REGION`                 | Cloud Run region (default `us-east1`)        |
+| `GCP_RUN_SERVICE`                | Service name (default `metal-birds-feed`)    |
+
+`FEED_TOKEN` remains a Google Secret Manager binding on the Cloud Run service. The workflow never copies the token into GitHub.
 
 ## Sources
 

@@ -8,6 +8,19 @@ import { extractTextItems, getDocumentProxy } from 'unpdf';
 
 export type Row = Record<string, string>;
 
+// Strips a leading UTF-8 BOM (EF BB BF) at the byte level before decoding. TextDecoder only drops a
+// BOM when it decodes as UTF-8; under latin1 the three bytes survive as `ï»¿` glued to the first
+// header cell, silently renaming that column (FAA ships a BOM on ACFTREF/MASTER — unhandled it
+// breaks the ACFTREF join and the N-NUMBER registration mapping). Byte-first strip is correct for
+// both encodings and idempotent once removed.
+const decodeText = (buf: Buffer, encoding: 'utf8' | 'latin1'): string => {
+  const body =
+    buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf
+      ? buf.subarray(3)
+      : buf;
+  return new TextDecoder(encoding).decode(body);
+};
+
 export interface ParseOptions {
   encoding: 'utf8' | 'latin1';
   delimiter: string;
@@ -56,7 +69,7 @@ export type ParseXlsOptions = BaseSpreadsheetOptions;
 // (quoted-then-unquoted in the same field) even with relax_quotes. Trimming after the
 // quote-handling pass sidesteps that regression.
 export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[]> {
-  const text = new TextDecoder(options.encoding).decode(buf);
+  const text = decodeText(buf, options.encoding);
   const cast = options.trim ? (value: string): string => value.trim() : undefined;
   const columns =
     options.columns ?? ((header: string[]) => assertUniqueHeaders(header.map((h) => h.trim())));
@@ -129,7 +142,7 @@ const jsonType = (value: unknown): string => {
 
 // eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so a parse throw becomes a rejection, matching the other parsers
 export async function parseJson(buf: Buffer, options: ParseJsonOptions): Promise<Row[]> {
-  const text = new TextDecoder(options.encoding).decode(buf);
+  const text = decodeText(buf, options.encoding);
   const parsed: unknown = JSON.parse(text);
   const records = navigateToArray(parsed, options.record_path);
   return records.map((record, i) => {
@@ -249,7 +262,7 @@ export type ParseHtmlOptions = BaseSpreadsheetOptions & { encoding: 'utf8' | 'la
 // artifact because content_hash is over the parsed records, not the raw page.
 // eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
 export async function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise<Row[]> {
-  const html = new TextDecoder(options.encoding).decode(buf);
+  const html = decodeText(buf, options.encoding);
   const wb = XLSX.read(html, { type: 'string' });
   return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
 }

@@ -7,6 +7,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
+import { FeedRowsSchema } from './feed.js';
 import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
@@ -147,6 +148,21 @@ export class R2ArtifactWriter {
     }
   }
 
+  // Cadence skips are only safe when the feed slice both exists and is usable. A HEAD would pass a
+  // present-but-corrupt-JSON slice, which `readFeedRows` later treats as absent — so `publishFeed`
+  // fails closed every run while nothing regenerates the slice until cadence expiry. Read+parse here
+  // (via readFeedRows, which returns null for absent OR corrupt) so the self-heal path covers a bad
+  // intermediate, not only a missing one. R2 egress is free, so the extra GET costs one cheap op.
+  async feedRowsExist(source: string): Promise<boolean> {
+    if (this.dryRun) return true;
+    try {
+      return (await this.readFeedRows(source)) !== null;
+    } catch (err) {
+      log('warn', 'feed_rows_missing_on_cadence_skip', { source, msg: errorMessage(err) });
+      return false;
+    }
+  }
+
   async readState(source: string): Promise<SourceState | null> {
     try {
       const res = await retry(
@@ -207,12 +223,64 @@ export class R2ArtifactWriter {
       );
       const body = await res.Body?.transformToString();
       if (!body) return null;
-      return JSON.parse(body) as FeedRow[];
+      let json: unknown;
+      try {
+        json = JSON.parse(body);
+      } catch {
+        // Present-but-corrupt slice reads as absent (parity with readState): publishFeed then fails
+        // closed on the named source rather than crashing the whole Promise.all on a raw parse error.
+        log('error', 'feed_rows_parse_failed', { source, reason: 'invalid_json' });
+        return null;
+      }
+      // Valid JSON isn't enough: a wrong-shape slice (bare object, row missing a NOT NULL column,
+      // scalar rows) would crash consolidation on merge/hash/insert. Reject it as absent so the
+      // cadence self-heal regenerates the slice instead.
+      const parsed = FeedRowsSchema.safeParse(json);
+      if (!parsed.success) {
+        log('error', 'feed_rows_parse_failed', {
+          source,
+          reason: 'schema_invalid',
+          msg: parsed.error.message,
+        });
+        return null;
+      }
+      return parsed.data;
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
       log('error', 'feed_rows_load_failed', { source, msg: errorMessage(err) });
       throw err;
     }
+  }
+
+  // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads
+  // it to decide whether a redeploy is warranted, and advances it only after a successful deploy.
+  async readDeployedFeedHash(): Promise<string | null> {
+    try {
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: 'aircraft/_feed/_deployed.json' })
+          ),
+        S3_RETRY
+      );
+      const body = await res.Body?.transformToString();
+      if (!body) return null;
+      try {
+        const parsed = JSON.parse(body) as { hash?: unknown };
+        return typeof parsed.hash === 'string' ? parsed.hash : null;
+      } catch {
+        log('error', 'deployed_feed_hash_parse_failed', { reason: 'invalid_json' });
+        return null;
+      }
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      log('error', 'deployed_feed_hash_load_failed', { msg: errorMessage(err) });
+      throw err;
+    }
+  }
+
+  async writeDeployedFeedHash(hash: string): Promise<void> {
+    await this.put('aircraft/_feed/_deployed.json', JSON.stringify({ hash }), 'application/json');
   }
 
   private async put(key: string, body: Uint8Array | string, contentType: string): Promise<void> {

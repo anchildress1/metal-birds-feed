@@ -108,7 +108,12 @@ describe('serveRequest', () => {
   });
 
   it('401s a wrong token', async () => {
-    const res = await withDb(post('nope', { hexes: ['a1b2c3'] }));
+    const req = new Request('https://feed.local/feed', {
+      method: 'POST',
+      headers: { authorization: 'Bearer nope' },
+      body: 'x'.repeat(20_000),
+    });
+    const res = await withDb(req);
     expect(res.status).toBe(401);
   });
 
@@ -135,6 +140,32 @@ describe('serveRequest', () => {
     });
     const res = await withDb(req);
     expect(res.status).toBe(400);
+  });
+
+  it('413s a body whose declared length exceeds the byte cap', async () => {
+    const req = new Request('https://feed.local/feed', {
+      method: 'POST',
+      headers: { authorization: 'Bearer secret', 'content-length': '20000' },
+      body: '{}',
+    });
+
+    const res = await withDb(req);
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'request body too large' });
+  });
+
+  it('413s a streamed body that exceeds the byte cap without a content-length header', async () => {
+    const req = new Request('https://feed.local/feed', {
+      method: 'POST',
+      headers: { authorization: 'Bearer secret' },
+      body: 'x'.repeat(20_000),
+    });
+
+    const res = await withDb(req);
+
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'request body too large' });
   });
 
   it('405s a GET', async () => {
