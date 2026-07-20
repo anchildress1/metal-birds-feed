@@ -1,9 +1,9 @@
-// The exact upstream attribution line for each source, keyed by source slug (config.id /
-// FeedRow.source). The feed is the single source of truth for this wording: consumers render the
-// returned string verbatim and never encode a source→notice map of their own. Text is quoted from
-// README `## Attribution` and DATA_LICENSES `## Required Notices`; adding a source there means adding
-// its line here. Open / public-domain sources without a mandated notice get a factual courtesy
-// credit so every displayed row still names its origin.
+// Why this exists: the feed is the one place a consumer reads a row's credit line, so it never has
+// to encode its own source→notice map. Where a license mandates exact wording (Transport Canada,
+// CAA Maldives, AESA's required citation), the string here must stay verbatim to that mandate — keep
+// it in sync with DATA_LICENSES `## Required Notices`, which is authoritative for the legally-fixed
+// text. Open / public-domain sources with no mandated notice get a courtesy credit so no displayed
+// row is ever uncredited. Keyed by source slug (config.id / FeedRow.source).
 
 const NOTICES: Record<string, string> = {
   faa: 'Source: Federal Aviation Administration (FAA), United States — public-domain civil aircraft registry, normalized into this project schema without implying endorsement.',

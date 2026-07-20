@@ -9,10 +9,9 @@ import { attributionFor } from './attributions.js';
 // FeedRow is the single typed description of a returned row.
 export type { FeedRow };
 
-// The descriptive slice as returned to the consumer: every FeedRow column except the hex key (which
-// becomes the map key), plus display-ready fields the consumer renders verbatim without composing
-// anything itself — `type` and `engine` collapse the raw maker/model columns, and `attribution` is
-// the source's exact credit line.
+// Carries the extra fields so the consumer renders directly and never joins columns or keeps its own
+// source→notice map: `type`/`engine` are the display-ready maker+model strings, `attribution` the
+// credit line from the attributions module. The rest is the FeedRow minus the hex map key.
 export type FeedResponseRow = Omit<FeedRow, 'icao_hex'> & {
   type: string | null;
   engine: string | null;
@@ -78,18 +77,22 @@ export const parseHexes = (body: unknown): string[] => {
 export const buildSelect = (count: number): string =>
   `SELECT * FROM feed WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
-// Joins the present parts of a compound display value (maker + model) with a space, or null when the
-// registry supplied neither — so the consumer renders the string as-is and never composes it itself.
-const compose = (...parts: (string | null)[]): string | null =>
-  parts.filter(Boolean).join(' ') || null;
+// Maker + model as one display string, dropping the maker when the model already leads with it: some
+// registries (CAAS) store the make inside the free-text model ("CESSNA 172N"), which would otherwise
+// render "Cessna CESSNA 172N". null when the registry supplied neither part.
+const composeMakerModel = (maker: string | null, model: string | null): string | null => {
+  if (!maker) return model || null;
+  if (!model) return maker;
+  return model.toLowerCase().startsWith(maker.toLowerCase()) ? model : `${maker} ${model}`;
+};
 
 export const toResponseMap = (rows: FeedRow[]): Record<string, FeedResponseRow> => {
   const out: Record<string, FeedResponseRow> = {};
   for (const { icao_hex, ...rest } of rows)
     out[icao_hex] = {
       ...rest,
-      type: compose(rest.manufacturer, rest.model),
-      engine: compose(rest.engine_manufacturer, rest.engine_model),
+      type: composeMakerModel(rest.manufacturer, rest.model),
+      engine: composeMakerModel(rest.engine_manufacturer, rest.engine_model),
       attribution: attributionFor(rest.source),
     };
   return out;
