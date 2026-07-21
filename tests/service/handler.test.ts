@@ -116,6 +116,30 @@ describe('toResponseMap', () => {
     expect(map['a1b2c3']).toMatchObject({ registration: 'N1' });
     expect(map['a1b2c3']).not.toHaveProperty('icao_hex');
   });
+
+  it("attaches the source's exact attribution line to each row", () => {
+    const map = toResponseMap([rec('a1b2c3', 'N1')]); // rec() is source 'faa'
+    expect(map['a1b2c3'].attribution).toContain('Federal Aviation Administration (FAA)');
+  });
+
+  it('composes display-ready type and engine so the consumer never joins columns itself', () => {
+    const map = toResponseMap([rec('a1b2c3', 'N1')]); // rec() is CESSNA / 172, no engine columns
+    expect(map['a1b2c3'].type).toBe('CESSNA 172');
+    expect(map['a1b2c3'].engine).toBeNull();
+  });
+
+  it('drops the maker when the model already leads with it (CAAS free-text models)', () => {
+    const row: FeedRow = {
+      ...rec('a1b2c3', 'N1'),
+      manufacturer: 'Cessna',
+      model: 'CESSNA 172N',
+      engine_manufacturer: 'Lycoming',
+      engine_model: 'Lycoming O-320-H',
+    };
+    const map = toResponseMap([row]);
+    expect(map['a1b2c3'].type).toBe('CESSNA 172N');
+    expect(map['a1b2c3'].engine).toBe('Lycoming O-320-H');
+  });
 });
 
 describe('route', () => {

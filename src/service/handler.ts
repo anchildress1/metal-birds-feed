@@ -3,10 +3,20 @@
 // server injects a SQLite-backed RunQuery and the rate-limit CheckLimit; the decisions live here.
 
 import type { FeedRow } from '../feed-row.js';
+import { attributionFor } from './attributions.js';
 
 // Re-exported so the service + tests import the row shape from one place; the query is SELECT *, so
 // FeedRow is the single typed description of a returned row.
 export type { FeedRow };
+
+// Carries the extra fields so the consumer renders directly and never joins columns or keeps its own
+// source→notice map: `type`/`engine` are the display-ready maker+model strings, `attribution` the
+// credit line from the attributions module. The rest is the FeedRow minus the hex map key.
+export type FeedResponseRow = Omit<FeedRow, 'icao_hex'> & {
+  type: string | null;
+  engine: string | null;
+  attribution: string;
+};
 
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
@@ -67,9 +77,24 @@ export const parseHexes = (body: unknown): string[] => {
 export const buildSelect = (count: number): string =>
   `SELECT * FROM feed WHERE icao_hex IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
-export const toResponseMap = (rows: FeedRow[]): Record<string, Omit<FeedRow, 'icao_hex'>> => {
-  const out: Record<string, Omit<FeedRow, 'icao_hex'>> = {};
-  for (const { icao_hex, ...rest } of rows) out[icao_hex] = rest;
+// Maker + model as one display string, dropping the maker when the model already leads with it: some
+// registries (CAAS) store the make inside the free-text model ("CESSNA 172N"), which would otherwise
+// render "Cessna CESSNA 172N". null when the registry supplied neither part.
+const composeMakerModel = (maker: string | null, model: string | null): string | null => {
+  if (!maker) return model || null;
+  if (!model) return maker;
+  return model.toLowerCase().startsWith(maker.toLowerCase()) ? model : `${maker} ${model}`;
+};
+
+export const toResponseMap = (rows: FeedRow[]): Record<string, FeedResponseRow> => {
+  const out: Record<string, FeedResponseRow> = {};
+  for (const { icao_hex, ...rest } of rows)
+    out[icao_hex] = {
+      ...rest,
+      type: composeMakerModel(rest.manufacturer, rest.model),
+      engine: composeMakerModel(rest.engine_manufacturer, rest.engine_model),
+      attribution: attributionFor(rest.source),
+    };
   return out;
 };
 
