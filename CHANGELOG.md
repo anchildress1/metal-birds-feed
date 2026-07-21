@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.12...v0.1.0) (2026-07-21)
+
+
+### Features
+
+* private feed service (Cloud Run + baked SQLite) ([#72](https://github.com/anchildress1/metal-birds-feed/issues/72)) ([3e6af95](https://github.com/anchildress1/metal-birds-feed/commit/3e6af955bc240d3e8f9e7a893d07bd0141f97074))
+* **service:** per-source attribution + display-ready type/engine on /feed ([#75](https://github.com/anchildress1/metal-birds-feed/issues/75)) ([48af14f](https://github.com/anchildress1/metal-birds-feed/commit/48af14f7a3fd9d01ccd6c5af712b86dbbbccff57))
+
+
+### Bug Fixes
+
+* FAA/br-anac live-data drift + land feed-service hardening missed by [#72](https://github.com/anchildress1/metal-birds-feed/issues/72) ([#74](https://github.com/anchildress1/metal-birds-feed/issues/74)) ([e247952](https://github.com/anchildress1/metal-birds-feed/commit/e247952c3920ed041a5c9900e33afa0e5419000b))
+
+
+### Miscellaneous Chores
+
+* Release as 0.1.0 ([191f0c6](https://github.com/anchildress1/metal-birds-feed/commit/191f0c603643c9da393c2b79ae17ed1fa8fb5eea))
+
 ## [0.0.12](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.11...v0.0.12) (2026-07-14)
 
 
