@@ -805,3 +805,137 @@ describe('foca owner/operator transforms', () => {
       applyScalar('foca_owner_name', PARTIES(OWNER('Main Owner', '', 'ZH', 'Switzerland')))
     ).toBeNull());
 });
+
+describe('date_dd_dot_or_null', () => {
+  it('parses DD.MM.YYYY', () =>
+    expect(applyScalar('date_dd_dot_or_null', '02.06.2005')).toBe('2005-06-02'));
+  it('accepts a leap day', () =>
+    expect(applyScalar('date_dd_dot_or_null', '29.02.2024')).toBe('2024-02-29'));
+  it('trims surrounding whitespace', () =>
+    expect(applyScalar('date_dd_dot_or_null', '  01.01.2000  ')).toBe('2000-01-01'));
+  it('returns null for empty', () => expect(applyScalar('date_dd_dot_or_null', '')).toBeNull());
+  it('returns null for an out-of-range day', () =>
+    expect(applyScalar('date_dd_dot_or_null', '32.01.2026')).toBeNull());
+  it('returns null for an out-of-range month', () =>
+    expect(applyScalar('date_dd_dot_or_null', '01.13.2026')).toBeNull());
+  it('rejects a non-leap Feb 29', () =>
+    expect(applyScalar('date_dd_dot_or_null', '29.02.2025')).toBeNull());
+  it('rejects the slash variant', () =>
+    expect(applyScalar('date_dd_dot_or_null', '02/06/2005')).toBeNull());
+});
+
+const NO_HEX = (hex: string): string =>
+  JSON.stringify([
+    { Desimal: '4687683' },
+    { Binær: '101' },
+    { Oktal: '21' },
+    { Heksadesimal: hex },
+  ]);
+
+describe('no_hex_or_null', () => {
+  it('extracts the hexadecimal radix', () =>
+    expect(applyScalar('no_hex_or_null', NO_HEX('478743'))).toBe('478743'));
+  it('lowercases the hex', () =>
+    expect(applyScalar('no_hex_or_null', NO_HEX('47C097'))).toBe('47c097'));
+  it('zero-pads a short address', () =>
+    expect(applyScalar('no_hex_or_null', NO_HEX('4bf'))).toBe('0004bf'));
+  it('returns null for empty', () => expect(applyScalar('no_hex_or_null', '')).toBeNull());
+  it('returns null for malformed JSON', () =>
+    expect(applyScalar('no_hex_or_null', '[{bad')).toBeNull());
+  it('returns null when no hexadecimal entry is present', () =>
+    expect(applyScalar('no_hex_or_null', JSON.stringify([{ Desimal: '123' }]))).toBeNull());
+  it('returns null for a non-hex value', () =>
+    expect(applyScalar('no_hex_or_null', NO_HEX('zzzzzz'))).toBeNull());
+  it('returns null for valid JSON that is not an array', () =>
+    expect(applyScalar('no_hex_or_null', '{"Heksadesimal":"478743"}')).toBeNull());
+});
+
+const NO_OWNER = (
+  type: string,
+  navn: string,
+  orgnr: string | null,
+  land: string
+): Record<string, string> => ({
+  'Eier type': type,
+  Navn: navn,
+  ...(orgnr ? { Organisasjonsnummer: orgnr } : {}),
+  Gateadresse: 'Somestreet 1',
+  Postnummer: '0000',
+  Poststed: 'Oslo',
+  Land: land,
+});
+const NO_OWNERS = (...owners: Record<string, string>[]): string => JSON.stringify(owners);
+
+describe('no owner transforms', () => {
+  const corp = NO_OWNERS(
+    NO_OWNER('Eier/Kontakt', 'Robertsen Investments AS', '926310925', 'Norge')
+  );
+  const person = NO_OWNERS(NO_OWNER('Eier/Kontakt', 'Taraldsen, Stian', null, 'Norge'));
+  const foreign = NO_OWNERS(NO_OWNER('Eier/Kontakt', 'BE Probiotik SRL', '33951410', 'Romania'));
+  const multi = NO_OWNERS(
+    NO_OWNER('Eier', 'Berge, Jan Milton', null, 'Norge'),
+    NO_OWNER('Eier/Kontakt', 'Granviken, Bjørn', null, 'Norge')
+  );
+
+  it('reads the Eier/Kontakt name', () =>
+    expect(applyScalar('no_owner_name', corp)).toBe('Robertsen Investments AS'));
+  it('falls back to the first entry when no contact is flagged', () =>
+    expect(
+      applyScalar('no_owner_name', NO_OWNERS(NO_OWNER('Eier', 'Solo Eier', null, 'Norge')))
+    ).toBe('Solo Eier'));
+  it('reads the owner country', () =>
+    expect(applyScalar('no_owner_country', foreign)).toBe('Romania'));
+  it('types an org-number owner as a corporation', () =>
+    expect(applyScalar('no_owner_kind', corp)).toBe('corporation'));
+  it('types an owner without an org number as an individual', () =>
+    expect(applyScalar('no_owner_kind', person)).toBe('individual'));
+  it('types multiple owners as co-owner', () =>
+    expect(applyScalar('no_owner_kind', multi)).toBe('co-owner'));
+  it('reads the contact name from a multi-owner array', () =>
+    expect(applyScalar('no_owner_name', multi)).toBe('Granviken, Bjørn'));
+  it('returns null name/kind/country for an empty cell', () => {
+    expect(applyScalar('no_owner_name', '')).toBeNull();
+    expect(applyScalar('no_owner_kind', '')).toBeNull();
+    expect(applyScalar('no_owner_country', '')).toBeNull();
+  });
+  it('returns null for malformed JSON', () =>
+    expect(applyScalar('no_owner_name', '[{bad')).toBeNull());
+  it('returns null for valid JSON that is not an array', () =>
+    expect(applyScalar('no_owner_kind', '{"Navn":"x"}')).toBeNull());
+  it('collapses a nameless owner kind to null', () =>
+    expect(
+      applyScalar('no_owner_kind', NO_OWNERS(NO_OWNER('Eier/Kontakt', '', null, 'Norge')))
+    ).toBeNull());
+});
+
+describe('no_airworthiness_classes', () => {
+  it('parses a multi-value category array', () =>
+    expect(
+      applyArray('no_airworthiness_classes', JSON.stringify(['Amateur Built', 'Experimental']))
+    ).toEqual(['Amateur Built', 'Experimental']));
+  it('parses a single-value array', () =>
+    expect(applyArray('no_airworthiness_classes', JSON.stringify(['Sailplane']))).toEqual([
+      'Sailplane',
+    ]));
+  it('trims and drops blank entries', () =>
+    expect(applyArray('no_airworthiness_classes', JSON.stringify([' Normal ', '', '  ']))).toEqual([
+      'Normal',
+    ]));
+  it('returns empty for an empty cell', () =>
+    expect(applyArray('no_airworthiness_classes', '')).toEqual([]));
+  it('returns empty for malformed JSON', () =>
+    expect(applyArray('no_airworthiness_classes', '[{bad')).toEqual([]));
+  it('returns empty for valid JSON that is not an array', () =>
+    expect(applyArray('no_airworthiness_classes', '"Normal"')).toEqual([]));
+});
+
+describe('no_operator_kind', () => {
+  it('types an org-number operator as a corporation', () =>
+    expect(applyCompound('no_operator_kind', ['Heli Team AS', '850447772'])).toBe('corporation'));
+  it('types an operator without an org number as an individual', () =>
+    expect(applyCompound('no_operator_kind', ['Ola Nordmann', ''])).toBe('individual'));
+  it('returns null when no operator is named', () =>
+    expect(applyCompound('no_operator_kind', ['', '850447772'])).toBeNull());
+  it('returns null for an empty values array', () =>
+    expect(applyCompound('no_operator_kind', [])).toBeNull());
+});

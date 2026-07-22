@@ -1,0 +1,187 @@
+id: no-caa
+label: Luftfartstilsynet — Norwegian Civil Aircraft Register (Norges luftfartøyregister)
+country: NO
+encoding: utf8
+trim_all: false
+cadence_days: 1
+
+# Luftfartstilsynet publishes the full register as one JSON feed, refreshed daily (~16:00 local),
+# listed on the national open-data portal data.norge.no. Fetchable without auth; the response is
+# {headers, data:[...]}. The register lists only currently-registered aircraft, so status is a
+# constant `valid` (no deregistration rows to distinguish, mirroring the FOCA source).
+download:
+  url: https://data.caa.no/nlr/norgesluftfartoyregister.json
+  format: file
+  entries:
+    aircraft: '.'
+
+primary: aircraft
+format: json
+record_path: data
+delimiter: ','
+
+# The feed exposes no permanent per-aircraft key; the registration mark is unique within a
+# snapshot, so it serves as source_id. (Norwegian marks can in principle be reissued, but the feed
+# carries no stable id to key on instead.)
+source_id: Registreringsmerke
+registration: Registreringsmerke
+
+mapping:
+  registration:
+    field: Registreringsmerke
+    transform: trim
+    default: ''
+
+  icao_hex:
+    field: ICAO 24-bits adresse
+    transform: no_hex_or_null
+
+  # `Type` is the model/type name (e.g. "RV-6"), not an ICAO type designator; the feed has no
+  # ICAO type code column.
+  icao_type_code:
+    constant: ~
+
+  status:
+    constant: valid
+
+  country:
+    constant: NO
+
+  manufacturer:
+    field: Produsent
+    transform: trim_or_null
+
+  model:
+    field: Type
+    transform: trim_or_null
+
+  serial_number:
+    field: Serienummer
+    transform: trim_or_null
+
+  year_manufactured:
+    field: Byggeår
+    transform: int_or_null
+
+  airframe_type:
+    field: Kategori
+    lookup:
+      Fly: fixed-wing
+      Helikopter: rotorcraft
+      Seilfly: glider
+      Ballong: balloon
+    default: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  # Luftdyktighetskategori is a multi-valued airworthiness classification (e.g. Amateur Built +
+  # Experimental); the array home preserves every category the single-valued airworthiness_class
+  # would drop.
+  operational_classes:
+    field: Luftdyktighetskategori
+    array_transform: no_airworthiness_classes
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: Eier(e)
+    transform: no_owner_name
+
+  owner.kind:
+    field: Eier(e)
+    transform: no_owner_kind
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    field: Eier(e)
+    transform: no_owner_country
+
+  operator.name:
+    field: Operatør
+    transform: trim_or_null
+
+  operator.kind:
+    fields:
+      - Operatør
+      - Organisasjonsnummer operatør
+    compound_transform: no_operator_kind
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  # Registreringsdato is the date the aircraft was entered on the register; stored as the
+  # certification_date, matching the FOCA source's register-entry-date placement.
+  certification_date:
+    field: Registreringsdato
+    transform: date_dd_dot_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: Startmasse MTOM
+    transform: float_or_null
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

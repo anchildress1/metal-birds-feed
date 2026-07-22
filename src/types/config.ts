@@ -45,15 +45,21 @@ export const SCALAR_TRANSFORMS = [
   'foca_operator_kind',
   'foca_operator_country',
   'ee_registration',
+  'date_dd_dot_or_null',
+  'no_hex_or_null',
+  'no_owner_name',
+  'no_owner_country',
+  'no_owner_kind',
 ] as const;
 
-export const ARRAY_TRANSFORMS = ['faa_cert_ops'] as const;
+export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;
 
 export const COMPOUND_TRANSFORMS = [
   'tc_airframe',
   'nl_ilt_airframe',
   'casa_airframe',
   'es_aesa_airframe',
+  'no_operator_kind',
 ] as const;
 
 export type ScalarTransformName = (typeof SCALAR_TRANSFORMS)[number];

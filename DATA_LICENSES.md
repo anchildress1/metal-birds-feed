@@ -132,7 +132,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | NCAA | Nigeria | info@ncaa.gov.ng | 2026-05-11 | pending | sent |
 | n/a | Niue | none | n/a | none | excluded |
 | GACA DPRK | North Korea | none | n/a | none | excluded: sanctions |
-| Luftfartstilsynet | Norway | postmottak@caa.no | 2026-05-05 | pending | sent |
+| Luftfartstilsynet | Norway | postmottak@caa.no | 2026-05-05 | pending | live: not specified, treated as private-use |
 | CAA Oman | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
 | PASO (regional) | Pacific Island states (PASO) | info@paso.aero | 2026-05-11 | pending | sent |
 | PCAA | Pakistan | umair.sufyan@caapakistan.com.pk | 2026-05-05 | pending | sent |
@@ -203,4 +203,4 @@ Single record of source for agency correspondence and source-use posture: every 
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
 - AESA Spain: reusable under Real Decreto 1495/2011 (developing Ley 37/2007 on public-sector-information reuse); conditions require the source of origin be cited, the meaning not be distorted, and the update-date/reuse-condition metadata be preserved. Required citation, verbatim: "Data source: Agencia Estatal de Seguridad Aérea (AESA)". Normalized into this project schema; no endorsement implied.
-- Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence, storage/cache posture, and status.
+- Norway Luftfartstilsynet: daily JSON feed (https://data.caa.no/nlr/norgesluftfartoyregister.json) on data.norge.no. Licence "Ikke oppgitt" (not specified) → not Open; treated as Private-use (public, no fetch/storage prohibition; 30-day fallback elapsed, email 2026-05-05, no reply). Reclassify to Open if Luftfartstilsynet declares NLOD/CC BY.
