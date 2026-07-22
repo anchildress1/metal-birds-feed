@@ -887,9 +887,9 @@ describe('no owner transforms', () => {
     expect(applyScalar('no_owner_country', foreign)).toBe('Romania'));
   it('types an org-number owner as a corporation', () =>
     expect(applyScalar('no_owner_kind', corp)).toBe('corporation'));
-  it('leaves an owner without an org number untyped', () =>
-    expect(applyScalar('no_owner_kind', person)).toBeNull());
-  it('does not misclassify a foreign corporation whose org number is missing', () =>
+  it('types a Norwegian owner without an org number as an individual', () =>
+    expect(applyScalar('no_owner_kind', person)).toBe('individual'));
+  it('does not misclassify a foreign owner whose org number is missing', () =>
     expect(
       applyScalar(
         'no_owner_kind',

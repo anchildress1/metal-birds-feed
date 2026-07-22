@@ -585,15 +585,18 @@ const noOwnerCountry = (value: string): string | null =>
   noPrimaryOwner(parseNoOwners(value))?.country || null;
 
 // Multiple owner entries record co-ownership the schema cannot otherwise express. A Norwegian
-// organisasjonsnummer positively identifies an organisation; its absence proves nothing because
-// the source warns that foreign-owner organisation numbers may be missing.
+// organisasjonsnummer positively identifies an organisation (corporation). Without one, a Norwegian
+// party is a natural person (individual); a foreign party stays null — a non-Norwegian organisation
+// simply has no organisasjonsnummer to show, so absence there proves nothing.
+const NO_DOMESTIC_COUNTRY = 'Norge';
 const noOwnerKind = (value: string): string | null => {
   const owners = parseNoOwners(value);
   if (owners.length === 0) return null;
   if (owners.length > 1) return 'co-owner';
   const primary = owners[0];
   if (!primary.name) return null;
-  return primary.orgnr.length > 0 ? 'corporation' : null;
+  if (primary.orgnr.length > 0) return 'corporation';
+  return primary.country === NO_DOMESTIC_COUNTRY ? 'individual' : null;
 };
 
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {

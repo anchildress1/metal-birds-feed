@@ -2706,6 +2706,11 @@ describe('NO-CAA fixture translation', () => {
     });
   });
 
+  describe('LN-ABC — Norwegian owner without an org number', () => {
+    it('types a domestic no-org-number owner as an individual', () =>
+      expect(noRecords.get('LN-ABC')!.owner.kind).toBe('individual'));
+  });
+
   it('every NO record carries country=NO, valid status, and a 6-hex icao_hex', () => {
     for (const r of noRecords.values()) {
       expect(r.source).toBe('no-caa');
