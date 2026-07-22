@@ -2620,6 +2620,12 @@ describe('NO-CAA fixture translation', () => {
     expect(noStats).toEqual({ total: 7, ok: 7, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
+  it('does not commit prohibited owner address or registration-date fields', () => {
+    const fixture = readFileSync(resolve(NO_FIXTURES, 'input', 'nlr.json'), 'utf8');
+    for (const field of ['Eier siden', 'Gateadresse', 'Postnummer', 'Poststed'])
+      expect(fixture).not.toContain(`"${field}"`);
+  });
+
   describe('LN-ABA — amateur-built fixed-wing, co-ownership', () => {
     let r: Aircraft;
     beforeAll(() => {

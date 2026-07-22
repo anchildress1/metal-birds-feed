@@ -887,8 +887,15 @@ describe('no owner transforms', () => {
     expect(applyScalar('no_owner_country', foreign)).toBe('Romania'));
   it('types an org-number owner as a corporation', () =>
     expect(applyScalar('no_owner_kind', corp)).toBe('corporation'));
-  it('types an owner without an org number as an individual', () =>
-    expect(applyScalar('no_owner_kind', person)).toBe('individual'));
+  it('leaves an owner without an org number untyped', () =>
+    expect(applyScalar('no_owner_kind', person)).toBeNull());
+  it('does not misclassify a foreign corporation whose org number is missing', () =>
+    expect(
+      applyScalar(
+        'no_owner_kind',
+        NO_OWNERS(NO_OWNER('Eier/Kontakt', 'Foreign Aviation Ltd', null, 'United Kingdom'))
+      )
+    ).toBeNull());
   it('types multiple owners as co-owner', () =>
     expect(applyScalar('no_owner_kind', multi)).toBe('co-owner'));
   it('reads the contact name from a multi-owner array', () =>
@@ -932,8 +939,8 @@ describe('no_airworthiness_classes', () => {
 describe('no_operator_kind', () => {
   it('types an org-number operator as a corporation', () =>
     expect(applyCompound('no_operator_kind', ['Heli Team AS', '850447772'])).toBe('corporation'));
-  it('types an operator without an org number as an individual', () =>
-    expect(applyCompound('no_operator_kind', ['Ola Nordmann', ''])).toBe('individual'));
+  it('leaves an operator without an org number untyped', () =>
+    expect(applyCompound('no_operator_kind', ['Ola Nordmann', ''])).toBeNull());
   it('returns null when no operator is named', () =>
     expect(applyCompound('no_operator_kind', ['', '850447772'])).toBeNull());
   it('returns null for an empty values array', () =>

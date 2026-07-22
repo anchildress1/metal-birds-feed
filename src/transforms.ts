@@ -584,16 +584,16 @@ const noOwnerName = (value: string): string | null =>
 const noOwnerCountry = (value: string): string | null =>
   noPrimaryOwner(parseNoOwners(value))?.country || null;
 
-// Multiple owner entries record co-ownership the schema cannot otherwise express. A single party
-// types by org-number presence: a Norwegian organisasjonsnummer marks an organisation
-// (corporation), its absence a natural person (individual). Empty array → null.
+// Multiple owner entries record co-ownership the schema cannot otherwise express. A Norwegian
+// organisasjonsnummer positively identifies an organisation; its absence proves nothing because
+// the source warns that foreign-owner organisation numbers may be missing.
 const noOwnerKind = (value: string): string | null => {
   const owners = parseNoOwners(value);
   if (owners.length === 0) return null;
   if (owners.length > 1) return 'co-owner';
   const primary = owners[0];
   if (!primary.name) return null;
-  return primary.orgnr.length > 0 ? 'corporation' : 'individual';
+  return primary.orgnr.length > 0 ? 'corporation' : null;
 };
 
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
@@ -777,13 +777,13 @@ const esAesaAirframe = (values: string[]): string | null => {
   return null;
 };
 
-// Norway's operator (`Operatør`) types by its org-number column exactly as the owner does. Empty
-// operator name → null (most aircraft list no distinct operator). Distinct from owner kind because
-// the operator carries no per-aircraft array, so co-ownership cannot apply.
+// Norway's operator (`Operatør`) types as a corporation only with positive org-number evidence.
+// Empty operator name → null (most aircraft list no distinct operator); a named operator without
+// an org number stays unknown because the source does not prove it is a natural person.
 const noOperatorKind = (values: string[]): string | null => {
   const name = (values[0] ?? '').trim();
   if (name.length === 0) return null;
-  return (values[1] ?? '').trim().length > 0 ? 'corporation' : 'individual';
+  return (values[1] ?? '').trim().length > 0 ? 'corporation' : null;
 };
 
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
