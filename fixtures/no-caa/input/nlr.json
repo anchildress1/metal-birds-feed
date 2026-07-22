@@ -19,38 +19,22 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "05.10.2004",
           "Navn": "Berge, Jan Milton",
-          "Gateadresse": "Strandengveien 30 B",
-          "Postnummer": "1390",
-          "Poststed": "Vollen",
           "Land": "Norge"
         },
         {
           "Eier type": "Eier",
-          "Eier siden": "06.04.2018",
           "Navn": "Granviken, Bjørn",
-          "Gateadresse": "Fugleviklunden 6",
-          "Postnummer": "1570",
-          "Poststed": "Dilling",
           "Land": "Norge"
         },
         {
           "Eier type": "Eier",
-          "Eier siden": "06.04.2018",
           "Navn": "Paulsen, Dag Henning",
-          "Gateadresse": "Butterudveien 10",
-          "Postnummer": "1339",
-          "Poststed": "Vøyenenga",
           "Land": "Norge"
         },
         {
           "Eier type": "Eier",
-          "Eier siden": "06.04.2018",
           "Navn": "Thoresen, Thore Reinhardt",
-          "Gateadresse": "Brenneveien 41 A",
-          "Postnummer": "1339",
-          "Poststed": "Vøyenenga",
           "Land": "Norge"
         }
       ],
@@ -84,12 +68,8 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "23.02.2024",
           "Navn": "Robertsen Investments AS",
           "Organisasjonsnummer": "926310925",
-          "Gateadresse": "Nedrelia 7H",
-          "Postnummer": "5231",
-          "Poststed": "Paradis",
           "Land": "Norge"
         }
       ],
@@ -125,12 +105,8 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "12.05.2017",
           "Navn": "Heli Team AS",
           "Organisasjonsnummer": "850447772",
-          "Gateadresse": "Stangnesterminalen 2D",
-          "Postnummer": "9409",
-          "Poststed": "Harstad",
           "Land": "Norge"
         }
       ],
@@ -164,10 +140,7 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "04.04.1986",
           "Navn": "Sameiet Twin 1",
-          "Postnummer": "3503",
-          "Poststed": "HØNEFOSS",
           "Land": "Norge"
         }
       ],
@@ -203,12 +176,8 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "21.07.2016",
           "Navn": "Oslo Ballongklubb",
           "Organisasjonsnummer": "996517284",
-          "Gateadresse": "c/o Mikael Klingberg, Middelthuns gate 21B",
-          "Postnummer": "0368",
-          "Poststed": "OSLO",
           "Land": "Norge"
         }
       ],
@@ -242,11 +211,8 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "21.04.2026",
           "Navn": "BE Probiotik SRL",
           "Organisasjonsnummer": "33951410",
-          "Gateadresse": "Sat Serbesti, Strada Scolii No 6,",
-          "Poststed": "Judetul Bacau",
           "Land": "Romania"
         }
       ],
@@ -279,11 +245,7 @@
       "Eier(e)": [
         {
           "Eier type": "Eier/Kontakt",
-          "Eier siden": "14.09.2017",
           "Navn": "Taraldsen, Stian",
-          "Gateadresse": "Michelets vei 20",
-          "Postnummer": "1366",
-          "Poststed": "Lysaker",
           "Land": "Norge"
         }
       ],
