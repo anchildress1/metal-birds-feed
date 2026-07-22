@@ -21,6 +21,8 @@ const NOTICES: Record<string, string> = {
     "Source data from the Civil Aviation Authority of the Republic of Maldives — https://www.caa.gov.mv/; reproduced with the CAA's written permission, normalized into this project schema without implying endorsement. Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission.",
   'nl-ilt':
     'Source: Human Environment and Transport Inspectorate (ILT), Netherlands — open aviation registry, normalized into this project schema without implying endorsement.',
+  'no-caa':
+    'Source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
   'sg-caas':
     'Source data from the Civil Aviation Authority of Singapore — https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/; publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.',
   'es-aesa':
