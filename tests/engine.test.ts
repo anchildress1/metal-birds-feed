@@ -2620,10 +2620,23 @@ describe('NO-CAA fixture translation', () => {
     expect(noStats).toEqual({ total: 7, ok: 7, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
-  it('does not commit prohibited owner address or registration-date fields', () => {
-    const fixture = readFileSync(resolve(NO_FIXTURES, 'input', 'nlr.json'), 'utf8');
-    for (const field of ['Eier siden', 'Gateadresse', 'Postnummer', 'Poststed'])
-      expect(fixture).not.toContain(`"${field}"`);
+  it('drops owner address and registration-date PII from the output records', () => {
+    // The fixture input carries these public-register fields; the engine must not surface any of
+    // them (field names or distinctive street values) in the canonical record.
+    const prohibited = [
+      'Gateadresse',
+      'Postnummer',
+      'Poststed',
+      'Eier siden',
+      'Strandengveien',
+      'Fugleviklunden',
+    ];
+    for (const r of noRecords.values()) {
+      const json = JSON.stringify(r);
+      for (const token of prohibited) expect(json).not.toContain(token);
+      expect(Object.keys(r.owner).sort()).toEqual(['country', 'kind', 'name', 'state']);
+      expect(Object.keys(r.operator).sort()).toEqual(['country', 'kind', 'name', 'state']);
+    }
   });
 
   describe('LN-ABA — amateur-built fixed-wing, co-ownership', () => {
