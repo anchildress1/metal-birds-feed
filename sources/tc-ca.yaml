@@ -3,7 +3,8 @@ label: Transport Canada Civil Aircraft Register
 country: CA
 encoding: latin1
 trim_all: true
-cadence_days: 30
+# CCARCS bulk file was observed refreshing sub-daily (mid-month Last-Modified); publishes ≥ daily.
+cadence_days: 1
 
 download:
   url: https://wwwapps.tc.gc.ca/saf-sec-sur/2/ccarcs-riacc/download/ccarcsdb.zip

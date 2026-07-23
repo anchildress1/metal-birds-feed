@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Owner:** Ashley (anchildress1)
-**Last updated:** 2026-07-09 (CC.1-CC.5 reframed around private source-use/storage posture, not public redistribution)
+**Last updated:** 2026-07-22 (live-source roster now points to the README to avoid drift)
 **Consumes by:** Personal forked deployment of [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)
 
 ---
@@ -249,7 +249,7 @@ Suggested phasing:
 - **v2 — Transport Canada:** delta from v1 is small (one config file, one downloader, fixtures). Start when v1 has run cleanly through at least one monthly refresh.
 - **v3 — Third-registry milestone (NL ILT + CAA NZ):** start when v2 is stable. Two parallel tracks: NL ILT (no email, ships first; the spreadsheet parser path is the new engine work) and CAA NZ (CC.2 email gates slot, 30-day clock starts on send). NL ships independently of any agency reply; NZ ships when its email resolves or times out. v3 closes when both are in R2.
 - **v4 — Georgia (GCAA):** start when v3 is stable. Begins with R3.1 research milestone before any code. Schedule slips if data isn't accessible — that's the deal you accept by sentimental-prioritizing this over EU member states with known data sources.
-- **Current live set** — FAA, Transport Canada, Netherlands ILT, Australia CASA, Latvia CAA, and Taiwan CAA.
+- **Current live set** — see the [README sources table](README.md#sources), the maintained roster. The PRD intentionally does not enumerate live sources (it drifts); onboarding a config-driven source shifts no goal or requirement here.
 - **Future** — Ireland (IAA), EU member states, photo-URL hook, schema migration tooling, NTSB sibling project. No commitment, added when motivated. Each new registry begins with CC.1 + CC.2 when applicable.
 
 Dependencies:

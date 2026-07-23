@@ -132,7 +132,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | NCAA | Nigeria | info@ncaa.gov.ng | 2026-05-11 | pending | sent |
 | n/a | Niue | none | n/a | none | excluded |
 | GACA DPRK | North Korea | none | n/a | none | excluded: sanctions |
-| Luftfartstilsynet | Norway | postmottak@caa.no | 2026-05-05 | pending | sent |
+| Luftfartstilsynet | Norway | postmottak@caa.no | 2026-05-05 | pending | live: not specified, treated as private-use |
 | CAA Oman | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
 | PASO (regional) | Pacific Island states (PASO) | info@paso.aero | 2026-05-11 | pending | sent |
 | PCAA | Pakistan | umair.sufyan@caapakistan.com.pk | 2026-05-05 | pending | sent |
@@ -204,3 +204,10 @@ Single record of source for agency correspondence and source-use posture: every 
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
 - AESA Spain: reusable under Real Decreto 1495/2011 (developing Ley 37/2007 on public-sector-information reuse); conditions require the source of origin be cited, the meaning not be distorted, and the update-date/reuse-condition metadata be preserved. Required citation, verbatim: "Data source: Agencia Estatal de Seguridad Aérea (AESA)". Normalized into this project schema; no endorsement implied.
 - Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence, storage/cache posture, and status.
+
+## Update cadence
+
+Where a source's observed publishing rhythm differs from a stated or assumed one, the refresh runs at the more frequent of the two (see AGENTS.md). Per-source `cadence_days` lives in `sources/<id>.yaml`; the declared-vs-observed rationale is recorded here.
+
+- FAA (United States): **daily.** The Releasable Aircraft Database refreshes daily at 11:30 pm Central per the FAA download page; the earlier "monthly" assumption conflated this bulk ZIP with FAA's separate Aircraft Registry Reports.
+- Transport Canada: **daily.** No cadence documented on the CCARCS download page; `ccarcsdb.zip` `Last-Modified` was observed same-day and mid-month, indicating a sub-daily refresh.

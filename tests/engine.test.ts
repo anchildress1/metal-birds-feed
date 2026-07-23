@@ -2600,3 +2600,139 @@ describe('CAAS Singapore fixture translation', () => {
     }
   });
 });
+
+const NO_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'no-caa');
+const NO_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'no-caa.yaml');
+
+describe('NO-CAA fixture translation', () => {
+  let noRecords: Map<string, Aircraft>;
+  let noStats: EngineStats;
+
+  beforeAll(async () => {
+    const config: SourceConfig = loadSourceConfig(NO_CONFIG_PATH);
+    const buf = readFileSync(resolve(NO_FIXTURES, 'input', 'nlr.json'));
+    const result = await translate(config, new Map([['aircraft', buf]]));
+    noRecords = result.records;
+    noStats = result.stats;
+  });
+
+  it('translates every fixture record', () => {
+    expect(noStats).toEqual({ total: 7, ok: 7, failed: 0, skipped: 0, duplicateSkipped: 0 });
+  });
+
+  it('drops owner address and registration-date PII from the output records', () => {
+    // The fixture input carries these public-register fields; the engine must not surface any of
+    // them (field names or distinctive street values) in the canonical record.
+    const prohibited = [
+      'Gateadresse',
+      'Postnummer',
+      'Poststed',
+      'Eier siden',
+      'Strandengveien',
+      'Fugleviklunden',
+    ];
+    for (const r of noRecords.values()) {
+      const json = JSON.stringify(r);
+      for (const token of prohibited) expect(json).not.toContain(token);
+      expect(Object.keys(r.owner).sort()).toEqual(['country', 'kind', 'name', 'state']);
+      expect(Object.keys(r.operator).sort()).toEqual(['country', 'kind', 'name', 'state']);
+    }
+  });
+
+  describe('LN-ABA — amateur-built fixed-wing, co-ownership', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = noRecords.get('LN-ABA')!;
+    });
+
+    it('keys on the registration mark', () => {
+      expect(r.source).toBe('no-caa');
+      expect(r.source_id).toBe('LN-ABA');
+      expect(r.registration).toBe('LN-ABA');
+    });
+    it('extracts the hexadecimal ICAO address', () => expect(r.icao_hex).toBe('478743'));
+    it('maps Fly to fixed-wing with a constant valid status', () => {
+      expect(r.airframe_type).toBe('fixed-wing');
+      expect(r.status).toBe('valid');
+      expect(r.country).toBe('NO');
+    });
+    it('parses the dot date and kilogram MTOM', () => {
+      expect(r.certification_date).toBe('2005-06-02');
+      expect(r.max_takeoff_weight_kg).toBe(726);
+      expect(r.model).toBe('RV-6');
+    });
+    it('preserves every airworthiness category in operational_classes', () =>
+      expect(r.operational_classes).toEqual(['Amateur Built', 'Experimental']));
+    it('records co-ownership and drops street/PII', () => {
+      expect(r.owner.kind).toBe('co-owner');
+      expect(r.owner.country).toBe('Norge');
+      expect(r.owner.state).toBeNull();
+      expect(r).not.toHaveProperty('street');
+      expect(r).not.toHaveProperty('postal_code');
+    });
+  });
+
+  describe('LN-ABE — org-number owner types as corporation', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = noRecords.get('LN-ABE')!;
+    });
+    it('types the org-number owner as a corporation', () => {
+      expect(r.owner.name).toBe('Robertsen Investments AS');
+      expect(r.owner.kind).toBe('corporation');
+    });
+    it('leaves operator empty when the feed lists none', () =>
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null }));
+  });
+
+  describe('LN-OAB — helicopter with a distinct operator', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = noRecords.get('LN-OAB')!;
+    });
+    it('maps Helikopter to rotorcraft', () => expect(r.airframe_type).toBe('rotorcraft'));
+    it('populates the operator name and kind', () => {
+      expect(r.operator.name).toBe('Heli Team AS');
+      expect(r.operator.kind).toBe('corporation');
+    });
+  });
+
+  describe('LN-CAD — balloon airframe', () => {
+    it('maps Ballong to balloon', () =>
+      expect(noRecords.get('LN-CAD')!.airframe_type).toBe('balloon'));
+  });
+
+  describe('LN-GAB — glider airframe', () => {
+    it('maps Seilfly to glider', () =>
+      expect(noRecords.get('LN-GAB')!.airframe_type).toBe('glider'));
+  });
+
+  describe('LN-ADA — foreign owner country preserved verbatim', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = noRecords.get('LN-ADA')!;
+    });
+    it('keeps the non-Norwegian owner country', () => {
+      expect(r.owner.name).toBe('BE Probiotik SRL');
+      expect(r.owner.country).toBe('Romania');
+      expect(r.owner.kind).toBe('corporation');
+    });
+  });
+
+  describe('LN-ABC — Norwegian owner without an org number', () => {
+    it('types a domestic no-org-number owner as an individual', () =>
+      expect(noRecords.get('LN-ABC')!.owner.kind).toBe('individual'));
+  });
+
+  it('every NO record carries country=NO, valid status, and a 6-hex icao_hex', () => {
+    for (const r of noRecords.values()) {
+      expect(r.source).toBe('no-caa');
+      expect(r.registration.startsWith('LN-')).toBe(true);
+      expect(r.country).toBe('NO');
+      expect(r.status).toBe('valid');
+      expect(r.icao_hex).toMatch(/^[0-9a-f]{6}$/);
+      expect(r.icao_type_code).toBeNull();
+      expect(r).not.toHaveProperty('street');
+    }
+  });
+});

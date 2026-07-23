@@ -12,6 +12,12 @@ describe('attributionFor', () => {
     expect(attributionFor('faa')).toContain('Federal Aviation Administration (FAA)');
   });
 
+  it('returns the source-specific Norway attribution', () => {
+    expect(attributionFor('no-caa')).toBe(
+      'Source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.'
+    );
+  });
+
   it('never returns an empty credit for an unmapped source', () => {
     const line = attributionFor('zz-new');
     expect(line.length).toBeGreaterThan(0);

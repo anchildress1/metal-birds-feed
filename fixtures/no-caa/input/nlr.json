@@ -1,0 +1,306 @@
+{
+  "headers": {
+    "Tittel": "Registrerte opplysninger om luftfartøy og eiere som er registrert i Norges luftfartøyregister",
+    "Dokumentasjon": "https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f",
+    "Oppdatert": "2026-07-21T15:50:02.390033+02:00"
+  },
+  "data": [
+    {
+      "Registreringsmerke": "LN-ABA",
+      "Kategori": "Fly",
+      "Type": "RV-6",
+      "Produsent": "Berge, Jan Milton",
+      "Eier/Kontakt": "Berge, Jan Milton",
+      "Registreringsdato": "02.06.2005",
+      "Luftdyktighetskategori": ["Amateur Built", "Experimental"],
+      "Startmasse MTOM": "726.00",
+      "Byggeår": "2004",
+      "Serienummer": "24921",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "05.10.2004",
+          "Navn": "Berge, Jan Milton",
+          "Gateadresse": "Strandengveien 30 B",
+          "Postnummer": "1390",
+          "Poststed": "Vollen",
+          "Land": "Norge"
+        },
+        {
+          "Eier type": "Eier",
+          "Eier siden": "06.04.2018",
+          "Navn": "Granviken, Bjørn",
+          "Gateadresse": "Fugleviklunden 6",
+          "Postnummer": "1570",
+          "Poststed": "Dilling",
+          "Land": "Norge"
+        },
+        {
+          "Eier type": "Eier",
+          "Eier siden": "06.04.2018",
+          "Navn": "Paulsen, Dag Henning",
+          "Gateadresse": "Butterudveien 10",
+          "Postnummer": "1339",
+          "Poststed": "Vøyenenga",
+          "Land": "Norge"
+        },
+        {
+          "Eier type": "Eier",
+          "Eier siden": "06.04.2018",
+          "Navn": "Thoresen, Thore Reinhardt",
+          "Gateadresse": "Brenneveien 41 A",
+          "Postnummer": "1339",
+          "Poststed": "Vøyenenga",
+          "Land": "Norge"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4687683"
+        },
+        {
+          "Binær": "10001111000011101000011"
+        },
+        {
+          "Oktal": "21703503"
+        },
+        {
+          "Heksadesimal": "478743"
+        }
+      ]
+    },
+    {
+      "Registreringsmerke": "LN-ABE",
+      "Kategori": "Fly",
+      "Type": "U206G",
+      "Produsent": "Textron Aviation Inc.",
+      "Eier/Kontakt": "Robertsen Investments AS",
+      "Organisasjonsnummer eier/kontakt": "926310925",
+      "Registreringsdato": "21.06.2002",
+      "Luftdyktighetskategori": ["Normal Category"],
+      "Startmasse MTOM": "1633.00",
+      "Byggeår": "1978",
+      "Serienummer": "U206-04218",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "23.02.2024",
+          "Navn": "Robertsen Investments AS",
+          "Organisasjonsnummer": "926310925",
+          "Gateadresse": "Nedrelia 7H",
+          "Postnummer": "5231",
+          "Poststed": "Paradis",
+          "Land": "Norge"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4687478"
+        },
+        {
+          "Binær": "10001111000011001110110"
+        },
+        {
+          "Oktal": "21703166"
+        },
+        {
+          "Heksadesimal": "478676"
+        }
+      ]
+    },
+    {
+      "Registreringsmerke": "LN-OAB",
+      "Kategori": "Helikopter",
+      "Type": "AS350B3",
+      "Produsent": "Airbus Helicopters",
+      "Operatør": "Heli Team AS",
+      "Organisasjonsnummer operatør": "850447772",
+      "Eier/Kontakt": "Heli Team AS",
+      "Organisasjonsnummer eier/kontakt": "850447772",
+      "Registreringsdato": "12.05.2017",
+      "Luftdyktighetskategori": ["Small Rotorcraft"],
+      "Startmasse MTOM": "2250.00",
+      "Byggeår": "2017",
+      "Serienummer": "8380",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "12.05.2017",
+          "Navn": "Heli Team AS",
+          "Organisasjonsnummer": "850447772",
+          "Gateadresse": "Stangnesterminalen 2D",
+          "Postnummer": "9409",
+          "Poststed": "Harstad",
+          "Land": "Norge"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4687569"
+        },
+        {
+          "Binær": "10001111000011011010001"
+        },
+        {
+          "Oktal": "21703321"
+        },
+        {
+          "Heksadesimal": "4786d1"
+        }
+      ]
+    },
+    {
+      "Registreringsmerke": "LN-GAB",
+      "Kategori": "Seilfly",
+      "Type": "G103A",
+      "Produsent": "Grob-Werke Burkhart Grob e. K.",
+      "Operatør": "Sameiet Twin 1",
+      "Eier/Kontakt": "Sameiet Twin 1",
+      "Registreringsdato": "04.04.1986",
+      "Luftdyktighetskategori": ["Sailplane"],
+      "Startmasse MTOM": "580.00",
+      "Byggeår": "1986",
+      "Serienummer": "34063-K293",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "04.04.1986",
+          "Navn": "Sameiet Twin 1",
+          "Postnummer": "3503",
+          "Poststed": "HØNEFOSS",
+          "Land": "Norge"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4703104"
+        },
+        {
+          "Binær": "10001111100001110000000"
+        },
+        {
+          "Oktal": "21741600"
+        },
+        {
+          "Heksadesimal": "47c380"
+        }
+      ]
+    },
+    {
+      "Registreringsmerke": "LN-CAD",
+      "Kategori": "Ballong",
+      "Type": "C-80",
+      "Produsent": "Cameron Balloons LTD",
+      "Operatør": "Oslo Ballongklubb",
+      "Organisasjonsnummer operatør": "996517284",
+      "Eier/Kontakt": "Oslo Ballongklubb",
+      "Organisasjonsnummer eier/kontakt": "996517284",
+      "Registreringsdato": "20.01.2003",
+      "Luftdyktighetskategori": ["Free Manned Balloon"],
+      "Startmasse MTOM": "726.00",
+      "Byggeår": "2002",
+      "Serienummer": "10309",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "21.07.2016",
+          "Navn": "Oslo Ballongklubb",
+          "Organisasjonsnummer": "996517284",
+          "Gateadresse": "c/o Mikael Klingberg, Middelthuns gate 21B",
+          "Postnummer": "0368",
+          "Poststed": "OSLO",
+          "Land": "Norge"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4703128"
+        },
+        {
+          "Binær": "10001111100001110011000"
+        },
+        {
+          "Oktal": "21741630"
+        },
+        {
+          "Heksadesimal": "47c398"
+        }
+      ]
+    },
+    {
+      "Registreringsmerke": "LN-ADA",
+      "Kategori": "Fly",
+      "Type": "182T",
+      "Produsent": "Textron Aviation Inc.",
+      "Eier/Kontakt": "BE Probiotik SRL",
+      "Organisasjonsnummer eier/kontakt": "33951410",
+      "Registreringsdato": "05.08.2022",
+      "Luftdyktighetskategori": ["Normal Category"],
+      "Startmasse MTOM": "1406.00",
+      "Byggeår": "2007",
+      "Serienummer": "18281930",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "21.04.2026",
+          "Navn": "BE Probiotik SRL",
+          "Organisasjonsnummer": "33951410",
+          "Gateadresse": "Sat Serbesti, Strada Scolii No 6,",
+          "Poststed": "Judetul Bacau",
+          "Land": "Romania"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4687473"
+        },
+        {
+          "Binær": "10001111000011001110001"
+        },
+        {
+          "Oktal": "21703161"
+        },
+        {
+          "Heksadesimal": "478671"
+        }
+      ]
+    },
+    {
+      "Registreringsmerke": "LN-ABC",
+      "Kategori": "Fly",
+      "Type": "RV-8",
+      "Produsent": "Kobro, Terje",
+      "Eier/Kontakt": "Taraldsen, Stian",
+      "Registreringsdato": "17.10.2006",
+      "Luftdyktighetskategori": ["Amateur Built", "Experimental"],
+      "Startmasse MTOM": "816.00",
+      "Byggeår": "2002",
+      "Serienummer": "81104",
+      "Eier(e)": [
+        {
+          "Eier type": "Eier/Kontakt",
+          "Eier siden": "14.09.2017",
+          "Navn": "Taraldsen, Stian",
+          "Gateadresse": "Michelets vei 20",
+          "Postnummer": "1366",
+          "Poststed": "Lysaker",
+          "Land": "Norge"
+        }
+      ],
+      "ICAO 24-bits adresse": [
+        {
+          "Desimal": "4687544"
+        },
+        {
+          "Binær": "10001111000011010111000"
+        },
+        {
+          "Oktal": "21703270"
+        },
+        {
+          "Heksadesimal": "4786b8"
+        }
+      ]
+    }
+  ]
+}

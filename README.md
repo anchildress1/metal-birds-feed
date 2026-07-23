@@ -168,6 +168,7 @@ or cache restrictions) lives in [DATA_LICENSES.md](DATA_LICENSES.md).
 | CAA Latvia — lv-caa | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
 | CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
 | ILT — nl-ilt | Netherlands | none | n/a | open | live |
+| Luftfartstilsynet — no-caa | Norway | postmottak@caa.no | 2026-05-05 | pending | live |
 | CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
 | CAAS — sg-caas | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed | live |
 | AESA — es-aesa | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | open | live |
@@ -193,6 +194,7 @@ Required upstream notices, kept short:
 - Source: Estonian Transport Administration (Transpordiamet) – [transpordiamet.ee/ohusoidukite-register](https://transpordiamet.ee/ohusoidukite-register); reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.
 - CAAS Singapore: source data from the Civil Aviation Authority of Singapore — [certificate-of-registration](https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.
 - Data source: Agencia Estatal de Seguridad Aérea (AESA) — [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas); reusable under Real Decreto 1495/2011 (Ley 37/2007 on public-sector-information reuse), normalized into this project schema without implying endorsement.
+- Norway: source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — [data.norge.no](https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f); publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.
 - Public-domain, CC0, and open-government sources without a specific notice above are credited here as a courtesy; the full source list is tracked in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
@@ -222,7 +224,7 @@ Required upstream notices, kept short:
    - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
 4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
 
-The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform).
+The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path).
 
 ## License
 

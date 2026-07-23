@@ -511,6 +511,94 @@ const focaOperatorCountry = (value: string): string | null =>
 const focaOperatorKind = (value: string): string | null =>
   focaPartyKind(value, 'Main Operator', 'Part Operator');
 
+// European dot-separated date DD.MM.YYYY (Norway's Registreringsdato style). Distinct from the
+// slash variants so "02.06.2005" is unambiguously 2 June, never 6 February.
+const dateDdDotOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (!/^\d{2}\.\d{2}\.\d{4}$/.test(v)) return null;
+  return validateAndFormatYMD(v.slice(6, 10), v.slice(3, 5), v.slice(0, 2));
+};
+
+// Norway's `ICAO 24-bits adresse` is an array of single-key radix objects
+// ([{Desimal},{Binær},{Oktal},{Heksadesimal}]), JSON-stringified by the flattener. Pull the
+// hexadecimal representation, zero-pad to the canonical 6 digits (a small address drops leading
+// zeros upstream), and drop anything that is not a real 24-bit hex.
+const noHexOrNull = (value: string): string | null => {
+  const v = value.trim();
+  if (v.length === 0) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(v);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) return null;
+  const entry = (parsed as unknown[]).map(asRecord).find((o) => typeof o.Heksadesimal === 'string');
+  const hex =
+    typeof entry?.Heksadesimal === 'string' ? entry.Heksadesimal.trim().toLowerCase() : '';
+  // Guard before padStart: an empty/absent hex would pad to "000000" and pass the format check.
+  if (hex.length === 0) return null;
+  const padded = hex.padStart(6, '0');
+  return /^[0-9a-f]{6}$/.test(padded) ? padded : null;
+};
+
+interface NoOwner {
+  type: string;
+  name: string;
+  orgnr: string;
+  country: string;
+}
+
+// `Eier(e)` is the per-aircraft owner array, JSON-stringified by the flattener. Street/postal/city
+// (Gateadresse/Postnummer/Poststed) are deliberately never read — only name, org-number (for kind),
+// and country survive the PII rule.
+const parseNoOwners = (value: string): NoOwner[] => {
+  const v = value.trim();
+  if (v.length === 0) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(v);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return (parsed as unknown[]).map((entry) => {
+    const o = asRecord(entry);
+    return {
+      type: typeof o['Eier type'] === 'string' ? o['Eier type'] : '',
+      name: typeof o.Navn === 'string' ? o.Navn.trim() : '',
+      orgnr: typeof o.Organisasjonsnummer === 'string' ? o.Organisasjonsnummer.trim() : '',
+      country: typeof o.Land === 'string' ? o.Land.trim() : '',
+    };
+  });
+};
+
+// The register marks the contact copy as "Eier/Kontakt"; that entry carries the canonical
+// owner name and country. Falls back to the first entry when no contact is flagged.
+const noPrimaryOwner = (owners: NoOwner[]): NoOwner | null =>
+  owners.find((o) => o.type === 'Eier/Kontakt') ?? owners[0] ?? null;
+
+const noOwnerName = (value: string): string | null =>
+  noPrimaryOwner(parseNoOwners(value))?.name || null;
+
+const noOwnerCountry = (value: string): string | null =>
+  noPrimaryOwner(parseNoOwners(value))?.country || null;
+
+// Multiple owner entries record co-ownership the schema cannot otherwise express. A Norwegian
+// organisasjonsnummer positively identifies an organisation (corporation). Without one, a Norwegian
+// party is a natural person (individual); a foreign party stays null — a non-Norwegian organisation
+// simply has no organisasjonsnummer to show, so absence there proves nothing.
+const NO_DOMESTIC_COUNTRY = 'Norge';
+const noOwnerKind = (value: string): string | null => {
+  const owners = parseNoOwners(value);
+  if (owners.length === 0) return null;
+  if (owners.length > 1) return 'co-owner';
+  const primary = owners[0];
+  if (!primary.name) return null;
+  if (primary.orgnr.length > 0) return 'corporation';
+  return primary.country === NO_DOMESTIC_COUNTRY ? 'individual' : null;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -556,6 +644,11 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   foca_operator_state: focaOperatorState,
   foca_operator_kind: focaOperatorKind,
   foca_operator_country: focaOperatorCountry,
+  date_dd_dot_or_null: dateDdDotOrNull,
+  no_hex_or_null: noHexOrNull,
+  no_owner_name: noOwnerName,
+  no_owner_country: noOwnerCountry,
+  no_owner_kind: noOwnerKind,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
@@ -566,8 +659,28 @@ const faaCertOps = (value: string): string[] => {
   return v.length > 1 ? v.slice(1).split('') : [];
 };
 
+// Norway's `Luftdyktighetskategori` is an array of airworthiness categories
+// (["Amateur Built","Experimental"]), JSON-stringified by the flattener. Preserve each category —
+// the schema's single-valued airworthiness_class would drop all but one.
+const noAirworthinessClasses = (value: string): string[] => {
+  const v = value.trim();
+  if (v.length === 0) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(v);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  return (parsed as unknown[])
+    .filter((x): x is string => typeof x === 'string')
+    .map((x) => x.trim())
+    .filter((x) => x.length > 0);
+};
+
 const ARRAY_HANDLERS: Record<ArrayTransformName, (value: string) => string[]> = {
   faa_cert_ops: faaCertOps,
+  no_airworthiness_classes: noAirworthinessClasses,
 };
 
 export const applyArray = (name: ArrayTransformName, value: string): string[] =>
@@ -667,11 +780,21 @@ const esAesaAirframe = (values: string[]): string | null => {
   return null;
 };
 
+// Norway's operator (`Operatør`) types as a corporation only with positive org-number evidence.
+// Empty operator name → null (most aircraft list no distinct operator); a named operator without
+// an org number stays unknown because the source does not prove it is a natural person.
+const noOperatorKind = (values: string[]): string | null => {
+  const name = (values[0] ?? '').trim();
+  if (name.length === 0) return null;
+  return (values[1] ?? '').trim().length > 0 ? 'corporation' : null;
+};
+
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
   tc_airframe: tcAirframe,
   nl_ilt_airframe: nlIltAirframe,
   casa_airframe: casaAirframe,
   es_aesa_airframe: esAesaAirframe,
+  no_operator_kind: noOperatorKind,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>
