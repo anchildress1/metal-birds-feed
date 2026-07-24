@@ -2736,3 +2736,166 @@ describe('NO-CAA fixture translation', () => {
     }
   });
 });
+
+const CL_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'cl-dgac');
+const CL_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'cl-dgac.yaml');
+
+describe('DGAC Chile fixture translation', () => {
+  let clRecords: Map<string, Aircraft>;
+  let clStats: EngineStats;
+
+  beforeAll(async () => {
+    const config: SourceConfig = loadSourceConfig(CL_CONFIG_PATH);
+    const buf = readFileSync(resolve(CL_FIXTURES, 'input', 'register.xlsx'));
+    const result = await translate(config, new Map([['register', buf]]));
+    clRecords = result.records;
+    clStats = result.stats;
+  });
+
+  // 11 rows: 8 distinct tails, 3 co-owner rows for CCADB collapse to one, 1 byte-identical CCDUP
+  // row is skipped.
+  it('collapses co-owner and byte-identical rows to 8 records', () => {
+    expect(clStats).toEqual({ total: 11, ok: 8, failed: 0, skipped: 1, duplicateSkipped: 1 });
+    expect(clRecords.size).toBe(8);
+  });
+
+  describe('CCAAA — single-operator helicopter, commercial use', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = clRecords.get('CCAAA')!;
+    });
+    it('keys on the raw mark and restores the CC- dash for registration', () => {
+      expect(r.source).toBe('cl-dgac');
+      expect(r.source_id).toBe('CCAAA');
+      expect(r.registration).toBe('CC-AAA');
+      expect(r.country).toBe('CL');
+    });
+    it('maps HELICOPTERO to rotorcraft with a constant valid status', () => {
+      expect(r.airframe_type).toBe('rotorcraft');
+      expect(r.status).toBe('valid');
+    });
+    it('records commercial use as an operational class', () =>
+      expect(r.operational_classes).toEqual(['commercial']));
+    it('maps the operator (not owner) with CL country and no co-owner flag', () => {
+      expect(r.operator.name).toBe('PUBLICITARIA PUBLI G SPA');
+      expect(r.operator.country).toBe('CL');
+      expect(r.operator.kind).toBeNull();
+    });
+    it('leaves owner and legal_owner null — register publishes operator only', () => {
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.legal_owner).toEqual({ name: null, kind: null, state: null, country: null });
+    });
+    it('leaves register-not-published fields null', () => {
+      expect(r.icao_hex).toBeNull();
+      expect(r.serial_number).toBeNull();
+      expect(r.year_manufactured).toBeNull();
+      expect(r.engine.manufacturer).toBeNull();
+      expect(r.certification_date).toBeNull();
+    });
+  });
+
+  describe('CCADB — co-owner tail merged into one record', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = clRecords.get('CCADB')!;
+    });
+    it('joins every party name with the register Y conjunction', () =>
+      expect(r.operator.name).toBe(
+        'ANDES RENTAL SPA Y INVERSIONES GHC LIMITADA Y URRUTIA, MARIA ELEONORA'
+      ));
+    it('stamps operator.kind co-owner on the merge', () =>
+      expect(r.operator.kind).toBe('co-owner'));
+    it('keeps the shared identity fields intact', () => {
+      expect(r.registration).toBe('CC-ADB');
+      expect(r.manufacturer).toBe('CESSNA');
+      expect(r.model).toBe('525');
+      expect(r.airframe_type).toBe('fixed-wing');
+    });
+  });
+
+  it('maps every TIPO DE AERONAVE value to its airframe type', () => {
+    expect(clRecords.get('CCAAC')!.airframe_type).toBe('fixed-wing');
+    expect(clRecords.get('CCAAE')!.airframe_type).toBe('glider');
+    expect(clRecords.get('CCGLO')!.airframe_type).toBe('balloon');
+    expect(clRecords.get('CCGYR')!.airframe_type).toBe('gyroplane');
+    expect(clRecords.get('CCDIR')!.airframe_type).toBe('blimp');
+  });
+
+  it('maps PRIVADO to a private operational class', () =>
+    expect(clRecords.get('CCAAC')!.operational_classes).toEqual(['private']));
+
+  it('every CL record carries country=CL, valid status, a CC- registration, and no owner/hex/PII', () => {
+    for (const r of clRecords.values()) {
+      expect(r.source).toBe('cl-dgac');
+      expect(r.registration.startsWith('CC-')).toBe(true);
+      expect(r.country).toBe('CL');
+      expect(r.status).toBe('valid');
+      expect(r.operator.country).toBe('CL');
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.legal_owner).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.icao_hex).toBeNull();
+      expect(r).not.toHaveProperty('street');
+      expect(r).not.toHaveProperty('postal_code');
+    }
+  });
+});
+
+describe('engine — merge_duplicates edge cases', () => {
+  const buildMergeConfig = (setOnMerge: Record<string, string | null>): SourceConfig => ({
+    id: 'synthetic-merge',
+    label: 'Synthetic merge_duplicates source',
+    country: 'CL',
+    encoding: 'utf8',
+    download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
+    primary: 'register',
+    delimiter: ',',
+    trim_all: true,
+    format: 'ods',
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    merge_duplicates: { fields: ['owner.name'], separator: ' Y ', set_on_merge: setOnMerge },
+    mapping: {
+      registration: { field: 'REG' },
+      status: { constant: 'valid' },
+      country: { constant: 'CL' },
+      'owner.name': { field: 'OWNER', transform: 'trim_or_null' },
+    },
+  });
+
+  const odsBuffer = (rows: string[][]): Promise<Buffer> =>
+    writeOds({ sheets: [{ name: 'Sheet1', rows }] }).then((b) => Buffer.from(b));
+
+  // Covers the branch where the incumbent's merge field is empty and the incoming value fills it,
+  // rather than being concatenated onto an existing string.
+  it('fills an empty incumbent field from a later row instead of concatenating', async () => {
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER'],
+      ['1', 'CC-AAA', ''],
+      ['1', 'CC-AAA', 'LATE ADDITION SPA'],
+    ]);
+    const { records, stats } = await translate(
+      buildMergeConfig({ 'owner.kind': 'co-owner' }),
+      new Map([['register', buf]])
+    );
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')!.owner.name).toBe('LATE ADDITION SPA');
+    expect(records.get('1')!.owner.kind).toBe('co-owner');
+  });
+
+  // Covers the re-validation guard: a set_on_merge value that violates the schema fails the merged
+  // row loudly instead of publishing an invalid record.
+  it('fails the row when set_on_merge produces a schema-invalid value', async () => {
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER'],
+      ['1', 'CC-AAA', 'FIRST PARTY'],
+      ['1', 'CC-AAA', 'SECOND PARTY'],
+    ]);
+    const { records, stats } = await translate(
+      buildMergeConfig({ 'owner.kind': 'not-a-real-kind' }),
+      new Map([['register', buf]])
+    );
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
+  });
+});

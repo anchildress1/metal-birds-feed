@@ -1,5 +1,5 @@
 import { TextDecoder } from 'node:util';
-import type { SourceConfig, FieldMapping } from './types/config.js';
+import type { SourceConfig, FieldMapping, MergeDuplicatesConfig } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import {
   parseCSV,
@@ -234,6 +234,76 @@ function resolveRecency(
   return null;
 }
 
+const getPath = (obj: unknown, path: string): unknown =>
+  path
+    .split('.')
+    .reduce<unknown>(
+      (node, key) => (node == null ? undefined : (node as Record<string, unknown>)[key]),
+      obj
+    );
+
+const setPath = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+  const keys = path.split('.');
+  let node = obj;
+  for (let i = 0; i < keys.length - 1; i++) node = node[keys[i]] as Record<string, unknown>;
+  node[keys[keys.length - 1]] = value;
+};
+
+// Arrays (operational_classes) are compared whole, not descended into — a differing element is a
+// differing leaf, not a mergeable sub-path.
+const isLeaf = (value: unknown): boolean =>
+  value === null || typeof value !== 'object' || Array.isArray(value);
+
+// Canonical dotted paths where two records' leaves differ. Used to gate merge_duplicates: a merge is
+// safe only when every differing path is one the policy declares mergeable.
+const collectDiffPaths = (a: unknown, b: unknown, prefix: string, out: Set<string>): void => {
+  const keys = new Set([
+    ...Object.keys((a as Record<string, unknown>) ?? {}),
+    ...Object.keys((b as Record<string, unknown>) ?? {}),
+  ]);
+  for (const key of keys) {
+    const av = (a as Record<string, unknown> | undefined)?.[key];
+    const bv = (b as Record<string, unknown> | undefined)?.[key];
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (isLeaf(av) || isLeaf(bv)) {
+      if (!Bun.deepEquals(av, bv)) out.add(path);
+    } else collectDiffPaths(av, bv, path, out);
+  }
+};
+
+// The paths a merge is allowed to reconcile: the concatenated fields plus any set_on_merge targets
+// (which necessarily differ between an already-merged incumbent and a fresh single-party candidate).
+const mergeableFieldSet = (policy: MergeDuplicatesConfig): Set<string> =>
+  new Set([...policy.fields, ...Object.keys(policy.set_on_merge ?? {})]);
+
+// Folds a duplicate candidate into the incumbent: each policy field's new value is appended (joined
+// by separator, skipping empties and values already present), then set_on_merge stamps its fixed
+// values. Caller re-validates the result against the schema.
+const mergeDuplicateRecord = (
+  incumbent: Aircraft,
+  candidate: Aircraft,
+  policy: MergeDuplicatesConfig
+): unknown => {
+  const merged = structuredClone(incumbent) as unknown as Record<string, unknown>;
+  const separator = policy.separator ?? ', ';
+  for (const field of policy.fields) {
+    // Concatenation only makes sense for string leaves (operator names); a non-string incoming has
+    // nothing to append, and a non-string incumbent is simply replaced by the incoming string.
+    const incoming = getPath(candidate, field);
+    if (typeof incoming !== 'string' || incoming === '') continue;
+    const existing = getPath(merged, field);
+    if (typeof existing !== 'string' || existing === '') {
+      setPath(merged, field, incoming);
+      continue;
+    }
+    if (!existing.split(separator).includes(incoming))
+      setPath(merged, field, `${existing}${separator}${incoming}`);
+  }
+  for (const [path, value] of Object.entries(policy.set_on_merge ?? {}))
+    setPath(merged, path, value);
+  return merged;
+};
+
 interface TranslateRowContext {
   config: SourceConfig;
   joinMaps: Map<string, Map<string, Row>>;
@@ -313,6 +383,37 @@ function translateRow(
             'exact duplicate row (canonical record identical; raw fields differ outside the schema)',
         });
         return { status: 'skipped', reason: 'duplicate' };
+      }
+
+      // Same id, differing only in fields the source declares mergeable (Chile lists one row per
+      // co-registered party): fold the candidate into the incumbent rather than treating it as a
+      // reissue collision. A row differing anywhere else falls through to recency resolution.
+      const mergePolicy = config.merge_duplicates;
+      if (mergePolicy) {
+        const diff = new Set<string>();
+        collectDiffPaths(parsed.data, incumbent, '', diff);
+        const mergeable = mergeableFieldSet(mergePolicy);
+        if (diff.size > 0 && [...diff].every((path) => mergeable.has(path))) {
+          const revalidated = AircraftSchema.safeParse(
+            mergeDuplicateRecord(incumbent, parsed.data, mergePolicy)
+          );
+          if (!revalidated.success) {
+            log('error', 'translate_invalid', {
+              source: config.id,
+              row: i + 2,
+              source_id: rawId,
+              msg: revalidated.error.issues.map((e) => e.message).join('; '),
+            });
+            return { status: 'failed' };
+          }
+          log('warn', 'translate_duplicate_id_merged', {
+            source: config.id,
+            row: i + 2,
+            source_id: rawId,
+            fields: [...diff],
+          });
+          return { status: 'ok', id: rawId, record: revalidated.data, row: merged };
+        }
       }
 
       // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a

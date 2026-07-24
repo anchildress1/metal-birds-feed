@@ -70,7 +70,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | AAC Cabo Verde                            | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | SSCA Cambodia                             | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | CCAA Cameroon                             | 2026-05-11 | 2026-06-10 | pending | Yes      |
-| DGAC Chile                                | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | Ministry of Transport Cook Islands        | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | DGAC Costa Rica                           | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | ANAC CI Côte d'Ivoire                     | 2026-05-11 | 2026-06-10 | pending | Yes      |

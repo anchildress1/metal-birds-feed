@@ -571,6 +571,21 @@ describe('br_registration', () => {
     expect(applyScalar('br_registration', '')).toBeNull());
 });
 
+describe('cl_registration', () => {
+  it('restores the CC- dash on a dash-less mark', () =>
+    expect(applyScalar('cl_registration', 'CCAAA')).toBe('CC-AAA'));
+  it('handles an alphanumeric suffix', () =>
+    expect(applyScalar('cl_registration', 'CCPH1')).toBe('CC-PH1'));
+  it('uppercases and trims before formatting', () =>
+    expect(applyScalar('cl_registration', '  ccadb ')).toBe('CC-ADB'));
+  it('returns null for a non-CC prefix', () =>
+    expect(applyScalar('cl_registration', 'PPACK')).toBeNull());
+  it('returns null for a wrong-length mark', () =>
+    expect(applyScalar('cl_registration', 'CCAA')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('cl_registration', '')).toBeNull());
+});
+
 describe('ee_registration', () => {
   it('collapses the spaced hyphen to canonical form', () =>
     expect(applyScalar('ee_registration', 'ES - MBA')).toBe('ES-MBA'));

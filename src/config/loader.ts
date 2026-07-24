@@ -169,6 +169,13 @@ const SourceConfigSchema = z
     source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
     registration: z.string().min(1),
     cadence_days: z.number().int().positive().optional(),
+    merge_duplicates: z
+      .strictObject({
+        fields: z.array(z.string().min(1)).min(1),
+        separator: z.string().min(1).optional(),
+        set_on_merge: z.record(z.string().min(1), z.string().nullable()).optional(),
+      })
+      .optional(),
     mapping: z.record(z.string(), FieldMappingSchema),
   })
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {

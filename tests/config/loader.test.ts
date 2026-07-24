@@ -99,6 +99,30 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('loads cl-dgac config with a merge_duplicates policy', () => {
+    const config = loadSourceConfig(
+      resolve(import.meta.dirname, '..', '..', 'sources', 'cl-dgac.yaml')
+    );
+    expect(config.merge_duplicates).toEqual({
+      fields: ['operator.name'],
+      separator: ' Y ',
+      set_on_merge: { 'operator.kind': 'co-owner' },
+    });
+  });
+
+  it('rejects merge_duplicates with an empty fields array', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_merge_empty.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: []\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('defaults format to csv when omitted', () => {
     const config = loadSourceConfig(FAA_CONFIG);
     expect(config.format).toBe('csv');
