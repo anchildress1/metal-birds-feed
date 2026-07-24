@@ -2898,4 +2898,78 @@ describe('engine — merge_duplicates edge cases', () => {
     expect(stats.failed).toBe(1);
     expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
   });
+
+  // A non-string merge field is a misconfiguration: merge can only concatenate strings, so the row
+  // fails loudly rather than silently dropping the candidate's differing value.
+  it('fails the row when a declared merge field is not a string', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-merge-num',
+      label: 'Synthetic numeric merge field',
+      country: 'CL',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
+      primary: 'register',
+      delimiter: ',',
+      trim_all: true,
+      format: 'ods',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      merge_duplicates: { fields: ['year_manufactured'] },
+      mapping: {
+        registration: { field: 'REG' },
+        status: { constant: 'valid' },
+        country: { constant: 'CL' },
+        year_manufactured: { field: 'YEAR', transform: 'int_or_null' },
+      },
+    };
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'YEAR'],
+      ['1', 'CC-AAA', '2000'],
+      ['1', 'CC-AAA', '2001'],
+    ]);
+    const { stats } = await translate(config, new Map([['register', buf]]));
+    expect(stats.failed).toBe(1);
+  });
+
+  // set_on_merge must not silently overwrite real, conflicting upstream data. A candidate carrying a
+  // different value at a stamped path is a genuine collision — it fails loud and leaves the incumbent
+  // untouched instead of clobbering it with the stamp.
+  it('does not overwrite conflicting upstream data at a set_on_merge path', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-merge-clobber',
+      label: 'Synthetic set_on_merge clobber guard',
+      country: 'CL',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
+      primary: 'register',
+      delimiter: ',',
+      trim_all: true,
+      format: 'ods',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      merge_duplicates: {
+        fields: ['owner.name'],
+        separator: ' Y ',
+        set_on_merge: { 'owner.country': 'CL' },
+      },
+      mapping: {
+        registration: { field: 'REG' },
+        status: { constant: 'valid' },
+        country: { constant: 'CL' },
+        'owner.name': { field: 'OWNER', transform: 'trim_or_null' },
+        'owner.country': { field: 'OWNERCC', transform: 'trim_or_null' },
+      },
+    };
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER', 'OWNERCC'],
+      ['1', 'CC-AAA', 'FIRST PARTY', 'CL'],
+      ['1', 'CC-AAA', 'SECOND PARTY', 'AR'],
+    ]);
+    const { records, stats } = await translate(config, new Map([['register', buf]]));
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
+    expect(records.get('1')!.owner.country).toBe('CL');
+  });
 });

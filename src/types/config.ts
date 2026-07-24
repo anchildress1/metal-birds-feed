@@ -100,7 +100,10 @@ export interface MergeDuplicatesConfig {
   // in-cell multi-party convention.
   separator?: string;
   // Canonical dotted paths stamped to a fixed value whenever a merge fires (e.g. operator.kind ->
-  // co-owner). Applied after concatenation; these paths are also exempt from the collision guard.
+  // co-owner). Applied after concatenation. A stamped path is exempt from the collision guard only
+  // when the candidate carries no conflicting value there (null/empty or already the stamped value);
+  // a candidate with real, differing upstream data at a stamped path fails loud instead of being
+  // silently overwritten.
   set_on_merge?: Record<string, string | null>;
 }
 

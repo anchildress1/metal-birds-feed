@@ -18,21 +18,22 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### ✅ Done — no further action
 
-| Source                     | License                                               | How handled                                                                                    |
-| -------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| FAA                        | US public domain                                      | Live (phase 1)                                                                                 |
-| Transport Canada           | GC Open Data Licence Agreement (verbatim notices)     | Live (phase 2)                                                                                 |
-| ILT (Netherlands)          | CC-0                                                  | Live (phase 3)                                                                                 |
-| CASA (Australia)           | CC BY 4.0                                             | Live (phase 4)                                                                                 |
-| CAA Latvia                 | CC0-1.0                                               | Live (phase 5)                                                                                 |
-| CAA Taiwan                 | Open (OGDL v1.0)                                      | Live (phase 6)                                                                                 |
-| ANAC Brasil                | Open w/ attribution (CC BY-equiv)                     | Live (phase 7)                                                                                 |
-| FOCA / BAZL (CH)           | Open w/ attribution (FOCA legal grant 2026-05-22)     | Live (phase 8)                                                                                 |
-| CAA Maldives               | Open + attribution + error-disclaimer (written)       | Live (phase 9)                                                                                 |
-| Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)          | Live (phase 10) — `html` parser path                                                           |
-| CAAS (Singapore)           | Open + attribution (CAAS reply 2026-05-12)            | Live (phase 11) — `xlsx` + monthly `discover_url` (Isomer CDN)                                 |
-| AESA (Spain)               | Open + attribution (Ley 37/2007 / RD 1495/2011)       | Live (phase 12) — `pdf` parser path; cleared via public reuse licence, no reply needed         |
-| Luftfartstilsynet (Norway) | Not specified (Ikke oppgitt) — treated as Private-use | Live (phase 13) — `json` feed; cleared via research + elapsed 30-day fallback, no reply needed |
+| Source                     | License                                                                     | How handled                                                                                                                              |
+| -------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| FAA                        | US public domain                                                            | Live (phase 1)                                                                                                                           |
+| Transport Canada           | GC Open Data Licence Agreement (verbatim notices)                           | Live (phase 2)                                                                                                                           |
+| ILT (Netherlands)          | CC-0                                                                        | Live (phase 3)                                                                                                                           |
+| CASA (Australia)           | CC BY 4.0                                                                   | Live (phase 4)                                                                                                                           |
+| CAA Latvia                 | CC0-1.0                                                                     | Live (phase 5)                                                                                                                           |
+| CAA Taiwan                 | Open (OGDL v1.0)                                                            | Live (phase 6)                                                                                                                           |
+| ANAC Brasil                | Open w/ attribution (CC BY-equiv)                                           | Live (phase 7)                                                                                                                           |
+| FOCA / BAZL (CH)           | Open w/ attribution (FOCA legal grant 2026-05-22)                           | Live (phase 8)                                                                                                                           |
+| CAA Maldives               | Open + attribution + error-disclaimer (written)                             | Live (phase 9)                                                                                                                           |
+| Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                | Live (phase 10) — `html` parser path                                                                                                     |
+| CAAS (Singapore)           | Open + attribution (CAAS reply 2026-05-12)                                  | Live (phase 11) — `xlsx` + monthly `discover_url` (Isomer CDN)                                                                           |
+| AESA (Spain)               | Open + attribution (Ley 37/2007 / RD 1495/2011)                             | Live (phase 12) — `pdf` parser path; cleared via public reuse licence, no reply needed                                                   |
+| DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22) | Live (phase 14) — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
+| Luftfartstilsynet (Norway) | Not specified (Ikke oppgitt) — treated as Private-use                       | Live (phase 13) — `json` feed; cleared via research + elapsed 30-day fallback, no reply needed                                           |
 
 ### 🛠️ Cleared — implementation pending
 

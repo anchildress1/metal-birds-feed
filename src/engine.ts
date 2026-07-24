@@ -271,14 +271,29 @@ const collectDiffPaths = (a: unknown, b: unknown, prefix: string, out: Set<strin
   }
 };
 
-// The paths a merge is allowed to reconcile: the concatenated fields plus any set_on_merge targets
-// (which necessarily differ between an already-merged incumbent and a fresh single-party candidate).
-const mergeableFieldSet = (policy: MergeDuplicatesConfig): Set<string> =>
-  new Set([...policy.fields, ...Object.keys(policy.set_on_merge ?? {})]);
+// Whether a differing canonical path is one the merge policy is allowed to reconcile. `fields` are
+// concatenated (no value is lost). A set_on_merge path is exempt only when the candidate carries no
+// conflicting data there — null/empty, or already equal to the stamped value (the case on the 2nd+
+// merge, where the incumbent already holds the stamp). A set_on_merge path whose candidate holds
+// real, differing upstream data is NOT exempt: it falls through to recency and fails loud rather
+// than being silently overwritten by the stamp.
+const isReconcilablePath = (
+  path: string,
+  candidate: Aircraft,
+  policy: MergeDuplicatesConfig
+): boolean => {
+  if (policy.fields.includes(path)) return true;
+  const setOnMerge = policy.set_on_merge;
+  if (!setOnMerge || !Object.hasOwn(setOnMerge, path)) return false;
+  const candidateValue = getPath(candidate, path);
+  return candidateValue == null || candidateValue === '' || candidateValue === setOnMerge[path];
+};
 
 // Folds a duplicate candidate into the incumbent: each policy field's new value is appended (joined
 // by separator, skipping empties and values already present), then set_on_merge stamps its fixed
-// values. Caller re-validates the result against the schema.
+// values. Caller re-validates the result against the schema. A declared field holding a non-string
+// value is a misconfiguration — merge can only concatenate strings — and throws rather than silently
+// dropping the candidate's value.
 const mergeDuplicateRecord = (
   incumbent: Aircraft,
   candidate: Aircraft,
@@ -287,10 +302,12 @@ const mergeDuplicateRecord = (
   const merged = structuredClone(incumbent) as unknown as Record<string, unknown>;
   const separator = policy.separator ?? ', ';
   for (const field of policy.fields) {
-    // Concatenation only makes sense for string leaves (operator names); a non-string incoming has
-    // nothing to append, and a non-string incumbent is simply replaced by the incoming string.
     const incoming = getPath(candidate, field);
-    if (typeof incoming !== 'string' || incoming === '') continue;
+    if (incoming == null || incoming === '') continue;
+    if (typeof incoming !== 'string')
+      throw new Error(
+        `merge_duplicates field "${field}" holds a non-string value; only string fields can be concatenated`
+      );
     const existing = getPath(merged, field);
     if (typeof existing !== 'string' || existing === '') {
       setPath(merged, field, incoming);
@@ -392,8 +409,10 @@ function translateRow(
       if (mergePolicy) {
         const diff = new Set<string>();
         collectDiffPaths(parsed.data, incumbent, '', diff);
-        const mergeable = mergeableFieldSet(mergePolicy);
-        if (diff.size > 0 && [...diff].every((path) => mergeable.has(path))) {
+        if (
+          diff.size > 0 &&
+          [...diff].every((path) => isReconcilablePath(path, parsed.data, mergePolicy))
+        ) {
           const revalidated = AircraftSchema.safeParse(
             mergeDuplicateRecord(incumbent, parsed.data, mergePolicy)
           );
