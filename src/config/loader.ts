@@ -180,12 +180,21 @@ const SourceConfigSchema = z
       // doesn't define is stripped by re-validation and disappears silently — the merge still
       // "succeeds" while the intended field stays unset. Reject it at load instead.
       .superRefine((m, ctx) => {
-        for (const path of [...m.fields, ...Object.keys(m.set_on_merge ?? {})])
+        const stamped = Object.keys(m.set_on_merge ?? {});
+        for (const path of [...m.fields, ...stamped])
           if (!CANONICAL_PATHS.has(path))
             ctx.addIssue({
               code: 'custom',
               message: `merge_duplicates path "${path}" is not a canonical schema path`,
             });
+        // Stamping runs after concatenation, so a path in both lists has its concatenated upstream
+        // values overwritten by the fixed stamp — every merged party silently lost, run reporting
+        // success. The two intents are contradictory; make the config state one of them.
+        for (const path of m.fields.filter((f) => stamped.includes(f)))
+          ctx.addIssue({
+            code: 'custom',
+            message: `merge_duplicates path "${path}" is in both fields and set_on_merge; the stamp would overwrite the concatenated values`,
+          });
       })
       .optional(),
     mapping: z.record(z.string(), FieldMappingSchema),
