@@ -106,7 +106,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Commits
 
 - Conventional Commits. **Lowercase type + subject** (commitlint rejects sentence-case/start-case).
-- RAI footer required: `Co-Authored-By: Claude <Model> <noreply@anthropic.com>` (use the actual model name that produced the change).
+- RAI footer: **exactly one**, and it must carry a contact. AI-majority changes (the normal case here) use `Generated-by: Claude <Model> <noreply@anthropic.com>` with the actual model. Never stack a second footer naming that same model — a harness default asking for `Co-Authored-By` does not override this.
+- `rai-footer-exists` (`@checkmarkdevtools/commitlint-plugin-rai`) grades the footer by contribution and rejects the commit if none matches: `Authored-by` human-only · `Commit-generated-by` trivial AI · `Assisted-by` AI-helped but human-written · `Co-authored-by` ~50/50 · `Generated-by` AI-majority. Pick honestly. A second, genuinely distinct agent (e.g. `Codex <noreply@openai.com>`) gets its own line.
 - Atomic: each commit independently typechecks, lints, passes tests.
 - Pre-commit hooks (lefthook): format, lint, gitleaks, sort validator, actionlint, commitlint. Do not skip with `--no-verify`.
 
