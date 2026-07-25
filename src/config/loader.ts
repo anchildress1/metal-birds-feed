@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve, isAbsolute, relative } from 'node:path';
 import { load } from 'js-yaml';
 import { z } from 'zod';
+import { CANONICAL_PATHS } from '../schema.js';
 import {
   SCALAR_TRANSFORMS,
   ARRAY_TRANSFORMS,
@@ -174,6 +175,17 @@ const SourceConfigSchema = z
         fields: z.array(z.string().min(1)).min(1),
         separator: z.string().min(1).optional(),
         set_on_merge: z.record(z.string().min(1), z.string().nullable()).optional(),
+      })
+      // Both key sets are written into the canonical record by the merge, so a path the schema
+      // doesn't define is stripped by re-validation and disappears silently — the merge still
+      // "succeeds" while the intended field stays unset. Reject it at load instead.
+      .superRefine((m, ctx) => {
+        for (const path of [...m.fields, ...Object.keys(m.set_on_merge ?? {})])
+          if (!CANONICAL_PATHS.has(path))
+            ctx.addIssue({
+              code: 'custom',
+              message: `merge_duplicates path "${path}" is not a canonical schema path`,
+            });
       })
       .optional(),
     mapping: z.record(z.string(), FieldMappingSchema),

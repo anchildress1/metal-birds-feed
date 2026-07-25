@@ -123,6 +123,26 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  // A typo'd path is written into the record, stripped by re-validation, and leaves the intended
+  // field unset with no diagnostic — the load must reject it instead.
+  it('rejects merge_duplicates paths outside the canonical schema', () => {
+    const tmp = resolve(import.meta.dirname, '..', '..', 'sources', '_test_merge_path.yaml');
+    const base = `id: t\nlabel: t\ncountry: CL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\n`;
+    const mapping = `mapping:\n  registration: { field: ID }\n`;
+    try {
+      writeFileSync(tmp, `${base}merge_duplicates:\n  fields: ['operator.nme']\n${mapping}`);
+      expect(() => loadSourceConfig(tmp)).toThrow(/operator\.nme.*not a canonical schema path/i);
+
+      writeFileSync(
+        tmp,
+        `${base}merge_duplicates:\n  fields: ['operator.name']\n  set_on_merge:\n    operator.knd: co-owner\n${mapping}`
+      );
+      expect(() => loadSourceConfig(tmp)).toThrow(/operator\.knd.*not a canonical schema path/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('defaults format to csv when omitted', () => {
     const config = loadSourceConfig(FAA_CONFIG);
     expect(config.format).toBe('csv');

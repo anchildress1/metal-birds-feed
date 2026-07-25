@@ -150,3 +150,13 @@ export const AircraftSchema = z.object({
   interdiction_code: z.string().nullable(),
 });
 export type Aircraft = z.infer<typeof AircraftSchema>;
+
+// Dotted leaf paths of the canonical record, derived from the schema so a field rename can't leave
+// a stale hand-written allowlist behind. Config-declared paths (merge_duplicates) validate against
+// this at load: an unlisted path would be written into the record, stripped by `safeParse`, and
+// vanish with no diagnostic — a typo'd stamp (`operator.knd`) leaving the real field unset.
+export const CANONICAL_PATHS: ReadonlySet<string> = new Set(
+  Object.entries(AircraftSchema.shape).flatMap(([key, value]) =>
+    value instanceof z.ZodObject ? Object.keys(value.shape).map((sub) => `${key}.${sub}`) : [key]
+  )
+);
