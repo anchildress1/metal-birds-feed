@@ -32,8 +32,8 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                | Live (phase 10) — `html` parser path                                                                                                     |
 | CAAS (Singapore)           | Open + attribution (CAAS reply 2026-05-12)                                  | Live (phase 11) — `xlsx` + monthly `discover_url` (Isomer CDN)                                                                           |
 | AESA (Spain)               | Open + attribution (Ley 37/2007 / RD 1495/2011)                             | Live (phase 12) — `pdf` parser path; cleared via public reuse licence, no reply needed                                                   |
-| DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22) | Live (phase 14) — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
 | Luftfartstilsynet (Norway) | Not specified (Ikke oppgitt) — treated as Private-use                       | Live (phase 13) — `json` feed; cleared via research + elapsed 30-day fallback, no reply needed                                           |
+| DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22) | Live (phase 14) — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
 
 ### 🛠️ Cleared — implementation pending
 
