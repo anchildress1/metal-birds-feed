@@ -17,7 +17,9 @@ on:
         options: ['false', 'true']
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Gemini RPM limits apply per project, not per ref. One shared group prevents a manual branch run
+  # from overlapping the scheduled main run against the same project quota.
+  group: registry-refresh-gemini
   cancel-in-progress: false
 
 jobs:
@@ -58,6 +60,9 @@ jobs:
       issues: write
     strategy:
       fail-fast: false
+      # Every source uses the same Gemini project; serialize jobs so per-job batching cannot combine
+      # into a fleet-wide request burst against the project's RPM limit.
+      max-parallel: 1
       matrix:
         source: ${{ fromJson(needs.discover.outputs.sources) }}
     concurrency:
@@ -86,6 +91,7 @@ jobs:
           MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
           MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_REQUESTS_PER_MINUTE: ${{ vars.GEMINI_REQUESTS_PER_MINUTE || '10' }}
           REFRESH_SOURCE: ${{ matrix.source }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           GITHUB_TOKEN: ${{ github.token }}
