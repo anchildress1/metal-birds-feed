@@ -6,15 +6,8 @@
 ### Features
 
 * **cl-dgac:** onboard Chile register + merge-duplicates engine capability ([cdbb989](https://github.com/anchildress1/metal-birds-feed/commit/cdbb98909aae101023c2f97aa8f7a4dd465cef08))
-* **cl-dgac:** onboard Chile register + merge-duplicates engine capability ([55312e1](https://github.com/anchildress1/metal-birds-feed/commit/55312e1ba01cde1790f0739cc7e4f2c1dc76357a))
 * **no-caa:** onboard Norway register + deploy/runtime docs + FAA/TC cadence ([#77](https://github.com/anchildress1/metal-birds-feed/issues/77)) ([a412e28](https://github.com/anchildress1/metal-birds-feed/commit/a412e2878fdb546e43e27112f39d538201b6ceac))
 
-
-### Bug Fixes
-
-* **cl-dgac:** wire runtime attribution + harden merge_duplicates against silent loss ([dcac334](https://github.com/anchildress1/metal-birds-feed/commit/dcac334c8190fd872eedba715d0c64ebdcce1531))
-* **config:** reject merge_duplicates paths in both fields and set_on_merge ([49c7562](https://github.com/anchildress1/metal-birds-feed/commit/49c75621e6d5749bec10cc64cbbbb88cc6e501d8))
-* **engine:** validate merge paths at load + guard incumbent-side stamp clobber ([cd52658](https://github.com/anchildress1/metal-birds-feed/commit/cd52658b9573be2fcd21d49489cedaab37bca620))
 
 ## [0.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.12...v0.1.0) (2026-07-21)
 
