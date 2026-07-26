@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1041.0",
+    "@google/genai": "^2.13.0",
     "csv-parse": "^7.0.0",
     "hucre": "^0.6.0",
     "js-yaml": "^5.2.1",
