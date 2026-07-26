@@ -105,6 +105,28 @@ A private, authenticated point-lookup API for an authorized consumer application
 - Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.
 - `make build-feed` refreshes every source and then rebuilds the DB from the per-source `_feed` slices in R2 (`make assemble-feed` skips the refresh and only assembles — that is what CI calls, since its refresh matrix has already written the slices). `make deploy` assembles first (so an ambient stale `feed.sqlite` is never deployed) then ships it — it does not re-pull upstream, so run `make refresh` beforehand if the deploy should carry new register data. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
+### Running the Feed Service Locally
+
+```bash
+make build-feed                        # pulls every source's _feed slice from R2, writes feed.sqlite
+export FEED_TOKEN=$(uuidgen)           # ≥16 chars required; a UUID is the convention
+export MBF_FEED_DB_PATH=./feed.sqlite  # defaults to the service root if unset
+make serve                             # starts on PORT (default 8080)
+```
+
+Call it with the bearer token from a single batched request — up to 500 hexes per call:
+
+```bash
+curl -s http://localhost:8080/feed \
+  -H "Authorization: Bearer $FEED_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"hexes": ["a1b2c3", "d4e5f6"]}'
+```
+
+Misses are omitted from the response map rather than returned as nulls. `FEED_TOKEN` in
+production is a Google Secret Manager binding on the Cloud Run service — never place the real
+value in `.env` or any committed file.
+
 ## Setup
 
 ```bash
@@ -227,17 +249,28 @@ Required upstream notices, kept short:
 
 [AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
 
-1. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
-2. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
-3. New source onboarding touches **all five surfaces** or the source is incomplete:
+1. **Pick the source ID.** No generator script — it's `<iso-country-code>-<agency-abbrev>`, lowercase, hyphenated (e.g. `nl-ilt`, `br-anac`, `tc-ca`). `faa` is the one bare exception (globally unambiguous). This slug is the filename stem for every surface below, so decide it first — renaming later means touching all seven.
+2. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
+3. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
+4. New source onboarding touches **all seven surfaces** or the source is incomplete:
    - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls` | `json` | `pdf` | `html`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
    - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
    - `DATA_LICENSES.md` — classification, permitted uses, attribution wording quoted exactly (not the full reply — see AGENTS.md).
    - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
    - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
-4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
+   - `src/service/attributions.ts` `NOTICES[<source-id>]` — the exact wording served in the feed API's `attribution` field; a missing entry silently falls back to a generic slug credit.
+   - `docs/source-onboarding-checklist.md` `✅ Done` row — keeps the triage snapshot from losing a shipped source.
+5. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
 
 The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path).
+
+## Author
+
+**Ashley Childress**
+
+[![dev.to](https://img.shields.io/badge/dev.to-0A0A0A?logo=devdotto&logoColor=fff&style=for-the-badge)](https://dev.to/anchildress1) [![LinkedIn](https://img.shields.io/badge/linkedin-%230077B5.svg?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/anchildress1/) [![X](https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/anchildress1) [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/anchildress1)
+
+---
 
 ## License
 
