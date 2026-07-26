@@ -1,5 +1,5 @@
 import type { Aircraft } from '../schema.js';
-import { isTransientS3Error, type R2ArtifactWriter } from '../writer.js';
+import type { R2ArtifactWriter } from '../writer.js';
 import { readPositiveIntegerEnv, requireEnv } from '../env.js';
 import {
   emptyTranslationCache,
@@ -9,7 +9,7 @@ import {
   type TranslationCache,
   type TranslationEntries,
 } from './cache.js';
-import { isRetryableGeminiError, translateBatch } from './gemini-client.js';
+import { translateBatch } from './gemini-client.js';
 import { log, errorMessage } from '../logger.js';
 
 // idera_authorised_party is excluded: it's the authorised party's NAME (a proper noun), not
@@ -50,7 +50,6 @@ export const localizeRecords = async (
   try {
     cache = await writer.readTranslationCache(sourceId);
   } catch (err) {
-    if (!isTransientS3Error(err)) throw err;
     cacheReadSucceeded = false;
     log('warn', 'localize_cache_read_failed', { source: sourceId, msg: errorMessage(err) });
   }
@@ -70,13 +69,6 @@ export const localizeRecords = async (
         requestsPerMinute: readPositiveIntegerEnv('GEMINI_REQUESTS_PER_MINUTE', 10),
       }
     );
-    const permanentError = errors.find((err) => !isRetryableGeminiError(err));
-    if (permanentError !== undefined) {
-      throw permanentError instanceof Error
-        ? permanentError
-        : new Error(errorMessage(permanentError));
-    }
-
     // filters out any id the model returned that wasn't requested, which would otherwise fail
     // TranslationCacheSchema on the next read and discard the whole cache
     for (const [id, text] of result) if (deltaIds.has(id)) translated[id] = text;
@@ -99,7 +91,6 @@ export const localizeRecords = async (
     try {
       await writer.writeTranslationCache(sourceId, updatedCache);
     } catch (err) {
-      if (!isTransientS3Error(err)) throw err;
       log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
     }
   }

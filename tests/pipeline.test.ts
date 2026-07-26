@@ -180,11 +180,13 @@ describe('run', () => {
     );
   });
 
-  it('propagates permanent localization failures before any durable write', async () => {
+  it('propagates a localizeRecords rejection (e.g. missing API key) before any durable write', async () => {
     process.env['DRY_RUN'] = 'false';
-    mockLocalizeRecords.mockRejectedValueOnce(new Error('API key rejected'));
+    mockLocalizeRecords.mockRejectedValueOnce(
+      new Error('Missing required environment variable: GEMINI_API_KEY')
+    );
 
-    await expect(run('faa')).rejects.toThrow('API key rejected');
+    await expect(run('faa')).rejects.toThrow('GEMINI_API_KEY');
 
     expect(mockR2Write).not.toHaveBeenCalled();
     expect(mockWriteFeedRows).not.toHaveBeenCalled();

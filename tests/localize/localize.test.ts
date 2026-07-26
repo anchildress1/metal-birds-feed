@@ -9,13 +9,8 @@ import {
 const translateBatch = mock();
 const requireEnv = mock(() => 'test-key');
 const readPositiveIntegerEnv = mock(() => 10);
-const isRetryableGeminiError = (error: unknown): boolean =>
-  (error as { status?: unknown } | null)?.status === undefined;
 
-void mock.module('../../src/localize/gemini-client.js', () => ({
-  translateBatch,
-  isRetryableGeminiError,
-}));
+void mock.module('../../src/localize/gemini-client.js', () => ({ translateBatch }));
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
 const { localizeRecords } = await import('../../src/localize/localize.js');
@@ -200,14 +195,18 @@ describe('localizeRecords', () => {
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
-  it('throws a permanent Gemini error without writing the cache', async () => {
+  it('leaves translations null on an auth-shaped Gemini error, without throwing', async () => {
+    // Only an absent GEMINI_API_KEY (requireEnv) throws. Any error the Gemini call itself
+    // produces — auth, bad request, malformed response — degrades the same as a transient one.
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const error = Object.assign(new Error('API key rejected'), { status: 401 });
     translateBatch.mockReturnValue(Promise.resolve({ translated: new Map(), errors: [error] }));
     const { writer, writeTranslationCache } = fakeWriter();
 
-    await expect(localizeRecords(records, 'br-anac', writer)).rejects.toThrow('API key rejected');
+    const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
+    expect(stats.failed).toBe(1);
+    expect(result.get('1')!.translations_en.cancellation_reason).toBeNull();
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
@@ -266,17 +265,20 @@ describe('localizeRecords', () => {
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
-  it('propagates a permanent cache read failure before calling Gemini', async () => {
+  it('degrades on an access-denied cache read the same as a transient one', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     const error = Object.assign(new Error('AccessDenied'), {
       $metadata: { httpStatusCode: 403 },
     });
+    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
     (writer.readTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
 
-    await expect(localizeRecords(records, 'br-anac', writer)).rejects.toThrow('AccessDenied');
+    const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
-    expect(translateBatch).not.toHaveBeenCalled();
+    expect(translateBatch).toHaveBeenCalledTimes(1);
+    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
   });
 
   it('still returns the in-memory translation when the cache write fails, without throwing', async () => {
@@ -293,7 +295,7 @@ describe('localizeRecords', () => {
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
   });
 
-  it('propagates a permanent cache write failure', async () => {
+  it('degrades on an access-denied cache write the same as a transient one', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
@@ -303,7 +305,9 @@ describe('localizeRecords', () => {
     const { writer } = fakeWriter();
     (writer.writeTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
 
-    await expect(localizeRecords(records, 'br-anac', writer)).rejects.toThrow('AccessDenied');
+    const { records: result } = await localizeRecords(records, 'br-anac', writer);
+
+    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
   });
 
   it('throws on a missing GEMINI_API_KEY rather than degrading silently', async () => {
