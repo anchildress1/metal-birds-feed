@@ -44,7 +44,6 @@ const rec = (hex: string, reg: string): FeedRow => ({
   operator_country: null,
   cancellation_reason_en: null,
   airworthiness_class_en: null,
-  lien_status_en: null,
   source: 'faa',
 });
 

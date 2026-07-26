@@ -87,7 +87,6 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   interdiction_code: r.interdiction_code,
   translations_en_cancellation_reason: r.translations_en.cancellation_reason,
   translations_en_airworthiness_class: r.translations_en.airworthiness_class,
-  translations_en_lien_status: r.translations_en.lien_status,
 });
 
 // Column SQL types. STRICT enforces them at insert; `INTEGER` columns back `z.number().int()`
@@ -144,8 +143,7 @@ const DDL = `CREATE TABLE aircraft (
   lien_status TEXT,
   interdiction_code TEXT,
   translations_en_cancellation_reason TEXT,
-  translations_en_airworthiness_class TEXT,
-  translations_en_lien_status TEXT
+  translations_en_airworthiness_class TEXT
 ) STRICT`;
 
 // Indexed for the common consumer filters; `source_id` is already the PK.
@@ -163,7 +161,7 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
   const db = new Database(':memory:');
   try {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
-    db.run('PRAGMA user_version = 4');
+    db.run('PRAGMA user_version = 5');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

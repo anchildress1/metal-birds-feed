@@ -74,7 +74,7 @@ describe('translateBatch', () => {
     const { translated, errors } = await translateBatch(
       [
         { id: 'a', field: 'cancellation_reason', text: 'AERONAVE EXPORTADA' },
-        { id: 'b', field: 'lien_status', text: 'GRAVAME LIBERADO' },
+        { id: 'b', field: 'airworthiness_class', text: 'CA PADRAO' },
       ],
       { apiKey: 'k' }
     );

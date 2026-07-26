@@ -64,7 +64,6 @@ const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   translations_en: {
     cancellation_reason: null,
     airworthiness_class: null,
-    lien_status: null,
   },
   ...overrides,
 });
@@ -150,14 +149,14 @@ describe('localizeRecords', () => {
   });
 
   it('resolves from cache without calling Gemini', async () => {
-    const hash = hashTranslatable('lien_status', 'none');
-    const records = new Map([['1', make('1', { lien_status: 'none' })]]);
-    const { writer } = fakeWriter({ [hash]: 'none (cached)' });
+    const hash = hashTranslatable('airworthiness_class', 'CA PADRAO');
+    const records = new Map([['1', make('1', { airworthiness_class: 'CA PADRAO' })]]);
+    const { writer } = fakeWriter({ [hash]: 'Standard (cached)' });
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats).toEqual({ candidates: 1, cache_hits: 1, translated: 0, failed: 0 });
-    expect(result.get('1')!.translations_en.lien_status).toBe('none (cached)');
+    expect(result.get('1')!.translations_en.airworthiness_class).toBe('Standard (cached)');
     expect(translateBatch).not.toHaveBeenCalled();
   });
 
@@ -212,9 +211,12 @@ describe('localizeRecords', () => {
 
   it('counts a partial response accurately and still caches the entries that came back', async () => {
     const hashA = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    const hashB = hashTranslatable('lien_status', 'GRAVAME');
+    const hashB = hashTranslatable('airworthiness_class', 'CA PADRAO');
     const records = new Map([
-      ['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA', lien_status: 'GRAVAME' })],
+      [
+        '1',
+        make('1', { cancellation_reason: 'AERONAVE EXPORTADA', airworthiness_class: 'CA PADRAO' }),
+      ],
     ]);
     // Only hashA comes back — hashB silently missing from a well-formed-but-partial response.
     translateBatch.mockReturnValue(ok([[hashA, 'Aircraft exported']]));
@@ -224,7 +226,7 @@ describe('localizeRecords', () => {
 
     expect(stats).toEqual({ candidates: 2, cache_hits: 0, translated: 1, failed: 1 });
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
-    expect(result.get('1')!.translations_en.lien_status).toBeNull();
+    expect(result.get('1')!.translations_en.airworthiness_class).toBeNull();
     const cache = writeTranslationCache.mock.calls[0][1] as ReturnType<typeof cacheEnvelope>;
     expect(cache).toEqual(cacheEnvelope({ [hashA]: 'Aircraft exported' }));
     expect(cache.entries[hashB]).toBeUndefined();
@@ -310,6 +312,24 @@ describe('localizeRecords', () => {
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
   });
 
+  it('falls back to the default RPM and still translates when GEMINI_REQUESTS_PER_MINUTE is malformed', async () => {
+    readPositiveIntegerEnv.mockImplementation(() => {
+      throw new Error('GEMINI_REQUESTS_PER_MINUTE must be a positive integer');
+    });
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    const { writer } = fakeWriter();
+
+    const { records: result } = await localizeRecords(records, 'br-anac', writer);
+
+    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(translateBatch).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ requestsPerMinute: 10 })
+    );
+  });
+
   it('throws on a missing GEMINI_API_KEY rather than degrading silently', async () => {
     requireEnv.mockImplementation(() => {
       throw new Error('Missing required environment variable: GEMINI_API_KEY');
@@ -343,6 +363,6 @@ describe('localizeRecords', () => {
 
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
-    expect(result.get('1')!.translations_en.lien_status).toBeNull();
+    expect(result.get('1')!.translations_en.airworthiness_class).toBeNull();
   });
 });

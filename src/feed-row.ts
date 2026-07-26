@@ -35,6 +35,5 @@ export interface FeedRow {
   operator_country: string | null;
   cancellation_reason_en: string | null;
   airworthiness_class_en: string | null;
-  lien_status_en: string | null;
   source: string;
 }

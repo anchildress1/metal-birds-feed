@@ -103,10 +103,11 @@ export const EngineSchema = z.object({
 export type Engine = z.infer<typeof EngineSchema>;
 
 // English translation of the corresponding field, additive only — original is never overwritten.
+// lien_status is excluded: at least one onboarded source (mv-caa) populates it with a
+// mortgagee's NAME, not a status description — same proper-noun problem as idera_authorised_party.
 export const TranslationsEnSchema = z.object({
   cancellation_reason: z.string().nullable(),
   airworthiness_class: z.string().nullable(),
-  lien_status: z.string().nullable(),
 });
 export type TranslationsEn = z.infer<typeof TranslationsEnSchema>;
 

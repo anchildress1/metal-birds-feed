@@ -47,7 +47,6 @@ const base: Aircraft = {
   translations_en: {
     cancellation_reason: null,
     airworthiness_class: null,
-    lien_status: null,
   },
 };
 

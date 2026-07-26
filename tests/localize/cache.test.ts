@@ -15,7 +15,7 @@ describe('hashTranslatable', () => {
 
   it('differs when the field differs but the text is the same', () => {
     expect(hashTranslatable('cancellation_reason', 'x')).not.toBe(
-      hashTranslatable('lien_status', 'x')
+      hashTranslatable('airworthiness_class', 'x')
     );
   });
 
@@ -26,7 +26,7 @@ describe('hashTranslatable', () => {
   });
 
   it('produces a 64-character lowercase hex digest', () => {
-    expect(hashTranslatable('lien_status', 'x')).toMatch(/^[0-9a-f]{64}$/);
+    expect(hashTranslatable('airworthiness_class', 'x')).toMatch(/^[0-9a-f]{64}$/);
   });
 });
 

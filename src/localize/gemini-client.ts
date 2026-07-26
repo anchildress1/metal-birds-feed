@@ -24,8 +24,8 @@ const MAX_BATCH_ITEMS = 200; // safety cap, not a real limit at today's volumes
 const SYSTEM_INSTRUCTION = `<role>You translate short aircraft-registry administrative text into English.</role>
 
 <instructions>
-- Each item carries a "field" naming the registry field the text came from (cancellation_reason,
-  lien_status, or airworthiness_class) — use it as context, do not include it in the output.
+- Each item carries a "field" naming the registry field the text came from (cancellation_reason
+  or airworthiness_class) — use it as context, do not include it in the output.
 - Translate each item's text to English.
 - Preserve technical and legal terminology; do not paraphrase or summarize.
 - Return every item, in any order, each carrying its original id unchanged.

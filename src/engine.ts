@@ -739,7 +739,6 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     translations_en: {
       cancellation_reason: null,
       airworthiness_class: null,
-      lien_status: null,
     },
   };
 }

@@ -42,7 +42,6 @@ const COLUMNS = [
   'operator_country',
   'cancellation_reason_en',
   'airworthiness_class_en',
-  'lien_status_en',
   'source',
 ] as const;
 
@@ -100,7 +99,6 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     operator_country: r.operator.country,
     cancellation_reason_en: r.translations_en.cancellation_reason,
     airworthiness_class_en: r.translations_en.airworthiness_class,
-    lien_status_en: r.translations_en.lien_status,
     source: r.source,
   }));
 };
@@ -164,7 +162,6 @@ const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
   operator_country: 'TEXT',
   cancellation_reason_en: 'TEXT',
   airworthiness_class_en: 'TEXT',
-  lien_status_en: 'TEXT',
   source: 'TEXT NOT NULL',
 };
 
@@ -194,7 +191,7 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
   const db = new Database(':memory:');
   try {
     db.run('PRAGMA journal_mode = OFF');
-    db.run('PRAGMA user_version = 2');
+    db.run('PRAGMA user_version = 3');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     const insert = db.prepare(

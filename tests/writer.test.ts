@@ -36,7 +36,6 @@ const FEED_ROW: FeedRow = {
   operator_country: null,
   cancellation_reason_en: null,
   airworthiness_class_en: null,
-  lien_status_en: null,
   source: 'faa',
 };
 
@@ -138,7 +137,6 @@ function makeAircraft(id: string, reg: string, hex: string | null = null): Aircr
     translations_en: {
       cancellation_reason: null,
       airworthiness_class: null,
-      lien_status: null,
     },
   };
 }

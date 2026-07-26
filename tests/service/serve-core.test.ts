@@ -51,7 +51,6 @@ const make = (id: string, hex: string): Aircraft =>
     translations_en: {
       cancellation_reason: null,
       airworthiness_class: null,
-      lien_status: null,
     },
   }) satisfies Aircraft;
 

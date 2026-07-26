@@ -49,7 +49,6 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   translations_en: {
     cancellation_reason: null,
     airworthiness_class: null,
-    lien_status: null,
   },
 });
 
@@ -101,7 +100,6 @@ const populated: Aircraft = {
   translations_en: {
     cancellation_reason: 'owner request EN',
     airworthiness_class: 'Utility EN',
-    lien_status: 'none EN',
   },
 };
 
@@ -195,7 +193,6 @@ describe('buildSqlite', () => {
       interdiction_code: 'INT-9',
       translations_en_cancellation_reason: 'owner request EN',
       translations_en_airworthiness_class: 'Utility EN',
-      translations_en_lien_status: 'none EN',
     });
   });
 
@@ -239,7 +236,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(4);
+    expect(version.user_version).toBe(5);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -302,10 +299,9 @@ describe('buildSqlite', () => {
       'interdiction_code',
       'translations_en_cancellation_reason',
       'translations_en_airworthiness_class',
-      'translations_en_lien_status',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(4);
+    expect(version.user_version).toBe(5);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -325,7 +321,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(4);
+    expect(version.user_version).toBe(5);
   });
 });
 
