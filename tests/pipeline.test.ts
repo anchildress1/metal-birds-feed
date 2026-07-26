@@ -24,10 +24,12 @@ const mockReadFeedRows = mock();
 const mockReadDeployedFeedHash = mock();
 const mockWriteDeployedFeedHash = mock();
 const mockLog = mock();
+const mockLocalizeRecords = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
 void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
+void mock.module('../src/localize/localize.js', () => ({ localizeRecords: mockLocalizeRecords }));
 void mock.module('../src/logger.js', () => ({
   log: mockLog,
   errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
@@ -96,6 +98,7 @@ beforeEach(() => {
   mockReadDeployedFeedHash.mockReset();
   mockWriteDeployedFeedHash.mockReset();
   mockLog.mockReset();
+  mockLocalizeRecords.mockReset();
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
   mockDownload.mockResolvedValue(new Map([['master', Buffer.from('')]]));
@@ -103,6 +106,12 @@ beforeEach(() => {
     records: new Map(),
     stats: { total: 1, ok: 1, failed: 0 },
   });
+  mockLocalizeRecords.mockImplementation((records: unknown) =>
+    Promise.resolve({
+      records,
+      stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 },
+    })
+  );
   mockR2Write.mockResolvedValue({
     changed: false,
     record_count: 0,
@@ -146,6 +155,29 @@ describe('run', () => {
     await expect(run('faa')).rejects.toThrow(/aborting write/i);
 
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('writes localizeRecords output, not translate output, and never aborts on localize failure', async () => {
+    const translated = new Map([['1', { source_id: '1' }]]);
+    const localized = new Map([['1', { source_id: '1', translations_en: {} }]]);
+    mockTranslate.mockResolvedValueOnce({
+      records: translated,
+      stats: { total: 1, ok: 1, failed: 0 },
+    });
+    mockLocalizeRecords.mockResolvedValueOnce({
+      records: localized,
+      stats: { candidates: 1, cache_hits: 0, translated: 0, failed: 1 },
+    });
+
+    await run('faa');
+
+    expect(mockLocalizeRecords).toHaveBeenCalledWith(translated, 'faa', expect.anything(), true);
+    expect(mockR2Write).toHaveBeenCalledWith(localized, 'faa', null);
+    expect(mockLog).toHaveBeenCalledWith(
+      'warn',
+      'localize_partial_failure',
+      expect.objectContaining({ failed: 1 })
+    );
   });
 
   it('does not write state when the artifact write fails', async () => {

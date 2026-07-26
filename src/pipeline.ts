@@ -5,9 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
+import { localizeRecords } from './localize/localize.js';
 import { R2ArtifactWriter, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
 import { log, errorMessage } from './logger.js';
+import { requireEnv } from './env.js';
 import {
   shouldSkip,
   buildStalenessEntry,
@@ -15,12 +17,6 @@ import {
   STALENESS_MULTIPLIER,
 } from './cadence.js';
 import type { SourceState, StalenessEntry } from './cadence.js';
-
-function requireEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing required environment variable: ${name}`);
-  return v;
-}
 
 const r2ConfigFromEnv = (): R2Config => ({
   accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
@@ -92,11 +88,21 @@ export async function run(sourceId: string): Promise<RunResult> {
     log('info', 'dry_run_mode', { source: sourceId, records: records.size });
   }
 
-  const writeStats = await writer.write(records, sourceId, priorState);
+  const { records: localized, stats: localizeStats } = await localizeRecords(
+    records,
+    sourceId,
+    writer,
+    dryRun
+  );
+  log('info', 'localize_summary', { source: sourceId, ...localizeStats });
+  if (localizeStats.failed > 0)
+    log('warn', 'localize_partial_failure', { source: sourceId, failed: localizeStats.failed });
+
+  const writeStats = await writer.write(localized, sourceId, priorState);
 
   // State advances only after both durable outputs exist. Otherwise cadence gating could suppress
   // recovery from a missing feed slice for the full source cadence.
-  if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(records.values()));
+  if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values()));
 
   let newState: SourceState | null = priorState;
   if (!dryRun) {
