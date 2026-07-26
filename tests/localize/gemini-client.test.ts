@@ -1,8 +1,10 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import type { RetryOptions } from '../../src/retry.js';
+import type { TranslationItem } from '../../src/localize/gemini-client.js';
 
 // No-op sleep keeps backoff out of the test clock, mirroring tests/downloader.test.ts's FAST_RETRY.
 const FAST_RETRY: RetryOptions = { baseDelayMs: 0, sleep: async () => {} };
+const NO_RETRY: RetryOptions = { attempts: 1 };
 
 const generateContent = mock();
 
@@ -84,22 +86,28 @@ describe('translateBatch', () => {
   });
 
   it('splits batches larger than the chunk cap into separate calls', async () => {
+    const rateLimitSleep = mock(() => Promise.resolve());
     generateContent.mockImplementation((args: { contents: string }) => {
       const items = JSON.parse(args.contents) as { id: string; text: string }[];
       return Promise.resolve(textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` }))));
     });
 
-    const items = Array.from({ length: 201 }, (_, i) => ({
+    const items: TranslationItem[] = Array.from({ length: 201 }, (_, i) => ({
       id: `id${i}`,
       field: 'cancellation_reason',
       text: `text${i}`,
     }));
-    const { translated, errors } = await translateBatch(items, { apiKey: 'k' });
+    const { translated, errors } = await translateBatch(items, {
+      apiKey: 'k',
+      requestsPerMinute: 12,
+      rateLimitSleep,
+    });
 
     expect(generateContent).toHaveBeenCalledTimes(2);
     expect(translated.get('id0')).toBe('EN:text0');
     expect(translated.get('id200')).toBe('EN:text200');
     expect(errors).toEqual([]);
+    expect(rateLimitSleep).toHaveBeenCalledWith(5_000);
   });
 
   it('keeps a failing chunk from discarding another chunk that succeeded', async () => {
@@ -111,16 +119,20 @@ describe('translateBatch', () => {
 
     // 201 items forces 2 chunks (cap is 200): the first chunk always contains 'fails' and rejects,
     // the second (just 'ok') succeeds — proves one chunk's failure doesn't discard the other's work.
-    const failingChunk = Array.from({ length: 200 }, (_, i) => ({
+    const failingChunk: TranslationItem[] = Array.from({ length: 200 }, (_, i) => ({
       id: i === 0 ? 'fails' : `id${i}`,
       field: 'cancellation_reason',
       text: `text${i}`,
     }));
-    const items = [...failingChunk, { id: 'ok', field: 'cancellation_reason', text: 'x' }];
+    const items: TranslationItem[] = [
+      ...failingChunk,
+      { id: 'ok', field: 'cancellation_reason', text: 'x' },
+    ];
 
     const { translated, errors } = await translateBatch(items, {
       apiKey: 'k',
       retryOptions: FAST_RETRY,
+      rateLimitSleep: async () => {},
     });
 
     expect(errors).toHaveLength(1);
@@ -129,13 +141,30 @@ describe('translateBatch', () => {
   });
 
   it('retries a retryable failure then succeeds', async () => {
+    const rateLimitSleep = mock(() => Promise.resolve());
     generateContent
       .mockImplementationOnce(() => Promise.reject(new MockApiError(503)))
       .mockImplementationOnce(() => Promise.resolve(textResponse([{ id: 'a', text: 'ok' }])));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
-      { apiKey: 'k', retryOptions: FAST_RETRY }
+      { apiKey: 'k', requestsPerMinute: 12, retryOptions: FAST_RETRY, rateLimitSleep }
+    );
+
+    expect(translated.get('a')).toBe('ok');
+    expect(errors).toEqual([]);
+    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(rateLimitSleep).toHaveBeenCalledWith(5_000);
+  });
+
+  it('retries a malformed response then accepts a valid response', async () => {
+    generateContent
+      .mockResolvedValueOnce(textResponse([{ id: 'a' }]))
+      .mockResolvedValueOnce(textResponse([{ id: 'a', text: 'ok' }]));
+
+    const { translated, errors } = await translateBatch(
+      [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
+      { apiKey: 'k', retryOptions: FAST_RETRY, rateLimitSleep: async () => {} }
     );
 
     expect(translated.get('a')).toBe('ok');
@@ -161,7 +190,7 @@ describe('translateBatch', () => {
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
-      { apiKey: 'k' }
+      { apiKey: 'k', retryOptions: NO_RETRY }
     );
 
     expect(translated.size).toBe(0);
@@ -173,10 +202,50 @@ describe('translateBatch', () => {
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
-      { apiKey: 'k' }
+      { apiKey: 'k', retryOptions: NO_RETRY }
     );
 
     expect(translated.size).toBe(0);
     expect(errors).toHaveLength(1);
+  });
+
+  it('rejects a blank translation instead of caching it', async () => {
+    generateContent.mockResolvedValue(textResponse([{ id: 'a', text: '  ' }]));
+
+    const { translated, errors } = await translateBatch(
+      [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
+      { apiKey: 'k', retryOptions: NO_RETRY }
+    );
+
+    expect(translated.size).toBe(0);
+    expect(errors).toHaveLength(1);
+  });
+
+  it('rejects duplicate result IDs instead of keeping the last translation', async () => {
+    generateContent.mockResolvedValue(
+      textResponse([
+        { id: 'a', text: 'first' },
+        { id: 'a', text: 'second' },
+      ])
+    );
+
+    const { translated, errors } = await translateBatch(
+      [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
+      { apiKey: 'k', retryOptions: NO_RETRY }
+    );
+
+    expect(translated.size).toBe(0);
+    expect(errors).toHaveLength(1);
+  });
+
+  it('rejects an invalid RPM limit before sending a request', async () => {
+    await expect(
+      translateBatch([{ id: 'a', field: 'cancellation_reason', text: 'x' }], {
+        apiKey: 'k',
+        requestsPerMinute: 0,
+      })
+    ).rejects.toThrow('requestsPerMinute must be a positive integer');
+
+    expect(generateContent).not.toHaveBeenCalled();
   });
 });

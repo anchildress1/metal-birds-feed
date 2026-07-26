@@ -1,8 +1,8 @@
 // Manual: bun run scripts/gemini-poc.ts (needs GEMINI_API_KEY in .env). Not part of CI.
 import { requireEnv } from '../src/env.js';
-import { translateBatch } from '../src/localize/gemini-client.js';
+import { translateBatch, type TranslationItem } from '../src/localize/gemini-client.js';
 
-const SAMPLES = [
+const SAMPLES: TranslationItem[] = [
   { id: 'a', field: 'cancellation_reason', text: 'AERONAVE EXPORTADA' },
   { id: 'b', field: 'cancellation_reason', text: 'REQ 04042017 PERECIMENTO' },
   { id: 'c', field: 'cancellation_reason', text: 'AERONAVE EXPORTADA' }, // duplicate: proves dedup
@@ -17,4 +17,4 @@ const { translated, errors } = await translateBatch(distinct, {
 });
 
 for (const { id, text } of distinct) console.log(`[${id}] "${text}" -> "${translated.get(id)}"`);
-if (errors.length > 0) console.log(`${errors.length} chunk(s) failed:`, errors);
+if (errors.length > 0) console.log('%d chunk(s) failed:', errors.length, errors);

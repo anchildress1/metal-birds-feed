@@ -13,7 +13,11 @@ import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
-import { TranslationCacheSchema, type TranslationCache } from './localize/cache.js';
+import {
+  emptyTranslationCache,
+  TranslationCacheSchema,
+  type TranslationCache,
+} from './localize/cache.js';
 
 // R2 intermittently returns 500 "We encountered an internal error. Please try again." under load.
 // The SDK's adaptive retry rate-limiter drains its token bucket during a blip and then fast-fails
@@ -221,7 +225,7 @@ export class R2ArtifactWriter {
       `aircraft/_translation_cache/${source}.json`,
       TranslationCacheSchema,
       'translation_cache',
-      {},
+      emptyTranslationCache(),
       { source }
     );
   }

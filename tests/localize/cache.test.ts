@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'bun:test';
-import { hashTranslatable, TranslationCacheSchema } from '../../src/localize/cache.js';
+import {
+  emptyTranslationCache,
+  hashTranslatable,
+  TRANSLATION_CACHE_VERSION,
+  TranslationCacheSchema,
+} from '../../src/localize/cache.js';
 
 describe('hashTranslatable', () => {
   it('is stable for the same field and text', () => {
@@ -28,19 +33,44 @@ describe('hashTranslatable', () => {
 describe('TranslationCacheSchema', () => {
   const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
 
-  it('accepts a well-formed hash -> text record', () => {
-    expect(TranslationCacheSchema.safeParse({ [hash]: 'Aircraft exported' }).success).toBe(true);
+  it('accepts a current-version hash -> text envelope', () => {
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: { [hash]: 'Aircraft exported' },
+      }).success
+    ).toBe(true);
   });
 
-  it('accepts an empty record', () => {
-    expect(TranslationCacheSchema.safeParse({}).success).toBe(true);
+  it('constructs an empty current-version envelope', () => {
+    expect(emptyTranslationCache()).toEqual({
+      version: TRANSLATION_CACHE_VERSION,
+      entries: {},
+    });
+    expect(TranslationCacheSchema.safeParse(emptyTranslationCache()).success).toBe(true);
+  });
+
+  it('rejects an obsolete cache generation', () => {
+    expect(
+      TranslationCacheSchema.safeParse({ version: 0, entries: { [hash]: 'stale' } }).success
+    ).toBe(false);
   });
 
   it('rejects a key that is not a 64-char hex hash', () => {
-    expect(TranslationCacheSchema.safeParse({ 'not-a-hash': 'x' }).success).toBe(false);
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: { 'not-a-hash': 'x' },
+      }).success
+    ).toBe(false);
   });
 
   it('rejects a non-string value', () => {
-    expect(TranslationCacheSchema.safeParse({ [hash]: 42 }).success).toBe(false);
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: { [hash]: 42 },
+      }).success
+    ).toBe(false);
   });
 });

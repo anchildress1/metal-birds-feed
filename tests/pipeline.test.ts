@@ -157,7 +157,7 @@ describe('run', () => {
     expect(mockR2Write).not.toHaveBeenCalled();
   });
 
-  it('writes localizeRecords output, not translate output, and never aborts on localize failure', async () => {
+  it('writes localizeRecords output when transient localization misses are reported', async () => {
     const translated = new Map([['1', { source_id: '1' }]]);
     const localized = new Map([['1', { source_id: '1', translations_en: {} }]]);
     mockTranslate.mockResolvedValueOnce({
@@ -178,6 +178,17 @@ describe('run', () => {
       'localize_partial_failure',
       expect.objectContaining({ failed: 1 })
     );
+  });
+
+  it('propagates permanent localization failures before any durable write', async () => {
+    process.env['DRY_RUN'] = 'false';
+    mockLocalizeRecords.mockRejectedValueOnce(new Error('API key rejected'));
+
+    await expect(run('faa')).rejects.toThrow('API key rejected');
+
+    expect(mockR2Write).not.toHaveBeenCalled();
+    expect(mockWriteFeedRows).not.toHaveBeenCalled();
+    expect(mockWriteState).not.toHaveBeenCalled();
   });
 
   it('does not write state when the artifact write fails', async () => {

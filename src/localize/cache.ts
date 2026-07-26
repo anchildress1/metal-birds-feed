@@ -1,9 +1,29 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import type { Aircraft } from '../schema.js';
 
-export type TranslationCache = Record<string, string>;
+export type TranslatableField = keyof Aircraft['translations_en'];
 
-export const TranslationCacheSchema = z.record(z.string().regex(/^[0-9a-f]{64}$/), z.string());
+const TranslationEntriesSchema = z.record(z.string().regex(/^[0-9a-f]{64}$/), z.string());
 
-export const hashTranslatable = (field: string, text: string): string =>
+// Bump when the model, prompt, or generation contract changes. The envelope makes obsolete entries
+// fail validation as one generation instead of accumulating unreachable hashes forever.
+export const TRANSLATION_CACHE_VERSION = 1;
+
+export const TranslationCacheSchema = z
+  .object({
+    version: z.literal(TRANSLATION_CACHE_VERSION),
+    entries: TranslationEntriesSchema,
+  })
+  .strict();
+
+export type TranslationCache = z.infer<typeof TranslationCacheSchema>;
+export type TranslationEntries = TranslationCache['entries'];
+
+export const emptyTranslationCache = (): TranslationCache => ({
+  version: TRANSLATION_CACHE_VERSION,
+  entries: {},
+});
+
+export const hashTranslatable = (field: TranslatableField, text: string): string =>
   createHash('sha256').update(`${field}\0${text}`).digest('hex');

@@ -1,12 +1,22 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import type { Aircraft } from '../../src/schema.js';
-import { hashTranslatable } from '../../src/localize/cache.js';
+import {
+  hashTranslatable,
+  TRANSLATION_CACHE_VERSION,
+  type TranslationEntries,
+} from '../../src/localize/cache.js';
 
 const translateBatch = mock();
 const requireEnv = mock(() => 'test-key');
+const readPositiveIntegerEnv = mock(() => 10);
+const isRetryableGeminiError = (error: unknown): boolean =>
+  (error as { status?: unknown } | null)?.status === undefined;
 
-void mock.module('../../src/localize/gemini-client.js', () => ({ translateBatch }));
-void mock.module('../../src/env.js', () => ({ requireEnv }));
+void mock.module('../../src/localize/gemini-client.js', () => ({
+  translateBatch,
+  isRetryableGeminiError,
+}));
+void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
 const { localizeRecords } = await import('../../src/localize/localize.js');
 
@@ -69,14 +79,19 @@ type FakeWriter = import('../../src/writer.js').R2ArtifactWriter;
 // Only the two methods localizeRecords actually calls are exercised; the rest of
 // R2ArtifactWriter's surface is irrelevant here. Mocks are returned alongside the writer (rather
 // than read back off it) so assertions don't trip @typescript-eslint/unbound-method.
+const cacheEnvelope = (entries: TranslationEntries = {}) => ({
+  version: TRANSLATION_CACHE_VERSION,
+  entries,
+});
+
 const fakeWriter = (
-  cache: Record<string, string> = {}
+  entries: TranslationEntries = {}
 ): {
   writer: FakeWriter;
   readTranslationCache: ReturnType<typeof mock>;
   writeTranslationCache: ReturnType<typeof mock>;
 } => {
-  const readTranslationCache = mock(() => Promise.resolve(cache));
+  const readTranslationCache = mock(() => Promise.resolve(cacheEnvelope(entries)));
   const writeTranslationCache = mock(() => Promise.resolve());
   return {
     writer: { readTranslationCache, writeTranslationCache } as unknown as FakeWriter,
@@ -90,6 +105,8 @@ describe('localizeRecords', () => {
     translateBatch.mockReset();
     requireEnv.mockReset();
     requireEnv.mockReturnValue('test-key');
+    readPositiveIntegerEnv.mockReset();
+    readPositiveIntegerEnv.mockReturnValue(10);
   });
 
   it('short-circuits without touching the writer or Gemini when no field is populated', async () => {
@@ -114,7 +131,10 @@ describe('localizeRecords', () => {
 
     expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 1, failed: 0 });
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
-    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', { [hash]: 'Aircraft exported' });
+    expect(writeTranslationCache).toHaveBeenCalledWith(
+      'br-anac',
+      cacheEnvelope({ [hash]: 'Aircraft exported' })
+    );
   });
 
   it('never overwrites the original field, on success or failure', async () => {
@@ -180,6 +200,17 @@ describe('localizeRecords', () => {
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
+  it('throws a permanent Gemini error without writing the cache', async () => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const error = Object.assign(new Error('API key rejected'), { status: 401 });
+    translateBatch.mockReturnValue(Promise.resolve({ translated: new Map(), errors: [error] }));
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await expect(localizeRecords(records, 'br-anac', writer)).rejects.toThrow('API key rejected');
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
   it('counts a partial response accurately and still caches the entries that came back', async () => {
     const hashA = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     const hashB = hashTranslatable('lien_status', 'GRAVAME');
@@ -195,9 +226,9 @@ describe('localizeRecords', () => {
     expect(stats).toEqual({ candidates: 2, cache_hits: 0, translated: 1, failed: 1 });
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
     expect(result.get('1')!.translations_en.lien_status).toBeNull();
-    const cache = writeTranslationCache.mock.calls[0][1] as Record<string, string>;
-    expect(cache).toEqual({ [hashA]: 'Aircraft exported' });
-    expect(cache[hashB]).toBeUndefined();
+    const cache = writeTranslationCache.mock.calls[0][1] as ReturnType<typeof cacheEnvelope>;
+    expect(cache).toEqual(cacheEnvelope({ [hashA]: 'Aircraft exported' }));
+    expect(cache.entries[hashB]).toBeUndefined();
   });
 
   it('discards an id in the response that was never requested', async () => {
@@ -213,14 +244,17 @@ describe('localizeRecords', () => {
 
     await localizeRecords(records, 'br-anac', writer);
 
-    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', { [hash]: 'Aircraft exported' });
+    expect(writeTranslationCache).toHaveBeenCalledWith(
+      'br-anac',
+      cacheEnvelope({ [hash]: 'Aircraft exported' })
+    );
   });
 
   it('proceeds with an empty cache when the cache read fails, without throwing', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
-    const { writer } = fakeWriter();
+    const { writer, writeTranslationCache } = fakeWriter();
     (writer.readTranslationCache as ReturnType<typeof mock>).mockRejectedValue(
       new Error('R2 down')
     );
@@ -229,6 +263,20 @@ describe('localizeRecords', () => {
 
     expect(stats.failed).toBe(0);
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
+  it('propagates a permanent cache read failure before calling Gemini', async () => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const error = Object.assign(new Error('AccessDenied'), {
+      $metadata: { httpStatusCode: 403 },
+    });
+    const { writer } = fakeWriter();
+    (writer.readTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
+
+    await expect(localizeRecords(records, 'br-anac', writer)).rejects.toThrow('AccessDenied');
+
+    expect(translateBatch).not.toHaveBeenCalled();
   });
 
   it('still returns the in-memory translation when the cache write fails, without throwing', async () => {
@@ -243,6 +291,19 @@ describe('localizeRecords', () => {
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
     expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+  });
+
+  it('propagates a permanent cache write failure', async () => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    const error = Object.assign(new Error('AccessDenied'), {
+      $metadata: { httpStatusCode: 403 },
+    });
+    const { writer } = fakeWriter();
+    (writer.writeTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
+
+    await expect(localizeRecords(records, 'br-anac', writer)).rejects.toThrow('AccessDenied');
   });
 
   it('throws on a missing GEMINI_API_KEY rather than degrading silently', async () => {

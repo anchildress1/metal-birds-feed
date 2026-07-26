@@ -1,10 +1,11 @@
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { z } from 'zod';
 import { retry, type RetryOptions } from '../retry.js';
+import type { TranslatableField } from './cache.js';
 
 export interface TranslationItem {
   id: string;
-  field: string;
+  field: TranslatableField;
   text: string;
 }
 
@@ -12,6 +13,8 @@ export interface GeminiClientConfig {
   apiKey: string;
   model?: string;
   retryOptions?: RetryOptions;
+  requestsPerMinute?: number;
+  rateLimitSleep?: (ms: number) => Promise<void>;
 }
 
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
@@ -48,9 +51,27 @@ const RESPONSE_SCHEMA = {
   },
 };
 
-const TranslationResultSchema = z.array(z.object({ id: z.string(), text: z.string() }));
+const TranslationResultSchema = z
+  .array(z.object({ id: z.string(), text: z.string().trim().min(1) }))
+  .superRefine((items, ctx) => {
+    const seen = new Set<string>();
+    items.forEach(({ id }, index) => {
+      if (seen.has(id)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Duplicate translation id: ${id}`,
+          path: [index, 'id'],
+        });
+      }
+      seen.add(id);
+    });
+  });
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const DEFAULT_REQUESTS_PER_MINUTE = 10;
+const MINUTE_MS = 60_000;
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 // ApiError carries an HTTP-shaped `status`. A network-level failure (DNS, reset, timeout) has no
 // status at all — mirrors isTransientS3Error's "status === undefined is transient" convention.
@@ -65,28 +86,17 @@ const chunk = <T>(items: T[], size: number): T[][] => {
   return chunks;
 };
 
-const CONCURRENT_CHUNK_LIMIT = 5; // caps in-flight requests so a large backlog can't 429-storm the API
-
-const settleInBatches = async <T>(
-  factories: (() => Promise<T>)[],
-  limit: number
-): Promise<PromiseSettledResult<T>[]> => {
-  const results: PromiseSettledResult<T>[] = [];
-  for (let i = 0; i < factories.length; i += limit) {
-    results.push(...(await Promise.allSettled(factories.slice(i, i + limit).map((f) => f()))));
-  }
-  return results;
-};
-
 const translateChunk = async (
   items: TranslationItem[],
   ai: GoogleGenAI,
   model: string,
-  retryOptions: RetryOptions | undefined
+  retryOptions: RetryOptions | undefined,
+  beforeRequest: () => Promise<void>
 ): Promise<Map<string, string>> => {
-  const response = await retry(
-    () =>
-      ai.models.generateContent({
+  return retry(
+    async () => {
+      await beforeRequest();
+      const response = await ai.models.generateContent({
         model,
         contents: JSON.stringify(items),
         config: {
@@ -96,16 +106,17 @@ const translateChunk = async (
           // no temperature: deprecated and silently ignored on this model generation
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         },
-      }),
+      });
+      const text = response.text;
+      if (text === undefined) throw new Error('Gemini response contained no text');
+
+      // Re-validate inside retry: an LLM response is untrusted even with responseSchema, and a
+      // transient malformed response should receive the same bounded recovery as transport errors.
+      const parsed = TranslationResultSchema.parse(JSON.parse(text));
+      return new Map(parsed.map((result) => [result.id, result.text]));
+    },
     { ...retryOptions, isRetryable: isRetryableGeminiError }
   );
-
-  const text = response.text;
-  if (text === undefined) throw new Error('Gemini response contained no text');
-
-  // re-validate: an LLM tool call is untrusted input even with responseSchema
-  const parsed = TranslationResultSchema.parse(JSON.parse(text));
-  return new Map(parsed.map((p) => [p.id, p.text]));
 };
 
 export interface TranslateBatchResult {
@@ -113,7 +124,46 @@ export interface TranslateBatchResult {
   errors: unknown[];
 }
 
-// Never throws — a failing chunk lands in `errors` instead of discarding other chunks' results.
+const translateAtRate = async (
+  chunks: TranslationItem[][],
+  ai: GoogleGenAI,
+  config: GeminiClientConfig
+): Promise<PromiseSettledResult<Map<string, string>>[]> => {
+  const requestsPerMinute = config.requestsPerMinute ?? DEFAULT_REQUESTS_PER_MINUTE;
+  if (!Number.isSafeInteger(requestsPerMinute) || requestsPerMinute <= 0) {
+    throw new Error('requestsPerMinute must be a positive integer');
+  }
+  const intervalMs = Math.ceil(MINUTE_MS / requestsPerMinute);
+  const results: PromiseSettledResult<Map<string, string>>[] = [];
+  let requestStarted = false;
+  const beforeRequest = async (): Promise<void> => {
+    if (requestStarted) await (config.rateLimitSleep ?? defaultSleep)(intervalMs);
+    requestStarted = true;
+  };
+
+  // Gemini quotas are project-wide RPM. refresh.yml serializes workflows and source jobs; this
+  // intentionally sequential loop plus shared request gate spaces every API attempt, including
+  // retries, so one cold source cannot burst the quota.
+  for (const items of chunks) {
+    try {
+      results.push({
+        status: 'fulfilled',
+        value: await translateChunk(
+          items,
+          ai,
+          config.model ?? DEFAULT_MODEL,
+          config.retryOptions,
+          beforeRequest
+        ),
+      });
+    } catch (reason) {
+      results.push({ status: 'rejected', reason });
+    }
+  }
+  return results;
+};
+
+// A chunk failure lands in `errors` instead of discarding other chunks' results.
 export const translateBatch = async (
   items: TranslationItem[],
   config: GeminiClientConfig
@@ -121,12 +171,8 @@ export const translateBatch = async (
   if (items.length === 0) return { translated: new Map(), errors: [] };
 
   const ai = new GoogleGenAI({ apiKey: config.apiKey });
-  const model = config.model ?? DEFAULT_MODEL;
   const chunks = chunk(items, MAX_BATCH_ITEMS);
-  const settled = await settleInBatches(
-    chunks.map((c) => () => translateChunk(c, ai, model, config.retryOptions)),
-    CONCURRENT_CHUNK_LIMIT
-  );
+  const settled = await translateAtRate(chunks, ai, config);
 
   const translated = new Map<string, string>();
   const errors: unknown[] = [];
