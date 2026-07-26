@@ -184,31 +184,31 @@ make install
 
 ## Sources
 
-Sources active in the private operator pipeline, ordered alphabetically by country. Source
-IDs remain in backticks where a source has a checked-in or planned config. The full
-source-use tracker (every country contacted, sent/reply dates, status, and known storage
-or cache restrictions) lives in [DATA_LICENSES.md](DATA_LICENSES.md).
+Sources active or cleared in the private operator pipeline, ordered alphabetically by
+country. ID is the `sources/<id>.yaml` config stem — "—" means onboarding is cleared but
+no config is checked in yet. Full correspondence (email, sent/reply dates) and per-source
+restrictions live in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 <!-- prettier-ignore-start -->
-| Agency | Country | Email | Sent | Reply | Status |
-| --- | --- | --- | --- | --- | --- |
-| CASA — au-casa | Australia | none | n/a | open | live |
-| ANAC Brasil — br-anac | Brazil | rab@anac.gov.br | 2026-05-05 | confirmed | live |
-| Transport Canada — tc-ca | Canada | none | n/a | open | live |
-| DGAC — cl-dgac | Chile | registro.aeronaves@dgac.gob.cl | 2026-05-10 | confirmed | live |
-| Transpordiamet — ee-tram | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed | live |
-| CAA Latvia — lv-caa | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
-| CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
-| ILT — nl-ilt | Netherlands | none | n/a | open | live |
-| CAA NZ — nz-caa | New Zealand | info@caa.govt.nz | 2026-05-05 | pending | live |
-| Luftfartstilsynet — no-caa | Norway | postmottak@caa.no | 2026-05-05 | pending | live |
-| CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
-| CAAS — sg-caas | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed | live |
-| AESA — es-aesa | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | open | live |
-| FOCA / BAZL — ch-foca | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
-| CAA Taiwan — tw-caa | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
-| CAAT Thailand | Thailand | inter_focalpoint@caat.or.th | 2026-05-10 | confirmed | cleared |
-| FAA — faa | United States | none | n/a | open | live |
+| ID | Agency | Country | Status |
+| --- | --- | --- | --- |
+| `au-casa` | CASA | Australia | ✅ Live |
+| `br-anac` | ANAC Brasil | Brazil | ✅ Live |
+| `tc-ca` | Transport Canada | Canada | ✅ Live |
+| `cl-dgac` | DGAC | Chile | ✅ Live |
+| `ee-tram` | Transpordiamet | Estonia | ✅ Live |
+| `lv-caa` | CAA Latvia | Latvia | ✅ Live |
+| `mv-caa` | CAA Maldives | Maldives | ✅ Live |
+| `nl-ilt` | ILT | Netherlands | ✅ Live |
+| `nz-caa` | CAA NZ | New Zealand | ✅ Live |
+| `no-caa` | Luftfartstilsynet | Norway | ✅ Live |
+| — | CAA Oman | Oman | 🛠️ No dataset yet |
+| `sg-caas` | CAAS | Singapore | ✅ Live |
+| `es-aesa` | AESA | Spain | ✅ Live |
+| `ch-foca` | FOCA / BAZL | Switzerland | ✅ Live |
+| `tw-caa` | CAA Taiwan | Taiwan | ✅ Live |
+| — | CAAT | Thailand | 🛠️ Fetch blocked |
+| `faa` | FAA | United States | ✅ Live |
 <!-- prettier-ignore-end -->
 
 Full correspondence/status detail: [DATA_LICENSES.md](DATA_LICENSES.md).
