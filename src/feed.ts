@@ -5,11 +5,9 @@ import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { latestKnownDate } from './recency.js';
 
-// The descriptive, hex-addressable slice of a record a consumer application renders for a plane:
-// identity, airframe, engine, performance, and ownership. Excludes registry-admin bookkeeping the
-// canonical record still carries (certification/airworthiness dates, legal_owner, lien/interdiction
-// codes, operational classes) — none of that describes the aircraft to a spotter. PII beyond
-// owner/operator name/state/country is already absent from the schema. `source` is provenance.
+// Consumer-facing per-plane slice: identity/airframe/engine/performance/ownership plus English
+// translations of the legal/admin free-text fields — not the raw non-English originals, and not
+// the fields with no consumer value (dates, legal_owner, interdiction code, operational classes).
 export type { FeedRow };
 
 const COLUMNS = [
@@ -42,6 +40,9 @@ const COLUMNS = [
   'operator_kind',
   'operator_state',
   'operator_country',
+  'cancellation_reason_en',
+  'airworthiness_class_en',
+  'lien_status_en',
   'source',
 ] as const;
 
@@ -97,6 +98,9 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     operator_kind: r.operator.kind,
     operator_state: r.operator.state,
     operator_country: r.operator.country,
+    cancellation_reason_en: r.translations_en.cancellation_reason,
+    airworthiness_class_en: r.translations_en.airworthiness_class,
+    lien_status_en: r.translations_en.lien_status,
     source: r.source,
   }));
 };
@@ -158,6 +162,9 @@ const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
   operator_kind: 'TEXT',
   operator_state: 'TEXT',
   operator_country: 'TEXT',
+  cancellation_reason_en: 'TEXT',
+  airworthiness_class_en: 'TEXT',
+  lien_status_en: 'TEXT',
   source: 'TEXT NOT NULL',
 };
 
@@ -187,7 +194,7 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
   const db = new Database(':memory:');
   try {
     db.run('PRAGMA journal_mode = OFF');
-    db.run('PRAGMA user_version = 1');
+    db.run('PRAGMA user_version = 2');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     const insert = db.prepare(
