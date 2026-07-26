@@ -64,7 +64,7 @@ which exceeds GHA's per-job timeout. Run it once locally; cadence runs handle
 diffs forever after.
 
 ```bash
-cp .env.example .env  # fill in MBF_R2_* values
+cp .env.example .env  # fill in MBF_R2_* and GEMINI_API_KEY
 make bootstrap        # auto-loads .env, runs the full pipeline with no time cap
 ```
 
@@ -82,12 +82,13 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 
 ## R2 Key Structure
 
-| Path                            | Contents                                                                                                                                                                                                                                               |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `aircraft/<source>.sqlite`      | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
-| `aircraft/_state/<source>.json` | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                        |
-| `aircraft/_feed/<source>.json`  | Per-source feed slice (hex-collapsed descriptive columns) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                                                  |
-| `aircraft/_feed/_deployed.json` | Content hash of the feed last deployed to Cloud Run — the scheduled deploy redeploys only when the freshly built feed differs from it                                                                                                                  |
+| Path                                        | Contents                                                                                                                                                                                                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `aircraft/<source>.sqlite`                  | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
+| `aircraft/_state/<source>.json`             | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                        |
+| `aircraft/_feed/<source>.json`              | Per-source feed slice (hex-collapsed descriptive columns) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                                                  |
+| `aircraft/_feed/_deployed.json`             | Content hash of the feed last deployed to Cloud Run — the scheduled deploy redeploys only when the freshly built feed differs from it                                                                                                                  |
+| `aircraft/_translation_cache/<source>.json` | Versioned free-text hash → English translation cache for Gemini delta processing                                                                                                                                                                       |
 
 One queryable artifact per source — filter or point-lookup on any column (every canonical field is its own typed column). Rebuilt and re-uploaded whole only when the record set's content hash changes.
 
@@ -137,6 +138,7 @@ make install
 | `MBF_R2_ACCESS_KEY_ID`     | R2 S3-compatible access key |
 | `MBF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
 | `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
+| `GEMINI_API_KEY`           | Gemini translation API key  |
 | `SONAR_TOKEN`              | SonarCloud analysis token   |
 
 ### Variables
@@ -146,6 +148,7 @@ make install
 | `GCP_PROJECT_ID`                 | Cloud Run project                            |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | GitHub Workload Identity Federation provider |
 | `GCP_SERVICE_ACCOUNT`            | Federated Cloud Run deployer service account |
+| `GEMINI_REQUESTS_PER_MINUTE`     | Project-wide Gemini RPM limit (default: 10)  |
 | `GCP_RUN_REGION`                 | Cloud Run region (default `us-east1`)        |
 | `GCP_RUN_SERVICE`                | Service name (default `metal-birds-feed`)    |
 
