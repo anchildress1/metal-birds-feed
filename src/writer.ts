@@ -5,6 +5,7 @@ import {
   HeadObjectCommand,
   NoSuchKey,
 } from '@aws-sdk/client-s3';
+import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { FeedRowsSchema } from './feed.js';
@@ -12,6 +13,7 @@ import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
+import { TranslationCacheSchema, type TranslationCache } from './localize/cache.js';
 
 // R2 intermittently returns 500 "We encountered an internal error. Please try again." under load.
 // The SDK's adaptive retry rate-limiter drains its token bucket during a blip and then fast-fails
@@ -163,47 +165,73 @@ export class R2ArtifactWriter {
     }
   }
 
-  async readState(source: string): Promise<SourceState | null> {
+  // Shared by readState/readFeedRows/readTranslationCache: GET, parse, validate, self-heal to
+  // `fallback` on absence/corruption, rethrow a real R2 error for the caller to handle.
+  private async readJson<T>(
+    key: string,
+    schema: ZodType<T>,
+    eventPrefix: string,
+    fallback: T,
+    logContext: Record<string, unknown>
+  ): Promise<T> {
     try {
       const res = await retry(
-        () =>
-          this.client.send(
-            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_state/${source}.json` })
-          ),
+        () => this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key })),
         S3_RETRY
       );
       const body = await res.Body?.transformToString();
-      if (!body) return null;
+      if (!body) return fallback;
       let json: unknown;
       try {
         json = JSON.parse(body);
       } catch {
-        // Present-but-corrupt state is worse than absent — log it. Run proceeds fresh (re-PUT).
-        log('error', 'state_parse_failed', { source, reason: 'invalid_json' });
-        return null;
+        log('error', `${eventPrefix}_parse_failed`, { ...logContext, reason: 'invalid_json' });
+        return fallback;
       }
-      const parsed = SourceStateSchema.safeParse(json);
+      const parsed = schema.safeParse(json);
       if (!parsed.success) {
-        log('error', 'state_parse_failed', {
-          source,
+        log('error', `${eventPrefix}_parse_failed`, {
+          ...logContext,
           reason: 'schema_invalid',
           msg: parsed.error.message,
         });
-        return null;
+        return fallback;
       }
       return parsed.data;
     } catch (err) {
-      if (err instanceof NoSuchKey) return null;
-      log('error', 'state_load_failed', {
-        source,
-        msg: errorMessage(err),
-      });
+      if (err instanceof NoSuchKey) return fallback;
+      log('error', `${eventPrefix}_load_failed`, { ...logContext, msg: errorMessage(err) });
       throw err;
     }
   }
 
+  async readState(source: string): Promise<SourceState | null> {
+    return this.readJson(`aircraft/_state/${source}.json`, SourceStateSchema, 'state', null, {
+      source,
+    });
+  }
+
   async writeState(source: string, state: SourceState): Promise<void> {
     await this.put(`aircraft/_state/${source}.json`, JSON.stringify(state), 'application/json');
+  }
+
+  // Persists independent of the artifact's content-hash skip gate.
+  async readTranslationCache(source: string): Promise<TranslationCache> {
+    return this.readJson(
+      `aircraft/_translation_cache/${source}.json`,
+      TranslationCacheSchema,
+      'translation_cache',
+      {},
+      { source }
+    );
+  }
+
+  async writeTranslationCache(source: string, cache: TranslationCache): Promise<void> {
+    await this.put(
+      `aircraft/_translation_cache/${source}.json`,
+      JSON.stringify(cache),
+      'application/json'
+    );
   }
 
   // Per-source feed slice, the build intermediate main() merges into the consolidated DB.
@@ -213,43 +241,9 @@ export class R2ArtifactWriter {
   }
 
   async readFeedRows(source: string): Promise<FeedRow[] | null> {
-    try {
-      const res = await retry(
-        () =>
-          this.client.send(
-            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_feed/${source}.json` })
-          ),
-        S3_RETRY
-      );
-      const body = await res.Body?.transformToString();
-      if (!body) return null;
-      let json: unknown;
-      try {
-        json = JSON.parse(body);
-      } catch {
-        // Present-but-corrupt slice reads as absent (parity with readState): publishFeed then fails
-        // closed on the named source rather than crashing the whole Promise.all on a raw parse error.
-        log('error', 'feed_rows_parse_failed', { source, reason: 'invalid_json' });
-        return null;
-      }
-      // Valid JSON isn't enough: a wrong-shape slice (bare object, row missing a NOT NULL column,
-      // scalar rows) would crash consolidation on merge/hash/insert. Reject it as absent so the
-      // cadence self-heal regenerates the slice instead.
-      const parsed = FeedRowsSchema.safeParse(json);
-      if (!parsed.success) {
-        log('error', 'feed_rows_parse_failed', {
-          source,
-          reason: 'schema_invalid',
-          msg: parsed.error.message,
-        });
-        return null;
-      }
-      return parsed.data;
-    } catch (err) {
-      if (err instanceof NoSuchKey) return null;
-      log('error', 'feed_rows_load_failed', { source, msg: errorMessage(err) });
-      throw err;
-    }
+    return this.readJson(`aircraft/_feed/${source}.json`, FeedRowsSchema, 'feed_rows', null, {
+      source,
+    });
   }
 
   // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads

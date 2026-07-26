@@ -426,6 +426,63 @@ describe('R2ArtifactWriter — state', () => {
   });
 });
 
+describe('R2ArtifactWriter — translation cache', () => {
+  const cacheResponse = (cache: Record<string, string>) => ({
+    Body: { transformToString: () => Promise.resolve(JSON.stringify(cache)) },
+  });
+
+  it('writes the cache to aircraft/_translation_cache/<source>.json as JSON', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    await writer.writeTranslationCache('faa', { [HASH64]: 'Aircraft exported' });
+
+    const put = putCalls().find((c) => c.input.Key === 'aircraft/_translation_cache/faa.json');
+    expect(put).toBeDefined();
+    expect(put!.input.ContentType).toBe('application/json');
+    expect(JSON.parse(put!.input.Body as string)).toEqual({ [HASH64]: 'Aircraft exported' });
+  });
+
+  it('reads and parses a prior cache', async () => {
+    mockSend.mockResolvedValueOnce(cacheResponse({ [HASH64]: 'Aircraft exported' }));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readTranslationCache('faa')).toEqual({ [HASH64]: 'Aircraft exported' });
+  });
+
+  it('returns an empty cache when absent (NoSuchKey)', async () => {
+    mockSend.mockRejectedValueOnce(noSuchKey());
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readTranslationCache('faa')).toEqual({});
+  });
+
+  it('returns an empty cache for an empty body', async () => {
+    mockSend.mockResolvedValueOnce({ Body: { transformToString: () => Promise.resolve('') } });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readTranslationCache('faa')).toEqual({});
+  });
+
+  it('returns an empty cache for invalid JSON', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: () => Promise.resolve('{not json') },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readTranslationCache('faa')).toEqual({});
+  });
+
+  it('returns an empty cache for a schema-invalid body', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify({ 'not-a-hash': 'x' })) },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readTranslationCache('faa')).toEqual({});
+  });
+
+  it('rethrows a non-NoSuchKey cache read error', async () => {
+    mockSend.mockRejectedValueOnce(s3Error('AccessDenied', 403));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow('AccessDenied');
+  });
+});
+
 describe('R2ArtifactWriter — artifactExists', () => {
   it('returns true when HEAD resolves', async () => {
     mockSend.mockResolvedValueOnce({});
