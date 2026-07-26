@@ -44,7 +44,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | CCAA | Cameroon | contact@ccaa.aero | 2026-05-11 | pending | sent |
 | Transport Canada | Canada | none | n/a | open | live |
 | CAA Cayman | Cayman Islands | none | n/a | none | excluded: commercial |
-| DGAC | Chile | registro.aeronaves@dgac.gob.cl | 2026-05-10 | pending | sent: no bulk |
+| DGAC | Chile | registro.aeronaves@dgac.gob.cl | 2026-05-10 | confirmed 2026-07-22 | live: non-commercial (Ley 17.336), monthly xlsx via datos.gob.cl |
 | CAAC | China | none | n/a | none | excluded |
 | UAEAC | Colombia | atencionalciudadano@aerocivil.gov.co | 2026-05-10 | denied | excluded: denied |
 | Ministry of Transport | Cook Islands | mot.information@cookislands.gov.ck | 2026-05-11 | pending | sent |
@@ -203,6 +203,7 @@ Single record of source for agency correspondence and source-use posture: every 
 - CAA Maldives: Whilst reasonable care is taken compiling the above data, the CAA does not warrant the data is free of error or omission.
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
 - AESA Spain: reusable under Real Decreto 1495/2011 (developing Ley 37/2007 on public-sector-information reuse); conditions require the source of origin be cited, the meaning not be distorted, and the update-date/reuse-condition metadata be preserved. Required citation, verbatim: "Data source: Agencia Estatal de Seguridad Aérea (AESA)". Normalized into this project schema; no endorsement implied.
+- DGAC Chile: reusable non-commercially under Ley N° 17.336 (Chilean Intellectual Property Law); DGAC of Chile retains copyright. Strict and non-waivable condition (DGAC verbatim, Felipe Armijo Cadena reply 2026-07-22): the Dirección General de Aeronáutica Civil (DGAC) of Chile must be cited as the **sole official source and copyright holder** of the information, with a link to the institutional website (https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/). Non-commercial research and reference use only; commercial deployment requires separate written permission. Normalized into this project schema; no endorsement implied.
 - Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence, storage/cache posture, and status.
 
 ## Update cadence

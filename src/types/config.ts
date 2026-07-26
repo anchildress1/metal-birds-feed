@@ -50,6 +50,7 @@ export const SCALAR_TRANSFORMS = [
   'no_owner_name',
   'no_owner_country',
   'no_owner_kind',
+  'cl_registration',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;
@@ -84,6 +85,27 @@ export interface JoinConfig {
   file: string;
   key: string;
   on: string;
+}
+
+// Collapses rows that share a source_id but differ only in the listed canonical fields into one
+// record, concatenating those fields instead of failing on the collision. Chile's register emits
+// one row per co-registered party (same tail, differing NOMBRE DEL OPERADOR); merging preserves
+// every party (no silent upstream loss) rather than dropping all but one. `fields` and any
+// `set_on_merge` keys are the ONLY paths allowed to differ — a row differing anywhere else is a
+// real collision and still falls through to recency resolution / failure.
+export interface MergeDuplicatesConfig {
+  // Canonical dotted paths (e.g. "operator.name") whose differing values are joined with `separator`.
+  fields: string[];
+  // Joiner between concatenated values; defaults to ", ". Chile uses " Y " to match its own
+  // in-cell multi-party convention.
+  separator?: string;
+  // Canonical dotted paths stamped to a fixed value whenever a merge fires (e.g. operator.kind ->
+  // co-owner). Applied after concatenation. A stamped path is exempt from the collision guard only
+  // when neither row carries a conflicting value there (each null/empty or already the stamped
+  // value); real, differing upstream data on either side fails loud instead of being silently
+  // overwritten. Both sides matter because the stamp is written over the incumbent — guarding only
+  // the candidate would let row order decide whether upstream data survives.
+  set_on_merge?: Record<string, string | null>;
 }
 
 export type DownloadFormat = 'zip' | 'file';
@@ -165,5 +187,6 @@ export interface SourceConfig {
   source_id_transform?: ScalarTransformName;
   registration: string;
   cadence_days?: number;
+  merge_duplicates?: MergeDuplicatesConfig;
   mapping: Record<string, FieldMapping>;
 }

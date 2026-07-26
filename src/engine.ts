@@ -1,5 +1,5 @@
 import { TextDecoder } from 'node:util';
-import type { SourceConfig, FieldMapping } from './types/config.js';
+import type { SourceConfig, FieldMapping, MergeDuplicatesConfig } from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import {
   parseCSV,
@@ -234,6 +234,122 @@ function resolveRecency(
   return null;
 }
 
+const getPath = (obj: unknown, path: string): unknown =>
+  path
+    .split('.')
+    .reduce<unknown>(
+      (node, key) => (node == null ? undefined : (node as Record<string, unknown>)[key]),
+      obj
+    );
+
+// Every canonical path is an own property of a schema-validated record (all fields are required,
+// nullable), so a missing own-property mid-traversal means the path isn't canonical. That guard is
+// also what keeps a `__proto__`/`constructor` segment from walking onto Object.prototype and
+// polluting it — such a segment is never an own property of a plain record.
+const setPath = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+  const parents = path.split('.');
+  const leaf = parents.pop() ?? path;
+  let node = obj;
+  for (const key of parents) {
+    if (!Object.hasOwn(node, key)) throw new Error(`merge path "${path}" is not a canonical path`);
+    node = node[key] as Record<string, unknown>;
+  }
+  if (!Object.hasOwn(node, leaf)) throw new Error(`merge path "${path}" is not a canonical path`);
+  node[leaf] = value;
+};
+
+// Arrays (operational_classes) are compared whole, not descended into — a differing element is a
+// differing leaf, not a mergeable sub-path.
+const isLeaf = (value: unknown): boolean =>
+  value === null || typeof value !== 'object' || Array.isArray(value);
+
+// Canonical dotted paths where two records' leaves differ. Used to gate merge_duplicates: a merge is
+// safe only when every differing path is one the policy declares mergeable.
+const collectDiffPaths = (a: unknown, b: unknown, prefix: string, out: Set<string>): void => {
+  const keys = new Set([
+    ...Object.keys((a as Record<string, unknown>) ?? {}),
+    ...Object.keys((b as Record<string, unknown>) ?? {}),
+  ]);
+  for (const key of keys) {
+    const av = (a as Record<string, unknown> | undefined)?.[key];
+    const bv = (b as Record<string, unknown> | undefined)?.[key];
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (isLeaf(av) || isLeaf(bv)) {
+      if (!Bun.deepEquals(av, bv)) out.add(path);
+    } else collectDiffPaths(av, bv, path, out);
+  }
+};
+
+// Whether a differing canonical path is one the merge policy is allowed to reconcile. `fields` are
+// concatenated (no value is lost). A set_on_merge path is exempt only when NEITHER row carries
+// conflicting data there — each side null/empty, or already equal to the stamped value (the case on
+// the 2nd+ merge, where the incumbent holds the stamp). Both sides are checked because the stamp is
+// written over the incumbent: checking only the candidate would let file order decide whether real
+// upstream data survives or the row fails. Real, differing data on either side falls through to
+// recency and fails loud rather than being silently overwritten by the stamp.
+const isReconcilablePath = (
+  path: string,
+  candidate: Aircraft,
+  incumbent: Aircraft,
+  policy: MergeDuplicatesConfig
+): boolean => {
+  if (policy.fields.includes(path)) return true;
+  const setOnMerge = policy.set_on_merge;
+  if (!setOnMerge || !Object.hasOwn(setOnMerge, path)) return false;
+  const stamp = setOnMerge[path];
+  const stampable = (value: unknown): boolean => value == null || value === '' || value === stamp;
+  return stampable(getPath(candidate, path)) && stampable(getPath(incumbent, path));
+};
+
+// Folds a duplicate candidate into the incumbent: each policy field's new value is appended (joined
+// by separator, skipping empties and values already present), then set_on_merge stamps its fixed
+// values. Caller re-validates the result against the schema. A declared field holding a non-string
+// value is a misconfiguration — merge can only concatenate strings — and throws rather than silently
+// dropping the candidate's value.
+const mergeDuplicateRecord = (
+  incumbent: Aircraft,
+  candidate: Aircraft,
+  policy: MergeDuplicatesConfig
+): unknown => {
+  const merged = structuredClone(incumbent) as unknown as Record<string, unknown>;
+  const separator = policy.separator ?? ', ';
+  for (const field of policy.fields) {
+    const incoming = getPath(candidate, field);
+    if (incoming == null || incoming === '') continue;
+    if (typeof incoming !== 'string')
+      throw new Error(
+        `merge_duplicates field "${field}" holds a non-string value; only string fields can be concatenated`
+      );
+    const existing = getPath(merged, field);
+    if (typeof existing !== 'string' || existing === '') {
+      setPath(merged, field, incoming);
+      continue;
+    }
+    if (!existing.split(separator).includes(incoming))
+      setPath(merged, field, `${existing}${separator}${incoming}`);
+  }
+  for (const [path, value] of Object.entries(policy.set_on_merge ?? {}))
+    setPath(merged, path, value);
+  return merged;
+};
+
+// Same id, differing only in paths the source declares mergeable (Chile lists one row per
+// co-registered party): fold the candidate into the incumbent rather than treating it as a reissue
+// collision. Null when any differing path is outside the policy — the caller then falls through to
+// recency resolution, which fails loud rather than dropping upstream data.
+const tryMergeDuplicate = (
+  candidate: Aircraft,
+  incumbent: Aircraft,
+  policy: MergeDuplicatesConfig
+): { record: unknown; fields: string[] } | null => {
+  const diff = new Set<string>();
+  collectDiffPaths(candidate, incumbent, '', diff);
+  if (diff.size === 0) return null;
+  if (![...diff].every((path) => isReconcilablePath(path, candidate, incumbent, policy)))
+    return null;
+  return { record: mergeDuplicateRecord(incumbent, candidate, policy), fields: [...diff] };
+};
+
 interface TranslateRowContext {
   config: SourceConfig;
   joinMaps: Map<string, Map<string, Row>>;
@@ -243,6 +359,72 @@ interface TranslateRowContext {
   // config.source_id/source_id_transform never change across rows — built once per translate()
   // call instead of allocating an identical FieldMapping object on every row.
   sourceIdMapping: FieldMapping;
+}
+
+interface CollisionContext {
+  candidate: Aircraft;
+  incumbent: Aircraft;
+  rawId: string;
+  row: Row;
+  rowNumber: number;
+  config: SourceConfig;
+}
+
+// Same-source_id collision against the record already kept for that id: an identical canonical
+// record is a duplicate, a policy-mergeable difference folds together, anything else resolves by
+// recency (or fails). Returns the candidate outright only when it wins that resolution.
+function resolveCollision(ctx: CollisionContext): RowOutcome {
+  const { candidate, incumbent, rawId, row, rowNumber, config } = ctx;
+  const logCtx = { source: config.id, row: rowNumber, source_id: rawId };
+
+  // Raw rows can differ in a field the mapping never surfaces (e.g. ANAC's OPERADORES lists a
+  // second party's UF differently between publishes) while mapping to the identical canonical
+  // record. The raw-row exact-dup check upstream missed this; check the mapped record too before
+  // falling to recency resolution, which would otherwise fail on a collision that isn't one.
+  if (Bun.deepEquals(candidate, incumbent)) {
+    log('warn', 'translate_skip', {
+      ...logCtx,
+      reason:
+        'exact duplicate row (canonical record identical; raw fields differ outside the schema)',
+    });
+    return { status: 'skipped', reason: 'duplicate' };
+  }
+
+  const mergePolicy = config.merge_duplicates;
+  const merged = mergePolicy && tryMergeDuplicate(candidate, incumbent, mergePolicy);
+  if (merged) {
+    const revalidated = AircraftSchema.safeParse(merged.record);
+    if (!revalidated.success) {
+      log('error', 'translate_invalid', {
+        ...logCtx,
+        msg: revalidated.error.issues.map((e) => e.message).join('; '),
+      });
+      return { status: 'failed' };
+    }
+    log('warn', 'translate_duplicate_id_merged', { ...logCtx, fields: merged.fields });
+    return { status: 'ok', id: rawId, record: revalidated.data, row };
+  }
+
+  // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a balloon
+  // under the same mark). Keep whichever row is actually newer instead of trusting file position —
+  // resolve via status (a cancellation never outranks a live record), falling back to the most
+  // recent known date. A collision with neither signal isn't a reissue; it means the source_id
+  // assumption is wrong and last-wins would silently drop upstream data.
+  const resolution = resolveRecency(candidate, incumbent);
+  if (!resolution) {
+    log('error', 'translate_duplicate_id', {
+      ...logCtx,
+      reason:
+        'no safe distinguishing signal (same status/date, neither record is a strict superset)',
+    });
+    return { status: 'failed' };
+  }
+  if (resolution.winner === 'incumbent') {
+    log('warn', 'translate_duplicate_id_stale', { ...logCtx, reason: resolution.reason });
+    return { status: 'skipped', reason: 'duplicate' };
+  }
+  log('warn', 'translate_duplicate_id_replaced', { ...logCtx, reason: resolution.reason });
+  return { status: 'ok', id: rawId, record: candidate, row };
 }
 
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
@@ -299,54 +481,15 @@ function translateRow(
     }
 
     const incumbent = priorRow && records.get(rawId);
-    if (incumbent) {
-      // Raw rows can differ in a field the mapping never surfaces (e.g. ANAC's OPERADORES lists a
-      // second party's UF differently between publishes) while mapping to the identical canonical
-      // record. The raw-row exact-dup check above missed this; check the mapped record too before
-      // falling to recency resolution, which would otherwise fail on a collision that isn't one.
-      if (Bun.deepEquals(parsed.data, incumbent)) {
-        log('warn', 'translate_skip', {
-          source: config.id,
-          row: i + 2,
-          source_id: rawId,
-          reason:
-            'exact duplicate row (canonical record identical; raw fields differ outside the schema)',
-        });
-        return { status: 'skipped', reason: 'duplicate' };
-      }
-
-      // Same id, different data: a mark reissue (e.g. NL-ILT deregisters then re-registers a
-      // balloon under the same mark). Keep whichever row is actually newer instead of trusting
-      // file position — resolve via status (a cancellation never outranks a live record), falling
-      // back to the most recent known date. A collision with neither signal isn't a reissue; it
-      // means the source_id assumption is wrong and last-wins would silently drop upstream data.
-      const resolution = resolveRecency(parsed.data, incumbent);
-      if (!resolution) {
-        log('error', 'translate_duplicate_id', {
-          source: config.id,
-          row: i + 2,
-          source_id: rawId,
-          reason:
-            'no safe distinguishing signal (same status/date, neither record is a strict superset)',
-        });
-        return { status: 'failed' };
-      }
-      if (resolution.winner === 'incumbent') {
-        log('warn', 'translate_duplicate_id_stale', {
-          source: config.id,
-          row: i + 2,
-          source_id: rawId,
-          reason: resolution.reason,
-        });
-        return { status: 'skipped', reason: 'duplicate' };
-      }
-      log('warn', 'translate_duplicate_id_replaced', {
-        source: config.id,
-        row: i + 2,
-        source_id: rawId,
-        reason: resolution.reason,
+    if (incumbent)
+      return resolveCollision({
+        candidate: parsed.data,
+        incumbent,
+        rawId,
+        row: merged,
+        rowNumber: i + 2,
+        config,
       });
-    }
     return { status: 'ok', id: rawId, record: parsed.data, row: merged };
   } catch (err) {
     log('error', 'translate_error', {

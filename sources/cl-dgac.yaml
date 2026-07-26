@@ -1,0 +1,217 @@
+id: cl-dgac
+label: DGAC Registro Nacional de Aeronaves
+country: CL
+encoding: utf8
+trim_all: true
+cadence_days: 30
+
+download:
+  # DGAC publishes the R.N.A. as a monthly, date-stamped .xlsx on the Chilean open-data portal
+  # (datos.gob.cl). Each month is a new CKAN dataset+resource under a fresh UUID path, so the file
+  # URL can never be pinned, and the human organization page only links to dataset pages (one hop
+  # short of the download, and listed oldest-first). Instead, discover against the CKAN package_search
+  # API sorted newest-first (rows=1): its JSON carries the newest resource's absolute download URL,
+  # which `discover_pattern` captures. `url` is the schema-required fallback (never fetched while
+  # discover_* resolves), pointed at the human organization listing.
+  url: https://datos.gob.cl/organization/direccion_general_de_aeronautica_civil
+  format: file
+  discover_url: https://datos.gob.cl/api/3/action/package_search?fq=organization:direccion_general_de_aeronautica_civil&q=title:AERONAVES%20INSCRITAS&sort=metadata_created%20desc&rows=1
+  discover_pattern: '"url": ?"(https://datos\.gob\.cl/dataset/[0-9a-f-]+/resource/[0-9a-f-]+/download/aeronaves-inscritas[^"]+\.xlsx)"'
+  entries:
+    register: register.xlsx
+
+primary: register
+delimiter: ','
+format: xlsx
+
+# The sheet ships a two-line banner (title row + blank row) above a clean 7-column header
+# (N° | MATRICULA | USO AERONAVE | MARCA | MODELO | TIPO DE AERONAVE | NOMBRE DEL OPERADOR).
+# skip_rows discards the banner so header inference picks the real header row; no `columns` override
+# is needed because the header is descriptive and stable.
+skip_rows: 2
+
+# MATRICULA is the permanent tail mark and the only per-aircraft key the register publishes. The
+# file lists one row per co-registered party, so a tail with N owners appears N times; merge_duplicates
+# collapses those to one record (see below). source_id is the raw dash-less mark; registration
+# restores the CC- dash for display.
+source_id: MATRICULA
+registration: MATRICULA
+
+# The register repeats a tail once per co-registered party, differing only in NOMBRE DEL OPERADOR.
+# Collapse those rows into one record, joining the operator names with the register's own " Y "
+# conjunction and flagging the party slot as co-owner. Any row differing in another field is a real
+# collision and still fails via recency resolution.
+merge_duplicates:
+  fields: ['operator.name']
+  separator: ' Y '
+  set_on_merge:
+    operator.kind: co-owner
+
+mapping:
+  registration:
+    field: MATRICULA
+    transform: cl_registration
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # The register lists currently-inscribed aircraft only — there is no per-row status column, so
+  # every listed row is an active registration.
+  status:
+    constant: valid
+
+  country:
+    constant: CL
+
+  manufacturer:
+    field: MARCA
+    transform: collapse_ws_or_null
+
+  model:
+    field: MODELO
+    transform: collapse_ws_or_null
+
+  serial_number:
+    constant: ~
+
+  year_manufactured:
+    constant: ~
+
+  # Physical type from TIPO DE AERONAVE. No default: an unrecognized type fails the run loudly rather
+  # than silently bucketing a new airframe class. AVION carries no engine-count signal here, so it
+  # maps to the engine-agnostic fixed-wing.
+  airframe_type:
+    field: TIPO DE AERONAVE
+    lookup:
+      AVION: fixed-wing
+      HELICOPTERO: rotorcraft
+      PLANEADOR: glider
+      GLOBO: balloon
+      GIROPL: gyroplane
+      DIRIGIBLE: blimp
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  # USO AERONAVE (COMERCIAL/PRIVADO) is the operational use of the aircraft — meaningful upstream
+  # information with no dedicated schema column, preserved as an operational class. No default:
+  # a new use value fails loudly rather than dropping the distinction.
+  operational_classes:
+    field: USO AERONAVE
+    lookup:
+      COMERCIAL: commercial
+      PRIVADO: private
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # The register publishes only NOMBRE DEL OPERADOR — no owner or legal-owner party. It maps to the
+  # operator slot; owner/legal_owner stay null (nothing to drop — no address PII in this source).
+  # operator.kind is null for single-party rows and stamped co-owner by merge_duplicates when a tail
+  # lists more than one party. Personal names are kept verbatim (a bare name is not the PII this
+  # project drops).
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: NOMBRE DEL OPERADOR
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: CL
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

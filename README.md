@@ -164,6 +164,7 @@ or cache restrictions) lives in [DATA_LICENSES.md](DATA_LICENSES.md).
 | CASA — au-casa | Australia | none | n/a | open | live |
 | ANAC Brasil — br-anac | Brazil | rab@anac.gov.br | 2026-05-05 | confirmed | live |
 | Transport Canada — tc-ca | Canada | none | n/a | open | live |
+| DGAC — cl-dgac | Chile | registro.aeronaves@dgac.gob.cl | 2026-05-10 | confirmed | live |
 | Transpordiamet — ee-tram | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed | live |
 | CAA Latvia — lv-caa | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
 | CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
@@ -194,6 +195,7 @@ Required upstream notices, kept short:
 - Source: Estonian Transport Administration (Transpordiamet) – [transpordiamet.ee/ohusoidukite-register](https://transpordiamet.ee/ohusoidukite-register); reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.
 - CAAS Singapore: source data from the Civil Aviation Authority of Singapore — [certificate-of-registration](https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.
 - Data source: Agencia Estatal de Seguridad Aérea (AESA) — [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas); reusable under Real Decreto 1495/2011 (Ley 37/2007 on public-sector-information reuse), normalized into this project schema without implying endorsement.
+- DGAC Chile: source data from the Dirección General de Aeronáutica Civil (DGAC) of Chile — **sole official source and copyright holder** — [dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves](https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/); reused non-commercially for research and reference under Ley N° 17.336 (Chilean Intellectual Property Law), confirmed in writing by DGAC 2026-07-22, normalized into this project schema without implying endorsement.
 - Norway: source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — [data.norge.no](https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f); publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.
 - Public-domain, CC0, and open-government sources without a specific notice above are credited here as a courtesy; the full source list is tracked in [DATA_LICENSES.md](DATA_LICENSES.md).
 

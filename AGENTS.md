@@ -5,7 +5,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Hard prohibitions
 
 - PII allowed: `owner.{name,kind,state,country}` + `operator.{name,kind,state,country}`. Drop street/street2/city/postal-code/county/region/care-of at the mapping config.
-- No _public_ (unauthenticated) read API. A private, authenticated API is allowed: the feed service (Cloud Run, `src/service/`) is gated by a UUID bearer secret (`FEED_TOKEN`), rate-limited, batched by-hex point-lookup (`POST /feed`, up to 500 exact `icao_hex` values → descriptive aircraft slice: identity, airframe, engine, performance, ownership — no registry-admin/legal/date bookkeeping), server-side, a single authorized consumer application. Batching by exact hex is not enumeration — there is no attribute query/filter/list surface, misses are omitted, and the rate limit bounds it. Not a public surface — no unauthenticated access, query surface, or full-artifact access. It serves one consolidated `feed.sqlite` (built by the pipeline, baked into the image); direct R2 artifact access stays private-operator-binding only. (PRD §CC.4 "no public read API" = no _unauthenticated_ one; this private API complies.)
+- No _public_ (unauthenticated) read API. PRD §CC.4 "no public read API" = no _unauthenticated_ one. The feed service (`src/service/`) complies and is allowed: `FEED_TOKEN` bearer auth, rate-limited, batched exact-`icao_hex` point lookup, one authorized server-side consumer. Never add an attribute query/filter/list surface or full-artifact access. Direct R2 artifact access stays private-operator-binding only.
 - No commercial operator deployment. CC BY-NC + Private-use sources require non-commercial use (PRD §CC.3).
 - No public output distribution. Normalized artifacts are private to Ashley-operated applications only; forks self-host their own artifacts.
 - No `..` in path inputs. Resolve to absolute, enforce sandbox-root containment after resolution, default deny on validation failure.
@@ -33,7 +33,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Coverage thresholds (`bunfig.toml`): 85% lines/functions/statements. Do not lower. Branch coverage is not enforced — `bun test` cannot threshold branches (line/function/statement only).
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground-truth. Change only with schema or config change.
-- `src/pipeline.ts` holds real business logic (cadence gating, staleness-issue open/close, failure-summary rendering) and is covered like any other module via `mock.module` on its dependencies (`tests/pipeline.test.ts`). Only the top-level `if (isCliEntryPoint())` bootstrap is inherently untested — it only runs when the file is invoked as a script, not imported.
+- `src/pipeline.ts` holds real business logic and is covered like any other module, via `mock.module` on its dependencies. Only the `isCliEntryPoint()` bootstrap is inherently untested.
 - Local-validation test files removed before commit.
 
 ## Source onboarding (PRD §CC.x — read it first)
@@ -41,7 +41,14 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Classify source-use posture per CC.1: Open / Private-use / Restrictive / Unknown.
 - Private-use + Unknown: research storage/caching/automation terms first. Send permission email via `docs/agency-permission-request.md` only when private caching is unclear after public-web research.
 - Restrictive means paid single-PC, no-copy, no-storage, no-scraping, view-only, no-redistribute with storage implications, or active denial (PRD §CC.5 storage/caching gate). Exclude. Document reason in `DATA_LICENSES.md`; do not email unless there is a new material fact.
-- New source = 5 surfaces or incomplete: `sources/<id>.yaml` + `fixtures/<id>/` ground-truth + `DATA_LICENSES.md` entry + `README.md` sources row + `README.md` `## Attribution` block (required even for CC-0/public-domain: courtesy credit).
+- New source = all 7 surfaces or it is incomplete:
+  - `sources/<id>.yaml`
+  - `fixtures/<id>/` ground-truth
+  - `DATA_LICENSES.md` entry
+  - `README.md` sources row
+  - `README.md` `## Attribution` block — required even for CC-0/public-domain (courtesy credit)
+  - `src/service/attributions.ts` `NOTICES[<id>]` — a missing entry silently falls back to a generic slug credit; mandated wording stays verbatim to `DATA_LICENSES.md` `## Required Notices`. `tests/service/attributions.test.ts` enforces this; do not weaken it.
+  - `docs/source-onboarding-checklist.md` `✅ Done` row — never let a shipped source vanish from the snapshot
 - README sources table = alphabetical by country. `scripts/check-sources-sorted.py` runs in pre-commit; do not bypass. Insert in correct position, not append. The README table lists sources active in the private operator pipeline; the full agency/source-use tracker lives in `DATA_LICENSES.md`.
 - New scalar/compound transform = 3 places simultaneously or loader rejects: enum in `src/types/config.ts` (`ScalarTransformName`/`CompoundTransformName`) + handler in `src/transforms.ts` + allowlist in `src/config/loader.ts`.
 
@@ -63,13 +70,14 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Ragged CSV rows (cell count ≠ header) fail the parse: short rows silently null trailing fields, long rows silently drop cells. Known non-tabular rows (e.g. an Oracle "N rows selected." trailer): bound with `allowed_ragged_rows`, a per-file budget keyed by download-entry alias exactly like `columns` (default 0 for every unlisted file). Joins always parse as CSV; the primary only does when `format: csv`, so a budget on a non-CSV primary is a load-time error.
 - Server-rendered HTML register table: `format: html` reads the page's first `<table>` via SheetJS (no new dep), then the same `columns`/`skip_rows` shaping as the spreadsheet paths. Multi-table pages: `sheet:` (name or index, same as xls) — SheetJS names them `Sheet1`, `Sheet2`, ... in order.
 - Source-published fleet total (silent-drift guard): `record_count.pattern` (regex, one capture group, matched against the decoded primary file) — the engine asserts the translated record count equals that integer and fails the run on mismatch, so a dropped/added row or a preamble-count shift can't write a wrong-size private artifact silently.
+- Registers emitting one row per co-registered party: `merge_duplicates.fields` (canonical dotted paths joined by `separator`) + optional `set_on_merge` (paths stamped on merge). Paths validate at load against `CANONICAL_PATHS` (`src/schema.ts`) — an unlisted path is stripped by re-validation and vanishes silently. Any other differing path, or a stamped path where _either_ row holds conflicting data, is a real collision and falls to recency. Never drop the extra rows.
 - PDF cover/preface pages (text, zero anchors by design): `pdf.allowed_anchorless_pages` (default 0) bounds how many text-bearing pages may yield no `anchor_pattern` matches. Beyond the budget the parse fails naming the pages (a drifted register page drops its fleet slice and PDF sources can't use `record_count`); zero rows overall always fails regardless of budget. Declare cover pages explicitly — position-based tolerance would silently forgive a drifted first page.
 
 ## Architecture invariants
 
 - `src/schema.ts` = canonical Zod schema. All engine output validates against it before going into the artifact.
 - `src/engine.ts` = source-agnostic. New registry = new YAML + (when needed) new transform/parser path. Never edit engine row-translation logic for a single source.
-- `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()` bytes, no filesystem). Table `aircraft`: every canonical field is its own typed column (`source_id` PK; nested `owner`/`operator`/`legal_owner`/`engine` flattened to `owner_*`/`operator_*`/`legal_owner_*`/`engine_*`; the lone array `operational_classes` as a JSON-string column). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` — consumers filter/sort on any field, not just point lookups. `PRAGMA user_version` is the producer shape marker; bump on any column/contract change.
+- `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()` bytes, no filesystem). Table `aircraft`: every canonical field its own typed column, nested objects flattened, arrays as JSON strings — consumers filter/sort on any field, not just point lookups. `PRAGMA user_version` is the producer shape marker; bump on any column/contract change.
 - R2 keys (strict):
   - `aircraft/<source>.sqlite` — the per-source artifact (replaces the prior object-per-record + by-hex/by-registration index + manifest scheme).
   - `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` for cadence gating and skip-if-unchanged.
@@ -78,13 +86,13 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Deploy/runtime chain (R2 is build+intermediate store only; nothing serves reads from R2). `make build-feed` rebuilds `feed.sqlite` from every R2 `_feed` slice — never from an ambient on-disk copy. `make deploy` = `build-feed` then `deploy-only`. The DB is **baked into the Cloud Run image** (`Dockerfile` COPYs `feed.sqlite`; `MBF_FEED_DB_PATH=/app/feed.sqlite`), served in-memory by `bun:sqlite` — single instance, scale-to-zero, no runtime R2 or DB fetch. Reads never touch R2; a data change reaches production only by a redeploy of a new image.
 - The artifact PUT is gated on `content_hash` (sha256 over the sorted record set, in `db.ts`): unchanged set → no PUT. Registry data (`source_id`/`registration`/`icao_hex`) lives inside the SQLite, never in an R2 key — so it carries no key-escaping constraint.
 - FAA `UNIQUE ID` = `source_id`, never N-number. N-numbers are reissued; UNIQUE ID is permanent.
-- Duplicate `source_id` within a source: byte-identical rows are skipped. Differing rows resolve by recency (`resolveRecency` in `src/engine.ts`) only when a signal exists — a `cancelled` status never outranks a live one, checked before date; failing that, the row with the most recent known date wins. When status and dates tie, a strict canonical superset may win only when every populated value in the sparse row matches; conflicting collisions fail instead of silently dropping upstream data.
+- Duplicate `source_id` within a source: byte-identical rows skip; differing rows resolve via `resolveRecency` (`src/engine.ts`) only when a real signal exists. A collision with no signal fails the run — never last-wins, which silently drops upstream data.
 - A mapping `lookup` with a declared `default`: an unrecognized value doesn't fail the row (the schema still represents it via the default), but `resolveLookup` logs `translate_lookup_default` — matching every other bounded mechanism in the engine (missing-id budget, ragged-row budget, anchorless-page budget), an unrecognized code should be visible, not silently blended into the default forever.
 
 ## Distribution model
 
 - Source-available code (Polyform Shield 1.0.0 + Supplemental Terms). Forks self-host against own R2 + own per-source source-use assessment.
-- Normalized output is private to Ashley-operated applications only, plus the feed service's gated point-lookup slice served to an explicitly authorized consumer application, server-side. No public (unauthenticated) API, public download, public query surface, or public dataset publication — the service is authenticated by a UUID bearer secret, rate-limited, and single-consumer, not public.
+- Normalized output is private to Ashley-operated applications only, plus the feed service's gated slice (terms under Hard prohibitions). No public download, query surface, or dataset publication.
 - Operator deployment must remain non-commercial for lifetime of any Private-use source ingested.
 
 ## GitHub Actions
@@ -98,7 +106,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Commits
 
 - Conventional Commits. **Lowercase type + subject** (commitlint rejects sentence-case/start-case).
-- RAI footer required: `Co-Authored-By: Claude <Model> <noreply@anthropic.com>` (use the actual model name that produced the change).
+- RAI footer: **exactly one**, and it must carry a contact. AI-majority changes (the normal case here) use `Generated-by: Claude <Model> <noreply@anthropic.com>` with the actual model. Never stack a second footer naming that same model — a harness default asking for `Co-Authored-By` does not override this.
+- `rai-footer-exists` (`@checkmarkdevtools/commitlint-plugin-rai`) grades the footer by contribution and rejects the commit if none matches: `Authored-by` human-only · `Commit-generated-by` trivial AI · `Assisted-by` AI-helped but human-written · `Co-authored-by` ~50/50 · `Generated-by` AI-majority. Pick honestly. A second, genuinely distinct agent (e.g. `Codex <noreply@openai.com>`) gets its own line.
 - Atomic: each commit independently typechecks, lints, passes tests.
 - Pre-commit hooks (lefthook): format, lint, gitleaks, sort validator, actionlint, commitlint. Do not skip with `--no-verify`.
 
@@ -127,6 +136,6 @@ Never: stack feature + unrelated docs because "commit + push" was said; call a m
   - `DATA_LICENSES.md` — when a source is added or its source-use posture changes.
   - `README.md` sources table (private-pipeline/cleared sources) + `README.md` `## Attribution` block — alongside any new `sources/<id>.yaml`.
   - `PRD.md` — only when goals, requirements, or constraints shift. It is planning, not a shipped-implementation log; do not restate source YAML or schema here.
-- `DATA_LICENSES.md` is the single record of source for agency correspondence (every country contacted: email, sent/reply dates, status) and source-use posture. It is a flat tracker, not a reply archive: the agency's email thread is the complete verbatim record. Into the tracker capture only what downstream needs — status, source-use posture, storage/cache restrictions, and any license/attribution terms that must be quoted exactly (never paraphrased) so the `README.md` `## Attribution` block can cite them. Do not transcribe full replies into the table, and do not duplicate the table into other docs.
+- `DATA_LICENSES.md` is the single record of source for agency correspondence and source-use posture. Flat tracker, not a reply archive — the email thread is the verbatim record. Capture only what downstream needs: status, posture, storage/cache restrictions, and license/attribution terms that must be quoted exactly (never paraphrased) for the README `## Attribution` block. Don't transcribe replies; don't duplicate the table into other docs.
 - `docs/source-onboarding-checklist.md`: triage worklist only. Tracking tables stay bare (Source/Sent/Follow-up/Reply/Fallback) — contact provenance, names, phones, and prefixes belong in `DATA_LICENSES.md`, not here.
 - Inline code comments: WHY only (per Hard prohibitions WHAT-vs-WHY rule).

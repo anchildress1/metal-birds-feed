@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve, isAbsolute, relative } from 'node:path';
 import { load } from 'js-yaml';
 import { z } from 'zod';
+import { CANONICAL_PATHS } from '../schema.js';
 import {
   SCALAR_TRANSFORMS,
   ARRAY_TRANSFORMS,
@@ -169,6 +170,33 @@ const SourceConfigSchema = z
     source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
     registration: z.string().min(1),
     cadence_days: z.number().int().positive().optional(),
+    merge_duplicates: z
+      .strictObject({
+        fields: z.array(z.string().min(1)).min(1),
+        separator: z.string().min(1).optional(),
+        set_on_merge: z.record(z.string().min(1), z.string().nullable()).optional(),
+      })
+      // Both key sets are written into the canonical record by the merge, so a path the schema
+      // doesn't define is stripped by re-validation and disappears silently — the merge still
+      // "succeeds" while the intended field stays unset. Reject it at load instead.
+      .superRefine((m, ctx) => {
+        const stamped = Object.keys(m.set_on_merge ?? {});
+        for (const path of [...m.fields, ...stamped])
+          if (!CANONICAL_PATHS.has(path))
+            ctx.addIssue({
+              code: 'custom',
+              message: `merge_duplicates path "${path}" is not a canonical schema path`,
+            });
+        // Stamping runs after concatenation, so a path in both lists has its concatenated upstream
+        // values overwritten by the fixed stamp — every merged party silently lost, run reporting
+        // success. The two intents are contradictory; make the config state one of them.
+        for (const path of m.fields.filter((f) => stamped.includes(f)))
+          ctx.addIssue({
+            code: 'custom',
+            message: `merge_duplicates path "${path}" is in both fields and set_on_merge; the stamp would overwrite the concatenated values`,
+          });
+      })
+      .optional(),
     mapping: z.record(z.string(), FieldMappingSchema),
   })
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {

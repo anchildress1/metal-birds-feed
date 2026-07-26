@@ -286,6 +286,13 @@ const brRegistration = (value: string): string | null => {
   return `${v.slice(0, 2)}-${v.slice(2)}`;
 };
 
+// Chile's register stores the dash-less mark (CCAAA); restore the CC- prefix (CC-AAA). null if not
+// the CC + 3 shape, which fails the row loudly rather than publishing a malformed registration.
+const clRegistration = (value: string): string | null => {
+  const v = value.trim().toUpperCase();
+  return /^CC[A-Z0-9]{3}$/.test(v) ? `CC-${v.slice(2)}` : null;
+};
+
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
 // unpowered (glider); RPA/unknown -> null (no canonical UAV enum).
 const brAirframe = (value: string): string | null => {
@@ -649,6 +656,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   no_owner_name: noOwnerName,
   no_owner_country: noOwnerCountry,
   no_owner_kind: noOwnerKind,
+  cl_registration: clRegistration,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
