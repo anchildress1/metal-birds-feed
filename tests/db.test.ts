@@ -46,6 +46,11 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   cancellation_reason: null,
   lien_status: null,
   interdiction_code: null,
+  translations_en: {
+    cancellation_reason: null,
+    airworthiness_class: null,
+    lien_status: null,
+  },
 });
 
 // Every field set to a DISTINCT non-null sentinel so a column/value mis-map (e.g. owner_country
@@ -93,6 +98,11 @@ const populated: Aircraft = {
   cancellation_reason: 'owner request',
   lien_status: 'none',
   interdiction_code: 'INT-9',
+  translations_en: {
+    cancellation_reason: 'owner request EN',
+    airworthiness_class: 'Utility EN',
+    lien_status: 'none EN',
+  },
 };
 
 const records = new Map([
@@ -183,6 +193,9 @@ describe('buildSqlite', () => {
       cancellation_reason: 'owner request',
       lien_status: 'none',
       interdiction_code: 'INT-9',
+      translations_en_cancellation_reason: 'owner request EN',
+      translations_en_airworthiness_class: 'Utility EN',
+      translations_en_lien_status: 'none EN',
     });
   });
 
@@ -226,7 +239,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(3);
+    expect(version.user_version).toBe(4);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -287,9 +300,12 @@ describe('buildSqlite', () => {
       'cancellation_reason',
       'lien_status',
       'interdiction_code',
+      'translations_en_cancellation_reason',
+      'translations_en_airworthiness_class',
+      'translations_en_lien_status',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(3);
+    expect(version.user_version).toBe(4);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -309,7 +325,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(3);
+    expect(version.user_version).toBe(4);
   });
 });
 

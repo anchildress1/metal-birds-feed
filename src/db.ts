@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
-import type { Aircraft, Engine, Owner } from './schema.js';
+import type { Aircraft, Engine, Owner, TranslationsEn } from './schema.js';
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
@@ -25,11 +25,12 @@ type Bind = string | number | null;
 // this, so adding a field to `Aircraft`/`Owner`/`Engine` without mapping it here is a compile error
 // (guards the AGENTS "no silent loss of upstream information" rule).
 type FlatColumn =
-  | Exclude<keyof Aircraft, 'engine' | 'owner' | 'operator' | 'legal_owner'>
+  | Exclude<keyof Aircraft, 'engine' | 'owner' | 'operator' | 'legal_owner' | 'translations_en'>
   | `engine_${keyof Engine}`
   | `owner_${keyof Owner}`
   | `operator_${keyof Owner}`
-  | `legal_owner_${keyof Owner}`;
+  | `legal_owner_${keyof Owner}`
+  | `translations_en_${keyof TranslationsEn}`;
 
 // Single source of truth for column name → bound value. The INSERT column list and the bound
 // values both derive from this one object, so they cannot drift in order or membership. The lone
@@ -84,6 +85,9 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   cancellation_reason: r.cancellation_reason,
   lien_status: r.lien_status,
   interdiction_code: r.interdiction_code,
+  translations_en_cancellation_reason: r.translations_en.cancellation_reason,
+  translations_en_airworthiness_class: r.translations_en.airworthiness_class,
+  translations_en_lien_status: r.translations_en.lien_status,
 });
 
 // Column SQL types. STRICT enforces them at insert; `INTEGER` columns back `z.number().int()`
@@ -138,7 +142,10 @@ const DDL = `CREATE TABLE aircraft (
   airworthiness_review_date TEXT,
   cancellation_reason TEXT,
   lien_status TEXT,
-  interdiction_code TEXT
+  interdiction_code TEXT,
+  translations_en_cancellation_reason TEXT,
+  translations_en_airworthiness_class TEXT,
+  translations_en_lien_status TEXT
 ) STRICT`;
 
 // Indexed for the common consumer filters; `source_id` is already the PK.
@@ -156,7 +163,7 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
   const db = new Database(':memory:');
   try {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
-    db.run('PRAGMA user_version = 3');
+    db.run('PRAGMA user_version = 4');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

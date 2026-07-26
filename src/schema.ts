@@ -102,6 +102,14 @@ export const EngineSchema = z.object({
 });
 export type Engine = z.infer<typeof EngineSchema>;
 
+// English translation of the corresponding field, additive only — original is never overwritten.
+export const TranslationsEnSchema = z.object({
+  cancellation_reason: z.string().nullable(),
+  airworthiness_class: z.string().nullable(),
+  lien_status: z.string().nullable(),
+});
+export type TranslationsEn = z.infer<typeof TranslationsEnSchema>;
+
 export const AircraftSchema = z.object({
   source: z.string(),
   source_id: z.string(),
@@ -148,6 +156,7 @@ export const AircraftSchema = z.object({
   // Authoritative restriction code, preserved verbatim — its legend is registry-specific and
   // not published in machine-readable form, so consumers decode it against their own table.
   interdiction_code: z.string().nullable(),
+  translations_en: TranslationsEnSchema,
 });
 export type Aircraft = z.infer<typeof AircraftSchema>;
 

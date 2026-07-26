@@ -736,5 +736,10 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     cancellation_reason: scalarField(m, row, 'cancellation_reason', s),
     lien_status: scalarField(m, row, 'lien_status', s),
     interdiction_code: scalarField(m, row, 'interdiction_code', s),
+    translations_en: {
+      cancellation_reason: null,
+      airworthiness_class: null,
+      lien_status: null,
+    },
   };
 }

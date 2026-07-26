@@ -48,6 +48,11 @@ const make = (id: string, hex: string): Aircraft =>
     cancellation_reason: null,
     lien_status: null,
     interdiction_code: null,
+    translations_en: {
+      cancellation_reason: null,
+      airworthiness_class: null,
+      lien_status: null,
+    },
   }) satisfies Aircraft;
 
 const testDb = (): Database => Database.deserialize(buildFeedDb(toFeedRows([make('1', 'a1b2c3')])));

@@ -53,6 +53,11 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
   cancellation_reason: null,
   lien_status: null,
   interdiction_code: null,
+  translations_en: {
+    cancellation_reason: null,
+    airworthiness_class: null,
+    lien_status: null,
+  },
   ...overrides,
 });
 
