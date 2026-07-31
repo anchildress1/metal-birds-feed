@@ -33,7 +33,7 @@ export interface FeedRow {
   operator_kind: string | null;
   operator_state: string | null;
   operator_country: string | null;
-  cancellation_reason_en: string | null;
-  airworthiness_class_en: string | null;
+  cancellation_reason: string | null;
+  airworthiness_class: string | null;
   source: string;
 }

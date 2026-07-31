@@ -26,8 +26,10 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
   category: null,
   build_certification: null,
   airworthiness_class: null,
+  airworthiness_class_source_text: null,
   operating_environment: null,
   operational_classes: [],
+  operational_classes_source_text: [],
   engine: {
     manufacturer: null,
     model: null,
@@ -51,12 +53,10 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
   min_crew: null,
   airworthiness_review_date: null,
   cancellation_reason: null,
+  cancellation_reason_source_text: null,
   lien_status: null,
+  lien_status_source_text: null,
   interdiction_code: null,
-  translations_en: {
-    cancellation_reason: null,
-    airworthiness_class: null,
-  },
   ...overrides,
 });
 

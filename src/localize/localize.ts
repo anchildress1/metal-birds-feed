@@ -12,12 +12,24 @@ import {
 import { translateBatch } from './gemini-client.js';
 import { log, errorMessage } from '../logger.js';
 
-// idera_authorised_party and lien_status (for mv-caa specifically) are excluded: both can hold a
-// party's NAME, not descriptive text — see mv-caa.yaml/au-casa.yaml's own field comments.
-const TRANSLATABLE_FIELDS = [
+// Scalar (single-string) translatable fields. operational_classes is translated too, but as an
+// array — handled separately below since each element gets its own cache entry.
+//
+// idera_authorised_party is excluded for every source: it's always a party's NAME, not descriptive
+// text — see sources/mv-caa.yaml's own field comment.
+const TRANSLATABLE_SCALAR_FIELDS = [
   'cancellation_reason',
   'airworthiness_class',
+  'lien_status',
 ] as const satisfies readonly TranslatableField[];
+
+// Per-source exclusions for an otherwise-translatable field. lien_status is descriptive text for
+// most sources (e.g. br-anac's DS_GRAVAME, a lien *description*) but mv-caa's `mortgage` cell holds
+// the mortgagee's NAME instead — translating it would corrupt a proper noun, so it's excluded only
+// for mv-caa, not globally.
+const FIELD_EXCLUDED_FOR_SOURCE: Partial<Record<TranslatableField, ReadonlySet<string>>> = {
+  lien_status: new Set(['mv-caa']),
+};
 
 const DEFAULT_REQUESTS_PER_MINUTE = 10;
 
@@ -30,12 +42,22 @@ export interface LocalizationStats {
 
 type Candidate = { field: TranslatableField; text: string };
 
-const collectCandidates = (records: Map<string, Aircraft>): Map<string, Candidate> => {
+const collectCandidates = (
+  records: Map<string, Aircraft>,
+  sourceId: string
+): Map<string, Candidate> => {
   const candidates = new Map<string, Candidate>();
   for (const record of records.values()) {
-    for (const field of TRANSLATABLE_FIELDS) {
+    for (const field of TRANSLATABLE_SCALAR_FIELDS) {
+      if (FIELD_EXCLUDED_FOR_SOURCE[field]?.has(sourceId)) continue;
       const text = record[field];
       if (text !== null) candidates.set(hashTranslatable(field, text), { field, text });
+    }
+    for (const text of record.operational_classes) {
+      candidates.set(hashTranslatable('operational_classes', text), {
+        field: 'operational_classes',
+        text,
+      });
     }
   }
   return candidates;
@@ -126,21 +148,31 @@ const resolveTranslations = async (
   };
 };
 
+// English-primary: the canonical field IS the translation, not an additive sibling. A cache miss
+// (not yet translated, or Gemini/cache failed) keeps the original text rather than nulling — an
+// enrichment step that hasn't run must not empty a populated upstream field.
 const applyTranslations = (
   records: Map<string, Aircraft>,
-  cache: TranslationCache
+  cache: TranslationCache,
+  sourceId: string
 ): Map<string, Aircraft> => {
   const localized = new Map<string, Aircraft>();
   for (const [id, record] of records) {
-    const translatedValue = (field: TranslatableField): string | null => {
-      const text = record[field];
-      return text === null ? null : (cache.entries[hashTranslatable(field, text)] ?? null);
+    const translateScalar = (field: TranslatableField, text: string | null): string | null => {
+      if (text === null) return null;
+      if (FIELD_EXCLUDED_FOR_SOURCE[field]?.has(sourceId)) return text;
+      return cache.entries[hashTranslatable(field, text)] ?? text;
     };
-    const translations_en: Aircraft['translations_en'] = {
-      cancellation_reason: translatedValue('cancellation_reason'),
-      airworthiness_class: translatedValue('airworthiness_class'),
-    };
-    localized.set(id, { ...record, translations_en });
+    const translateArray = (values: string[]): string[] =>
+      values.map((v) => cache.entries[hashTranslatable('operational_classes', v)] ?? v);
+
+    localized.set(id, {
+      ...record,
+      cancellation_reason: translateScalar('cancellation_reason', record.cancellation_reason),
+      airworthiness_class: translateScalar('airworthiness_class', record.airworthiness_class),
+      lien_status: translateScalar('lien_status', record.lien_status),
+      operational_classes: translateArray(record.operational_classes),
+    });
   }
   return localized;
 };
@@ -151,7 +183,7 @@ export const localizeRecords = async (
   writer: R2ArtifactWriter,
   dryRun = false
 ): Promise<{ records: Map<string, Aircraft>; stats: LocalizationStats }> => {
-  const candidates = collectCandidates(records);
+  const candidates = collectCandidates(records, sourceId);
   if (candidates.size === 0) {
     return { records, stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 } };
   }
@@ -159,7 +191,7 @@ export const localizeRecords = async (
   const { cache, stats } = await resolveTranslations(candidates, sourceId, writer, dryRun);
 
   return {
-    records: applyTranslations(records, cache),
+    records: applyTranslations(records, cache, sourceId),
     stats: { candidates: candidates.size, ...stats },
   };
 };

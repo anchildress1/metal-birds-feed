@@ -159,7 +159,7 @@ describe('run', () => {
 
   it('writes localizeRecords output when transient localization misses are reported', async () => {
     const translated = new Map([['1', { source_id: '1' }]]);
-    const localized = new Map([['1', { source_id: '1', translations_en: {} }]]);
+    const localized = new Map([['1', { source_id: '1' }]]);
     mockTranslate.mockResolvedValueOnce({
       records: translated,
       stats: { total: 1, ok: 1, failed: 0 },

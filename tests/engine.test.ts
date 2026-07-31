@@ -1904,6 +1904,13 @@ describe('BR-ANAC fixture translation', () => {
       expect(r.lien_status).toBe('MATRICULA CANCELADA');
       expect(r.airworthiness_review_date).toBe('2026-02-18');
     });
+    // br-anac declares no *_source_text mapping, so each companion mirrors its primary. This record
+    // carries all three populated — a mirror regressing to null passes trivially against null ones.
+    it('mirrors each primary into *_source_text when the config declares no override', () => {
+      expect(r.cancellation_reason_source_text).toBe('AERONAVE EXPORTADA');
+      expect(r.lien_status_source_text).toBe('MATRICULA CANCELADA');
+      expect(r.operational_classes_source_text).toEqual(['PRIVADA']);
+    });
   });
 
   describe('PPJCR — three-way co-ownership', () => {
@@ -2253,6 +2260,13 @@ describe('AESA Spain fixture translation (PDF)', () => {
     it('types it single-engine via the engine count and labels the class in English', () => {
       expect(r.airframe_type).toBe('fixed-wing-single-engine');
       expect(r.airworthiness_class).toBe('airplane');
+    });
+    // es_aesa_class_en renders English at parse time, so the mirrored default would store English
+    // in source_text and lose the Spanish original AESA's licence requires be recoverable. The
+    // explicit airworthiness_class_source_text mapping must win over the mirror.
+    it('keeps the raw Spanish class, the explicit source_text mapping beating the mirror', () => {
+      expect(r.airworthiness_class_source_text).toBe('AVION');
+      expect(r.airworthiness_class_source_text).not.toBe(r.airworthiness_class);
     });
     it('maps the engine detail and count', () => {
       expect(r.engine.manufacturer).toBe('LYCOMING');

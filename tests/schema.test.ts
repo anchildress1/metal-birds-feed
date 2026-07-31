@@ -17,8 +17,10 @@ const base: Aircraft = {
   category: 'standard',
   build_certification: 'type-certificated',
   airworthiness_class: '1',
+  airworthiness_class_source_text: '1',
   operating_environment: 'land',
   operational_classes: ['4'],
+  operational_classes_source_text: ['4'],
   engine: {
     manufacturer: null,
     model: null,
@@ -42,12 +44,10 @@ const base: Aircraft = {
   min_crew: null,
   airworthiness_review_date: null,
   cancellation_reason: null,
+  cancellation_reason_source_text: null,
   lien_status: null,
+  lien_status_source_text: null,
   interdiction_code: null,
-  translations_en: {
-    cancellation_reason: null,
-    airworthiness_class: null,
-  },
 };
 
 describe('AircraftSchema', () => {

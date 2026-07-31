@@ -102,15 +102,6 @@ export const EngineSchema = z.object({
 });
 export type Engine = z.infer<typeof EngineSchema>;
 
-// English translation of the corresponding field, additive only — original is never overwritten.
-// lien_status is excluded: at least one onboarded source (mv-caa) populates it with a
-// mortgagee's NAME, not a status description — same proper-noun problem as idera_authorised_party.
-export const TranslationsEnSchema = z.object({
-  cancellation_reason: z.string().nullable(),
-  airworthiness_class: z.string().nullable(),
-});
-export type TranslationsEn = z.infer<typeof TranslationsEnSchema>;
-
 export const AircraftSchema = z.object({
   source: z.string(),
   source_id: z.string(),
@@ -134,9 +125,15 @@ export const AircraftSchema = z.object({
   airframe_type: AirframeTypeSchema.nullable(),
   category: AircraftCategorySchema.nullable(),
   build_certification: BuildCertificationSchema.nullable(),
+  // English-primary. An untranslated value survives here rather than nulling: a translation miss
+  // leaves the pre-translation text in place.
   airworthiness_class: z.string().nullable(),
+  // Untranslated original — the provenance a licence requiring the source meaning not be distorted
+  // relies on (e.g. AESA Spain). Never read back by the pipeline; write-once at parse time.
+  airworthiness_class_source_text: z.string().nullable(),
   operating_environment: OperatingEnvironmentSchema.nullable(),
   operational_classes: z.array(z.string()),
+  operational_classes_source_text: z.array(z.string()),
   engine: EngineSchema,
   owner: OwnerSchema,
   operator: OperatorSchema,
@@ -153,11 +150,14 @@ export const AircraftSchema = z.object({
   min_crew: z.number().int().nullable(),
   airworthiness_review_date: isoDate,
   cancellation_reason: z.string().nullable(),
+  cancellation_reason_source_text: z.string().nullable(),
+  // English-primary, except for mv-caa — its mortgage cell holds the mortgagee's NAME, so it is
+  // excluded per-source in localize.ts rather than translated into a corrupted proper noun.
   lien_status: z.string().nullable(),
+  lien_status_source_text: z.string().nullable(),
   // Authoritative restriction code, preserved verbatim — its legend is registry-specific and
   // not published in machine-readable form, so consumers decode it against their own table.
   interdiction_code: z.string().nullable(),
-  translations_en: TranslationsEnSchema,
 });
 export type Aircraft = z.infer<typeof AircraftSchema>;
 

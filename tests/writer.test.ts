@@ -34,8 +34,8 @@ const FEED_ROW: FeedRow = {
   operator_kind: null,
   operator_state: null,
   operator_country: null,
-  cancellation_reason_en: null,
-  airworthiness_class_en: null,
+  cancellation_reason: null,
+  airworthiness_class: null,
   source: 'faa',
 };
 
@@ -107,8 +107,10 @@ function makeAircraft(id: string, reg: string, hex: string | null = null): Aircr
     category: 'standard',
     build_certification: 'type-certificated',
     airworthiness_class: '1',
+    airworthiness_class_source_text: '1',
     operating_environment: 'land',
     operational_classes: ['4'],
+    operational_classes_source_text: ['4'],
     engine: {
       manufacturer: null,
       model: null,
@@ -132,12 +134,10 @@ function makeAircraft(id: string, reg: string, hex: string | null = null): Aircr
     min_crew: null,
     airworthiness_review_date: null,
     cancellation_reason: null,
+    cancellation_reason_source_text: null,
     lien_status: null,
+    lien_status_source_text: null,
     interdiction_code: null,
-    translations_en: {
-      cancellation_reason: null,
-      airworthiness_class: null,
-    },
   };
 }
 

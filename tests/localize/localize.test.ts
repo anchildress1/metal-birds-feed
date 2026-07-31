@@ -34,8 +34,10 @@ const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   category: null,
   build_certification: null,
   airworthiness_class: null,
+  airworthiness_class_source_text: null,
   operating_environment: null,
   operational_classes: [],
+  operational_classes_source_text: [],
   engine: {
     manufacturer: null,
     model: null,
@@ -59,12 +61,10 @@ const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   min_crew: null,
   airworthiness_review_date: null,
   cancellation_reason: null,
+  cancellation_reason_source_text: null,
   lien_status: null,
+  lien_status_source_text: null,
   interdiction_code: null,
-  translations_en: {
-    cancellation_reason: null,
-    airworthiness_class: null,
-  },
   ...overrides,
 });
 
@@ -112,10 +112,10 @@ describe('localizeRecords', () => {
     expect(stats).toEqual({ candidates: 0, cache_hits: 0, translated: 0, failed: 0 });
     expect(readTranslationCache).not.toHaveBeenCalled();
     expect(translateBatch).not.toHaveBeenCalled();
-    expect(result.get('1')!.translations_en.cancellation_reason).toBeNull();
+    expect(result.get('1')!.cancellation_reason).toBeNull();
   });
 
-  it('translates a cache miss and persists the updated cache', async () => {
+  it('translates a cache miss into the primary field and persists the updated cache', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
@@ -124,21 +124,30 @@ describe('localizeRecords', () => {
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 1, failed: 0 });
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
     expect(writeTranslationCache).toHaveBeenCalledWith(
       'br-anac',
       cacheEnvelope({ [hash]: 'Aircraft exported' })
     );
   });
 
-  it('never overwrites the original field, on success or failure', async () => {
-    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+  it('never touches source_text, and falls back the primary field to it on failure', async () => {
+    const records = new Map([
+      [
+        '1',
+        make('1', {
+          cancellation_reason: 'AERONAVE EXPORTADA',
+          cancellation_reason_source_text: 'AERONAVE EXPORTADA',
+        }),
+      ],
+    ]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
 
     const { records: success } = await localizeRecords(records, 'br-anac', writer);
-    expect(success.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
+    expect(success.get('1')!.cancellation_reason).toBe('Aircraft exported');
+    expect(success.get('1')!.cancellation_reason_source_text).toBe('AERONAVE EXPORTADA');
 
     translateBatch.mockReturnValue(
       Promise.resolve({ translated: new Map(), errors: [new Error('x')] })
@@ -146,6 +155,7 @@ describe('localizeRecords', () => {
     const { writer: writer2 } = fakeWriter();
     const { records: failure } = await localizeRecords(records, 'br-anac', writer2);
     expect(failure.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
+    expect(failure.get('1')!.cancellation_reason_source_text).toBe('AERONAVE EXPORTADA');
   });
 
   it('resolves from cache without calling Gemini', async () => {
@@ -156,7 +166,7 @@ describe('localizeRecords', () => {
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats).toEqual({ candidates: 1, cache_hits: 1, translated: 0, failed: 0 });
-    expect(result.get('1')!.translations_en.airworthiness_class).toBe('Standard (cached)');
+    expect(result.get('1')!.airworthiness_class).toBe('Standard (cached)');
     expect(translateBatch).not.toHaveBeenCalled();
   });
 
@@ -176,11 +186,11 @@ describe('localizeRecords', () => {
     expect(translateBatch.mock.calls[0][0]).toEqual([
       { id: hash, field: 'cancellation_reason', text: 'AERONAVE EXPORTADA' },
     ]);
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
-    expect(result.get('2')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('2')!.cancellation_reason).toBe('Aircraft exported');
   });
 
-  it('leaves translations null and skips the cache write when every chunk errors', async () => {
+  it('falls back to the original text and skips the cache write when every chunk errors', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     translateBatch.mockReturnValue(
       Promise.resolve({ translated: new Map(), errors: [new Error('quota exceeded')] })
@@ -190,11 +200,11 @@ describe('localizeRecords', () => {
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 1 });
-    expect(result.get('1')!.translations_en.cancellation_reason).toBeNull();
+    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
-  it('leaves translations null on an auth-shaped Gemini error, without throwing', async () => {
+  it('falls back to the original text on an auth-shaped Gemini error, without throwing', async () => {
     // Only an absent GEMINI_API_KEY (requireEnv) throws. Any error the Gemini call itself
     // produces — auth, bad request, malformed response — degrades the same as a transient one.
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
@@ -205,7 +215,7 @@ describe('localizeRecords', () => {
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats.failed).toBe(1);
-    expect(result.get('1')!.translations_en.cancellation_reason).toBeNull();
+    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
@@ -225,8 +235,8 @@ describe('localizeRecords', () => {
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats).toEqual({ candidates: 2, cache_hits: 0, translated: 1, failed: 1 });
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
-    expect(result.get('1')!.translations_en.airworthiness_class).toBeNull();
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.airworthiness_class).toBe('CA PADRAO');
     const cache = writeTranslationCache.mock.calls[0][1] as ReturnType<typeof cacheEnvelope>;
     expect(cache).toEqual(cacheEnvelope({ [hashA]: 'Aircraft exported' }));
     expect(cache.entries[hashB]).toBeUndefined();
@@ -263,7 +273,7 @@ describe('localizeRecords', () => {
     const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
 
     expect(stats.failed).toBe(0);
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
@@ -280,7 +290,7 @@ describe('localizeRecords', () => {
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
     expect(translateBatch).toHaveBeenCalledTimes(1);
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
   });
 
   it('still returns the in-memory translation when the cache write fails, without throwing', async () => {
@@ -294,7 +304,7 @@ describe('localizeRecords', () => {
 
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
   });
 
   it('degrades on an access-denied cache write the same as a transient one', async () => {
@@ -309,7 +319,7 @@ describe('localizeRecords', () => {
 
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
   });
 
   it('falls back to the default RPM and still translates when GEMINI_REQUESTS_PER_MINUTE is malformed', async () => {
@@ -323,7 +333,7 @@ describe('localizeRecords', () => {
 
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
-    expect(result.get('1')!.translations_en.cancellation_reason).toBe('Aircraft exported');
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
     expect(translateBatch).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ requestsPerMinute: 10 })
@@ -343,7 +353,7 @@ describe('localizeRecords', () => {
     expect(translateBatch).not.toHaveBeenCalled();
   });
 
-  it('never calls Gemini or writes the cache in dry-run mode', async () => {
+  it('never calls Gemini or writes the cache in dry-run mode, and leaves the original text in place', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const { writer, writeTranslationCache } = fakeWriter();
 
@@ -352,7 +362,7 @@ describe('localizeRecords', () => {
     expect(translateBatch).not.toHaveBeenCalled();
     expect(writeTranslationCache).not.toHaveBeenCalled();
     expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 0 });
-    expect(result.get('1')!.translations_en.cancellation_reason).toBeNull();
+    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
   });
 
   it('passes null through for an unpopulated field even when others are translated', async () => {
@@ -363,6 +373,60 @@ describe('localizeRecords', () => {
 
     const { records: result } = await localizeRecords(records, 'br-anac', writer);
 
-    expect(result.get('1')!.translations_en.airworthiness_class).toBeNull();
+    expect(result.get('1')!.airworthiness_class).toBeNull();
+  });
+
+  it('translates lien_status for a source other than mv-caa', async () => {
+    const hash = hashTranslatable('lien_status', 'ALIENACAO FIDUCIARIA');
+    const records = new Map([['1', make('1', { lien_status: 'ALIENACAO FIDUCIARIA' })]]);
+    translateBatch.mockReturnValue(ok([[hash, 'Fiduciary lien']]));
+    const { writer } = fakeWriter();
+
+    const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
+
+    expect(stats.candidates).toBe(1);
+    expect(result.get('1')!.lien_status).toBe('Fiduciary lien');
+  });
+
+  it('never sends mv-caa lien_status to Gemini — it holds a party name, not a description', async () => {
+    const records = new Map([
+      ['1', make('1', { source: 'mv-caa', lien_status: 'First Bank Ltd' })],
+    ]);
+    const { writer } = fakeWriter();
+
+    const { records: result, stats } = await localizeRecords(records, 'mv-caa', writer);
+
+    expect(stats.candidates).toBe(0);
+    expect(translateBatch).not.toHaveBeenCalled();
+    expect(result.get('1')!.lien_status).toBe('First Bank Ltd');
+  });
+
+  it('translates each operational_classes element independently and preserves array order', async () => {
+    const hashA = hashTranslatable('operational_classes', 'INSTRUCAO');
+    const hashB = hashTranslatable('operational_classes', 'AGRICOLA');
+    const records = new Map([['1', make('1', { operational_classes: ['INSTRUCAO', 'AGRICOLA'] })]]);
+    translateBatch.mockReturnValue(
+      ok([
+        [hashA, 'Instruction'],
+        [hashB, 'Agricultural'],
+      ])
+    );
+    const { writer } = fakeWriter();
+
+    const { records: result, stats } = await localizeRecords(records, 'br-anac', writer);
+
+    expect(stats.candidates).toBe(2);
+    expect(result.get('1')!.operational_classes).toEqual(['Instruction', 'Agricultural']);
+  });
+
+  it('falls back per-element to the original operational_classes text on a partial response', async () => {
+    const hashA = hashTranslatable('operational_classes', 'INSTRUCAO');
+    const records = new Map([['1', make('1', { operational_classes: ['INSTRUCAO', 'AGRICOLA'] })]]);
+    translateBatch.mockReturnValue(ok([[hashA, 'Instruction']]));
+    const { writer } = fakeWriter();
+
+    const { records: result } = await localizeRecords(records, 'br-anac', writer);
+
+    expect(result.get('1')!.operational_classes).toEqual(['Instruction', 'AGRICOLA']);
   });
 });

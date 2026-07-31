@@ -1,8 +1,14 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import type { Aircraft } from '../schema.js';
 
-export type TranslatableField = keyof Aircraft['translations_en'];
+// Fields eligible for English rendering. An explicit union, not derived from Aircraft: eligibility
+// is a translation-pipeline concern, not a schema shape — idera_authorised_party is a string field
+// too, and is deliberately never a candidate.
+export type TranslatableField =
+  | 'cancellation_reason'
+  | 'airworthiness_class'
+  | 'lien_status'
+  | 'operational_classes';
 
 const TranslationEntriesSchema = z.record(z.string().regex(/^[0-9a-f]{64}$/), z.string());
 
