@@ -15,7 +15,9 @@ download:
   url: https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
   format: file
   discover_url: https://www.caa.gov.mv/operations/registration-of-aircraft-and-mortgages
-  discover_pattern: 'register can be downloaded from <a href="(https://[^"]+\.pdf)"'
+  # href is relative (e.g. "/attachments/<hash>.pdf") as of 2026-07-29; capture without requiring
+  # an https:// prefix so a future switch back to an absolute href keeps matching too.
+  discover_pattern: 'register can be downloaded from <a href="([^"]+\.pdf)"'
   headers:
     User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
   entries:
