@@ -10,7 +10,15 @@ const translateBatch = mock();
 const requireEnv = mock(() => 'test-key');
 const readPositiveIntegerEnv = mock(() => 10);
 
-void mock.module('../../src/localize/gemini-client.js', () => ({ translateBatch }));
+// isGeminiAuthError is re-exported real: it is a pure status predicate, and stubbing it would let
+// the auth hard-fail pass on a mock that never matches the production classification.
+void mock.module('../../src/localize/gemini-client.js', () => ({
+  translateBatch,
+  isGeminiAuthError: (e: unknown) => {
+    const s = (e as { status?: unknown } | null)?.status;
+    return s === 401 || s === 403;
+  },
+}));
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
 const { localizeRecords } = await import('../../src/localize/localize.js');
@@ -204,11 +212,11 @@ describe('localizeRecords', () => {
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
-  it('falls back to the original text on an auth-shaped Gemini error, without throwing', async () => {
-    // Only an absent GEMINI_API_KEY (requireEnv) throws. Any error the Gemini call itself
-    // produces — auth, bad request, malformed response — degrades the same as a transient one.
+  it('falls back to the original text on a non-auth Gemini error, without throwing', async () => {
+    // A bad request or malformed response degrades like a transient failure — the run still ships,
+    // just untranslated. Only an absent or rejected key throws.
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    const error = Object.assign(new Error('API key rejected'), { status: 401 });
+    const error = Object.assign(new Error('bad request'), { status: 400 });
     translateBatch.mockReturnValue(Promise.resolve({ translated: new Map(), errors: [error] }));
     const { writer, writeTranslationCache } = fakeWriter();
 
@@ -351,6 +359,24 @@ describe('localizeRecords', () => {
       'Missing required environment variable: GEMINI_API_KEY'
     );
     expect(translateBatch).not.toHaveBeenCalled();
+  });
+
+  // A rejected key fails identically every run. Degrading to a warn would ship untranslated data
+  // indefinitely behind a green pipeline, which is the same setup bug as a missing key.
+  it.each([401, 403])('throws when Gemini rejects the key with %i', async (status) => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    translateBatch.mockReturnValue(
+      Promise.resolve({
+        translated: new Map(),
+        errors: [Object.assign(new Error('denied'), { status })],
+      })
+    );
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await expect(localizeRecords(records, 'br-anac', 'pt', writer)).rejects.toThrow(
+      /GEMINI_API_KEY rejected/
+    );
+    expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
   it('never calls Gemini or writes the cache in dry-run mode, and leaves the original text in place', async () => {
