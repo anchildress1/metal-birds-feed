@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { crc32 } from 'node:zlib';
 import { download, STREAM_THRESHOLD_BYTES, type RetryOptions } from '../src/downloader.js';
+import { loadSourceConfig } from '../src/config/loader.js';
 import type { DownloadConfig } from '../src/types/config.js';
 
 // No-op sleep keeps backoff out of the test clock; assertions cover attempt counts, not timing.
@@ -550,6 +551,32 @@ describe('download — discover_url + discover_pattern', () => {
 
     // First match in INDEX_HTML is the April 2026 file (declared first).
     expect(fetchFn.mock.calls[1]?.[0]).toContain('2026-04-28');
+  });
+
+  // Regression: the registration page serves the register link as a relative href, alongside
+  // absolute-href links to unrelated form PDFs on the same page — the pattern must resolve the
+  // former to the current agency-hosted register while ignoring the latter.
+  it("resolves mv-caa's discover_pattern against the live page's relative register href", async () => {
+    const MV_CAA_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'mv-caa.yaml');
+    const { download: mvDownload } = loadSourceConfig(MV_CAA_CONFIG);
+
+    const REGISTRATION_PAGE_HTML = `
+      <html><body>
+        <p>Application form: <a href="https://www.caa.gov.mv/attachments/PgrSS7KENKiapW6eo9L1XBJzvWotf7qkf2oaBK0V.pdf">download</a></p>
+        <p>The register can be downloaded from <a href="/attachments/JSGDRnn0oWF2YGUW76GJHgF4sedj9baDF3tfyw3P.pdf">here</a></p>
+      </body></html>
+    `;
+
+    const fetchFn = mockFetchSequence([
+      { ok: true, status: 200, statusText: 'OK', body: REGISTRATION_PAGE_HTML },
+      { ok: true, status: 200, statusText: 'OK', body: Buffer.from('pdf-bytes') },
+    ]);
+
+    await download(mvDownload);
+
+    expect(fetchFn.mock.calls[1]?.[0]).toBe(
+      'https://www.caa.gov.mv/attachments/JSGDRnn0oWF2YGUW76GJHgF4sedj9baDF3tfyw3P.pdf'
+    );
   });
 });
 

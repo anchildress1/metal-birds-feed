@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.1](https://github.com/anchildress1/metal-birds-feed/compare/v0.1.0...v0.1.1) (2026-07-26)
+
+
+### Features
+
+* **cl-dgac:** onboard Chile register + merge-duplicates engine capability ([cdbb989](https://github.com/anchildress1/metal-birds-feed/commit/cdbb98909aae101023c2f97aa8f7a4dd465cef08))
+* **no-caa:** onboard Norway register + deploy/runtime docs + FAA/TC cadence ([#77](https://github.com/anchildress1/metal-birds-feed/issues/77)) ([a412e28](https://github.com/anchildress1/metal-birds-feed/commit/a412e2878fdb546e43e27112f39d538201b6ceac))
+
+
 ## [0.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v0.0.12...v0.1.0) (2026-07-21)
 
 
