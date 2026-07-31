@@ -8,6 +8,9 @@ import {
 } from '../src/cadence.js';
 import type { SourceState } from '../src/cadence.js';
 
+const HASH64 = 'a'.repeat(64);
+const HASH_UP = 'b'.repeat(64);
+
 const DAY_MS = 86_400_000;
 
 const makeState = (lastRunDaysAgo: number, lastChangeDaysAgo: number): SourceState => {
@@ -16,6 +19,8 @@ const makeState = (lastRunDaysAgo: number, lastChangeDaysAgo: number): SourceSta
     last_run: new Date(now - lastRunDaysAgo * DAY_MS).toISOString(),
     last_content_change: new Date(now - lastChangeDaysAgo * DAY_MS).toISOString(),
     record_count: 1000,
+    content_hash: HASH64,
+    upstream_hash: HASH_UP,
   };
 };
 
@@ -39,12 +44,21 @@ describe('shouldSkip', () => {
     const state: SourceState = {
       last_run: new Date(now.getTime() - 30 * DAY_MS).toISOString(),
       last_content_change: new Date(now.getTime() - 30 * DAY_MS).toISOString(),
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     expect(shouldSkip(state, 30, now)).toBe(false);
   });
 
   it('returns false when last_run is an invalid date string', () => {
-    const state: SourceState = { last_run: 'not-a-date', last_content_change: '2026-01-01' };
+    const state: SourceState = {
+      last_run: 'not-a-date',
+      last_content_change: '2026-01-01',
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
     expect(shouldSkip(state, 30, new Date())).toBe(false);
   });
 
@@ -57,6 +71,9 @@ describe('shouldSkip', () => {
     const state: SourceState = {
       last_run: new Date(Date.now() + 10 * DAY_MS).toISOString(),
       last_content_change: new Date().toISOString(),
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     expect(shouldSkip(state, 30, new Date())).toBe(true);
   });
@@ -84,6 +101,9 @@ describe('isOverdue', () => {
     const state: SourceState = {
       last_run: new Date(now.getTime() - DAY_MS).toISOString(),
       last_content_change: new Date(now.getTime() - threshold * DAY_MS).toISOString(),
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     expect(isOverdue(state, cadence, now)).toBe(false);
   });
@@ -91,7 +111,13 @@ describe('isOverdue', () => {
   it('returns true when last_content_change is an invalid date string (fail open)', () => {
     // A garbage timestamp never heals itself; returning false would disarm the staleness alarm
     // for that source forever.
-    const state: SourceState = { last_run: '2026-01-01', last_content_change: 'bad-date' };
+    const state: SourceState = {
+      last_run: '2026-01-01',
+      last_content_change: 'bad-date',
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
     expect(isOverdue(state, 30, new Date())).toBe(true);
   });
 
@@ -99,6 +125,9 @@ describe('isOverdue', () => {
     const state: SourceState = {
       last_run: new Date().toISOString(),
       last_content_change: new Date(Date.now() + 10 * DAY_MS).toISOString(),
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     expect(isOverdue(state, 30, new Date())).toBe(false);
   });
@@ -137,6 +166,9 @@ describe('buildStalenessEntry', () => {
     const state: SourceState = {
       last_run: new Date().toISOString(),
       last_content_change: 'not-a-valid-date',
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     const entry = buildStalenessEntry('faa', 30, state, new Date());
     expect(entry.days_since_change).toBe(-1);
@@ -199,6 +231,9 @@ describe('buildSummaryMarkdown', () => {
     const state: SourceState = {
       last_run: '2026-05-31T00:00:00.000Z',
       last_content_change: '2026-05-16T00:00:00.000Z',
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     const entries = [buildStalenessEntry('faa', 30, state, now)];
     const md = buildSummaryMarkdown(entries);

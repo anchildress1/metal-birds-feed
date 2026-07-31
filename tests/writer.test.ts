@@ -200,6 +200,7 @@ describe('R2ArtifactWriter — write', () => {
       last_content_change: 'x',
       record_count: 1,
       content_hash: first.content_hash,
+      upstream_hash: HASH_UP,
     };
     mockSend.mockReset();
     mockSend.mockResolvedValue({});
@@ -255,6 +256,7 @@ describe('R2ArtifactWriter — write', () => {
       last_content_change: 'x',
       record_count: 1,
       content_hash: first.content_hash,
+      upstream_hash: HASH_UP,
     };
     mockSend.mockReset();
     mockSend.mockImplementation((cmd: { _kind: string }) =>
@@ -267,7 +269,7 @@ describe('R2ArtifactWriter — write', () => {
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
   });
 
-  it('rewrites the artifact when the content hash differs from prior state', async () => {
+  it('rewrites the artifact and reports a change when the register published new data', async () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
@@ -275,6 +277,7 @@ describe('R2ArtifactWriter — write', () => {
       last_content_change: 'x',
       record_count: 1,
       content_hash: 'stale',
+      upstream_hash: 'c'.repeat(64),
     };
 
     const stats = await writer.write(
@@ -295,6 +298,7 @@ describe('R2ArtifactWriter — write', () => {
       last_content_change: 'x',
       record_count: 300_000,
       content_hash: 'h',
+      upstream_hash: HASH_UP,
     };
     await expect(writer.write(new Map(), 'faa', prior, HASH_UP)).rejects.toThrow(
       /Refusing to write 0 records/
@@ -310,7 +314,13 @@ describe('R2ArtifactWriter — write', () => {
 
   it('refuses a drop below half the prior record count (truncated-upstream guard)', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 100 };
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 100,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
     // 1 record vs prior 100 = 99% drop → suspected truncation.
     await expect(
       writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior, HASH_UP)
@@ -322,7 +332,13 @@ describe('R2ArtifactWriter — write', () => {
     // cleanup bricks the source's daily refresh until someone deletes its state by hand.
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 4 };
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 4,
+      content_hash: HASH64,
+      upstream_hash: 'c'.repeat(64),
+    };
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1')],
       ['00002', makeAircraft('00002', 'N2')],
@@ -336,7 +352,13 @@ describe('R2ArtifactWriter — write', () => {
 
   it('rejects a shrink just below the 50% retain floor', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 5 };
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 5,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1')],
       ['00002', makeAircraft('00002', 'N2')],
@@ -345,17 +367,16 @@ describe('R2ArtifactWriter — write', () => {
     await expect(writer.write(records, 'faa', prior, HASH_UP)).rejects.toThrow(/drop from prior 5/);
   });
 
-  it('bypasses the truncation guard when prior state has no record_count (legacy escape hatch)', async () => {
-    // Legacy state predates record_count, and deleting _state/<source>.json is the documented
-    // override for a legitimate mass shrink — both flow through this bypass.
+  it('bypasses the truncation guard when prior state is absent (the documented override)', async () => {
+    // Deleting _state/<source>.json is how an operator accepts a legitimate mass shrink; with no
+    // prior record_count there is nothing to compare against, so the guard cannot fire.
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const prior: SourceState = { last_run: 'x', last_content_change: 'x', content_hash: 'stale' };
 
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N1')]]),
       'faa',
-      prior,
+      null,
       HASH_UP
     );
 
@@ -397,6 +418,7 @@ describe('R2ArtifactWriter — state', () => {
       last_content_change: '2026-06-21T00:00:00Z',
       record_count: 5,
       content_hash: 'abc',
+      upstream_hash: HASH_UP,
     };
 
     await writer.writeState('faa', state);
@@ -413,6 +435,7 @@ describe('R2ArtifactWriter — state', () => {
       last_content_change: 'c',
       record_count: 9,
       content_hash: HASH64,
+      upstream_hash: HASH_UP,
     };
     mockSend.mockResolvedValueOnce(stateResponse(state));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -447,6 +470,26 @@ describe('R2ArtifactWriter — state', () => {
     expect(await writer.readState('faa')).toBeNull();
   });
 
+  // The migration contract: state written before upstream_hash existed fails validation and reads
+  // back as absent, so the source runs as if fresh — one forced rewrite, no compatibility branch.
+  it('returns null for state written before upstream_hash existed', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: {
+        transformToString: () =>
+          Promise.resolve(
+            JSON.stringify({
+              last_run: 'x',
+              last_content_change: 'x',
+              record_count: 1,
+              content_hash: HASH64,
+            })
+          ),
+      },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readState('faa')).toBeNull();
+  });
+
   it('rethrows a non-NoSuchKey state read error', async () => {
     mockSend.mockRejectedValueOnce(s3Error('AccessDenied', 403));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -454,7 +497,13 @@ describe('R2ArtifactWriter — state', () => {
   });
 
   it('retries a transient state read error', async () => {
-    const state: SourceState = { last_run: 'r', last_content_change: 'c' };
+    const state: SourceState = {
+      last_run: 'r',
+      last_content_change: 'c',
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
     mockSend
       .mockRejectedValueOnce(s3Error('internal', 500))
       .mockResolvedValueOnce(stateResponse(state));

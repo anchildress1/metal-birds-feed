@@ -113,19 +113,13 @@ export class R2ArtifactWriter {
       );
     }
 
-    // A prior hash that is absent (legacy/first-run state) never equals the current one, so the
-    // artifact is rewritten — exactly what a format migration needs. The skip additionally
-    // requires the artifact to actually exist: state and artifact are separate objects, and an
-    // externally deleted artifact (lifecycle rule, manual cleanup) would otherwise 404 for
-    // consumers indefinitely while every run reports unchanged.
+    // No prior state (fresh source, or state that failed validation and self-healed to absent)
+    // matches neither hash, so the artifact is rewritten — which is also how a schema migration
+    // lands. The skip additionally requires the artifact to actually exist: state and artifact are
+    // separate objects, and an externally deleted artifact (lifecycle rule, manual cleanup) would
+    // otherwise 404 for consumers indefinitely while every run reports unchanged.
     const artifactUnchanged = priorState?.content_hash === content_hash;
-    // Legacy state has no upstream_hash; treating absent as "changed" would stamp
-    // last_content_change on the first run after this field lands. Fall back to the artifact
-    // comparison, which is the pre-split behaviour.
-    const upstreamUnchanged =
-      priorState?.upstream_hash === undefined
-        ? artifactUnchanged
-        : priorState.upstream_hash === upstreamHash;
+    const upstreamUnchanged = priorState?.upstream_hash === upstreamHash;
     if (artifactUnchanged && (await this.artifactExists(source))) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return {
