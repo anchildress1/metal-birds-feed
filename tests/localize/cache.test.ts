@@ -73,4 +73,15 @@ describe('TranslationCacheSchema', () => {
       }).success
     ).toBe(false);
   });
+
+  // An empty translation would survive the `?? text` fallback (it is not nullish) and blank a
+  // populated upstream field, leaving only *_source_text with the content.
+  it.each(['', '   '])('rejects a blank translation: %p', (blank) => {
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: { [hash]: blank },
+      }).success
+    ).toBe(false);
+  });
 });

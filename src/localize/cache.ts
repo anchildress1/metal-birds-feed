@@ -10,7 +10,13 @@ export type TranslatableField =
   | 'lien_status'
   | 'operational_classes';
 
-const TranslationEntriesSchema = z.record(z.string().regex(/^[0-9a-f]{64}$/), z.string());
+// Values are non-empty: the primary field falls back with `?? text`, which an empty string passes
+// straight through (it is not nullish), blanking a populated upstream value. R2 is the boundary
+// where a corrupted or hand-edited object can introduce one, so reject it on read.
+const TranslationEntriesSchema = z.record(
+  z.string().regex(/^[0-9a-f]{64}$/),
+  z.string().trim().min(1)
+);
 
 // Bump when the model, prompt, or generation contract changes. The envelope makes obsolete entries
 // fail validation as one generation instead of accumulating unreachable hashes forever.

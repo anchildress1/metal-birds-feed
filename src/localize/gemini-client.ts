@@ -1,6 +1,7 @@
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { z } from 'zod';
 import { retry, type RetryOptions } from '../retry.js';
+import { log } from '../logger.js';
 import type { TranslatableField } from './cache.js';
 
 export interface TranslationItem {
@@ -52,21 +53,34 @@ const RESPONSE_SCHEMA = {
   },
 };
 
-const TranslationResultSchema = z
-  .array(z.object({ id: z.string(), text: z.string().trim().min(1) }))
-  .superRefine((items, ctx) => {
-    const seen = new Set<string>();
-    items.forEach(({ id }, index) => {
-      if (seen.has(id)) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Duplicate translation id: ${id}`,
-          path: [index, 'id'],
-        });
-      }
-      seen.add(id);
-    });
-  });
+const TranslationItemSchema = z.object({ id: z.string(), text: z.string().trim().min(1) });
+
+// Per item, not per array. An all-or-nothing parse lets one blank or duplicated item discard up to
+// MAX_BATCH_ITEMS good translations, which are then re-billed on every subsequent run — potentially
+// forever, if the model reliably returns the same bad item. A wrong-shaped response as a whole is
+// still an error, so it keeps the retry path.
+const parseTranslations = (raw: unknown): Map<string, string> => {
+  if (!Array.isArray(raw)) throw new Error('Gemini response was not a JSON array');
+  const translated = new Map<string, string>();
+  const rejected: string[] = [];
+  for (const item of raw) {
+    const parsed = TranslationItemSchema.safeParse(item);
+    if (!parsed.success) {
+      rejected.push(
+        typeof (item as { id?: unknown })?.id === 'string'
+          ? String((item as { id: string }).id)
+          : '<unparseable>'
+      );
+      continue;
+    }
+    // First value wins; a repeated id is the model contradicting itself, not new information.
+    if (translated.has(parsed.data.id)) rejected.push(parsed.data.id);
+    else translated.set(parsed.data.id, parsed.data.text);
+  }
+  if (rejected.length > 0)
+    log('warn', 'localize_items_rejected', { count: rejected.length, ids: rejected.slice(0, 10) });
+  return translated;
+};
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const DEFAULT_REQUESTS_PER_MINUTE = 10;
@@ -113,8 +127,7 @@ const translateChunk = async (
 
       // Re-validate inside retry: an LLM response is untrusted even with responseSchema, and a
       // transient malformed response should receive the same bounded recovery as transport errors.
-      const parsed = TranslationResultSchema.parse(JSON.parse(text));
-      return new Map(parsed.map((result) => [result.id, result.text]));
+      return parseTranslations(JSON.parse(text));
     },
     { ...retryOptions, isRetryable: isRetryableGeminiError }
   );

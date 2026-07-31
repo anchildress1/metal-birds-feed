@@ -157,9 +157,9 @@ describe('translateBatch', () => {
     expect(rateLimitSleep).toHaveBeenCalledWith(5_000);
   });
 
-  it('retries a malformed response then accepts a valid response', async () => {
+  it('retries a wrong-shaped response then accepts a valid response', async () => {
     generateContent
-      .mockResolvedValueOnce(textResponse([{ id: 'a' }]))
+      .mockResolvedValueOnce(textResponse({ not: 'an array' }))
       .mockResolvedValueOnce(textResponse([{ id: 'a', text: 'ok' }]));
 
     const { translated, errors } = await translateBatch(
@@ -197,8 +197,8 @@ describe('translateBatch', () => {
     expect(errors).toHaveLength(1);
   });
 
-  it('reports a malformed translation array as a chunk error', async () => {
-    generateContent.mockResolvedValue(textResponse([{ id: 'a' }]));
+  it('reports a response that is not an array as a chunk error', async () => {
+    generateContent.mockResolvedValue(textResponse({ not: 'an array' }));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -209,7 +209,7 @@ describe('translateBatch', () => {
     expect(errors).toHaveLength(1);
   });
 
-  it('rejects a blank translation instead of caching it', async () => {
+  it('drops a blank translation without caching it or failing the chunk', async () => {
     generateContent.mockResolvedValue(textResponse([{ id: 'a', text: '  ' }]));
 
     const { translated, errors } = await translateBatch(
@@ -218,10 +218,10 @@ describe('translateBatch', () => {
     );
 
     expect(translated.size).toBe(0);
-    expect(errors).toHaveLength(1);
+    expect(errors).toEqual([]);
   });
 
-  it('rejects duplicate result IDs instead of keeping the last translation', async () => {
+  it('keeps the first of a duplicated result ID rather than the model contradicting itself', async () => {
     generateContent.mockResolvedValue(
       textResponse([
         { id: 'a', text: 'first' },
@@ -234,8 +234,26 @@ describe('translateBatch', () => {
       { apiKey: 'k', retryOptions: NO_RETRY }
     );
 
-    expect(translated.size).toBe(0);
-    expect(errors).toHaveLength(1);
+    expect(translated.get('a')).toBe('first');
+    expect(errors).toEqual([]);
+  });
+
+  // The reason per-item validation exists: an all-or-nothing parse discarded every good
+  // translation in the chunk, which then got re-billed on the next run.
+  it('keeps the good items when one item in the chunk is malformed', async () => {
+    generateContent.mockResolvedValue(
+      textResponse([{ id: 'a', text: 'alpha' }, { id: 'b' }, { id: 'c', text: 'gamma' }])
+    );
+
+    const { translated, errors } = await translateBatch(
+      ['a', 'b', 'c'].map((id) => ({ id, field: 'cancellation_reason' as const, text: id })),
+      { apiKey: 'k', retryOptions: NO_RETRY }
+    );
+
+    expect(translated.get('a')).toBe('alpha');
+    expect(translated.get('c')).toBe('gamma');
+    expect(translated.has('b')).toBe(false);
+    expect(errors).toEqual([]);
   });
 
   it('rejects an invalid RPM limit before sending a request', async () => {
