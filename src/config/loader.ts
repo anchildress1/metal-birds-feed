@@ -82,6 +82,9 @@ const SourceConfigSchema = z
     id: z.string().min(1),
     label: z.string().min(1),
     country: z.string().min(1),
+    // Required, not defaulted: silently assuming a language decides whether a source is billed to
+    // Gemini and whether its curated values get reworded. That must be a stated choice per source.
+    language: z.string().regex(/^[a-z]{2}$/, 'language must be a lowercase ISO 639-1 code'),
     encoding: z.enum(['utf8', 'latin1']),
     download: z
       .strictObject({

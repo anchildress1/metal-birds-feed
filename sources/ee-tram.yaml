@@ -1,6 +1,7 @@
 id: ee-tram
 label: Estonian Transport Administration Civil Aircraft Register
 country: EE
+language: et
 encoding: utf8
 trim_all: true
 # Register updates a few times a year (the page stamps its own "updated" date); poll weekly so a

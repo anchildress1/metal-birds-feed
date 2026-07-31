@@ -1,6 +1,7 @@
 id: cl-dgac
 label: DGAC Registro Nacional de Aeronaves
 country: CL
+language: es
 encoding: utf8
 trim_all: true
 cadence_days: 30

@@ -1,6 +1,7 @@
 id: ch-foca
 label: FOCA / BAZL — Swiss Aircraft Register (HB-)
 country: CH
+language: en
 encoding: utf8
 trim_all: false
 cadence_days: 1

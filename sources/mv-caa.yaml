@@ -1,6 +1,7 @@
 id: mv-caa
 label: CAA Maldives Civil Aircraft Register
 country: MV
+language: en
 encoding: utf8
 trim_all: true
 cadence_days: 7

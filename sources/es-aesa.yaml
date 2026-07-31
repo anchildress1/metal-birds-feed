@@ -1,6 +1,7 @@
 id: es-aesa
 label: AESA Registro de Matrícula de Aeronaves Civiles
 country: ES
+language: es
 encoding: utf8
 trim_all: true
 cadence_days: 30

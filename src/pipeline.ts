@@ -91,6 +91,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   const { records: localized, stats: localizeStats } = await localizeRecords(
     records,
     sourceId,
+    config.language,
     writer,
     dryRun
   );

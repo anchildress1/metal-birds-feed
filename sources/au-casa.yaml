@@ -1,6 +1,7 @@
 id: au-casa
 label: CASA Australian Civil Aircraft Register
 country: AU
+language: en
 encoding: utf8
 trim_all: true
 

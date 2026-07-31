@@ -23,12 +23,15 @@ const TRANSLATABLE_SCALAR_FIELDS = [
   'lien_status',
 ] as const satisfies readonly TranslatableField[];
 
-// Per-source exclusions for an otherwise-translatable field. lien_status is descriptive text for
-// most sources (e.g. br-anac's DS_GRAVAME, a lien *description*) but mv-caa's `mortgage` cell holds
-// the mortgagee's NAME instead — translating it would corrupt a proper noun, so it's excluded only
-// for mv-caa, not globally.
+const ENGLISH = 'en';
+
+// Field-level exclusions *within* a non-English source, where one mapping already yields English or
+// a canonical token while the rest of the register is translatable. English-only registers are
+// handled by the `language` gate instead — they never reach here.
+//   operational_classes — cl-dgac's lookup normalizes to canonical English tokens; no-caa's
+//                         Luftdyktighetskategori publishes English category names.
 const FIELD_EXCLUDED_FOR_SOURCE: Partial<Record<TranslatableField, ReadonlySet<string>>> = {
-  lien_status: new Set(['mv-caa']),
+  operational_classes: new Set(['cl-dgac', 'no-caa']),
 };
 
 const DEFAULT_REQUESTS_PER_MINUTE = 10;
@@ -53,12 +56,13 @@ const collectCandidates = (
       const text = record[field];
       if (text !== null) candidates.set(hashTranslatable(field, text), { field, text });
     }
-    for (const text of record.operational_classes) {
-      candidates.set(hashTranslatable('operational_classes', text), {
-        field: 'operational_classes',
-        text,
-      });
-    }
+    if (!FIELD_EXCLUDED_FOR_SOURCE['operational_classes']?.has(sourceId))
+      for (const text of record.operational_classes) {
+        candidates.set(hashTranslatable('operational_classes', text), {
+          field: 'operational_classes',
+          text,
+        });
+      }
   }
   return candidates;
 };
@@ -180,9 +184,17 @@ const applyTranslations = (
 export const localizeRecords = async (
   records: Map<string, Aircraft>,
   sourceId: string,
+  language: string,
   writer: R2ArtifactWriter,
   dryRun = false
 ): Promise<{ records: Map<string, Aircraft>; stats: LocalizationStats }> => {
+  // An English register has nothing to translate, and asking for one anyway is actively harmful:
+  // the model rewords curated labels (tc-ca's "Certificate of Airworthiness") and invents meaning
+  // for bare codes (faa's "1", "4"), overwriting the canonical field in the artifact and the feed.
+  if (language === ENGLISH) {
+    return { records, stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 } };
+  }
+
   const candidates = collectCandidates(records, sourceId);
   if (candidates.size === 0) {
     return { records, stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 } };

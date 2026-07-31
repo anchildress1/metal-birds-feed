@@ -1,6 +1,7 @@
 id: nl-ilt
 label: Netherlands ILT Civil Aircraft Register
 country: NL
+language: en
 encoding: utf8
 trim_all: true
 # cadence_days intentionally absent: ILT publishes on an irregular schedule

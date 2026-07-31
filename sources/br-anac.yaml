@@ -1,6 +1,7 @@
 id: br-anac
 label: ANAC Brasil — Brazilian Aircraft Registry (RAB)
 country: BR
+language: pt
 encoding: utf8
 trim_all: true
 cadence_days: 1

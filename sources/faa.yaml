@@ -1,6 +1,7 @@
 id: faa
 label: FAA U.S. Civil Aircraft Registry
 country: US
+language: en
 encoding: latin1
 trim_all: true
 # FAA's Releasable Aircraft Database refreshes daily at 11:30pm Central; a prior monthly value
