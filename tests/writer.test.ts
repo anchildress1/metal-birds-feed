@@ -89,6 +89,9 @@ const R2_CONFIG = {
 };
 
 const HASH64 = 'a'.repeat(64);
+// Stands in for the pre-localization hash. Distinct from HASH64 so a test asserting on one cannot
+// pass by accidentally matching the other.
+const HASH_UP = 'b'.repeat(64);
 
 function makeAircraft(id: string, reg: string, hex: string | null = null): Aircraft {
   return {
@@ -171,7 +174,7 @@ describe('R2ArtifactWriter — write', () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
 
-    const stats = await writer.write(records, 'faa', null);
+    const stats = await writer.write(records, 'faa', null, HASH_UP);
 
     expect(stats.changed).toBe(true);
     expect(stats.record_count).toBe(1);
@@ -191,7 +194,7 @@ describe('R2ArtifactWriter — write', () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
 
-    const first = await writer.write(records, 'faa', null);
+    const first = await writer.write(records, 'faa', null, HASH_UP);
     const prior: SourceState = {
       last_run: 'x',
       last_content_change: 'x',
@@ -201,10 +204,40 @@ describe('R2ArtifactWriter — write', () => {
     mockSend.mockReset();
     mockSend.mockResolvedValue({});
 
-    const second = await writer.write(records, 'faa', prior);
+    const second = await writer.write(records, 'faa', prior, HASH_UP);
 
     expect(second.changed).toBe(false);
     expect(putCalls()).toHaveLength(0);
+  });
+
+  // Change detection must track the register, not our own enrichment. A translation landing on an
+  // unchanged register would otherwise stamp last_content_change and close the staleness issue for
+  // a source that has published nothing for months — defeating the monitor entirely.
+  it('writes a translation-only change without reporting an upstream change', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const untranslated = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
+    const first = await writer.write(untranslated, 'faa', null, HASH_UP);
+
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 1,
+      content_hash: first.content_hash,
+      upstream_hash: HASH_UP,
+    };
+    mockSend.mockReset();
+    mockSend.mockResolvedValue({});
+
+    // Same upstream rows, now carrying English — the artifact differs, the register does not.
+    const translated = new Map([
+      ['00001', { ...makeAircraft('00001', 'N12345', 'a4e294'), airworthiness_class: 'Standard' }],
+    ]);
+    const second = await writer.write(translated, 'faa', prior, HASH_UP);
+
+    expect(second.changed).toBe(false);
+    expect(second.content_hash).not.toBe(first.content_hash);
+    expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
   });
 
   it('rewrites when the hash matches but the artifact is missing (external-deletion self-heal)', async () => {
@@ -216,7 +249,7 @@ describe('R2ArtifactWriter — write', () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
-    const first = await writer.write(records, 'faa', null);
+    const first = await writer.write(records, 'faa', null, HASH_UP);
     const prior: SourceState = {
       last_run: 'x',
       last_content_change: 'x',
@@ -228,7 +261,7 @@ describe('R2ArtifactWriter — write', () => {
       cmd._kind === 'head' ? Promise.reject(s3Error('NotFound', 404)) : Promise.resolve({})
     );
 
-    const second = await writer.write(records, 'faa', prior);
+    const second = await writer.write(records, 'faa', prior, HASH_UP);
 
     expect(second.changed).toBe(false);
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
@@ -247,7 +280,8 @@ describe('R2ArtifactWriter — write', () => {
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]),
       'faa',
-      prior
+      prior,
+      HASH_UP
     );
 
     expect(stats.changed).toBe(true);
@@ -262,14 +296,14 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 300_000,
       content_hash: 'h',
     };
-    await expect(writer.write(new Map(), 'faa', prior)).rejects.toThrow(
+    await expect(writer.write(new Map(), 'faa', prior, HASH_UP)).rejects.toThrow(
       /Refusing to write 0 records/
     );
   });
 
   it('refuses zero records even on a fresh source with no prior state', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    await expect(writer.write(new Map(), 'faa', null)).rejects.toThrow(
+    await expect(writer.write(new Map(), 'faa', null, HASH_UP)).rejects.toThrow(
       /Refusing to write 0 records/
     );
   });
@@ -279,7 +313,7 @@ describe('R2ArtifactWriter — write', () => {
     const prior: SourceState = { last_run: 'x', last_content_change: 'x', record_count: 100 };
     // 1 record vs prior 100 = 99% drop → suspected truncation.
     await expect(
-      writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior)
+      writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior, HASH_UP)
     ).rejects.toThrow(/drop from prior 100/);
   });
 
@@ -294,7 +328,7 @@ describe('R2ArtifactWriter — write', () => {
       ['00002', makeAircraft('00002', 'N2')],
     ]);
 
-    const stats = await writer.write(records, 'faa', prior);
+    const stats = await writer.write(records, 'faa', prior, HASH_UP);
 
     expect(stats.changed).toBe(true);
     expect(stats.record_count).toBe(2);
@@ -308,7 +342,7 @@ describe('R2ArtifactWriter — write', () => {
       ['00002', makeAircraft('00002', 'N2')],
     ]);
 
-    await expect(writer.write(records, 'faa', prior)).rejects.toThrow(/drop from prior 5/);
+    await expect(writer.write(records, 'faa', prior, HASH_UP)).rejects.toThrow(/drop from prior 5/);
   });
 
   it('bypasses the truncation guard when prior state has no record_count (legacy escape hatch)', async () => {
@@ -321,7 +355,8 @@ describe('R2ArtifactWriter — write', () => {
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N1')]]),
       'faa',
-      prior
+      prior,
+      HASH_UP
     );
 
     expect(stats.changed).toBe(true);
@@ -333,7 +368,8 @@ describe('R2ArtifactWriter — write', () => {
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]),
       'faa',
-      null
+      null,
+      HASH_UP
     );
     expect(stats.changed).toBe(true);
     expect(mockSend).toHaveBeenCalledTimes(2);
@@ -344,7 +380,8 @@ describe('R2ArtifactWriter — write', () => {
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N12345')]]),
       'faa',
-      null
+      null,
+      HASH_UP
     );
     expect(stats.changed).toBe(true);
     expect(mockSend).not.toHaveBeenCalled();

@@ -8,6 +8,7 @@ import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
 import { R2ArtifactWriter, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
+import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
 import {
@@ -99,7 +100,8 @@ export async function run(sourceId: string): Promise<RunResult> {
   if (localizeStats.failed > 0)
     log('warn', 'localize_partial_failure', { source: sourceId, failed: localizeStats.failed });
 
-  const writeStats = await writer.write(localized, sourceId, priorState);
+  // Hashed pre-localization: change detection must track the register, not our own enrichment.
+  const writeStats = await writer.write(localized, sourceId, priorState, hashRecords(records));
 
   // State advances only after both durable outputs exist. Otherwise cadence gating could suppress
   // recovery from a missing feed slice for the full source cadence.
@@ -113,6 +115,7 @@ export async function run(sourceId: string): Promise<RunResult> {
       last_content_change: writeStats.changed ? now : (priorState?.last_content_change ?? now),
       record_count: writeStats.record_count,
       content_hash: writeStats.content_hash,
+      upstream_hash: writeStats.upstream_hash,
     };
     await writer.writeState(sourceId, newState);
   }

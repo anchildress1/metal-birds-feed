@@ -45,9 +45,12 @@ const S3_MAX_ATTEMPTS = 5;
 const MIN_RETAIN_RATIO = 0.5;
 
 export interface WriteStats {
+  // Upstream data changed. Drives last_content_change, and so staleness — never set by a
+  // translation landing or a self-heal rewrite of the same record set.
   changed: boolean;
   record_count: number;
   content_hash: string;
+  upstream_hash: string;
 }
 
 export interface R2Config {
@@ -80,10 +83,14 @@ export class R2ArtifactWriter {
   // Builds the source's SQLite artifact and writes it to aircraft/<source>.sqlite, skipping the
   // PUT when the record set is byte-for-byte the prior run's (content_hash match). `changed`
   // reports whether the artifact was rewritten so the caller can stamp last_content_change.
+  // `upstreamHash` is hashed over the pre-localization records. It is what `changed` reports, so a
+  // translation landing later never counterfeits an upstream publication. The artifact hash still
+  // gates the PUT — otherwise a translation-only improvement would never reach R2.
   async write(
     records: Map<string, Aircraft>,
     source: string,
-    priorState: SourceState | null
+    priorState: SourceState | null,
+    upstreamHash: string
   ): Promise<WriteStats> {
     const content_hash = hashRecords(records);
 
@@ -111,10 +118,22 @@ export class R2ArtifactWriter {
     // requires the artifact to actually exist: state and artifact are separate objects, and an
     // externally deleted artifact (lifecycle rule, manual cleanup) would otherwise 404 for
     // consumers indefinitely while every run reports unchanged.
-    const dataUnchanged = priorState?.content_hash === content_hash;
-    if (dataUnchanged && (await this.artifactExists(source))) {
+    const artifactUnchanged = priorState?.content_hash === content_hash;
+    // Legacy state has no upstream_hash; treating absent as "changed" would stamp
+    // last_content_change on the first run after this field lands. Fall back to the artifact
+    // comparison, which is the pre-split behaviour.
+    const upstreamUnchanged =
+      priorState?.upstream_hash === undefined
+        ? artifactUnchanged
+        : priorState.upstream_hash === upstreamHash;
+    if (artifactUnchanged && (await this.artifactExists(source))) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
-      return { changed: false, record_count: records.size, content_hash };
+      return {
+        changed: false,
+        record_count: records.size,
+        content_hash,
+        upstream_hash: upstreamHash,
+      };
     }
 
     const bytes = buildSqlite(records);
@@ -125,9 +144,15 @@ export class R2ArtifactWriter {
       record_count: records.size,
       bytes: bytes.byteLength,
     });
-    // `changed` reports DATA change only. A self-heal rewrite of a deleted artifact carries the
-    // same record set, so it must not stamp last_content_change or close staleness issues.
-    return { changed: !dataUnchanged, record_count: records.size, content_hash };
+    // `changed` reports UPSTREAM change only. A self-heal rewrite of a deleted artifact, or a
+    // rewrite carrying nothing but fresh translations, must not stamp last_content_change or close
+    // staleness issues — the register itself may have published nothing for months.
+    return {
+      changed: !upstreamUnchanged,
+      record_count: records.size,
+      content_hash,
+      upstream_hash: upstreamHash,
+    };
   }
 
   // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.

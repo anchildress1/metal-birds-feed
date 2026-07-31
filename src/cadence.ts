@@ -4,9 +4,17 @@ export const SourceStateSchema = z.object({
   last_run: z.string(),
   last_content_change: z.string(),
   record_count: z.number().int().nonnegative().optional(),
-  // sha256 hex of the source's record set; gates skip-if-unchanged. Optional so legacy/first-run
-  // state (written before this field existed) still parses — an absent hash forces one rewrite.
+  // sha256 hex of the written artifact's record set; gates skip-if-unchanged. Optional so
+  // legacy/first-run state (written before this field existed) still parses — an absent hash
+  // forces one rewrite.
   content_hash: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .optional(),
+  // sha256 hex of the same records *before* localization. Drives last_content_change, and so
+  // staleness: translation catching up must not read as the register publishing something new.
+  // Optional for the same legacy reason; absent falls back to content_hash's behaviour.
+  upstream_hash: z
     .string()
     .regex(/^[0-9a-f]{64}$/)
     .optional(),

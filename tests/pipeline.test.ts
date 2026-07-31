@@ -197,7 +197,7 @@ describe('run', () => {
     await run('faa');
 
     expect(mockR2Constructor).toHaveBeenCalledTimes(1);
-    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null);
+    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null, expect.any(String));
   });
 
   it('aborts write when any row fails translation', async () => {
@@ -236,7 +236,7 @@ describe('run', () => {
       expect.anything(),
       false
     );
-    expect(mockR2Write).toHaveBeenCalledWith(localized, 'faa', null);
+    expect(mockR2Write).toHaveBeenCalledWith(localized, 'faa', null, expect.any(String));
     expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', [
       expect.objectContaining({ cancellation_reason: 'AIRCRAFT EXPORTED' }),
     ]);
