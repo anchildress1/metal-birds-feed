@@ -4,15 +4,16 @@ pre-commit:
     format:
       # Only format files actually staged for this commit — running prettier across the
       # whole repo would auto-stage unrelated working-tree drift via stage_fixed.
-      # Calls bun directly: make format-files FILES="{staged_files}" broke because
-      # lefthook expands {staged_files} without quotes, causing make to treat each
-      # extra filename as a build target instead of part of the FILES= variable.
+      # Calls bun directly rather than a make target: lefthook expands {staged_files}
+      # unquoted, so make reads each extra filename as a build target.
       glob: '*.{ts,tsx,js,jsx,md,json,yaml,yml}'
       run: bun x prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
     lint:
       run: bun x eslint .
     scan-secrets:
+      # --redact keeps the secret out of terminal scrollback; a finding still exits 1 and blocks
+      # the commit. --staged catches it before it ever enters history, which pre-push cannot.
       run: gitleaks git --staged --redact
     actionlint:
       glob: '.github/workflows/*.yml'
@@ -36,3 +37,8 @@ pre-push:
       run: bun x tsc --noEmit -p tsconfig.eslint.json
     unit-tests:
       run: bun test --isolate --coverage
+    # Backstop over full history (~0.7s): the pre-commit hook only sees the staged diff, so a
+    # --no-verify commit, or anything committed before that hook existed, would reach the remote
+    # unscanned. Nothing leaves the machine without this passing.
+    scan-secrets-history:
+      run: gitleaks git --redact --no-banner

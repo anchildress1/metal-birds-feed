@@ -1,7 +1,7 @@
 # Cloud Run image for the feed service. Bun runtime — bun:sqlite is built in and the service graph
 # has no external dependencies, so there is no install step. The consolidated feed DB is baked in;
 # data refreshes by rebuilding + redeploying (registry cadence is monthly).
-FROM oven/bun:1.3-slim
+FROM oven/bun:1.3.14-slim
 
 WORKDIR /app
 
