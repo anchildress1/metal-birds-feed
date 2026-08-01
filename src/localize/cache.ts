@@ -5,10 +5,7 @@ import { z } from 'zod';
 // is a translation-pipeline concern, not a schema shape — idera_authorised_party is a string field
 // too, and is deliberately never a candidate.
 export type TranslatableField =
-  | 'cancellation_reason'
-  | 'airworthiness_class'
-  | 'lien_status'
-  | 'operational_classes';
+  'cancellation_reason' | 'airworthiness_class' | 'lien_status' | 'operational_classes';
 
 // Values are non-empty: the primary field falls back with `?? text`, which an empty string passes
 // straight through (it is not nullish), blanking a populated upstream value. R2 is the boundary
