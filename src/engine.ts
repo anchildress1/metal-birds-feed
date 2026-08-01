@@ -698,16 +698,14 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
   const cancellationReason = scalarField(m, row, 'cancellation_reason', s);
   const lienStatus = scalarField(m, row, 'lien_status', s);
   const operationalClasses = arrField(m, row, 'operational_classes', s);
+  const operationalClassesSourceText = arrField(m, row, 'operational_classes_source_text', s);
 
   // A *_source_text field mirrors its primary, except where the config already renders the primary
   // in English at parse time (deterministic transform, e.g. es-aesa's `clase` -> es_aesa_class_en);
-  // that source declares an explicit `<field>_source_text` mapping, which wins or the untranslated
-  // original is lost. Presence-checked, not `??`: a declared mapping resolving null must stay null
-  // rather than silently fall back to the English primary.
+  // that source declares an explicit `<field>_source_text` mapping back to the raw cell, which wins
+  // or the untranslated original is lost.
   const sourceText = (field: string, mirrored: string | null): string | null =>
-    m[`${field}_source_text`] === undefined
-      ? mirrored
-      : scalarField(m, row, `${field}_source_text`, s);
+    scalarField(m, row, `${field}_source_text`, s) ?? mirrored;
 
   return {
     source: config.id,
@@ -728,10 +726,9 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     airworthiness_class_source_text: sourceText('airworthiness_class', airworthinessClass),
     operating_environment: scalarField(m, row, 'operating_environment', s),
     operational_classes: operationalClasses,
-    operational_classes_source_text:
-      m['operational_classes_source_text'] === undefined
-        ? operationalClasses
-        : arrField(m, row, 'operational_classes_source_text', s),
+    operational_classes_source_text: operationalClassesSourceText.length
+      ? operationalClassesSourceText
+      : operationalClasses,
     engine: {
       manufacturer: scalarField(m, row, 'engine.manufacturer', s),
       model: scalarField(m, row, 'engine.model', s),

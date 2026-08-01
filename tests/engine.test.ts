@@ -2805,6 +2805,12 @@ describe('DGAC Chile fixture translation', () => {
       expect(r.registration).toBe('CC-AAA');
       expect(r.country).toBe('CL');
     });
+    // The lookup renders English at parse time, so without the explicit source_text mapping the
+    // Spanish cell is gone — the same provenance loss es-aesa's class transform would cause.
+    it('keeps the Spanish USO AERONAVE alongside the canonical English token', () => {
+      expect(r.operational_classes).toEqual(['commercial']);
+      expect(r.operational_classes_source_text).toEqual(['COMERCIAL']);
+    });
     it('maps HELICOPTERO to rotorcraft with a constant valid status', () => {
       expect(r.airframe_type).toBe('rotorcraft');
       expect(r.status).toBe('valid');
