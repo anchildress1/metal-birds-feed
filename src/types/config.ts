@@ -5,7 +5,6 @@ export const SCALAR_TRANSFORMS = [
   'trim_or_null',
   'na_or_null',
   'lowercase',
-  'uppercase',
   'int_or_null',
   'float_or_null',
   'date_yyyymmdd_or_null',

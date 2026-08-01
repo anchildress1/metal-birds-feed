@@ -9,7 +9,7 @@ import {
   type TranslationCache,
   type TranslationEntries,
 } from './cache.js';
-import { translateBatch, isGeminiAuthError } from './gemini-client.js';
+import { translateBatch, isGeminiAuthError, DEFAULT_REQUESTS_PER_MINUTE } from './gemini-client.js';
 import { log, errorMessage } from '../logger.js';
 
 // Scalar (single-string) translatable fields. operational_classes is translated too, but as an
@@ -23,18 +23,10 @@ const TRANSLATABLE_SCALAR_FIELDS = [
   'lien_status',
 ] as const satisfies readonly TranslatableField[];
 
-const ENGLISH = 'en';
-
-// Field-level exclusions *within* a non-English source, where one mapping already yields English or
-// a canonical token while the rest of the register is translatable. English-only registers are
-// handled by the `language` gate instead — they never reach here.
-//   operational_classes — cl-dgac's lookup normalizes to canonical English tokens; no-caa's
-//                         Luftdyktighetskategori publishes English category names.
-const FIELD_EXCLUDED_FOR_SOURCE: Partial<Record<TranslatableField, ReadonlySet<string>>> = {
-  operational_classes: new Set(['cl-dgac', 'no-caa']),
-};
-
-const DEFAULT_REQUESTS_PER_MINUTE = 10;
+// The one field-level exclusion inside an otherwise-translatable register: cl-dgac's lookup and
+// no-caa's Luftdyktighetskategori already emit canonical English tokens. A wholly English register
+// never gets this far — the `language` gate stops it.
+const OPERATIONAL_CLASSES_ALREADY_ENGLISH = new Set(['cl-dgac', 'no-caa']);
 
 export interface LocalizationStats {
   candidates: number;
@@ -52,11 +44,10 @@ const collectCandidates = (
   const candidates = new Map<string, Candidate>();
   for (const record of records.values()) {
     for (const field of TRANSLATABLE_SCALAR_FIELDS) {
-      if (FIELD_EXCLUDED_FOR_SOURCE[field]?.has(sourceId)) continue;
       const text = record[field];
       if (text !== null) candidates.set(hashTranslatable(field, text), { field, text });
     }
-    if (!FIELD_EXCLUDED_FOR_SOURCE['operational_classes']?.has(sourceId))
+    if (!OPERATIONAL_CLASSES_ALREADY_ENGLISH.has(sourceId))
       for (const text of record.operational_classes) {
         candidates.set(hashTranslatable('operational_classes', text), {
           field: 'operational_classes',
@@ -80,7 +71,6 @@ const resolveRequestsPerMinute = (sourceId: string): number => {
 
 interface ResolvedTranslations {
   cache: TranslationCache;
-  translated: TranslationEntries;
   stats: { cache_hits: number; translated: number; failed: number };
 }
 
@@ -148,7 +138,6 @@ const resolveTranslations = async (
 
   return {
     cache: updatedCache,
-    translated,
     stats: {
       cache_hits: candidates.size - delta.length,
       translated: Object.keys(translated).length,
@@ -169,11 +158,14 @@ const applyTranslations = (
   for (const [id, record] of records) {
     const translateScalar = (field: TranslatableField, text: string | null): string | null => {
       if (text === null) return null;
-      if (FIELD_EXCLUDED_FOR_SOURCE[field]?.has(sourceId)) return text;
       return cache.entries[hashTranslatable(field, text)] ?? text;
     };
+    // Guarded here too, not just at collection: an entry cached before the exclusion existed would
+    // otherwise still be applied, and the cache version is not bumped for a membership change.
     const translateArray = (values: string[]): string[] =>
-      values.map((v) => cache.entries[hashTranslatable('operational_classes', v)] ?? v);
+      OPERATIONAL_CLASSES_ALREADY_ENGLISH.has(sourceId)
+        ? values
+        : values.map((v) => cache.entries[hashTranslatable('operational_classes', v)] ?? v);
 
     localized.set(id, {
       ...record,
@@ -196,7 +188,7 @@ export const localizeRecords = async (
   // An English register has nothing to translate, and asking for one anyway is actively harmful:
   // the model rewords curated labels (tc-ca's "Certificate of Airworthiness") and invents meaning
   // for bare codes (faa's "1", "4"), overwriting the canonical field in the artifact and the feed.
-  if (language === ENGLISH) {
+  if (language === 'en') {
     return { records, stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 } };
   }
 

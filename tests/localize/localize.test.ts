@@ -14,6 +14,7 @@ const readPositiveIntegerEnv = mock(() => 10);
 // the auth hard-fail pass on a mock that never matches the production classification.
 void mock.module('../../src/localize/gemini-client.js', () => ({
   translateBatch,
+  DEFAULT_REQUESTS_PER_MINUTE: 10,
   isGeminiAuthError: (e: unknown) => {
     const s = (e as { status?: unknown } | null)?.status;
     return s === 401 || s === 403;
@@ -437,6 +438,32 @@ describe('localizeRecords', () => {
 
   // A non-English source still reaches Gemini, but only for the fields that are actually free text:
   // cl-dgac's operational_classes comes from a lookup that already emits canonical English tokens.
+  // Guarded at apply-time as well as collection: an entry cached before the source joined the
+  // exclusion set would otherwise still be applied on every later run.
+  it('ignores a stale cached translation for an excluded array field', async () => {
+    const stale = hashTranslatable('operational_classes', 'commercial');
+    const live = hashTranslatable('cancellation_reason', 'CANCELADA');
+    // cancellation_reason keeps the record past the zero-candidate short-circuit, so the apply path
+    // actually runs and the array guard is the only thing protecting the excluded field.
+    const records = new Map([
+      [
+        '1',
+        make('1', {
+          source: 'cl-dgac',
+          cancellation_reason: 'CANCELADA',
+          operational_classes: ['commercial'],
+        }),
+      ],
+    ]);
+    const { writer } = fakeWriter({ [stale]: 'comercial (stale)', [live]: 'Cancelled' });
+
+    const { records: result, stats } = await localizeRecords(records, 'cl-dgac', 'es', writer);
+
+    expect(stats.candidates).toBe(1);
+    expect(result.get('1')!.cancellation_reason).toBe('Cancelled');
+    expect(result.get('1')!.operational_classes).toEqual(['commercial']);
+  });
+
   it('excludes an already-canonical array field within a non-English source', async () => {
     const hash = hashTranslatable('cancellation_reason', 'CANCELADA');
     const records = new Map([

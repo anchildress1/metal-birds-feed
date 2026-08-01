@@ -11,41 +11,6 @@ import { latestKnownDate } from './recency.js';
 // legal_owner, interdiction code, operational classes).
 export type { FeedRow };
 
-const COLUMNS = [
-  'icao_hex',
-  'registration',
-  'icao_type_code',
-  'status',
-  'country',
-  'manufacturer',
-  'model',
-  'serial_number',
-  'year_manufactured',
-  'airframe_type',
-  'category',
-  'engine_manufacturer',
-  'engine_model',
-  'engine_type',
-  'engine_count',
-  'engine_horsepower',
-  'engine_thrust_lbs',
-  'seats',
-  'max_passengers',
-  'cruise_speed_ktas',
-  'max_takeoff_weight_kg',
-  'owner_name',
-  'owner_kind',
-  'owner_state',
-  'owner_country',
-  'operator_name',
-  'operator_kind',
-  'operator_state',
-  'operator_country',
-  'cancellation_reason',
-  'airworthiness_class',
-  'source',
-] as const;
-
 // Records sharing an icao_hex collapse to one winner deterministically so import order can't decide
 // it: a cancelled record never shadows a live one, then the most recent known date wins, then
 // source_id breaks the tie. Mirrors the engine's resolveRecency principle.
@@ -131,7 +96,9 @@ export const hashFeedRows = (rows: FeedRow[]): string => {
   return hash.digest('hex');
 };
 
-const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
+// Keyed by `keyof FeedRow`, not by COLUMNS: adding a field to FeedRow must be a compile error here
+// rather than a column silently missing from the served DB. Mirrors db.ts's FlatColumn guard.
+const COLUMN_TYPES: Record<keyof FeedRow, string> = {
   icao_hex: 'TEXT PRIMARY KEY',
   registration: 'TEXT NOT NULL',
   icao_type_code: 'TEXT',
@@ -165,6 +132,10 @@ const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
   airworthiness_class: 'TEXT',
   source: 'TEXT NOT NULL',
 };
+
+// Single source of column truth: the DDL, the INSERT, and FeedRowsSchema all derive from this,
+// so a field cannot reach FeedRow without reaching the served database.
+const COLUMNS = Object.keys(COLUMN_TYPES) as (keyof FeedRow)[];
 
 const COLUMN_DEFS = COLUMNS.map((c) => `${c} ${COLUMN_TYPES[c]}`).join(',\n  ');
 const DDL = `CREATE TABLE feed (\n  ${COLUMN_DEFS}\n);`;

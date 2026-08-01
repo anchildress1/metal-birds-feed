@@ -11,7 +11,6 @@ export const OwnerKindSchema = z.enum([
   'non-citizen-co-owner',
   'other',
 ]);
-export type OwnerKind = z.infer<typeof OwnerKindSchema>;
 
 export const AircraftStatusSchema = z.enum([
   'valid',
@@ -21,7 +20,6 @@ export const AircraftStatusSchema = z.enum([
   'restricted',
   'other',
 ]);
-export type AircraftStatus = z.infer<typeof AircraftStatusSchema>;
 
 export const AirframeTypeSchema = z.enum([
   'glider',
@@ -37,7 +35,6 @@ export const AirframeTypeSchema = z.enum([
   'hybrid-lift',
   'other',
 ]);
-export type AirframeType = z.infer<typeof AirframeTypeSchema>;
 
 export const EngineTypeSchema = z.enum([
   'none',
@@ -54,7 +51,6 @@ export const EngineTypeSchema = z.enum([
   'rotary',
   'other',
 ]);
-export type EngineType = z.infer<typeof EngineTypeSchema>;
 
 export const AircraftCategorySchema = z.enum([
   'standard',
@@ -63,13 +59,10 @@ export const AircraftCategorySchema = z.enum([
   'provisional',
   'other',
 ]);
-export type AircraftCategory = z.infer<typeof AircraftCategorySchema>;
 
 export const BuildCertificationSchema = z.enum(['type-certificated', 'not-type-certificated']);
-export type BuildCertification = z.infer<typeof BuildCertificationSchema>;
 
 export const OperatingEnvironmentSchema = z.enum(['land', 'sea', 'amphibian']);
-export type OperatingEnvironment = z.infer<typeof OperatingEnvironmentSchema>;
 
 export const OwnerSchema = z.object({
   name: z.string().nullable(),
@@ -151,8 +144,6 @@ export const AircraftSchema = z.object({
   airworthiness_review_date: isoDate,
   cancellation_reason: z.string().nullable(),
   cancellation_reason_source_text: z.string().nullable(),
-  // English-primary, except for mv-caa — its mortgage cell holds the mortgagee's NAME, so it is
-  // excluded per-source in localize.ts rather than translated into a corrupted proper noun.
   lien_status: z.string().nullable(),
   lien_status_source_text: z.string().nullable(),
   // Authoritative restriction code, preserved verbatim — its legend is registry-specific and

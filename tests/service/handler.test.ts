@@ -4,12 +4,12 @@ import {
   parseHexes,
   buildSelect,
   toResponseMap,
-  route,
   routeRequest,
   HttpError,
   type FeedRow,
   type RunQuery,
   type CheckLimit,
+  type RouteResult,
 } from '../../src/service/handler.js';
 
 const rec = (hex: string, reg: string): FeedRow => ({
@@ -46,6 +46,18 @@ const rec = (hex: string, reg: string): FeedRow => ({
   airworthiness_class: null,
   source: 'faa',
 });
+
+// Test-only convenience over routeRequest for the many cases that already hold a parsed body.
+const route = (
+  method: string,
+  path: string,
+  authHeader: string | null,
+  token: string | undefined,
+  body: unknown,
+  checkLimit: CheckLimit,
+  runQuery: RunQuery
+): Promise<RouteResult> =>
+  routeRequest(method, path, authHeader, token, () => Promise.resolve(body), checkLimit, runQuery);
 
 const expectHttp = (fn: () => unknown, status: number): void => {
   try {

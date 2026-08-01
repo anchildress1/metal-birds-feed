@@ -62,28 +62,20 @@ const TranslationItemSchema = z.object({ id: z.string(), text: z.string().trim()
 const parseTranslations = (raw: unknown): Map<string, string> => {
   if (!Array.isArray(raw)) throw new Error('Gemini response was not a JSON array');
   const translated = new Map<string, string>();
-  const rejected: string[] = [];
+  let rejected = 0;
   for (const item of raw) {
     const parsed = TranslationItemSchema.safeParse(item);
-    if (!parsed.success) {
-      rejected.push(
-        typeof (item as { id?: unknown })?.id === 'string'
-          ? String((item as { id: string }).id)
-          : '<unparseable>'
-      );
-      continue;
-    }
     // First value wins; a repeated id is the model contradicting itself, not new information.
-    if (translated.has(parsed.data.id)) rejected.push(parsed.data.id);
+    if (!parsed.success || translated.has(parsed.data.id)) rejected += 1;
     else translated.set(parsed.data.id, parsed.data.text);
   }
-  if (rejected.length > 0)
-    log('warn', 'localize_items_rejected', { count: rejected.length, ids: rejected.slice(0, 10) });
+  // Count only: the ids are content hashes, so naming them identifies nothing to a reader.
+  if (rejected > 0) log('warn', 'localize_items_rejected', { count: rejected });
   return translated;
 };
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
-const DEFAULT_REQUESTS_PER_MINUTE = 10;
+export const DEFAULT_REQUESTS_PER_MINUTE = 10;
 const MINUTE_MS = 60_000;
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

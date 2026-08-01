@@ -23,8 +23,6 @@ const naOrNull = (value: string): string | null => {
 
 const lowercase = (value: string): string => value.trim().toLowerCase();
 
-const uppercase = (value: string): string => value.trim().toUpperCase();
-
 // Number(), not parseInt/parseFloat: parse* silently accept a numeric prefix and ignore the rest
 // ("1,800" -> 1, "180 HP" -> 180), which would corrupt a thousands-separated or unit-suffixed
 // upstream cell into a plausible-looking but wrong value instead of nulling it.
@@ -363,12 +361,16 @@ const dedupeParties = (parties: Record<string, string>[]): Record<string, string
 const parseBrParties = (value: string): Record<string, string>[] | null => {
   const v = value.trim();
   if (v.length === 0) return null;
+  let parsed: unknown;
+  // Only JSON.parse is guarded, matching every other JSON-cell transform here. Keeping
+  // dedupeParties inside would swallow a TypeError from unexpected upstream types (a numeric
+  // DOCUMENTO, say) and report the whole owner set as absent instead of failing the row.
   try {
-    const parsed: unknown = JSON.parse(v);
-    return Array.isArray(parsed) ? dedupeParties(parsed as Record<string, string>[]) : null;
+    parsed = JSON.parse(v);
   } catch {
     return null;
   }
+  return Array.isArray(parsed) ? dedupeParties(parsed as Record<string, string>[]) : null;
 };
 
 const brPartyName = (value: string): string | null => {
@@ -623,7 +625,6 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   trim_or_null: trimOrNull,
   na_or_null: naOrNull,
   lowercase,
-  uppercase,
   int_or_null: intOrNull,
   float_or_null: floatOrNull,
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
