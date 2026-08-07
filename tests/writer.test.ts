@@ -74,6 +74,7 @@ void mock.module('@aws-sdk/client-s3', () => ({
 }));
 
 const { R2ArtifactWriter, isTransientS3Error } = await import('../src/writer.js');
+const { FEED_SLICE_VERSION } = await import('../src/feed.js');
 const { NoSuchKey } = await import('@aws-sdk/client-s3');
 
 const s3Error = (message: string, httpStatusCode: number): Error =>
@@ -154,6 +155,16 @@ interface PutCmd {
 }
 const putCalls = (): PutCmd[] =>
   (mockSend.mock.calls as unknown[][]).map((c) => c[0] as PutCmd).filter((c) => c._kind === 'put');
+
+const feedSliceBody = (rows: FeedRow[] = [FEED_ROW]): string =>
+  JSON.stringify({ version: FEED_SLICE_VERSION, rows });
+
+const legacyFeedRow = (): object =>
+  Object.fromEntries(
+    Object.entries(FEED_ROW).filter(
+      ([key]) => key !== 'cancellation_reason' && key !== 'airworthiness_class'
+    )
+  );
 
 beforeEach(() => {
   mockSend.mockReset();
@@ -618,9 +629,9 @@ describe('isTransientS3Error', () => {
 });
 
 describe('R2ArtifactWriter — feed intermediates', () => {
-  it('reports the slice exists when it reads back as a well-formed FeedRow[]', async () => {
+  it('reports the slice exists when it reads back as a current feed envelope', async () => {
     mockSend.mockResolvedValueOnce({
-      Body: { transformToString: () => Promise.resolve(JSON.stringify([FEED_ROW])) },
+      Body: { transformToString: () => Promise.resolve(feedSliceBody()) },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
 
@@ -628,6 +639,22 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     const command = mockSend.mock.calls[0]?.[0] as { _kind: string; input: { Key: string } };
     expect(command._kind).toBe('get');
     expect(command.input.Key).toBe('aircraft/_feed/faa.json');
+  });
+
+  it('reports a migratable legacy slice as present and writes the current envelope back', async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
+      })
+      .mockResolvedValueOnce({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+    expect(await writer.feedRowsExist('faa')).toBe(true);
+    const put = putCalls().find((call) => call.input.Key === 'aircraft/_feed/faa.json');
+    expect(JSON.parse(String(put?.input.Body))).toEqual({
+      version: FEED_SLICE_VERSION,
+      rows: [FEED_ROW],
+    });
   });
 
   it('reports a structurally-invalid slice as missing so it self-heals', async () => {
@@ -671,18 +698,55 @@ describe('R2ArtifactWriter — feed intermediates', () => {
   it('writes the per-source slice JSON to aircraft/_feed/<source>.json', async () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    await writer.writeFeedRows('faa', [{ icao_hex: 'a1b2c3', registration: 'N1' } as never]);
+    await writer.writeFeedRows('faa', [FEED_ROW]);
     const put = putCalls().find((c) => c.input.Key === 'aircraft/_feed/faa.json');
     expect(put?.input.ContentType).toBe('application/json');
-    expect(String(put?.input.Body)).toContain('a1b2c3');
+    expect(JSON.parse(String(put?.input.Body))).toEqual({
+      version: FEED_SLICE_VERSION,
+      rows: [FEED_ROW],
+    });
   });
 
   it('reads a well-formed per-source slice back', async () => {
     mockSend.mockResolvedValue({
-      Body: { transformToString: () => Promise.resolve(JSON.stringify([FEED_ROW])) },
+      Body: { transformToString: () => Promise.resolve(feedSliceBody()) },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
+  });
+
+  it('migrates a legacy slice and persists the current envelope', async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
+      })
+      .mockResolvedValueOnce({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+    expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
+    const put = putCalls().find((call) => call.input.Key === 'aircraft/_feed/faa.json');
+    expect(JSON.parse(String(put?.input.Body))).toEqual({
+      version: FEED_SLICE_VERSION,
+      rows: [FEED_ROW],
+    });
+  });
+
+  it('returns migrated rows when the writeback fails so another source can still deploy', async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
+      })
+      .mockRejectedValueOnce(s3Error('Access Denied', 403));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
+      expect(logSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
+        'event=feed_rows_migration_write_failed'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('treats a valid-JSON but wrong-shape slice as absent (structural validation)', async () => {

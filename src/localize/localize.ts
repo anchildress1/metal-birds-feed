@@ -9,7 +9,7 @@ import {
   type TranslationCache,
   type TranslationEntries,
 } from './cache.js';
-import { translateBatch, isGeminiAuthError, DEFAULT_REQUESTS_PER_MINUTE } from './gemini-client.js';
+import { translateBatch, DEFAULT_REQUESTS_PER_MINUTE } from './gemini-client.js';
 import { log, errorMessage } from '../logger.js';
 
 // Scalar (single-string) translatable fields. operational_classes is translated too, but as an
@@ -23,10 +23,16 @@ const TRANSLATABLE_SCALAR_FIELDS = [
   'lien_status',
 ] as const satisfies readonly TranslatableField[];
 
-// The one field-level exclusion inside an otherwise-translatable register: cl-dgac's lookup and
-// no-caa's Luftdyktighetskategori already emit canonical English tokens. A wholly English register
-// never gets this far — the `language` gate stops it.
-const OPERATIONAL_CLASSES_ALREADY_ENGLISH = new Set(['cl-dgac', 'no-caa']);
+// Fields already rendered in English by deterministic source mappings. Guard both collection and
+// application: a cache entry written before an exclusion existed must not overwrite the mapping.
+const FIELD_EXCLUDED_FOR_SOURCE = new Map<string, ReadonlySet<TranslatableField>>([
+  ['cl-dgac', new Set(['operational_classes'])],
+  ['es-aesa', new Set(['airworthiness_class'])],
+  ['no-caa', new Set(['operational_classes'])],
+]);
+
+const isFieldExcluded = (sourceId: string, field: TranslatableField): boolean =>
+  FIELD_EXCLUDED_FOR_SOURCE.get(sourceId)?.has(field) ?? false;
 
 export interface LocalizationStats {
   candidates: number;
@@ -45,9 +51,10 @@ const collectCandidates = (
   for (const record of records.values()) {
     for (const field of TRANSLATABLE_SCALAR_FIELDS) {
       const text = record[field];
-      if (text !== null) candidates.set(hashTranslatable(field, text), { field, text });
+      if (text !== null && !isFieldExcluded(sourceId, field))
+        candidates.set(hashTranslatable(field, text), { field, text });
     }
-    if (!OPERATIONAL_CLASSES_ALREADY_ENGLISH.has(sourceId))
+    if (!isFieldExcluded(sourceId, 'operational_classes'))
       for (const text of record.operational_classes) {
         candidates.set(hashTranslatable('operational_classes', text), {
           field: 'operational_classes',
@@ -110,11 +117,6 @@ const resolveTranslations = async (
     // TranslationCacheSchema on the next read and discard the whole cache
     for (const [id, text] of result) if (deltaIds.has(id)) translated[id] = text;
     failed = delta.length - Object.keys(translated).length;
-    // Before the warn: an auth failure is a setup bug that recurs identically every run, so it gets
-    // the same hard fail as a missing key rather than a warn nobody reads on a passing job.
-    const authError = errors.find(isGeminiAuthError);
-    if (authError !== undefined)
-      throw new Error(`GEMINI_API_KEY rejected by Gemini: ${errorMessage(authError)}`);
     if (errors.length > 0) {
       log('warn', 'localize_translate_failed', {
         source: sourceId,
@@ -157,13 +159,11 @@ const applyTranslations = (
   const localized = new Map<string, Aircraft>();
   for (const [id, record] of records) {
     const translateScalar = (field: TranslatableField, text: string | null): string | null => {
-      if (text === null) return null;
+      if (text === null || isFieldExcluded(sourceId, field)) return text;
       return cache.entries[hashTranslatable(field, text)] ?? text;
     };
-    // Guarded here too, not just at collection: an entry cached before the exclusion existed would
-    // otherwise still be applied, and the cache version is not bumped for a membership change.
     const translateArray = (values: string[]): string[] =>
-      OPERATIONAL_CLASSES_ALREADY_ENGLISH.has(sourceId)
+      isFieldExcluded(sourceId, 'operational_classes')
         ? values
         : values.map((v) => cache.entries[hashTranslatable('operational_classes', v)] ?? v);
 

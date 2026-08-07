@@ -137,6 +137,8 @@ const COLUMN_TYPES: Record<keyof FeedRow, string> = {
 // so a field cannot reach FeedRow without reaching the served database.
 const COLUMNS = Object.keys(COLUMN_TYPES) as (keyof FeedRow)[];
 
+type LegacyFeedRow = Omit<FeedRow, 'cancellation_reason' | 'airworthiness_class'>;
+
 const COLUMN_DEFS = COLUMNS.map((c) => `${c} ${COLUMN_TYPES[c]}`).join(',\n  ');
 const DDL = `CREATE TABLE feed (\n  ${COLUMN_DEFS}\n);`;
 
@@ -151,9 +153,55 @@ const columnSchema = (type: string): z.ZodTypeAny => {
   return z.string().nullable();
 };
 
-export const FeedRowsSchema = z.array(
-  z.object(Object.fromEntries(COLUMNS.map((c) => [c, columnSchema(COLUMN_TYPES[c])])))
-) as unknown as z.ZodType<FeedRow[]>;
+type FeedRowShape = { [K in keyof FeedRow]: z.ZodType<FeedRow[K]> };
+const FeedRowObjectSchema = z.strictObject(
+  Object.fromEntries(
+    COLUMNS.map((column) => [column, columnSchema(COLUMN_TYPES[column])])
+  ) as FeedRowShape
+);
+export const FeedRowsSchema: z.ZodType<FeedRow[]> = z.array(FeedRowObjectSchema);
+const LegacyFeedRowsSchema: z.ZodType<LegacyFeedRow[]> = z.array(
+  FeedRowObjectSchema.omit({ cancellation_reason: true, airworthiness_class: true })
+);
+
+export const FEED_SLICE_VERSION = 2;
+
+export interface ParsedFeedSlice {
+  rows: FeedRow[];
+  needsMigration: boolean;
+}
+
+const CurrentFeedSliceSchema = z
+  .strictObject({ version: z.literal(FEED_SLICE_VERSION), rows: FeedRowsSchema })
+  .transform(({ rows }): ParsedFeedSlice => ({ rows, needsMigration: false }));
+
+const UnversionedCurrentFeedSliceSchema = FeedRowsSchema.transform((rows): ParsedFeedSlice => ({
+  rows,
+  needsMigration: true,
+}));
+
+const UnversionedLegacyFeedSliceSchema = LegacyFeedRowsSchema.transform(
+  (rows): ParsedFeedSlice => ({
+    rows: rows.map((row) => ({
+      ...row,
+      cancellation_reason: null,
+      airworthiness_class: null,
+    })),
+    needsMigration: true,
+  })
+);
+
+// Bounded migration: production slices predate the versioned envelope and the two additive nullable
+// fields. Exact old/current arrays upgrade once and are rewritten by the reader; malformed rows and
+// unknown envelope versions still fail closed.
+export const FeedSliceSchema = z.union([
+  CurrentFeedSliceSchema,
+  UnversionedCurrentFeedSliceSchema,
+  UnversionedLegacyFeedSliceSchema,
+]);
+
+export const serializeFeedSlice = (rows: FeedRow[]): string =>
+  JSON.stringify({ version: FEED_SLICE_VERSION, rows });
 
 // The consolidated, single-table lookup DB the service serves: one row per icao_hex across every
 // source, queried as `SELECT * FROM feed WHERE icao_hex IN (...)` — no per-country union. Built

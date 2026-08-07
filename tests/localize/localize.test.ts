@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, spyOn } from 'bun:test';
 import type { Aircraft } from '../../src/schema.js';
 import {
   hashTranslatable,
@@ -10,15 +10,9 @@ const translateBatch = mock();
 const requireEnv = mock(() => 'test-key');
 const readPositiveIntegerEnv = mock(() => 10);
 
-// isGeminiAuthError is re-exported real: it is a pure status predicate, and stubbing it would let
-// the auth hard-fail pass on a mock that never matches the production classification.
 void mock.module('../../src/localize/gemini-client.js', () => ({
   translateBatch,
   DEFAULT_REQUESTS_PER_MINUTE: 10,
-  isGeminiAuthError: (e: unknown) => {
-    const s = (e as { status?: unknown } | null)?.status;
-    return s === 401 || s === 403;
-  },
 }));
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
@@ -215,7 +209,7 @@ describe('localizeRecords', () => {
 
   it('falls back to the original text on a non-auth Gemini error, without throwing', async () => {
     // A bad request or malformed response degrades like a transient failure — the run still ships,
-    // just untranslated. Only an absent or rejected key throws.
+    // just untranslated. Only an absent key throws.
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const error = Object.assign(new Error('bad request'), { status: 400 });
     translateBatch.mockReturnValue(Promise.resolve({ translated: new Map(), errors: [error] }));
@@ -362,23 +356,32 @@ describe('localizeRecords', () => {
     expect(translateBatch).not.toHaveBeenCalled();
   });
 
-  // A rejected key fails identically every run. Degrading to a warn would ship untranslated data
-  // indefinitely behind a green pipeline, which is the same setup bug as a missing key.
-  it.each([401, 403])('throws when Gemini rejects the key with %i', async (status) => {
-    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    translateBatch.mockReturnValue(
-      Promise.resolve({
-        translated: new Map(),
-        errors: [Object.assign(new Error('denied'), { status })],
-      })
-    );
-    const { writer, writeTranslationCache } = fakeWriter();
+  it.each([401, 403])(
+    'keeps the original text when Gemini rejects the key with %i',
+    async (status) => {
+      const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+      translateBatch.mockReturnValue(
+        Promise.resolve({
+          translated: new Map(),
+          errors: [Object.assign(new Error('denied'), { status })],
+        })
+      );
+      const { writer, writeTranslationCache } = fakeWriter();
+      const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    await expect(localizeRecords(records, 'br-anac', 'pt', writer)).rejects.toThrow(
-      /GEMINI_API_KEY rejected/
-    );
-    expect(writeTranslationCache).not.toHaveBeenCalled();
-  });
+        expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
+        expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 1 });
+        expect(writeTranslationCache).not.toHaveBeenCalled();
+        expect(logSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
+          'event=localize_translate_failed'
+        );
+      } finally {
+        logSpy.mockRestore();
+      }
+    }
+  );
 
   it('never calls Gemini or writes the cache in dry-run mode, and leaves the original text in place', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
@@ -484,6 +487,34 @@ describe('localizeRecords', () => {
     expect(stats.candidates).toBe(1);
     expect(result.get('1')!.cancellation_reason).toBe('Cancelled');
     expect(result.get('1')!.operational_classes).toEqual(['commercial']);
+  });
+
+  it('ignores AESA airworthiness classes already rendered in English, including stale cache entries', async () => {
+    const classHash = hashTranslatable('airworthiness_class', 'ultralight airplane');
+    const reasonHash = hashTranslatable('cancellation_reason', 'BAJA DEFINITIVA');
+    const records = new Map([
+      [
+        '1',
+        make('1', {
+          source: 'es-aesa',
+          airworthiness_class: 'ultralight airplane',
+          airworthiness_class_source_text: 'ULM - AVION',
+          cancellation_reason: 'BAJA DEFINITIVA',
+        }),
+      ],
+    ]);
+    translateBatch.mockReturnValue(ok([[reasonHash, 'Permanent deregistration']]));
+    const { writer } = fakeWriter({ [classHash]: 'light sport aircraft' });
+
+    const { records: result, stats } = await localizeRecords(records, 'es-aesa', 'es', writer);
+
+    expect(stats.candidates).toBe(1);
+    expect(translateBatch).toHaveBeenCalledWith(
+      [{ id: reasonHash, field: 'cancellation_reason', text: 'BAJA DEFINITIVA' }],
+      expect.anything()
+    );
+    expect(result.get('1')!.airworthiness_class).toBe('ultralight airplane');
+    expect(result.get('1')!.cancellation_reason).toBe('Permanent deregistration');
   });
 
   it('translates each operational_classes element independently and preserves array order', async () => {

@@ -1,6 +1,7 @@
 id: nz-caa
 label: CAA New Zealand Civil Aircraft Register
 country: NZ
+language: en
 encoding: utf8
 trim_all: true
 # No published rhythm, and content_hash gates the PUT — so one small daily bulk download catches a

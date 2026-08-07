@@ -8,7 +8,7 @@ import {
 import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
-import { FeedRowsSchema } from './feed.js';
+import { FeedSliceSchema, serializeFeedSlice } from './feed.js';
 import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
@@ -260,13 +260,28 @@ export class R2ArtifactWriter {
   // Per-source feed slice, the build intermediate main() merges into the consolidated DB.
   // Stored as JSON so consolidation reads it back without a SQLite round trip.
   async writeFeedRows(source: string, rows: FeedRow[]): Promise<void> {
-    await this.put(`aircraft/_feed/${source}.json`, JSON.stringify(rows), 'application/json');
+    await this.put(`aircraft/_feed/${source}.json`, serializeFeedSlice(rows), 'application/json');
   }
 
   async readFeedRows(source: string): Promise<FeedRow[] | null> {
-    return this.readJson(`aircraft/_feed/${source}.json`, FeedRowsSchema, 'feed_rows', null, {
-      source,
-    });
+    const slice = await this.readJson(
+      `aircraft/_feed/${source}.json`,
+      FeedSliceSchema,
+      'feed_rows',
+      null,
+      { source }
+    );
+    if (slice === null) return null;
+    if (slice.needsMigration) {
+      try {
+        await this.writeFeedRows(source, slice.rows);
+        log('info', 'feed_rows_migrated', { source });
+      } catch (err) {
+        // The validated rows remain safe for this build; the next read retries the writeback.
+        log('warn', 'feed_rows_migration_write_failed', { source, msg: errorMessage(err) });
+      }
+    }
+    return slice.rows;
   }
 
   // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads
