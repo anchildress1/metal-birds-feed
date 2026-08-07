@@ -60,9 +60,8 @@ jobs:
       issues: write
     strategy:
       fail-fast: false
-      # Every source uses the same Gemini project; serialize jobs so per-job batching cannot combine
-      # into a fleet-wide request burst against the project's RPM limit.
-      max-parallel: 1
+      # Unserialized: only br-anac reaches Gemini, and translateAtRate already paces it. Revisit if
+      # a second translating source lands.
       matrix:
         source: ${{ fromJson(needs.discover.outputs.sources) }}
     concurrency:
