@@ -293,6 +293,18 @@ const clRegistration = (value: string): string | null => {
   return /^CC[A-Z0-9]{3}$/.test(v) ? `CC-${v.slice(2)}` : null;
 };
 
+// Trailing component of a free-form comma-separated postal address, which is where registers that
+// publish one address string put the country (CAA NZ). Pair with a `lookup` to reach an ISO code.
+// Everything ahead of it is street/suburb/postcode and stays dropped — this reads the one component
+// the PII rule permits rather than keeping the address to get at it.
+const lastCommaSegmentOrNull = (value: string): string | null => {
+  const segments = value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return segments.at(-1) ?? null;
+};
+
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
 // unpowered (glider); RPA/unknown -> null (no canonical UAV enum).
 const brAirframe = (value: string): string | null => {
@@ -657,6 +669,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   no_owner_country: noOwnerCountry,
   no_owner_kind: noOwnerKind,
   cl_registration: clRegistration,
+  last_comma_segment_or_null: lastCommaSegmentOrNull,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

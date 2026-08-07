@@ -91,6 +91,7 @@ const SourceConfigSchema = z
         body: z.unknown().optional(),
         entries: z.record(z.string(), z.string()),
         headers: z.record(z.string(), z.string()).optional(),
+        prime_url: z.url().optional(),
         discover_url: z.url().optional(),
         discover_pattern: z
           .string()

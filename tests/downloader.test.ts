@@ -724,3 +724,82 @@ describe('download — method: POST', () => {
     expect(call[1].body).toBe('{}');
   });
 });
+
+describe('prime_url cookie priming', () => {
+  const PRIMED_CONFIG: DownloadConfig = {
+    prime_url: 'https://www.example.govt.nz/',
+    url: 'https://www.example.govt.nz/assets/register.csv',
+    format: 'file',
+    entries: { register: 'register.csv' },
+  };
+
+  // Mirrors the Imperva behavior this exists for: the edge only serves the file once the cookies
+  // it handed out at the site root come back on the request.
+  const primeThenFile = (setCookie: string[], body: string): ReturnType<typeof mock> => {
+    const fn = mock();
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(setCookie.map((c) => ['set-cookie', c] as [string, string])),
+      text: () => Promise.resolve(''),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    });
+    const buf = Buffer.from(body, 'utf8');
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'content-length': String(buf.byteLength) }),
+      arrayBuffer: () =>
+        Promise.resolve(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)),
+    });
+    setFetch(fn);
+    return fn;
+  };
+
+  it('replays the primed cookies on the download, stripping their attributes', async () => {
+    const fn = primeThenFile(
+      ['visid_incap_1=abc; path=/; Secure; HttpOnly', 'incap_ses_2=def; path=/'],
+      'a,b\n1,2\n'
+    );
+    const files = await download(PRIMED_CONFIG, FAST_RETRY);
+
+    expect(files.get('register')?.toString('utf8')).toBe('a,b\n1,2\n');
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(fn.mock.calls[0]?.[0]).toBe('https://www.example.govt.nz/');
+    const init = fn.mock.calls[1]?.[1] as RequestInit;
+    expect((init.headers as Record<string, string>).Cookie).toBe(
+      'visid_incap_1=abc; incap_ses_2=def'
+    );
+  });
+
+  it('preserves configured headers alongside the cookie', async () => {
+    const fn = primeThenFile(['visid_incap_1=abc; path=/'], 'a\n1\n');
+    await download({ ...PRIMED_CONFIG, headers: { 'User-Agent': 'test-agent' } }, FAST_RETRY);
+
+    const init = fn.mock.calls[1]?.[1] as RequestInit;
+    expect(init.headers).toEqual({ 'User-Agent': 'test-agent', Cookie: 'visid_incap_1=abc' });
+  });
+
+  it('fails naming the prime URL when it sets no cookies, rather than downloading a challenge', async () => {
+    primeThenFile([], 'a\n1\n');
+    await expect(download(PRIMED_CONFIG, FAST_RETRY)).rejects.toThrow(
+      'Prime fetch set no cookies on https://www.example.govt.nz/'
+    );
+  });
+
+  it('sends no Cookie header when prime_url is absent', async () => {
+    const buf = Buffer.from('a\n1\n', 'utf8');
+    mockFetch(buf);
+    const fn = globalThis.fetch as unknown as ReturnType<typeof mock>;
+    await download(
+      { url: PRIMED_CONFIG.url, format: 'file', entries: { register: 'register.csv' } },
+      FAST_RETRY
+    );
+
+    expect(fn).toHaveBeenCalledTimes(1);
+    const init = fn.mock.calls[0]?.[1] as RequestInit;
+    expect((init.headers as Record<string, string> | undefined)?.Cookie).toBeUndefined();
+  });
+});

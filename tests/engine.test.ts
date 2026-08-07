@@ -3032,9 +3032,9 @@ beforeAll(async () => {
 });
 
 describe('CAA NZ fixture translation', () => {
-  it('translates all 11 fixture rows with no failures', () => {
-    expect(nzStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
-    expect(nzRecords.size).toBe(11);
+  it('translates all 12 fixture rows with no failures', () => {
+    expect(nzStats).toEqual({ total: 12, ok: 12, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(nzRecords.size).toBe(12);
   });
 
   describe('ZK-AAC — Cessna, corporate owner', () => {
@@ -3098,12 +3098,19 @@ describe('CAA NZ fixture translation', () => {
     it('preserves a serial containing a slash', () => expect(r.serial_number).toBe('AACA/445'));
   });
 
-  it('drops the Owner Address column entirely — no field carries postal detail', () => {
+  it('keeps only the country component of Owner Address, never the postal detail', () => {
     for (const r of nzRecords.values()) {
       expect(r.owner.state).toBeNull();
-      expect(r.owner.country).toBe('NZ');
-      expect(JSON.stringify(r)).not.toContain('Example Street');
+      const blob = JSON.stringify(r);
+      for (const fragment of ['Example Street', 'Example Road', 'Testville', 'Queensland', '4559'])
+        expect(blob).not.toContain(fragment);
     }
+  });
+
+  it('reads owner.country from the address rather than assuming the register country', () => {
+    expect(nzRecords.get('ZK-AAC')?.owner.country).toBe('NZ');
+    // A constant NZ would have written a false country for this Australian owner.
+    expect(nzRecords.get('ZK-EXC')?.owner.country).toBe('AU');
   });
 
   it('every record carries a canonical 6-lowercase-hex address inside the NZ block', () => {

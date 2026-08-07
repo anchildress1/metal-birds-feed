@@ -213,4 +213,4 @@ Where a source's observed publishing rhythm differs from a stated or assumed one
 
 - FAA (United States): **daily.** The Releasable Aircraft Database refreshes daily at 11:30 pm Central per the FAA download page; the earlier "monthly" assumption conflated this bulk ZIP with FAA's separate Aircraft Registry Reports.
 - Transport Canada: **daily.** No cadence documented on the CCARCS download page; `ccarcsdb.zip` `Last-Modified` was observed same-day and mid-month, indicating a sub-daily refresh.
-- CAA New Zealand: **weekly, assumed.** No published cadence; a 2026-07-31 publish against a 2026-08-06 fetch rules out daily but pins nothing. Tighten if a faster rhythm is observed.
+- CAA New Zealand: **daily.** No published cadence and only one observation point (a 2026-07-31 publish against a 2026-08-06 fetch), so the "more frequent of the two" rule applies: polling daily costs one conditional GET and `content_hash` gates the PUT, while a weekly cadence would hide a mid-week publish for up to seven days and delay the staleness alarm to 10.5.

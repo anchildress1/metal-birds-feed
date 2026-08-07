@@ -51,6 +51,7 @@ export const SCALAR_TRANSFORMS = [
   'no_owner_country',
   'no_owner_kind',
   'cl_registration',
+  'last_comma_segment_or_null',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;
@@ -126,6 +127,10 @@ export interface DownloadConfig {
   body?: unknown;
   entries: Record<string, string>;
   headers?: Record<string, string>;
+  // Bot-protection edges (CAA NZ sits behind Imperva) answer a cold, cookie-less request with a
+  // 200 and a challenge page instead of the file — a success status carrying the wrong bytes.
+  // Fetching this URL first and replaying the cookies it sets on the real request clears them.
+  prime_url?: string;
   discover_url?: string;
   discover_pattern?: string;
 }

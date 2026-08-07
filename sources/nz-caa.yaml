@@ -3,11 +3,15 @@ label: CAA New Zealand Civil Aircraft Register
 country: NZ
 encoding: utf8
 trim_all: true
-# No published rhythm; 2026-07-31 publish vs 2026-08-06 fetch rules out daily. content_hash gates
-# the PUT, so over-polling is free.
-cadence_days: 7
+# No published rhythm, and content_hash gates the PUT — so polling daily costs one conditional GET
+# and catches a mid-week publish that a weekly cadence would hide for up to seven days.
+cadence_days: 1
 
 download:
+  # aviation.govt.nz is behind Imperva: a cold request for the CSV returns 200 with a challenge page
+  # instead of the file. Priming the site root first yields the cookies that let the real request
+  # through.
+  prime_url: https://www.aviation.govt.nz/
   url: https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv
   format: file
   entries:
@@ -57,9 +61,11 @@ mapping:
   year_manufactured:
     constant: ~
 
-  # No `default`: an unrecognized category throws, so a CAA NZ category change fails the run instead
-  # of nulling a slice of the fleet. Microlight Class 1/2 are mass/seat bands spanning both 3-axis
-  # and weight-shift airframes, so `other` avoids asserting a wing type the register never states.
+  # No `default`: an unrecognized category throws, so a renamed or added CAA NZ category fails the
+  # run instead of nulling a slice of the fleet. A blank cell is the one case that still nulls
+  # quietly — trim_or_null yields null and resolveScalar returns before the lookup runs. Today's
+  # register has none. Microlight Class 1/2 are mass/seat bands spanning both 3-axis and
+  # weight-shift airframes, so `other` avoids asserting a wing type the register never states.
   airframe_type:
     field: Model Category
     transform: trim_or_null
@@ -137,8 +143,22 @@ mapping:
   owner.state:
     constant: ~
 
+  # Not every owner is in New Zealand — the register carries owners in AU, HK, SI, GB and VU, and a
+  # constant would write a false country for them. The address's trailing component is the country,
+  # which is permitted PII; the rest of the address stays dropped. `default: ~` rather than a throw
+  # because an owner moving to a new country is routine data, not upstream drift — it nulls and logs
+  # translate_lookup_default, which stays legible at this volume.
   owner.country:
-    constant: NZ
+    field: Owner Address
+    transform: last_comma_segment_or_null
+    lookup:
+      'New Zealand': NZ
+      'Australia': AU
+      'Hong Kong': HK
+      'Slovenia': SI
+      'United Kingdom': GB
+      'Vanuatu': VU
+    default: ~
 
   operator.name:
     constant: ~
