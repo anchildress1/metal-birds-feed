@@ -23,9 +23,16 @@ void mock.module('../../src/localize/gemini-client.js', () => ({
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
 const { localizeRecords } = await import('../../src/localize/localize.js');
+type GeminiClientConfig = { onChunkTranslated?: (m: Map<string, string>) => Promise<void> };
 
-const ok = (entries: [string, string][]) =>
-  Promise.resolve({ translated: new Map(entries), errors: [] });
+// Mirrors the real client: translations reach the caller through onChunkTranslated as each chunk
+// lands, not only via the return value. A mock that skipped the callback would let an incremental
+// persistence regression pass.
+const ok = (entries: [string, string][]) => async (_items: unknown, config: GeminiClientConfig) => {
+  const translated = new Map(entries);
+  await config.onChunkTranslated?.(translated);
+  return { translated, errors: [] };
+};
 
 const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   source: 'br-anac',
@@ -127,7 +134,7 @@ describe('localizeRecords', () => {
   it('translates a cache miss into the primary field and persists the updated cache', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer, writeTranslationCache } = fakeWriter();
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -151,7 +158,7 @@ describe('localizeRecords', () => {
       ],
     ]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
 
     const { records: success } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -165,6 +172,47 @@ describe('localizeRecords', () => {
     const { records: failure } = await localizeRecords(records, 'br-anac', 'pt', writer2);
     expect(failure.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
     expect(failure.get('1')!.cancellation_reason_source_text).toBe('AERONAVE EXPORTADA');
+  });
+
+  it('persists each chunk as it lands, so a later chunk failing keeps the earlier one', async () => {
+    const hashA = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([
+      ['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })],
+      ['2', make('2', { airworthiness_class: 'CA PADRAO' })],
+    ]);
+    // Two chunks: the first lands and is persisted, the second throws. Without per-chunk
+    // persistence the first chunk's paid-for translation would be discarded with the batch.
+    translateBatch.mockImplementation(async (_items: unknown, config: GeminiClientConfig) => {
+      await config.onChunkTranslated?.(new Map([[hashA, 'Aircraft exported']]));
+      return {
+        translated: new Map([[hashA, 'Aircraft exported']]),
+        errors: [new Error('chunk 2')],
+      };
+    });
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+    expect(writeTranslationCache).toHaveBeenCalledWith(
+      'br-anac',
+      cacheEnvelope({ [hashA]: 'Aircraft exported' })
+    );
+    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
+    // The unfinished half degrades to source text rather than blocking the finished half.
+    expect(result.get('2')!.airworthiness_class).toBe('CA PADRAO');
+    expect(stats.failed).toBe(1);
+  });
+
+  it('does not re-upload an identical cache after the last chunk already persisted it', async () => {
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
   });
 
   it('resolves from cache without calling Gemini', async () => {
@@ -185,7 +233,7 @@ describe('localizeRecords', () => {
       ['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })],
       ['2', make('2', { cancellation_reason: 'AERONAVE EXPORTADA' })],
     ]);
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -238,7 +286,7 @@ describe('localizeRecords', () => {
       ],
     ]);
     // Only hashA comes back — hashB silently missing from a well-formed-but-partial response.
-    translateBatch.mockReturnValue(ok([[hashA, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hashA, 'Aircraft exported']]));
     const { writer, writeTranslationCache } = fakeWriter();
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -254,7 +302,7 @@ describe('localizeRecords', () => {
   it('discards an id in the response that was never requested', async () => {
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    translateBatch.mockReturnValue(
+    translateBatch.mockImplementation(
       ok([
         [hash, 'Aircraft exported'],
         ['unrequested-id', 'junk'],
@@ -275,7 +323,7 @@ describe('localizeRecords', () => {
   it('skips translation when the cache read fails, rather than re-billing the whole source', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer, writeTranslationCache } = fakeWriter();
     (writer.readTranslationCache as ReturnType<typeof mock>).mockRejectedValue(
       new Error('R2 down')
@@ -297,7 +345,7 @@ describe('localizeRecords', () => {
     const error = Object.assign(new Error('AccessDenied'), {
       $metadata: { httpStatusCode: 403 },
     });
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
     (writer.readTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
 
@@ -310,7 +358,7 @@ describe('localizeRecords', () => {
   it('still returns the in-memory translation when the cache write fails, without throwing', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
     (writer.writeTranslationCache as ReturnType<typeof mock>).mockRejectedValue(
       new Error('R2 down')
@@ -324,7 +372,7 @@ describe('localizeRecords', () => {
   it('degrades on an access-denied cache write the same as a transient one', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const error = Object.assign(new Error('AccessDenied'), {
       $metadata: { httpStatusCode: 403 },
     });
@@ -342,7 +390,7 @@ describe('localizeRecords', () => {
     });
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
 
     const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -406,7 +454,7 @@ describe('localizeRecords', () => {
   it('passes null through for an unpopulated field even when others are translated', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
 
     const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -417,7 +465,7 @@ describe('localizeRecords', () => {
   it('translates lien_status for a source other than mv-caa', async () => {
     const hash = hashTranslatable('lien_status', 'ALIENACAO FIDUCIARIA');
     const records = new Map([['1', make('1', { lien_status: 'ALIENACAO FIDUCIARIA' })]]);
-    translateBatch.mockReturnValue(ok([[hash, 'Fiduciary lien']]));
+    translateBatch.mockImplementation(ok([[hash, 'Fiduciary lien']]));
     const { writer } = fakeWriter();
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -481,7 +529,7 @@ describe('localizeRecords', () => {
         }),
       ],
     ]);
-    translateBatch.mockReturnValue(ok([[hash, 'Cancelled']]));
+    translateBatch.mockImplementation(ok([[hash, 'Cancelled']]));
     const { writer } = fakeWriter();
 
     const { records: result, stats } = await localizeRecords(records, 'cl-dgac', 'es', writer);
@@ -505,7 +553,7 @@ describe('localizeRecords', () => {
         }),
       ],
     ]);
-    translateBatch.mockReturnValue(ok([[reasonHash, 'Permanent deregistration']]));
+    translateBatch.mockImplementation(ok([[reasonHash, 'Permanent deregistration']]));
     const { writer } = fakeWriter({ [classHash]: 'light sport aircraft' });
 
     const { records: result, stats } = await localizeRecords(records, 'es-aesa', 'es', writer);
@@ -523,7 +571,7 @@ describe('localizeRecords', () => {
     const hashA = hashTranslatable('operational_classes', 'INSTRUCAO');
     const hashB = hashTranslatable('operational_classes', 'AGRICOLA');
     const records = new Map([['1', make('1', { operational_classes: ['INSTRUCAO', 'AGRICOLA'] })]]);
-    translateBatch.mockReturnValue(
+    translateBatch.mockImplementation(
       ok([
         [hashA, 'Instruction'],
         [hashB, 'Agricultural'],
@@ -540,7 +588,7 @@ describe('localizeRecords', () => {
   it('falls back per-element to the original operational_classes text on a partial response', async () => {
     const hashA = hashTranslatable('operational_classes', 'INSTRUCAO');
     const records = new Map([['1', make('1', { operational_classes: ['INSTRUCAO', 'AGRICOLA'] })]]);
-    translateBatch.mockReturnValue(ok([[hashA, 'Instruction']]));
+    translateBatch.mockImplementation(ok([[hashA, 'Instruction']]));
     const { writer } = fakeWriter();
 
     const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);

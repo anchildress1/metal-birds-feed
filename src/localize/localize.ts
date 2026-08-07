@@ -122,13 +122,32 @@ const resolveTranslations = async (
   // text for this run instead; the following run reads the real cache and translates only the delta.
   if (delta.length > 0 && !dryRun && cacheReadSucceeded) {
     const apiKey = requireEnv('GEMINI_API_KEY'); // outside try/catch: a missing key must throw, not degrade
-    const { translated: result, errors } = await translateBatch(
+    // Persist as each chunk lands rather than once at the end: the job has a wall-clock timeout and
+    // a cold source can exceed it, which would discard everything already paid for and re-bill the
+    // identical delta next run, never converging. Swallowing the write keeps a persistence blip
+    // from abandoning translations already bought — they still apply to this run's records.
+    const persistChunk = async (chunkTranslations: Map<string, string>): Promise<void> => {
+      // filters out any id the model returned that wasn't requested, which would otherwise fail
+      // TranslationCacheSchema on the next read and discard the whole cache
+      for (const [id, text] of chunkTranslations) if (deltaIds.has(id)) translated[id] = text;
+      try {
+        await writer.writeTranslationCache(sourceId, {
+          version: TRANSLATION_CACHE_VERSION,
+          entries: { ...cache.entries, ...translated },
+        });
+      } catch (err) {
+        log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
+      }
+    };
+
+    const { errors } = await translateBatch(
       delta.map(([id, { field, text }]) => ({ id, field, text })),
-      { apiKey, requestsPerMinute: resolveRequestsPerMinute(sourceId) }
+      {
+        apiKey,
+        requestsPerMinute: resolveRequestsPerMinute(sourceId),
+        onChunkTranslated: persistChunk,
+      }
     );
-    // filters out any id the model returned that wasn't requested, which would otherwise fail
-    // TranslationCacheSchema on the next read and discard the whole cache
-    for (const [id, text] of result) if (deltaIds.has(id)) translated[id] = text;
     failed = delta.length - Object.keys(translated).length;
     // Before the warn: a rejected key recurs identically on every run, so it earns the same hard
     // fail as a missing one rather than a warning nobody reads on a green job. This does not block
@@ -145,17 +164,12 @@ const resolveTranslations = async (
     }
   }
 
+  // No write here: persistChunk already wrote after the last chunk that landed, so a second PUT
+  // would only re-upload the identical object.
   const updatedCache: TranslationCache = {
     version: TRANSLATION_CACHE_VERSION,
     entries: { ...cache.entries, ...translated },
   };
-  if (cacheReadSucceeded && Object.keys(translated).length > 0) {
-    try {
-      await writer.writeTranslationCache(sourceId, updatedCache);
-    } catch (err) {
-      log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
-    }
-  }
 
   return {
     cache: updatedCache,
