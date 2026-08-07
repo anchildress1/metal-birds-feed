@@ -320,6 +320,24 @@ describe('localizeRecords', () => {
     );
   });
 
+  it('withholds pruning when the candidate set collapses but the record count did not', async () => {
+    const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    // A mapping typo or an upstream column rename can null a field on most rows without changing
+    // records.size, so the caller's record-count gate says prune while the candidate set has
+    // collapsed. Only 1 of 4 cached entries is still a candidate — below the retention floor.
+    const { writer, writeTranslationCache } = fakeWriter({
+      [live]: 'Aircraft exported',
+      [hashTranslatable('cancellation_reason', 'MOTIVO A')]: 'Reason A',
+      [hashTranslatable('cancellation_reason', 'MOTIVO B')]: 'Reason B',
+      [hashTranslatable('cancellation_reason', 'MOTIVO C')]: 'Reason C',
+    });
+
+    await localizeRecords(records, 'br-anac', 'pt', writer, false, true);
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
   it('keeps stale entries when the caller withholds permission to prune', async () => {
     const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');

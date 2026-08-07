@@ -37,6 +37,11 @@ const FIELD_EXCLUDED_FOR_SOURCE = new Map<string, ReadonlySet<TranslatableField>
 // than as the model rejecting individual strings — so no item is charged an attempt.
 const MIN_CHUNK_RETURN_RATIO = 0.5;
 
+// Share of existing cache entries that must still be candidates before pruning is allowed to run.
+// Mirrors writer.ts's MIN_RETAIN_RATIO: registries turn over their descriptive text gradually, so
+// losing half of it in one refresh is a defect somewhere, not a publication.
+const MIN_RETAIN_RATIO = 0.5;
+
 const isFieldExcluded = (sourceId: string, field: TranslatableField): boolean =>
   FIELD_EXCLUDED_FOR_SOURCE.get(sourceId)?.has(field) ?? false;
 
@@ -159,11 +164,30 @@ const resolveTranslations = async (
   // Skip both what is already translated and what has failed enough times to look like a property
   // of the text rather than a bad run — otherwise a string the model reliably mangles is re-sent,
   // and re-billed, on every refresh forever.
-  // null disables pruning for this run. localizeRecords runs before writer.write applies the
-  // retain-ratio guard, so a truncated upstream would otherwise prune the cache down to its short
-  // candidate set, the artifact write would then fail, and the next healthy run would re-send every
-  // dropped string to Gemini — for br-anac, most of what has ever been paid for.
-  const live = allowPrune ? new Set(candidates.keys()) : null;
+  // null disables pruning for this run. Two independent gates, because they fail differently.
+  //
+  // `allowPrune` is the caller's record-count judgement: localizeRecords runs before writer.write
+  // applies the retain-ratio guard, so a truncated upstream would otherwise prune the cache to its
+  // short candidate set, fail the artifact write, and leave the next healthy run to re-buy every
+  // dropped string — for br-anac, most of what has ever been paid for.
+  //
+  // The second gate measures the thing actually being destroyed. A record count can be perfectly
+  // stable while the candidate set collapses: a mapping typo or an upstream column rename that
+  // nulls cancellation_reason on most rows leaves records.size untouched, so the caller says prune
+  // and the cache sheds those entries anyway. Reverting the mapping would then re-buy all of them.
+  // Comparing survivors against the existing cache catches that, and covers the case where a
+  // corrupt _state self-heals to null and the record-count gate has nothing to compare against.
+  const candidateHashes = new Set(candidates.keys());
+  const priorEntryCount = Object.keys(cache.entries).length;
+  const retained = Object.keys(cache.entries).filter((hash) => candidateHashes.has(hash)).length;
+  const retainsEnough = priorEntryCount === 0 || retained / priorEntryCount >= MIN_RETAIN_RATIO;
+  if (allowPrune && !retainsEnough)
+    log('warn', 'localize_prune_withheld', {
+      source: sourceId,
+      prior_entries: priorEntryCount,
+      retained,
+    });
+  const live = allowPrune && retainsEnough ? candidateHashes : null;
   const delta = [...candidates.entries()].filter(
     ([hash]) => !(hash in cache.entries) && !isExhausted(cache.failures, hash)
   );
