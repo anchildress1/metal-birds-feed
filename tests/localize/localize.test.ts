@@ -291,7 +291,7 @@ describe('localizeRecords', () => {
       { [staleFailure]: 2 }
     );
 
-    await localizeRecords(records, 'br-anac', 'pt', writer);
+    await localizeRecords(records, 'br-anac', 'pt', writer, false, true);
 
     expect(translateBatch).not.toHaveBeenCalled();
     expect(writeTranslationCache).toHaveBeenCalledWith(
@@ -300,12 +300,28 @@ describe('localizeRecords', () => {
     );
   });
 
+  it('keeps stale entries when the caller withholds permission to prune', async () => {
+    const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer, writeTranslationCache } = fakeWriter({
+      [live]: 'Aircraft exported',
+      [stale]: 'Old reason',
+    });
+
+    // allowPrune defaults false: a truncated upstream reaches here before writer.write can reject
+    // it, and pruning against its short candidate set would discard paid translations for good.
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
   it('does not write a pruned cache on a dry run', async () => {
     const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const { writer, writeTranslationCache } = fakeWriter({ [stale]: 'Old reason' });
 
-    await localizeRecords(records, 'br-anac', 'pt', writer, true);
+    await localizeRecords(records, 'br-anac', 'pt', writer, true, true);
 
     expect(writeTranslationCache).not.toHaveBeenCalled();
   });

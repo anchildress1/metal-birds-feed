@@ -83,19 +83,25 @@ const buildCache = (
   prior: TranslationCache,
   translated: TranslationEntries,
   attempted: Set<string>,
-  live: ReadonlySet<string>
+  live: ReadonlySet<string> | null
 ): TranslationCache => {
   const failures: TranslationFailures = {};
   for (const [hash, count] of Object.entries(prior.failures))
-    if (live.has(hash)) failures[hash] = count;
+    if (live === null || live.has(hash)) failures[hash] = count;
   for (const hash of attempted) {
     if (hash in translated) delete failures[hash];
     else failures[hash] = (failures[hash] ?? 0) + 1;
   }
 
   const entries: TranslationEntries = {};
-  for (const [hash, text] of Object.entries({ ...prior.entries, ...translated }))
-    if (live.has(hash)) entries[hash] = text;
+  if (live === null) Object.assign(entries, prior.entries, translated);
+  else
+    // Iterating `live` rather than copying the prior cache and filtering: the candidate set is the
+    // small side, and the cache is the one that grows per cancelled aircraft.
+    for (const hash of live) {
+      const text = translated[hash] ?? prior.entries[hash];
+      if (text !== undefined) entries[hash] = text;
+    }
 
   return { version: TRANSLATION_CACHE_VERSION, entries, failures };
 };
@@ -141,14 +147,19 @@ const resolveTranslations = async (
   candidates: Map<string, Candidate>,
   sourceId: string,
   writer: R2ArtifactWriter,
-  dryRun: boolean
+  dryRun: boolean,
+  allowPrune: boolean
 ): Promise<ResolvedTranslations> => {
   const { cache, ok: cacheReadSucceeded } = await readCache(writer, sourceId);
 
   // Skip both what is already translated and what has failed enough times to look like a property
   // of the text rather than a bad run — otherwise a string the model reliably mangles is re-sent,
   // and re-billed, on every refresh forever.
-  const live = new Set(candidates.keys());
+  // null disables pruning for this run. localizeRecords runs before writer.write applies the
+  // retain-ratio guard, so a truncated upstream would otherwise prune the cache down to its short
+  // candidate set, the artifact write would then fail, and the next healthy run would re-send every
+  // dropped string to Gemini — for br-anac, most of what has ever been paid for.
+  const live = allowPrune ? new Set(candidates.keys()) : null;
   const delta = [...candidates.entries()].filter(
     ([hash]) => !(hash in cache.entries) && !isExhausted(cache.failures, hash)
   );
@@ -229,8 +240,9 @@ const resolveTranslations = async (
   // delta is empty still sheds entries as upstream text turns over. `!dryRun` because a dry run
   // must not mutate R2, and its empty `attempted` set would otherwise make this the only write.
   const pruned =
-    Object.keys(cache.entries).some((hash) => !live.has(hash)) ||
-    Object.keys(cache.failures).some((hash) => !live.has(hash));
+    live !== null &&
+    (Object.keys(cache.entries).some((hash) => !live.has(hash)) ||
+      Object.keys(cache.failures).some((hash) => !live.has(hash)));
   if (cacheReadSucceeded && !dryRun && (droppedByModel || pruned)) {
     try {
       await writer.writeTranslationCache(sourceId, updatedCache);
@@ -291,7 +303,10 @@ export const localizeRecords = async (
   sourceId: string,
   language: string,
   writer: R2ArtifactWriter,
-  dryRun = false
+  dryRun = false,
+  // Pruning is destructive and irreversible for this run's cache; the caller owns the judgement of
+  // whether the record set is trustworthy, because only it has the prior count to compare against.
+  allowPrune = false
 ): Promise<{ records: Map<string, Aircraft>; stats: LocalizationStats }> => {
   // An English register has nothing to translate, and asking for one anyway is actively harmful:
   // the model rewords curated labels (tc-ca's "Certificate of Airworthiness") and invents meaning
@@ -305,7 +320,13 @@ export const localizeRecords = async (
     return { records, stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 } };
   }
 
-  const { cache, stats } = await resolveTranslations(candidates, sourceId, writer, dryRun);
+  const { cache, stats } = await resolveTranslations(
+    candidates,
+    sourceId,
+    writer,
+    dryRun,
+    allowPrune
+  );
 
   return {
     records: applyTranslations(records, cache, sourceId),

@@ -51,6 +51,9 @@ void mock.module('../src/writer.js', () => ({
     readDeployedFeedHash = mockReadDeployedFeedHash;
     writeDeployedFeedHash = mockWriteDeployedFeedHash;
   },
+  // pipeline.ts reads this to decide whether a run is trustworthy enough to prune the translation
+  // cache; a mock omitting it fails the import, not the assertion.
+  MIN_RETAIN_RATIO: 0.5,
 }));
 
 const { main, publishFeed, publishFeedForDeploy, markFeedDeployed, resolveFeedOutputPath, run } =
@@ -214,6 +217,29 @@ describe('run', () => {
   // The two maps must differ structurally: toHaveBeenCalledWith is deep equality, so
   // interchangeable-looking maps let a `localized` -> `records` regression pass silently and ship
   // untranslated text to both durable outputs.
+  it('withholds cache pruning when the run is short enough to be a truncated upstream', async () => {
+    // localizeRecords runs before writer.write can reject a truncated download, so the same
+    // retain-ratio decides whether pruning is safe. Below it, paid translations must survive.
+    mockReadState.mockResolvedValueOnce({
+      last_run: '2020-01-01T00:00:00.000Z',
+      last_content_change: '2020-01-01T00:00:00.000Z',
+      record_count: 100,
+      content_hash: 'a'.repeat(64),
+      upstream_hash: 'b'.repeat(64),
+    });
+
+    await run('faa').catch(() => undefined);
+
+    expect(mockLocalizeRecords).toHaveBeenCalledWith(
+      expect.anything(),
+      'faa',
+      'en',
+      expect.anything(),
+      expect.any(Boolean),
+      false
+    );
+  });
+
   it('writes localizeRecords output, not the pre-localization records, to both durable outputs', async () => {
     process.env['DRY_RUN'] = 'false';
     const translated = new Map([['1', aircraft({ cancellation_reason: 'AERONAVE EXPORTADA' })]]);
@@ -234,7 +260,9 @@ describe('run', () => {
       'faa',
       'en',
       expect.anything(),
-      false
+      false,
+      // allowPrune: no prior state in this fixture, so there is no truncation to guard against
+      true
     );
     expect(mockR2Write).toHaveBeenCalledWith(localized, 'faa', null, expect.any(String));
     expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', [
