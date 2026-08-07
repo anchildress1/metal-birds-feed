@@ -1,0 +1,161 @@
+id: nz-caa
+label: CAA New Zealand Civil Aircraft Register
+country: NZ
+encoding: utf8
+trim_all: true
+# No published rhythm; 2026-07-31 publish vs 2026-08-06 fetch rules out daily. content_hash gates
+# the PUT, so over-polling is free.
+cadence_days: 7
+
+download:
+  url: https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv
+  format: file
+  entries:
+    register: register.csv
+
+primary: register
+delimiter: ','
+format: csv
+
+source_id: Registration Mark
+registration: Registration Mark
+
+mapping:
+  registration:
+    field: Registration Mark
+    transform: trim_or_null
+    default: ''
+
+  # Published uppercase on every row; canonical form is lowercase. `Mode S Code Binary` carries the
+  # same value and is redundant here.
+  icao_hex:
+    field: Mode S Code HEX
+    transform: lowercase
+
+  icao_type_code:
+    constant: ~
+
+  # Active-fleet snapshot — deregistered aircraft drop out rather than carrying a cancelled marker.
+  status:
+    constant: valid
+
+  country:
+    constant: NZ
+
+  manufacturer:
+    field: Manufacturer
+    transform: trim_or_null
+
+  model:
+    field: Model
+    transform: trim_or_null
+
+  serial_number:
+    field: Serial No.
+    transform: trim_or_null
+
+  year_manufactured:
+    constant: ~
+
+  # No `default`: an unrecognized category throws, so a CAA NZ category change fails the run instead
+  # of nulling a slice of the fleet. Microlight Class 1/2 are mass/seat bands spanning both 3-axis
+  # and weight-shift airframes, so `other` avoids asserting a wing type the register never states.
+  airframe_type:
+    field: Model Category
+    transform: trim_or_null
+    lookup:
+      'Aeroplane (Aircraft)': fixed-wing
+      'Amateur Built Aeroplane': fixed-wing
+      'Helicopter': rotorcraft
+      'Amateur Built Helicopter': rotorcraft
+      'Glider': glider
+      'Amateur Built Glider': glider
+      'Power Glider': glider
+      'Balloon (hot-air)': balloon
+      'Gyroplane (Gyrocopter)': gyroplane
+      'Microlight Class 1': other
+      'Microlight Class 2': other
+
+  category:
+    constant: ~
+
+  # "Amateur Built *" and the microlight classes are genuinely not-type-certificated, but the rest
+  # are only usually so — inferring from Model Category would invent airworthiness status.
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: Owner Name
+    transform: trim_or_null
+
+  owner.kind:
+    constant: ~
+
+  # `Owner Address` is dropped per the PII rule, and it is the only source for state.
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: NZ
+
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: Registered on
+    transform: date_dd_slash_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: MCTOW (Kg)
+    transform: float_or_null

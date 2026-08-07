@@ -3013,3 +3013,134 @@ describe('engine — merge_duplicates edge cases', () => {
     expect(records.get('1')!.owner.country).toBe('AR');
   });
 });
+
+const NZ_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'nz-caa');
+const NZ_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'nz-caa.yaml');
+
+const nzFixtureBuffer = (filename: string): Buffer =>
+  readFileSync(resolve(NZ_FIXTURES, 'input', filename));
+
+let nzRecords: Map<string, Aircraft>;
+let nzStats: EngineStats;
+
+beforeAll(async () => {
+  const config = loadSourceConfig(NZ_CONFIG_PATH);
+  const files = new Map([['register', nzFixtureBuffer('register.csv')]]);
+  const result = await translate(config, files);
+  nzRecords = result.records;
+  nzStats = result.stats;
+});
+
+describe('CAA NZ fixture translation', () => {
+  it('translates all 11 fixture rows with no failures', () => {
+    expect(nzStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(nzRecords.size).toBe(11);
+  });
+
+  describe('ZK-AAC — Cessna, corporate owner', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = nzRecords.get('ZK-AAC')!;
+    });
+    it('has correct identity', () => {
+      expect(r.source).toBe('nz-caa');
+      expect(r.source_id).toBe('ZK-AAC');
+      expect(r.registration).toBe('ZK-AAC');
+      expect(r.country).toBe('NZ');
+    });
+    it('lowercases the uppercase Mode S hex to canonical form', () => {
+      expect(r.icao_hex).toBe('c81e56');
+    });
+    it('parses the DD/MM/YYYY registration date as an unambiguous ISO date', () =>
+      expect(r.certification_date).toBe('2011-06-01'));
+    it('captures MCTOW as a number', () => expect(r.max_takeoff_weight_kg).toBe(598));
+    it('keeps manufacturer, model and serial distinct', () => {
+      expect(r.manufacturer).toBe('Cessna Aircraft Company');
+      expect(r.model).toBe('162');
+      expect(r.serial_number).toBe('16200060');
+    });
+    it('has status=valid (NZ register is an active-fleet snapshot)', () =>
+      expect(r.status).toBe('valid'));
+  });
+
+  describe('Model Category → airframe_type lookup', () => {
+    const cases: [string, NonNullable<Aircraft['airframe_type']>][] = [
+      ['ZK-AAC', 'fixed-wing'],
+      ['ZK-BFC', 'fixed-wing'],
+      ['ZK-HAA', 'rotorcraft'],
+      ['ZK-HIV', 'rotorcraft'],
+      ['ZK-GAJ', 'glider'],
+      ['ZK-GMR', 'glider'],
+      ['ZK-GDC', 'glider'],
+      ['ZK-CBU', 'balloon'],
+      ['ZK-DJW', 'gyroplane'],
+    ];
+    for (const [mark, expected] of cases) {
+      it(`maps ${mark} to ${expected}`, () =>
+        expect(nzRecords.get(mark)?.airframe_type).toBe(expected));
+    }
+
+    it('maps both microlight classes to other rather than asserting a wing type', () => {
+      expect(nzRecords.get('ZK-EII')?.airframe_type).toBe('other');
+      expect(nzRecords.get('ZK-AJW')?.airframe_type).toBe('other');
+    });
+  });
+
+  describe('ZK-GMR — individually owned amateur-built glider', () => {
+    let r: Aircraft;
+    beforeAll(() => {
+      r = nzRecords.get('ZK-GMR')!;
+    });
+    it('retains the owner name (a bare name is allowed PII)', () =>
+      expect(r.owner.name).toBe('JANE DOE'));
+    it('parses a 1981 date without windowing the century', () =>
+      expect(r.certification_date).toBe('1981-10-27'));
+    it('preserves a serial containing a slash', () => expect(r.serial_number).toBe('AACA/445'));
+  });
+
+  it('drops the Owner Address column entirely — no field carries postal detail', () => {
+    for (const r of nzRecords.values()) {
+      expect(r.owner.state).toBeNull();
+      expect(r.owner.country).toBe('NZ');
+      expect(JSON.stringify(r)).not.toContain('Example Street');
+    }
+  });
+
+  it('every record carries a canonical 6-lowercase-hex address inside the NZ block', () => {
+    for (const r of nzRecords.values()) {
+      expect(r.icao_hex).toMatch(/^[0-9a-f]{6}$/);
+      const v = Number.parseInt(r.icao_hex!, 16);
+      expect(v).toBeGreaterThanOrEqual(0xc80000);
+      expect(v).toBeLessThanOrEqual(0xc87fff);
+    }
+  });
+
+  it('publishes no operator or engine data, which NZ does not carry', () => {
+    for (const r of nzRecords.values()) {
+      expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null });
+      expect(r.engine).toEqual({
+        manufacturer: null,
+        model: null,
+        type: null,
+        count: null,
+        horsepower: null,
+        thrust_lbs: null,
+      });
+      expect(r.owner.kind).toBeNull();
+      expect(r.year_manufactured).toBeNull();
+      expect(r.build_certification).toBeNull();
+    }
+  });
+
+  it('fails loudly on an unrecognized Model Category instead of nulling the airframe', async () => {
+    const config = loadSourceConfig(NZ_CONFIG_PATH);
+    const header = nzFixtureBuffer('register.csv').toString('utf8').split('\n')[0];
+    const drifted = `${header}\nSeaplane (Amphibian),ZK-ZZZ,01/06/2011,Maker,Model,1,600,Owner Limited,"1 Example Street, Testville 1234, New Zealand",C81E57,0,\n`;
+    const { stats } = await translate(
+      config,
+      new Map([['register', Buffer.from(drifted, 'utf8')]])
+    );
+    expect(stats.failed).toBe(1);
+    expect(stats.ok).toBe(0);
+  });
+});

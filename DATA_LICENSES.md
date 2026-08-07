@@ -126,7 +126,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | n/a | Nauru | none | n/a | none | excluded: no register |
 | CAAN | Nepal | dgca@caanepal.gov.np | 2026-05-11 | pending | sent |
 | ILT | Netherlands | none | n/a | open | live |
-| CAA NZ | New Zealand | info@caa.govt.nz | 2026-05-05 | pending | sent |
+| CAA NZ | New Zealand | info@caa.govt.nz | 2026-05-05 | none (30-day fallback elapsed 2026-06-04) | live: private-use via CC.2 fallback; see personal-use caveat below |
 | INAC | Nicaragua | info@inac.gob.ni | 2026-05-10 | pending | sent |
 | ANAC Niger | Niger | none | n/a | none | excluded: sanctions |
 | NCAA | Nigeria | info@ncaa.gov.ng | 2026-05-11 | pending | sent |
@@ -204,6 +204,7 @@ Single record of source for agency correspondence and source-use posture: every 
 - CAAS Singapore: Civil Aviation Authority of Singapore source data, free to use with attribution to CAAS and a link to its register page (https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); normalized into this project schema; no endorsement implied.
 - AESA Spain: reusable under Real Decreto 1495/2011 (developing Ley 37/2007 on public-sector-information reuse); conditions require the source of origin be cited, the meaning not be distorted, and the update-date/reuse-condition metadata be preserved. Required citation, verbatim: "Data source: Agencia Estatal de Seguridad Aérea (AESA)". Normalized into this project schema; no endorsement implied.
 - DGAC Chile: reusable non-commercially under Ley N° 17.336 (Chilean Intellectual Property Law); DGAC of Chile retains copyright. Strict and non-waivable condition (DGAC verbatim, Felipe Armijo Cadena reply 2026-07-22): the Dirección General de Aeronáutica Civil (DGAC) of Chile must be cited as the **sole official source and copyright holder** of the information, with a link to the institutional website (https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/). Non-commercial research and reference use only; commercial deployment requires separate written permission. Normalized into this project schema; no endorsement implied.
+- CAA New Zealand: terms grant reproduction **for personal use**, conditioned (verbatim) on "the material being reproduced accurately and not being used in a misleading context" and on acknowledgement — "In all cases, the CAA must be acknowledged as the source." Required credit, verbatim: "Civil Aviation Authority of New Zealand". No storage/caching prohibition, so the §CC.5 gate passes; the open question is whether a private operator pipeline counts as "personal use." Shipped on the §CC.2 fallback (sent 2026-05-05, elapsed 2026-06-04, no reply) — the weakest fallback clearance held, since unlike Norway's silence CAA NZ actively directs non-personal reuse to a permission request. NZGOAL is not adopted on the CAA site. Revisit on any reply.
 - Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence, storage/cache posture, and status.
 
 ## Update cadence
@@ -212,3 +213,4 @@ Where a source's observed publishing rhythm differs from a stated or assumed one
 
 - FAA (United States): **daily.** The Releasable Aircraft Database refreshes daily at 11:30 pm Central per the FAA download page; the earlier "monthly" assumption conflated this bulk ZIP with FAA's separate Aircraft Registry Reports.
 - Transport Canada: **daily.** No cadence documented on the CCARCS download page; `ccarcsdb.zip` `Last-Modified` was observed same-day and mid-month, indicating a sub-daily refresh.
+- CAA New Zealand: **weekly, assumed.** No published cadence; a 2026-07-31 publish against a 2026-08-06 fetch rules out daily but pins nothing. Tighten if a faster rhythm is observed.

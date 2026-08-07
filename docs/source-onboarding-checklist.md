@@ -18,22 +18,23 @@ Working list for triaging the rest of the world's national aircraft registers, d
 
 ### ✅ Done — no further action
 
-| Source                     | License                                                                     | How handled                                                                                                                   |
-| -------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| CASA (Australia)           | CC BY 4.0                                                                   | Live                                                                                                                          |
-| ANAC Brasil                | Open w/ attribution (CC BY-equiv)                                           | Live                                                                                                                          |
-| Transport Canada           | GC Open Data Licence Agreement (verbatim notices)                           | Live                                                                                                                          |
-| DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22) | Live — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
-| Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                | Live — `html` parser path                                                                                                     |
-| CAA Latvia                 | CC0-1.0                                                                     | Live                                                                                                                          |
-| CAA Maldives               | Open + attribution + error-disclaimer (written)                             | Live                                                                                                                          |
-| ILT (Netherlands)          | CC-0                                                                        | Live                                                                                                                          |
-| Luftfartstilsynet (Norway) | Not specified (Ikke oppgitt) — treated as Private-use                       | Live — `json` feed; cleared via research + elapsed 30-day fallback, no reply needed                                           |
-| CAAS (Singapore)           | Open + attribution (CAAS reply 2026-05-12)                                  | Live — `xlsx` + monthly `discover_url` (Isomer CDN)                                                                           |
-| AESA (Spain)               | Open + attribution (Ley 37/2007 / RD 1495/2011)                             | Live — `pdf` parser path; cleared via public reuse licence, no reply needed                                                   |
-| FOCA / BAZL (CH)           | Open w/ attribution (FOCA legal grant 2026-05-22)                           | Live                                                                                                                          |
-| CAA Taiwan                 | Open (OGDL v1.0)                                                            | Live                                                                                                                          |
-| FAA                        | US public domain                                                            | Live                                                                                                                          |
+| Source                     | License                                                                      | How handled                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| CASA (Australia)           | CC BY 4.0                                                                    | Live                                                                                                                          |
+| ANAC Brasil                | Open w/ attribution (CC BY-equiv)                                            | Live                                                                                                                          |
+| Transport Canada           | GC Open Data Licence Agreement (verbatim notices)                            | Live                                                                                                                          |
+| DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22)  | Live — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
+| Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                 | Live — `html` parser path                                                                                                     |
+| CAA Latvia                 | CC0-1.0                                                                      | Live                                                                                                                          |
+| CAA Maldives               | Open + attribution + error-disclaimer (written)                              | Live                                                                                                                          |
+| ILT (Netherlands)          | CC-0                                                                         | Live                                                                                                                          |
+| CAA NZ (New Zealand)       | Private-use ("personal use" + attribution), CC.2 fallback elapsed 2026-06-04 | Live — `csv`; 100% ICAO 24-bit coverage                                                                                       |
+| Luftfartstilsynet (Norway) | Not specified (Ikke oppgitt) — treated as Private-use                        | Live — `json` feed; cleared via research + elapsed 30-day fallback, no reply needed                                           |
+| CAAS (Singapore)           | Open + attribution (CAAS reply 2026-05-12)                                   | Live — `xlsx` + monthly `discover_url` (Isomer CDN)                                                                           |
+| AESA (Spain)               | Open + attribution (Ley 37/2007 / RD 1495/2011)                              | Live — `pdf` parser path; cleared via public reuse licence, no reply needed                                                   |
+| FOCA / BAZL (CH)           | Open w/ attribution (FOCA legal grant 2026-05-22)                            | Live                                                                                                                          |
+| CAA Taiwan                 | Open (OGDL v1.0)                                                             | Live                                                                                                                          |
+| FAA                        | US public domain                                                             | Live                                                                                                                          |
 
 ### 🛠️ Cleared — implementation pending
 
@@ -124,7 +125,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | ACG Montenegro                            | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | IACM Mozambique                           | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | CAAN Nepal                                | 2026-05-11 | 2026-06-10 | pending | Yes      |
-| CAA NZ                                    | 2026-05-05 | 2026-06-04 | pending | No       |
 | INAC Nicaragua                            | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | NCAA Nigeria                              | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | PASO (regional) Pacific Island states     | 2026-05-11 | 2026-06-10 | pending | Yes      |
