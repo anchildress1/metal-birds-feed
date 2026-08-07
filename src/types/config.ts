@@ -76,7 +76,11 @@ export interface FieldMapping {
   transform?: ScalarTransformName;
   array_transform?: ArrayTransformName;
   compound_transform?: CompoundTransformName;
-  lookup?: Record<string, string>;
+  // A null value means "this code is recognized, but the schema has no value for it" — distinct
+  // from an absent key, which is unrecognized and fails the row (or takes `default`, loudly).
+  // Without it, a source enumerating every upstream code would have to route its known-but-
+  // unrepresentable codes through `default` and log a drift warning on each one.
+  lookup?: Record<string, string | null>;
   default?: string | null;
 }
 

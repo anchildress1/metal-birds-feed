@@ -3128,8 +3128,21 @@ describe('CAA NZ fixture translation', () => {
       });
       expect(r.owner.kind).toBeNull();
       expect(r.year_manufactured).toBeNull();
-      expect(r.build_certification).toBeNull();
     }
+  });
+
+  describe('Model Category → build_certification', () => {
+    it('marks the amateur-built and microlight categories not-type-certificated', () => {
+      for (const mark of ['ZK-BFC', 'ZK-HIV', 'ZK-GMR', 'ZK-EII', 'ZK-AJW']) {
+        expect(nzRecords.get(mark)?.build_certification).toBe('not-type-certificated');
+      }
+    });
+
+    it('leaves the remaining categories null via an explicit null lookup value, not a default', () => {
+      for (const mark of ['ZK-AAC', 'ZK-HAA', 'ZK-GAJ', 'ZK-GDC', 'ZK-CBU', 'ZK-DJW']) {
+        expect(nzRecords.get(mark)?.build_certification).toBeNull();
+      }
+    });
   });
 
   it('fails loudly on an unrecognized Model Category instead of nulling the airframe', async () => {

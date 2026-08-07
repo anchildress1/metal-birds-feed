@@ -79,10 +79,25 @@ mapping:
   category:
     constant: ~
 
-  # "Amateur Built *" and the microlight classes are genuinely not-type-certificated, but the rest
-  # are only usually so — inferring from Model Category would invent airworthiness status.
+  # "Amateur Built *" and the microlight classes are not-type-certificated by definition of the
+  # category. The rest are only usually so, and map to null rather than asserting a certification
+  # basis the register never states. Enumerated with no `default` for the same reason as
+  # airframe_type: an added category should fail the run, not silently pick a side.
   build_certification:
-    constant: ~
+    field: Model Category
+    transform: trim_or_null
+    lookup:
+      'Amateur Built Aeroplane': not-type-certificated
+      'Amateur Built Helicopter': not-type-certificated
+      'Amateur Built Glider': not-type-certificated
+      'Microlight Class 1': not-type-certificated
+      'Microlight Class 2': not-type-certificated
+      'Aeroplane (Aircraft)': ~
+      'Helicopter': ~
+      'Glider': ~
+      'Power Glider': ~
+      'Balloon (hot-air)': ~
+      'Gyroplane (Gyrocopter)': ~
 
   airworthiness_class:
     constant: ~

@@ -47,7 +47,7 @@ const FieldMappingSchema = z
     transform: z.enum(SCALAR_TRANSFORMS).optional(),
     array_transform: z.enum(ARRAY_TRANSFORMS).optional(),
     compound_transform: z.enum(COMPOUND_TRANSFORMS).optional(),
-    lookup: z.record(z.string(), z.string()).optional(),
+    lookup: z.record(z.string(), z.string().nullable()).optional(),
     default: z.string().nullable().optional(),
   })
   // The mapping kinds are mutually exclusive; the engine resolves constant before field before
