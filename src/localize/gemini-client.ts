@@ -87,6 +87,16 @@ export const isRetryableGeminiError = (error: unknown): boolean => {
   return status === undefined || (typeof status === 'number' && RETRYABLE_STATUS.has(status));
 };
 
+// A revoked, wrong-project, or billing-disabled key returns 401/403. That is the same class of
+// setup bug as a missing key, not a runtime blip: it fails identically on every subsequent run, so
+// degrading to a warn would ship untranslated data indefinitely behind a green pipeline. Nothing
+// else catches it either — staleness keys off upstream_hash, which keeps advancing normally while
+// the register publishes and the translator stays broken.
+export const isGeminiAuthError = (error: unknown): boolean => {
+  const status = (error as { status?: unknown } | null)?.status;
+  return status === 401 || status === 403;
+};
+
 const chunk = <T>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));

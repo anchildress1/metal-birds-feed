@@ -9,7 +9,7 @@ import {
   type TranslationCache,
   type TranslationEntries,
 } from './cache.js';
-import { translateBatch, DEFAULT_REQUESTS_PER_MINUTE } from './gemini-client.js';
+import { translateBatch, isGeminiAuthError, DEFAULT_REQUESTS_PER_MINUTE } from './gemini-client.js';
 import { log, errorMessage } from '../logger.js';
 
 // Scalar (single-string) translatable fields. operational_classes is translated too, but as an
@@ -121,6 +121,12 @@ const resolveTranslations = async (
     // TranslationCacheSchema on the next read and discard the whole cache
     for (const [id, text] of result) if (deltaIds.has(id)) translated[id] = text;
     failed = delta.length - Object.keys(translated).length;
+    // Before the warn: a rejected key recurs identically on every run, so it earns the same hard
+    // fail as a missing one rather than a warning nobody reads on a green job. This does not block
+    // the feed — deploy-feed runs under `!cancelled()` and reuses a failed source's prior slice.
+    const authError = errors.find(isGeminiAuthError);
+    if (authError !== undefined)
+      throw new Error(`GEMINI_API_KEY rejected by Gemini: ${errorMessage(authError)}`);
     if (errors.length > 0) {
       log('warn', 'localize_translate_failed', {
         source: sourceId,

@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach, spyOn } from 'bun:test';
+import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import type { Aircraft } from '../../src/schema.js';
 import {
   hashTranslatable,
@@ -13,6 +13,12 @@ const readPositiveIntegerEnv = mock(() => 10);
 void mock.module('../../src/localize/gemini-client.js', () => ({
   translateBatch,
   DEFAULT_REQUESTS_PER_MINUTE: 10,
+  // Real behaviour, not a stub: the auth hard-fail is the thing under test, so a mock that always
+  // said false would let the regression through.
+  isGeminiAuthError: (error: unknown) => {
+    const status = (error as { status?: unknown } | null)?.status;
+    return status === 401 || status === 403;
+  },
 }));
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
@@ -361,32 +367,23 @@ describe('localizeRecords', () => {
     expect(translateBatch).not.toHaveBeenCalled();
   });
 
-  it.each([401, 403])(
-    'keeps the original text when Gemini rejects the key with %i',
-    async (status) => {
-      const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-      translateBatch.mockReturnValue(
-        Promise.resolve({
-          translated: new Map(),
-          errors: [Object.assign(new Error('denied'), { status })],
-        })
-      );
-      const { writer, writeTranslationCache } = fakeWriter();
-      const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-      try {
-        const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
+  it.each([401, 403])('fails the run when Gemini rejects the key with %i', async (status) => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    translateBatch.mockReturnValue(
+      Promise.resolve({
+        translated: new Map(),
+        errors: [Object.assign(new Error('denied'), { status })],
+      })
+    );
+    const { writer, writeTranslationCache } = fakeWriter();
 
-        expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
-        expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 1 });
-        expect(writeTranslationCache).not.toHaveBeenCalled();
-        expect(logSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
-          'event=localize_translate_failed'
-        );
-      } finally {
-        logSpy.mockRestore();
-      }
-    }
-  );
+    // A rejected key is a setup bug, not a runtime blip: it recurs identically every run, and
+    // staleness cannot catch it because upstream_hash keeps advancing while the register publishes.
+    await expect(localizeRecords(records, 'br-anac', 'pt', writer)).rejects.toThrow(
+      /GEMINI_API_KEY rejected by Gemini/
+    );
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
 
   it('never calls Gemini or writes the cache in dry-run mode, and leaves the original text in place', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
