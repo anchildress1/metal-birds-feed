@@ -46,6 +46,7 @@ describe('TranslationCacheSchema', () => {
     expect(emptyTranslationCache()).toEqual({
       version: TRANSLATION_CACHE_VERSION,
       entries: {},
+      failures: {},
     });
     expect(TranslationCacheSchema.safeParse(emptyTranslationCache()).success).toBe(true);
   });

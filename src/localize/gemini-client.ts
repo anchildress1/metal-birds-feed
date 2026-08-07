@@ -16,11 +16,16 @@ export interface GeminiClientConfig {
   retryOptions?: RetryOptions;
   requestsPerMinute?: number;
   rateLimitSleep?: (ms: number) => Promise<void>;
-  // Called with each chunk's translations as it lands. Lets the caller persist progress mid-batch:
-  // a cold source can run past the job timeout, and without this every chunk already paid for is
-  // lost and re-billed identically on the next run, so it never converges. Failures are the
-  // caller's to swallow — a persistence problem must not abandon translations already bought.
-  onChunkTranslated?: (translations: Map<string, string>) => Promise<void>;
+  // Called for each chunk that comes back, with what it returned and what was asked of it. Lets the
+  // caller persist progress mid-batch: a cold source can run past the job timeout, and without this
+  // every chunk already paid for is lost and re-billed identically next run, never converging.
+  // `requested` is what makes a per-item drop distinguishable from a whole-chunk error — this fires
+  // only for chunks that succeeded, so an id missing from `translations` was dropped by the model,
+  // not lost to an outage. Failures are the caller's to swallow.
+  onChunkTranslated?: (
+    translations: Map<string, string>,
+    requested: TranslationItem[]
+  ) => Promise<void>;
 }
 
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
@@ -181,7 +186,7 @@ const translateAtRate = async (
     }
     // Outside the try on purpose: a throwing callback would otherwise record the same chunk as both
     // fulfilled and rejected, turning bought translations into counted failures.
-    if (value) await config.onChunkTranslated?.(value);
+    if (value) await config.onChunkTranslated?.(value, items);
   }
   return results;
 };
