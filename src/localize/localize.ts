@@ -67,24 +67,37 @@ const collectCandidates = (
   return candidates;
 };
 
-// Folds this run's results into the prior cache. A hash that succeeded clears its failure count —
-// counting consecutive failures, not lifetime ones, so one bad run never accumulates toward the
-// give-up threshold. A hash that was offered and did not come back increments.
+// Folds this run's results into the prior cache and drops anything upstream no longer publishes.
+//
+// A hash that succeeded clears its failure count — counting consecutive failures, not lifetime
+// ones, so one bad run never accumulates toward the give-up threshold. A hash that was offered and
+// did not come back increments.
+//
+// Pruning to `live` matters because cardinality is not bounded by a label vocabulary: br-anac's
+// cancellation reasons are per-record free text carrying dates and protocol numbers, so entries
+// accrue roughly per cancelled aircraft and the whole object is re-uploaded every translating run.
+// The cost of over-pruning is re-translation, never wrong data — a truncated upstream would shrink
+// `live` and re-bill those entries next run, which is why the record-count and retain-ratio guards
+// exist upstream of this.
 const buildCache = (
   prior: TranslationCache,
   translated: TranslationEntries,
-  attempted: Set<string>
+  attempted: Set<string>,
+  live: ReadonlySet<string>
 ): TranslationCache => {
-  const failures: TranslationFailures = { ...prior.failures };
+  const failures: TranslationFailures = {};
+  for (const [hash, count] of Object.entries(prior.failures))
+    if (live.has(hash)) failures[hash] = count;
   for (const hash of attempted) {
     if (hash in translated) delete failures[hash];
     else failures[hash] = (failures[hash] ?? 0) + 1;
   }
-  return {
-    version: TRANSLATION_CACHE_VERSION,
-    entries: { ...prior.entries, ...translated },
-    failures,
-  };
+
+  const entries: TranslationEntries = {};
+  for (const [hash, text] of Object.entries({ ...prior.entries, ...translated }))
+    if (live.has(hash)) entries[hash] = text;
+
+  return { version: TRANSLATION_CACHE_VERSION, entries, failures };
 };
 
 // A malformed (not missing) rate limit must not become a second hard-fail path — only an absent
@@ -135,6 +148,7 @@ const resolveTranslations = async (
   // Skip both what is already translated and what has failed enough times to look like a property
   // of the text rather than a bad run — otherwise a string the model reliably mangles is re-sent,
   // and re-billed, on every refresh forever.
+  const live = new Set(candidates.keys());
   const delta = [...candidates.entries()].filter(
     ([hash]) => !(hash in cache.entries) && !isExhausted(cache.failures, hash)
   );
@@ -174,7 +188,7 @@ const resolveTranslations = async (
         // a failed attempt would retire translatable text after three interrupted runs.
         await writer.writeTranslationCache(
           sourceId,
-          buildCache(cache, translated, new Set(Object.keys(translated)))
+          buildCache(cache, translated, new Set(Object.keys(translated)), live)
         );
       } catch (err) {
         log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
@@ -205,13 +219,19 @@ const resolveTranslations = async (
     }
   }
 
-  const updatedCache = buildCache(cache, translated, attempted);
+  const updatedCache = buildCache(cache, translated, attempted, live);
 
   // persistChunk records successes only, so a run where everything landed has already written this
   // exact object and needs no second PUT. Failures are counted here, once the full delta is known —
   // a hash missing after every chunk is what "did not come back" means — so they still need one.
   const droppedByModel = [...attempted].some((id) => !(id in translated));
-  if (cacheReadSucceeded && droppedByModel) {
+  // Pruning alone is a reason to write even when nothing was translated this run — a source whose
+  // delta is empty still sheds entries as upstream text turns over. `!dryRun` because a dry run
+  // must not mutate R2, and its empty `attempted` set would otherwise make this the only write.
+  const pruned =
+    Object.keys(cache.entries).some((hash) => !live.has(hash)) ||
+    Object.keys(cache.failures).some((hash) => !live.has(hash));
+  if (cacheReadSucceeded && !dryRun && (droppedByModel || pruned)) {
     try {
       await writer.writeTranslationCache(sourceId, updatedCache);
     } catch (err) {

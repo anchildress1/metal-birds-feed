@@ -281,6 +281,35 @@ describe('localizeRecords', () => {
     );
   });
 
+  it('drops cache entries and failures for text upstream no longer publishes', async () => {
+    const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
+    const staleFailure = hashTranslatable('lien_status', 'GRAVAME ANTIGO');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer, writeTranslationCache } = fakeWriter(
+      { [live]: 'Aircraft exported', [stale]: 'Old reason' },
+      { [staleFailure]: 2 }
+    );
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(translateBatch).not.toHaveBeenCalled();
+    expect(writeTranslationCache).toHaveBeenCalledWith(
+      'br-anac',
+      cacheEnvelope({ [live]: 'Aircraft exported' }, {})
+    );
+  });
+
+  it('does not write a pruned cache on a dry run', async () => {
+    const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer, writeTranslationCache } = fakeWriter({ [stale]: 'Old reason' });
+
+    await localizeRecords(records, 'br-anac', 'pt', writer, true);
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
   it('resolves from cache without calling Gemini', async () => {
     const hash = hashTranslatable('airworthiness_class', 'CA PADRAO');
     const records = new Map([['1', make('1', { airworthiness_class: 'CA PADRAO' })]]);
