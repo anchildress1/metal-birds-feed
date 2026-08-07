@@ -47,7 +47,7 @@ const FieldMappingSchema = z
     transform: z.enum(SCALAR_TRANSFORMS).optional(),
     array_transform: z.enum(ARRAY_TRANSFORMS).optional(),
     compound_transform: z.enum(COMPOUND_TRANSFORMS).optional(),
-    lookup: z.record(z.string(), z.string()).optional(),
+    lookup: z.record(z.string(), z.string().nullable()).optional(),
     default: z.string().nullable().optional(),
   })
   // The mapping kinds are mutually exclusive; the engine resolves constant before field before
@@ -91,6 +91,7 @@ const SourceConfigSchema = z
         body: z.unknown().optional(),
         entries: z.record(z.string(), z.string()),
         headers: z.record(z.string(), z.string()).optional(),
+        prime_url: z.url().optional(),
         discover_url: z.url().optional(),
         discover_pattern: z
           .string()
@@ -112,6 +113,18 @@ const SourceConfigSchema = z
       .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
         message: 'download.discover_url and download.discover_pattern must be set together',
       })
+      // A manually replayed Cookie header has no browser jar enforcing Domain scope. Keep every
+      // request that receives primed cookies on the origin that issued them.
+      .refine(
+        (d) => {
+          if (d.prime_url === undefined) return true;
+          const primeOrigin = new URL(d.prime_url).origin;
+          return [d.url, ...(d.discover_url ? [d.discover_url] : [])].every(
+            (url) => new URL(url).origin === primeOrigin
+          );
+        },
+        { message: 'download.prime_url must share an origin with url and discover_url' }
+      )
       .refine((d) => d.method === 'POST' || d.body === undefined, {
         message: 'download.body is only valid with method POST',
       }),

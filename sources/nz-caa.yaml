@@ -1,0 +1,196 @@
+id: nz-caa
+label: CAA New Zealand Civil Aircraft Register
+country: NZ
+encoding: utf8
+trim_all: true
+# No published rhythm, and content_hash gates the PUT — so one small daily bulk download catches a
+# mid-week publish that a weekly cadence would hide for up to seven days.
+cadence_days: 1
+
+download:
+  # aviation.govt.nz is behind Imperva: a cold request for the CSV returns 200 with a challenge page
+  # instead of the file. Priming the site root first yields the cookies that let the real request
+  # through.
+  prime_url: https://www.aviation.govt.nz/
+  url: https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv
+  format: file
+  entries:
+    register: register.csv
+
+primary: register
+delimiter: ','
+format: csv
+
+source_id: Registration Mark
+registration: Registration Mark
+
+mapping:
+  registration:
+    field: Registration Mark
+    transform: trim_or_null
+    default: ''
+
+  # Published uppercase on every row; canonical form is lowercase. `Mode S Code Binary` carries the
+  # same value and is redundant here.
+  icao_hex:
+    field: Mode S Code HEX
+    transform: lowercase
+
+  icao_type_code:
+    constant: ~
+
+  # Active-fleet snapshot — deregistered aircraft drop out rather than carrying a cancelled marker.
+  status:
+    constant: valid
+
+  country:
+    constant: NZ
+
+  manufacturer:
+    field: Manufacturer
+    transform: trim_or_null
+
+  model:
+    field: Model
+    transform: trim_or_null
+
+  serial_number:
+    field: Serial No.
+    transform: trim_or_null
+
+  year_manufactured:
+    constant: ~
+
+  # No `default`: an unrecognized category throws, so a renamed or added CAA NZ category fails the
+  # run instead of nulling a slice of the fleet. A blank cell is the one case that still nulls
+  # quietly — trim_or_null yields null and resolveScalar returns before the lookup runs. Today's
+  # register has none. Microlight Class 1/2 are mass/seat bands spanning both 3-axis and
+  # weight-shift airframes, so `other` avoids asserting a wing type the register never states.
+  airframe_type:
+    field: Model Category
+    transform: trim_or_null
+    lookup:
+      'Aeroplane (Aircraft)': fixed-wing
+      'Amateur Built Aeroplane': fixed-wing
+      'Helicopter': rotorcraft
+      'Amateur Built Helicopter': rotorcraft
+      'Glider': glider
+      'Amateur Built Glider': glider
+      'Power Glider': glider
+      'Balloon (hot-air)': balloon
+      'Gyroplane (Gyrocopter)': gyroplane
+      'Microlight Class 1': other
+      'Microlight Class 2': other
+
+  category:
+    constant: ~
+
+  # "Amateur Built *" and the microlight classes are not-type-certificated by definition of the
+  # category. The rest are only usually so, and map to null rather than asserting a certification
+  # basis the register never states. Enumerated with no `default` for the same reason as
+  # airframe_type: an added category should fail the run, not silently pick a side.
+  build_certification:
+    field: Model Category
+    transform: trim_or_null
+    lookup:
+      'Amateur Built Aeroplane': not-type-certificated
+      'Amateur Built Helicopter': not-type-certificated
+      'Amateur Built Glider': not-type-certificated
+      'Microlight Class 1': not-type-certificated
+      'Microlight Class 2': not-type-certificated
+      'Aeroplane (Aircraft)': ~
+      'Helicopter': ~
+      'Glider': ~
+      'Power Glider': ~
+      'Balloon (hot-air)': ~
+      'Gyroplane (Gyrocopter)': ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: Owner Name
+    transform: trim_or_null
+
+  owner.kind:
+    constant: ~
+
+  # `Owner Address` is dropped per the PII rule, and it is the only source for state.
+  owner.state:
+    constant: ~
+
+  # Not every owner is in New Zealand — the register carries owners in AU, HK, SI, GB and VU, and a
+  # constant would write a false country for them. The address's trailing component is the country,
+  # which is permitted PII; the rest of the address stays dropped. `default: ~` rather than a throw
+  # because an owner moving to a new country is routine data, not upstream drift — it nulls and logs
+  # translate_lookup_default, which stays legible at this volume.
+  owner.country:
+    field: Owner Address
+    transform: last_comma_segment_or_null
+    lookup:
+      'New Zealand': NZ
+      'Australia': AU
+      'Hong Kong': HK
+      'Slovenia': SI
+      'United Kingdom': GB
+      'Vanuatu': VU
+    default: ~
+
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: Registered on
+    transform: date_dd_slash_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: MCTOW (Kg)
+    transform: float_or_null

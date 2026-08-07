@@ -72,14 +72,15 @@ export async function download(
   opts: RetryOptions = {}
 ): Promise<Map<string, Buffer>> {
   const start = Date.now();
-  const url = await resolveDownloadUrl(config, opts);
+  const cookie = await primeCookies(config, opts);
+  const url = await resolveDownloadUrl(config, opts, cookie);
   log('info', 'download_start', { url });
 
   // Extraction happens inside the retry so a body stream that drops mid-download is retried as
   // a whole request, in stream mode as much as in buffer mode.
   const files = await readWithRetry(
     url,
-    buildRequestInit(config),
+    buildRequestInit(config, url, cookie),
     'Download failed',
     async (res) => {
       if (config.format === 'file') {
@@ -114,13 +115,60 @@ const contentLengthOf = (res: Response): number | null => {
 // GET unless the source declares POST (e.g. a search-API register that returns the full set for an
 // empty-query POST). For POST, the JSON body is serialized and Content-Type defaults to
 // application/json unless the source overrides it.
-const buildRequestInit = (config: DownloadConfig): RequestInit => {
-  if (config.method !== 'POST') return { headers: config.headers };
+const buildRequestInit = (config: DownloadConfig, url: string, cookie?: string): RequestInit => {
+  const headers = withCookie(config.headers, cookie, url, config.prime_url);
+  if (config.method !== 'POST') return { headers };
   return {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...config.headers },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(config.body ?? {}),
   };
+};
+
+const withCookie = (
+  headers: Record<string, string> | undefined,
+  cookie: string | undefined,
+  targetUrl: string,
+  primeUrl: string | undefined
+): Record<string, string> | undefined => {
+  if (!cookie) return headers;
+  if (!primeUrl || new URL(targetUrl).origin !== new URL(primeUrl).origin) {
+    throw new Error(`Refusing to send primed cookies cross-origin to ${targetUrl}`);
+  }
+  return { ...headers, Cookie: cookie };
+};
+
+// Fetches `prime_url` purely to collect the cookies the edge hands out, and folds them into one
+// Cookie header for the requests that follow. Only name=value is kept — attributes (Path, Secure,
+// SameSite) are directives to a browser jar, not part of what a client sends back.
+//
+// Throws when the priming request sets nothing: a declared prime_url that stops issuing cookies
+// means the download is about to receive a challenge page under a 200, and that surfaces as an
+// unintelligible parse error several steps later. Naming the real cause here is the difference
+// between a five-minute fix and an afternoon.
+const primeCookies = async (
+  config: DownloadConfig,
+  opts: RetryOptions
+): Promise<string | undefined> => {
+  if (!config.prime_url) return undefined;
+  log('info', 'prime_start', { prime_url: config.prime_url });
+  const cookie = await readWithRetry(
+    config.prime_url,
+    { headers: config.headers },
+    'Prime fetch failed',
+    (res) =>
+      Promise.resolve(
+        res.headers
+          .getSetCookie()
+          .map((c) => c.split(';')[0]?.trim())
+          .filter((c): c is string => !!c)
+          .join('; ')
+      ),
+    opts
+  );
+  if (!cookie) throw new Error(`Prime fetch set no cookies on ${config.prime_url}`);
+  log('info', 'prime_complete', { prime_url: config.prime_url });
+  return cookie;
 };
 
 // Resolves the actual download URL. If `discover_url` + `discover_pattern` are configured
@@ -128,12 +176,18 @@ const buildRequestInit = (config: DownloadConfig): RequestInit => {
 // each refresh), fetch the index page, regex-match the first capture group, and return that
 // URL — resolved against the index URL as the base for relative links. Otherwise, return
 // `config.url` unchanged.
-const resolveDownloadUrl = async (config: DownloadConfig, opts: RetryOptions): Promise<string> => {
+const resolveDownloadUrl = async (
+  config: DownloadConfig,
+  opts: RetryOptions,
+  cookie?: string
+): Promise<string> => {
   if (!config.discover_url || !config.discover_pattern) return config.url;
   log('info', 'discover_start', { discover_url: config.discover_url });
   const html = await readWithRetry(
     config.discover_url,
-    { headers: config.headers },
+    {
+      headers: withCookie(config.headers, cookie, config.discover_url, config.prime_url),
+    },
     'Discovery fetch failed',
     (res) => res.text(),
     opts

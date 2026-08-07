@@ -5,6 +5,7 @@ import { loadSourceConfig } from '../../src/config/loader.js';
 
 const FAA_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'faa.yaml');
 const TC_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'tc-ca.yaml');
+const NZ_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'nz-caa.yaml');
 
 // Throwaway configs stay out of sources/: `resolveAllSources()` and the runtime-attribution guard
 // both enumerate that directory, so one file left behind by an interrupted run becomes a phantom
@@ -511,6 +512,38 @@ describe('loadSourceConfig', () => {
       const config = loadSourceConfig(tmp);
       expect(config.download.discover_url).toBe('https://example.com/index');
       expect(config.download.discover_pattern).toBe('href="([^"]+\\.ods)"');
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts prime_url when every cookie-bearing request shares its origin', () => {
+    const config = loadSourceConfig(NZ_CONFIG);
+
+    expect(config.download.prime_url).toBe('https://www.aviation.govt.nz/');
+    expect(new URL(config.download.url).origin).toBe('https://www.aviation.govt.nz');
+  });
+
+  it.each([
+    {
+      label: 'download URL',
+      url: 'https://downloads.example.net/register.csv',
+      discovery: '',
+    },
+    {
+      label: 'discovery URL',
+      url: 'https://example.com/register.csv',
+      discovery:
+        '  discover_url: https://discovery.example.net/index\n  discover_pattern: \'href=\\"([^\\"]+\\.csv)\\"\'\n',
+    },
+  ])('rejects prime_url with a cross-origin $label', ({ url, discovery }) => {
+    const tmp = tmpConfig('_test_prime_origin.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NZ\nencoding: utf8\ndownload:\n  prime_url: https://example.com/\n  url: ${url}\n  format: file\n  entries: { register: register.csv }\n${discovery}primary: register\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/prime_url must share an origin/i);
     } finally {
       unlinkSync(tmp);
     }

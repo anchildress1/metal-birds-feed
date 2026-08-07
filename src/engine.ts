@@ -591,7 +591,7 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // unrecognized code is visible in the run log instead of silently blending into "other".
 function resolveLookup(
   value: string,
-  lookup: Record<string, string>,
+  lookup: Record<string, string | null>,
   defaultValue: string | null | undefined,
   field: string,
   source: string

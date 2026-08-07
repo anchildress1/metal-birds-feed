@@ -1,0 +1,14 @@
+Model Category,Registration Mark,Registered on,Manufacturer,Model,Serial No.,MCTOW (Kg),Owner Name,Owner Address,Mode S Code HEX,Mode S Code Binary,Flight manual no.
+Aeroplane (Aircraft),ZK-AAC,01/06/2011,Cessna Aircraft Company,162,16200060,598,RPM White Limited,"1 Example Street, Testville 1234, New Zealand",C81E56,110010000001111001010110,3180
+Helicopter,ZK-HAA,17/04/2014,Eurocopter,AS 350 B2,3700,2249,The Helicopter Line Limited,"1 Example Street, Testville 1234, New Zealand",C8218B,110010000010000110001011,2382
+Glider,ZK-GAJ,02/08/2007,Grob-Werke GmbH & Co K G,G103A Twin II Acro,3730-K-46,580,Nelson Lakes Gliding Club (Inc),"1 Example Street, Testville 1234, New Zealand",C81AFC,110010000001101011111100,2142
+Microlight Class 1,ZK-EII,30/08/2018,Airdrome Aeroplanes,Fokker E-III Replica,37/15,212,East Canterbury Aviation Limited,"1 Example Street, Testville 1234, New Zealand",C8279B,110010000010011110011011,
+Microlight Class 2,ZK-AJW,12/03/2024,JMB Aircraft s.r.o.,VL-3TE-915 UL,549,598,York Holdings Limited,"1 Example Street, Testville 1234, New Zealand",C82B05,110010000010101100000101,
+Amateur Built Aeroplane,ZK-BFC,29/09/2025,Kitplanes for Africa (Pty) Ltd,Safari MK3,090-04-23 SAF3,750,Bush Flying Company Limited,"1 Example Street, Testville 1234, New Zealand",C82DD5,110010000010110111010101,
+Gyroplane (Gyrocopter),ZK-DJW,28/01/2014,AutoGyro GmbH,Cavalon,V00135,499,GyroFlight Ltd,"1 Example Street, Testville 1234, New Zealand",C8215E,110010000010000101011110,
+Balloon (hot-air),ZK-CBU,18/12/2018,Cameron Balloons Limited,Z-133,10322,1206,Ballooning Canterbury.Com Limited,"1 Example Street, Testville 1234, New Zealand",C827EB,110010000010011111101011,2188
+Power Glider,ZK-GDC,02/03/1998,Stemme GmbH & Co KG,S 10,10-41,850,Emeny Family Trust,"1 Example Street, Testville 1234, New Zealand",C81378,110010000001001101111000,2608
+Amateur Built Helicopter,ZK-HIV,28/10/2004,Canadian Home Rotors,Safari,0514N,680,Cloud 7 Aviation Limited,"1 Example Street, Testville 1234, New Zealand",C8184A,110010000001100001001010,
+Amateur Built Glider,ZK-GMR,27/10/1981,Amateur-Built Briegleb,BG 12-16,AACA/445,358,JANE DOE,"1 Example Street, Testville 1234, New Zealand",C8088D,110010000000100010001101,
+Aeroplane (Aircraft),ZK-EXC,21/03/1994,The Engineering and Research Corporation,415-D,4811,635,JOHN DOE,"1 Example Road, Queensland 4559, Australia",C80FEA,110010000000111111101010,2486
+Aeroplane (Aircraft),ZK-ALY,20/05/2014,Piper Aircraft Corporation,J3C-65,19612,530,Private Owner,,C8219D,110010000010000110011101,432

@@ -961,3 +961,25 @@ describe('no_operator_kind', () => {
   it('returns null for an empty values array', () =>
     expect(applyCompound('no_operator_kind', [])).toBeNull());
 });
+
+describe('last_comma_segment_or_null', () => {
+  const run = (v: string): string | null => applyScalar('last_comma_segment_or_null', v);
+
+  it('returns the trailing country component of a postal address', () => {
+    expect(run('1/34 Rosina Corlette Lane, RD 2, Blenheim 7272, New Zealand')).toBe('New Zealand');
+    expect(run('Sunshine coast, Queensland 4559, Australia')).toBe('Australia');
+  });
+
+  it('returns a single segment unchanged', () => expect(run('Vanuatu')).toBe('Vanuatu'));
+
+  it('ignores a trailing comma and surrounding whitespace', () => {
+    expect(run('Beech, Alton, United Kingdom,')).toBe('United Kingdom');
+    expect(run('  Alton ,  Hong Kong  ')).toBe('Hong Kong');
+  });
+
+  it('returns null for blank or comma-only input', () => {
+    expect(run('')).toBeNull();
+    expect(run('   ')).toBeNull();
+    expect(run(', ,')).toBeNull();
+  });
+});

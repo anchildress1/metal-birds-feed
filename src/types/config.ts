@@ -51,6 +51,7 @@ export const SCALAR_TRANSFORMS = [
   'no_owner_country',
   'no_owner_kind',
   'cl_registration',
+  'last_comma_segment_or_null',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;
@@ -76,7 +77,11 @@ export interface FieldMapping {
   transform?: ScalarTransformName;
   array_transform?: ArrayTransformName;
   compound_transform?: CompoundTransformName;
-  lookup?: Record<string, string>;
+  // A null value means "this code is recognized, but the schema has no value for it" — distinct
+  // from an absent key, which is unrecognized and fails the row (or takes `default`, loudly).
+  // Without it, a source enumerating every upstream code would have to route its known-but-
+  // unrepresentable codes through `default` and log a drift warning on each one.
+  lookup?: Record<string, string | null>;
   default?: string | null;
 }
 
@@ -122,6 +127,10 @@ export interface DownloadConfig {
   body?: unknown;
   entries: Record<string, string>;
   headers?: Record<string, string>;
+  // Bot-protection edges (CAA NZ sits behind Imperva) answer a cold, cookie-less request with a
+  // 200 and a challenge page instead of the file — a success status carrying the wrong bytes.
+  // Fetching this URL first and replaying the cookies it sets on the real request clears them.
+  prime_url?: string;
   discover_url?: string;
   discover_pattern?: string;
 }
