@@ -33,6 +33,10 @@ const FIELD_EXCLUDED_FOR_SOURCE = new Map<string, ReadonlySet<TranslatableField>
   ['no-caa', new Set(['operational_classes'])],
 ]);
 
+// Below this share of a chunk's requested items coming back, the response reads as truncated rather
+// than as the model rejecting individual strings — so no item is charged an attempt.
+const MIN_CHUNK_RETURN_RATIO = 0.5;
+
 const isFieldExcluded = (sourceId: string, field: TranslatableField): boolean =>
   FIELD_EXCLUDED_FOR_SOURCE.get(sourceId)?.has(field) ?? false;
 
@@ -170,6 +174,7 @@ const resolveTranslations = async (
   // says nothing about whether its text is translatable, and counting it would retire good strings
   // after three bad days.
   const attempted = new Set<string>();
+  let persistFailed = false;
   let failed = 0;
 
   // A failed cache read leaves an empty cache, which makes the delta the entire source. Translating
@@ -186,7 +191,19 @@ const resolveTranslations = async (
       chunkTranslations: Map<string, string>,
       requested: { id: string }[]
     ): Promise<void> => {
-      for (const { id } of requested) attempted.add(id);
+      // A model can self-truncate inside the response schema — well-formed JSON, fewer items — which
+      // reaches the per-item drop path rather than the error path. Charging every requested id a
+      // failed attempt would retire the chunk's tail after three runs, which is exactly the harm the
+      // attempt limit exists to avoid. Below the retention floor, treat it as the chunk failing.
+      const returned = requested.filter(({ id }) => chunkTranslations.has(id)).length;
+      if (returned >= requested.length * MIN_CHUNK_RETURN_RATIO)
+        for (const { id } of requested) attempted.add(id);
+      else
+        log('warn', 'localize_chunk_shortfall', {
+          source: sourceId,
+          requested: requested.length,
+          returned,
+        });
       // filters out any id the model returned that wasn't requested, which would otherwise fail
       // TranslationCacheSchema on the next read and discard the whole cache
       const before = Object.keys(translated).length;
@@ -202,6 +219,9 @@ const resolveTranslations = async (
           buildCache(cache, translated, new Set(Object.keys(translated)), live)
         );
       } catch (err) {
+        // Recorded so the end-of-run write still fires. Without it a steady-state run whose last
+        // chunk failed to persist would discard translations already billed for, and re-buy them.
+        persistFailed = true;
         log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
       }
     };
@@ -243,7 +263,7 @@ const resolveTranslations = async (
     live !== null &&
     (Object.keys(cache.entries).some((hash) => !live.has(hash)) ||
       Object.keys(cache.failures).some((hash) => !live.has(hash)));
-  if (cacheReadSucceeded && !dryRun && (droppedByModel || pruned)) {
+  if (cacheReadSucceeded && !dryRun && (droppedByModel || pruned || persistFailed)) {
     try {
       await writer.writeTranslationCache(sourceId, updatedCache);
     } catch (err) {
@@ -251,11 +271,16 @@ const resolveTranslations = async (
     }
   }
 
-  // Counted from actual entries, not `candidates - delta`. An exhausted hash leaves the delta while
+  // Counted from actual entries, not `candidates - delta`: an exhausted hash leaves the delta while
   // still having no translation, so the subtraction would book it as a hit and drive `failed` to
   // zero — silencing pipeline.ts's localize_partial_failure while the artifact carries source text.
+  //
+  // Restricted to hashes the delta never offered. One that was offered and dropped is already in
+  // `failed`; counting it again because the drop crossed the attempt limit made `failed` exceed
+  // `candidates` and the stats stop summing.
   const exhausted = [...candidates.keys()].filter(
-    (hash) => !(hash in updatedCache.entries) && isExhausted(updatedCache.failures, hash)
+    (hash) =>
+      !deltaIds.has(hash) && !(hash in updatedCache.entries) && isExhausted(cache.failures, hash)
   ).length;
 
   return {

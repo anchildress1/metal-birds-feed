@@ -228,15 +228,35 @@ describe('localizeRecords', () => {
   });
 
   it('records a failed attempt so a repeatedly-mangled string stops being re-billed', async () => {
-    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const kept = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const dropped = hashTranslatable('lien_status', 'GRAVAME');
+    const records = new Map([
+      ['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA', lien_status: 'GRAVAME' })],
+    ]);
+    // The chunk worked and the model rejected one item — the per-item drop path. Enough came back
+    // that this cannot be read as a truncated response, so the drop is charged an attempt.
+    translateBatch.mockImplementation(ok([[kept, 'Aircraft exported']]));
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).toHaveBeenLastCalledWith(
+      'br-anac',
+      cacheEnvelope({ [kept]: 'Aircraft exported' }, { [dropped]: 1 })
+    );
+  });
+
+  it('charges no attempt when a chunk returns too little to be a per-item rejection', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    // Offered, nothing came back — the per-item drop path, not a chunk error.
+    // A model that self-truncates inside the response schema returns well-formed JSON with fewer
+    // items, reaching the drop path rather than the error path. Charging those would retire the
+    // chunk's tail after three runs — the exact harm the attempt limit exists to prevent.
     translateBatch.mockImplementation(ok([]));
     const { writer, writeTranslationCache } = fakeWriter();
 
     await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}, { [hash]: 1 }));
+    expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
   it('reports an exhausted hash as a failure, not a cache hit', async () => {
