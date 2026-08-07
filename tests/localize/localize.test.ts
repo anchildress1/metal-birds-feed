@@ -264,7 +264,9 @@ describe('localizeRecords', () => {
     );
   });
 
-  it('proceeds with an empty cache when the cache read fails, without throwing', async () => {
+  // An unreadable cache makes the delta the whole source. Translating it would bill a full batch
+  // and then discard the result, because the write is gated on the same read having succeeded.
+  it('skips translation when the cache read fails, rather than re-billing the whole source', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockReturnValue(ok([[hash, 'Aircraft exported']]));
@@ -275,9 +277,12 @@ describe('localizeRecords', () => {
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(stats.failed).toBe(0);
-    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
+    expect(translateBatch).not.toHaveBeenCalled();
     expect(writeTranslationCache).not.toHaveBeenCalled();
+    expect(stats.failed).toBe(0);
+    expect(stats.translated).toBe(0);
+    // Degrades to the untranslated original, never null.
+    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
   });
 
   it('degrades on an access-denied cache read the same as a transient one', async () => {
@@ -292,8 +297,8 @@ describe('localizeRecords', () => {
 
     const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(translateBatch).toHaveBeenCalledTimes(1);
-    expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
+    expect(translateBatch).not.toHaveBeenCalled();
+    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
   });
 
   it('still returns the in-memory translation when the cache write fails, without throwing', async () => {

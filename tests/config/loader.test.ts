@@ -551,6 +551,29 @@ describe('loadSourceConfig', () => {
     );
   });
 
+  it('rejects a mapping key that is not a canonical schema path', () => {
+    const tmp = tmpConfig('_test_mapping_key.yaml');
+    // A one-character slip in a `_source_text` companion is the case that matters: engine.ts
+    // mirrors the primary field when the key is absent, so this would silently store the
+    // English transform output as the untranslated original.
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: ES\nlanguage: es\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  airworthiness_class_source_txt: { field: CLASE }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/not a canonical schema path/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts the canonical _source_text companion keys', () => {
+    const config = loadSourceConfig(
+      resolve(import.meta.dirname, '..', '..', 'sources', 'es-aesa.yaml')
+    );
+    expect(config.mapping['airworthiness_class_source_text']).toBeDefined();
+  });
+
   it('accepts prime_url when every cookie-bearing request shares its origin', () => {
     const config = loadSourceConfig(NZ_CONFIG);
 

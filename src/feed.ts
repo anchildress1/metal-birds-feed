@@ -89,10 +89,14 @@ export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
 // Stable content hash over the consolidated feed, mirroring db.ts's per-source hashRecords: sorted
 // by icao_hex (the row key) so merge/iteration order can't churn it. The scheduled deploy compares
 // this against the last-deployed hash to skip a redundant Cloud Run redeploy when nothing changed.
+// Hashes values in `COLUMNS` order rather than `JSON.stringify(row)`, which is key-order sensitive:
+// a migrated legacy slice appends its added fields after `source`, while a zod re-parse emits them
+// in schema order, so the same data hashed two ways would disagree and trigger a redundant Cloud
+// Run image build. Column order is the contract, and adding a column still changes the hash.
 export const hashFeedRows = (rows: FeedRow[]): string => {
   const hash = createHash('sha256');
   for (const row of [...rows].sort((a, b) => a.icao_hex.localeCompare(b.icao_hex)))
-    hash.update(`${row.icao_hex}\0${JSON.stringify(row)}\n`);
+    hash.update(`${row.icao_hex}\0${JSON.stringify(COLUMNS.map((column) => row[column]))}\n`);
   return hash.digest('hex');
 };
 

@@ -232,7 +232,20 @@ const SourceConfigSchema = z
           });
       })
       .optional(),
-    mapping: z.record(z.string(), FieldMappingSchema),
+    // A key the schema doesn't define is written into the record and stripped by re-validation, so
+    // the mapping "succeeds" while the intended field stays unset. That is worst for the
+    // `<field>_source_text` companions: `engine.ts` falls back to mirroring the primary field when
+    // the key is absent, so a typo in AESA's `airworthiness_class_source_text` would store the
+    // English transform output as the untranslated original — silently defeating the provenance the
+    // licence requires. Reject at load.
+    mapping: z.record(z.string(), FieldMappingSchema).superRefine((m, ctx) => {
+      for (const path of Object.keys(m))
+        if (!CANONICAL_PATHS.has(path))
+          ctx.addIssue({
+            code: 'custom',
+            message: `mapping key "${path}" is not a canonical schema path`,
+          });
+    }),
   })
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
     message: 'format "pdf" requires a pdf config block',

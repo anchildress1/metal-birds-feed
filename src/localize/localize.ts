@@ -107,7 +107,11 @@ const resolveTranslations = async (
   const translated: TranslationEntries = {};
   let failed = 0;
 
-  if (delta.length > 0 && !dryRun) {
+  // A failed cache read leaves an empty cache, which makes the delta the entire source. Translating
+  // against it would bill a full-source batch and then discard the result, since the write below is
+  // gated on the same read having succeeded — and the next run would repeat it. Degrade to source
+  // text for this run instead; the following run reads the real cache and translates only the delta.
+  if (delta.length > 0 && !dryRun && cacheReadSucceeded) {
     const apiKey = requireEnv('GEMINI_API_KEY'); // outside try/catch: a missing key must throw, not degrade
     const { translated: result, errors } = await translateBatch(
       delta.map(([id, { field, text }]) => ({ id, field, text })),
