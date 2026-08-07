@@ -80,7 +80,7 @@ export async function download(
   // a whole request, in stream mode as much as in buffer mode.
   const files = await readWithRetry(
     url,
-    buildRequestInit(config, cookie),
+    buildRequestInit(config, url, cookie),
     'Download failed',
     async (res) => {
       if (config.format === 'file') {
@@ -115,8 +115,8 @@ const contentLengthOf = (res: Response): number | null => {
 // GET unless the source declares POST (e.g. a search-API register that returns the full set for an
 // empty-query POST). For POST, the JSON body is serialized and Content-Type defaults to
 // application/json unless the source overrides it.
-const buildRequestInit = (config: DownloadConfig, cookie?: string): RequestInit => {
-  const headers = withCookie(config.headers, cookie);
+const buildRequestInit = (config: DownloadConfig, url: string, cookie?: string): RequestInit => {
+  const headers = withCookie(config.headers, cookie, url, config.prime_url);
   if (config.method !== 'POST') return { headers };
   return {
     method: 'POST',
@@ -127,8 +127,16 @@ const buildRequestInit = (config: DownloadConfig, cookie?: string): RequestInit 
 
 const withCookie = (
   headers: Record<string, string> | undefined,
-  cookie: string | undefined
-): Record<string, string> | undefined => (cookie ? { ...headers, Cookie: cookie } : headers);
+  cookie: string | undefined,
+  targetUrl: string,
+  primeUrl: string | undefined
+): Record<string, string> | undefined => {
+  if (!cookie) return headers;
+  if (!primeUrl || new URL(targetUrl).origin !== new URL(primeUrl).origin) {
+    throw new Error(`Refusing to send primed cookies cross-origin to ${targetUrl}`);
+  }
+  return { ...headers, Cookie: cookie };
+};
 
 // Fetches `prime_url` purely to collect the cookies the edge hands out, and folds them into one
 // Cookie header for the requests that follow. Only name=value is kept — attributes (Path, Secure,
@@ -177,7 +185,9 @@ const resolveDownloadUrl = async (
   log('info', 'discover_start', { discover_url: config.discover_url });
   const html = await readWithRetry(
     config.discover_url,
-    { headers: withCookie(config.headers, cookie) },
+    {
+      headers: withCookie(config.headers, cookie, config.discover_url, config.prime_url),
+    },
     'Discovery fetch failed',
     (res) => res.text(),
     opts

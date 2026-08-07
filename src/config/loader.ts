@@ -113,6 +113,18 @@ const SourceConfigSchema = z
       .refine((d) => (d.discover_url === undefined) === (d.discover_pattern === undefined), {
         message: 'download.discover_url and download.discover_pattern must be set together',
       })
+      // A manually replayed Cookie header has no browser jar enforcing Domain scope. Keep every
+      // request that receives primed cookies on the origin that issued them.
+      .refine(
+        (d) => {
+          if (d.prime_url === undefined) return true;
+          const primeOrigin = new URL(d.prime_url).origin;
+          return [d.url, ...(d.discover_url ? [d.discover_url] : [])].every(
+            (url) => new URL(url).origin === primeOrigin
+          );
+        },
+        { message: 'download.prime_url must share an origin with url and discover_url' }
+      )
       .refine((d) => d.method === 'POST' || d.body === undefined, {
         message: 'download.body is only valid with method POST',
       }),

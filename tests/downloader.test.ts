@@ -782,6 +782,38 @@ describe('prime_url cookie priming', () => {
     expect(init.headers).toEqual({ 'User-Agent': 'test-agent', Cookie: 'visid_incap_1=abc' });
   });
 
+  it('rejects a discovered cross-origin download before sending primed cookies', async () => {
+    const fn = mock();
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'set-cookie': 'visid_incap_1=abc; path=/; Secure' }),
+    });
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      text: () => Promise.resolve('<a href="https://cdn.example.net/register.csv">download</a>'),
+    });
+    setFetch(fn);
+
+    await expect(
+      download(
+        {
+          ...PRIMED_CONFIG,
+          discover_url: 'https://www.example.govt.nz/register/',
+          discover_pattern: 'href="([^"]+register\\.csv)"',
+        },
+        FAST_RETRY
+      )
+    ).rejects.toThrow(
+      'Refusing to send primed cookies cross-origin to https://cdn.example.net/register.csv'
+    );
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   it('fails naming the prime URL when it sets no cookies, rather than downloading a challenge', async () => {
     primeThenFile([], 'a\n1\n');
     await expect(download(PRIMED_CONFIG, FAST_RETRY)).rejects.toThrow(

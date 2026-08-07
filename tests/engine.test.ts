@@ -3032,9 +3032,9 @@ beforeAll(async () => {
 });
 
 describe('CAA NZ fixture translation', () => {
-  it('translates all 12 fixture rows with no failures', () => {
-    expect(nzStats).toEqual({ total: 12, ok: 12, failed: 0, skipped: 0, duplicateSkipped: 0 });
-    expect(nzRecords.size).toBe(12);
+  it('translates all 13 fixture rows with no failures', () => {
+    expect(nzStats).toEqual({ total: 13, ok: 13, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(nzRecords.size).toBe(13);
   });
 
   describe('ZK-AAC — Cessna, corporate owner', () => {
@@ -3111,6 +3111,15 @@ describe('CAA NZ fixture translation', () => {
     expect(nzRecords.get('ZK-AAC')?.owner.country).toBe('NZ');
     // A constant NZ would have written a false country for this Australian owner.
     expect(nzRecords.get('ZK-EXC')?.owner.country).toBe('AU');
+  });
+
+  it('leaves owner identity and country null when the source withholds the address', () => {
+    expect(nzRecords.get('ZK-WTH')?.owner).toEqual({
+      name: null,
+      kind: null,
+      state: null,
+      country: null,
+    });
   });
 
   it('every record carries a canonical 6-lowercase-hex address inside the NZ block', () => {

@@ -3,8 +3,8 @@ label: CAA New Zealand Civil Aircraft Register
 country: NZ
 encoding: utf8
 trim_all: true
-# No published rhythm, and content_hash gates the PUT — so polling daily costs one conditional GET
-# and catches a mid-week publish that a weekly cadence would hide for up to seven days.
+# No published rhythm, and content_hash gates the PUT — so one small daily bulk download catches a
+# mid-week publish that a weekly cadence would hide for up to seven days.
 cadence_days: 1
 
 download:
