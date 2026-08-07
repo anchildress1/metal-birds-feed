@@ -3113,9 +3113,11 @@ describe('CAA NZ fixture translation', () => {
     expect(nzRecords.get('ZK-EXC')?.owner.country).toBe('AU');
   });
 
-  it('leaves owner identity and country null when the source withholds the address', () => {
-    expect(nzRecords.get('ZK-WTH')?.owner).toEqual({
-      name: null,
+  // 146 live rows withhold the address and name the owner "Private Owner" verbatim — the register
+  // never blanks the name itself, so country is the only field an absent address can cost.
+  it('nulls owner.country when the address is withheld, keeping the name the register publishes', () => {
+    expect(nzRecords.get('ZK-ALY')?.owner).toEqual({
+      name: 'Private Owner',
       kind: null,
       state: null,
       country: null,
