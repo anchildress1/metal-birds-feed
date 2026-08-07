@@ -164,7 +164,11 @@ const resolveTranslations = async (
       for (const { id } of requested) attempted.add(id);
       // filters out any id the model returned that wasn't requested, which would otherwise fail
       // TranslationCacheSchema on the next read and discard the whole cache
+      const before = Object.keys(translated).length;
       for (const [id, text] of chunkTranslations) if (deltaIds.has(id)) translated[id] = text;
+      // A chunk whose items were all dropped adds nothing, so this PUT would rewrite the cache
+      // byte-for-byte; the failure counts it produced are written once at the end instead.
+      if (Object.keys(translated).length === before) return;
       try {
         // Successes only. A run killed mid-batch never offered the later chunks, and charging them
         // a failed attempt would retire translatable text after three interrupted runs.
@@ -215,12 +219,19 @@ const resolveTranslations = async (
     }
   }
 
+  // Counted from actual entries, not `candidates - delta`. An exhausted hash leaves the delta while
+  // still having no translation, so the subtraction would book it as a hit and drive `failed` to
+  // zero — silencing pipeline.ts's localize_partial_failure while the artifact carries source text.
+  const exhausted = [...candidates.keys()].filter(
+    (hash) => !(hash in updatedCache.entries) && isExhausted(updatedCache.failures, hash)
+  ).length;
+
   return {
     cache: updatedCache,
     stats: {
-      cache_hits: candidates.size - delta.length,
+      cache_hits: [...candidates.keys()].filter((hash) => hash in cache.entries).length,
       translated: Object.keys(translated).length,
-      failed,
+      failed: failed + exhausted,
     },
   };
 };

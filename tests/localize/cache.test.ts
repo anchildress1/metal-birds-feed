@@ -38,6 +38,7 @@ describe('TranslationCacheSchema', () => {
       TranslationCacheSchema.safeParse({
         version: TRANSLATION_CACHE_VERSION,
         entries: { [hash]: 'Aircraft exported' },
+        failures: {},
       }).success
     ).toBe(true);
   });
@@ -82,6 +83,17 @@ describe('TranslationCacheSchema', () => {
       TranslationCacheSchema.safeParse({
         version: TRANSLATION_CACHE_VERSION,
         entries: { [hash]: blank },
+      }).success
+    ).toBe(false);
+  });
+
+  // `failures` shipped with version 2 and the version literal rejects everything older, so a v2
+  // object missing it is malformed, not legacy. Defaulting would normalize a broken contract.
+  it('rejects a current-version envelope missing failures', () => {
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: {},
       }).success
     ).toBe(false);
   });

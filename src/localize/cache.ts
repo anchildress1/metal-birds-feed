@@ -35,9 +35,11 @@ export const TranslationCacheSchema = z
   .object({
     version: z.literal(TRANSLATION_CACHE_VERSION),
     entries: TranslationEntriesSchema,
-    // Absent on a cache written before failures were tracked; an empty map is the honest reading,
-    // since nothing had been recorded as failing.
-    failures: TranslationFailuresSchema.default({}),
+    // Required, not defaulted. `failures` arrived with version 2 and the version literal already
+    // rejects every earlier envelope, so a v2 object without it is malformed rather than old —
+    // defaulting would normalize a broken contract instead of letting the reader reject and
+    // self-heal it.
+    failures: TranslationFailuresSchema,
   })
   .strict();
 

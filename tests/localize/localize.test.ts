@@ -239,6 +239,18 @@ describe('localizeRecords', () => {
     expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}, { [hash]: 1 }));
   });
 
+  it('reports an exhausted hash as a failure, not a cache hit', async () => {
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer } = fakeWriter({}, { [hash]: MAX_TRANSLATION_ATTEMPTS });
+
+    const { stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    // Booking it as a hit would drive failed to 0 and silence localize_partial_failure while the
+    // artifact still carries source text.
+    expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 1 });
+  });
+
   it('stops offering a hash once it has failed the attempt limit', async () => {
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
