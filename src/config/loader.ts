@@ -10,6 +10,19 @@ import {
   type SourceConfig,
 } from '../types/config.js';
 
+// CLDR, via the runtime's own tables, is the authority on which two-letter subtags are assigned —
+// a hand-kept list would drift and silently reject a legitimate register. `fallback: 'none'`
+// returns undefined for an unassigned subtag instead of echoing the input back.
+const LANGUAGE_NAMES = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' });
+
+const isIso639_1 = (code: string): boolean => {
+  try {
+    return LANGUAGE_NAMES.of(code) !== undefined;
+  } catch {
+    return false;
+  }
+};
+
 const isValidRegex = (pattern: string): boolean => {
   try {
     // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
@@ -84,7 +97,13 @@ const SourceConfigSchema = z
     country: z.string().min(1),
     // Required, not defaulted: silently assuming a language decides whether a source is billed to
     // Gemini and whether its curated values get reworded. That must be a stated choice per source.
-    language: z.string().regex(/^[a-z]{2}$/, 'language must be a lowercase ISO 639-1 code'),
+    // Shape alone is not enough — `em` is a well-formed typo for `en` that loads cleanly, misses
+    // the exact `language === 'en'` gate, and quietly ships curated English labels to a translator
+    // to be reworded over. The membership check is what makes that typo a load-time failure.
+    language: z
+      .string()
+      .regex(/^[a-z]{2}$/, 'language must be a lowercase two-letter code')
+      .refine(isIso639_1, { message: 'language must be an assigned ISO 639-1 code' }),
     encoding: z.enum(['utf8', 'latin1']),
     download: z
       .strictObject({

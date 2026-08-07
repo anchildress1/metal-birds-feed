@@ -517,6 +517,40 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  const languageConfig = (language: string): string =>
+    `id: t\nlabel: t\ncountry: NZ\nlanguage: ${language}\nencoding: utf8\ndownload:\n  url: https://example.com/register.csv\n  format: file\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`;
+
+  const withLanguageConfig = <T>(language: string, assert: (path: string) => T): T => {
+    const tmp = tmpConfig('_test_language.yaml');
+    writeFileSync(tmp, languageConfig(language));
+    try {
+      return assert(tmp);
+    } finally {
+      unlinkSync(tmp);
+    }
+  };
+
+  it.each(['en', 'es', 'pt', 'no', 'et', 'aa'])(
+    'accepts the assigned ISO 639-1 code %s',
+    (code) => {
+      withLanguageConfig(code, (path) => expect(loadSourceConfig(path).language).toBe(code));
+    }
+  );
+
+  // `em` is the load-bearing case: a well-formed typo for `en` that passes a shape-only check,
+  // then misses the exact `language === 'en'` gate and ships curated English to be reworded.
+  it.each(['em', 'xx', 'zz', 'qq'])('rejects the unassigned two-letter code %s', (code) => {
+    withLanguageConfig(code, (path) =>
+      expect(() => loadSourceConfig(path)).toThrow(/assigned ISO 639-1 code/i)
+    );
+  });
+
+  it.each(['EN', 'eng', 'e', 'e1'])('rejects the malformed language value %s', (code) => {
+    withLanguageConfig(code, (path) =>
+      expect(() => loadSourceConfig(path)).toThrow(/language must be/i)
+    );
+  });
+
   it('accepts prime_url when every cookie-bearing request shares its origin', () => {
     const config = loadSourceConfig(NZ_CONFIG);
 
