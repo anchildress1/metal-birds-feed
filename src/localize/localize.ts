@@ -86,20 +86,29 @@ interface ResolvedTranslations {
 // id-filtered and confirmed-good and shouldn't be re-billed to Gemini next run for siblings that
 // failed. Never throws except via requireEnv('GEMINI_API_KEY'): a missing key is a setup bug and
 // deliberately aborts the run; every other failure here (Gemini or cache, any status) degrades.
+// Degrades to an empty cache and reports whether the read worked. The caller needs the
+// distinction: "nothing cached yet" and "could not read" look identical afterwards, but only one
+// may be translated against — an empty cache from a failed read would make the delta the whole
+// source and bill for it.
+const readCache = async (
+  writer: R2ArtifactWriter,
+  sourceId: string
+): Promise<{ cache: TranslationCache; ok: boolean }> => {
+  try {
+    return { cache: await writer.readTranslationCache(sourceId), ok: true };
+  } catch (err) {
+    log('warn', 'localize_cache_read_failed', { source: sourceId, msg: errorMessage(err) });
+    return { cache: emptyTranslationCache(), ok: false };
+  }
+};
+
 const resolveTranslations = async (
   candidates: Map<string, Candidate>,
   sourceId: string,
   writer: R2ArtifactWriter,
   dryRun: boolean
 ): Promise<ResolvedTranslations> => {
-  let cache: TranslationCache = emptyTranslationCache();
-  let cacheReadSucceeded = true;
-  try {
-    cache = await writer.readTranslationCache(sourceId);
-  } catch (err) {
-    cacheReadSucceeded = false;
-    log('warn', 'localize_cache_read_failed', { source: sourceId, msg: errorMessage(err) });
-  }
+  const { cache, ok: cacheReadSucceeded } = await readCache(writer, sourceId);
 
   const delta = [...candidates.entries()].filter(([hash]) => !(hash in cache.entries));
   const deltaIds = new Set(delta.map(([id]) => id));
