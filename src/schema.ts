@@ -60,7 +60,13 @@ export const AircraftCategorySchema = z.enum([
   'other',
 ]);
 
-export const BuildCertificationSchema = z.enum(['type-certificated', 'not-type-certificated']);
+// Light Sport is a third builder-certification state, not a flavour of the other two: the FAA
+// publishes it as its own code (ardata.pdf, Builder Certification Code 2) for ~10k aircraft.
+export const BuildCertificationSchema = z.enum([
+  'type-certificated',
+  'not-type-certificated',
+  'light-sport',
+]);
 
 export const OperatingEnvironmentSchema = z.enum(['land', 'sea', 'amphibian']);
 

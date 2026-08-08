@@ -192,13 +192,20 @@ mapping:
     transform: trim_or_null
     lookup:
       'Reciprocating piston-driven engine': reciprocating
+      'Reciprocating piston-driven Diesel engine': reciprocating
+      'Reciprocating piston radial engine': reciprocating
+      'Piston-driven shaft (rotorcraft) engine': reciprocating
       'Turbofan engine': turbo-fan
       'Turbojet engine': turbo-jet
       'Turbine-driven shaft (rotorcraft) engine': turbo-shaft
       'Turbo-prop engine': turbo-prop
+      'Turbine-driven propeller engine': turbo-prop
       'Electrical engine': electric
       'Wankel engine': rotary
       'No engine': none
+      # ILT's explicit "we did not record this" label — distinct from 'No engine', which asserts
+      # the aircraft has none.
+      'Engine - not defined': unknown
     default: ~
 
   engine.count:
