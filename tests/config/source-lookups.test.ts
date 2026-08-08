@@ -21,6 +21,17 @@ const CASES: Array<{
   { source: 'faa', field: 'build_certification', value: '2', expected: 'light-sport' },
   // Airworthiness Classification Code is documented as 1-9; 0 is emitted with no published meaning.
   { source: 'faa', field: 'category', value: '0', expected: null },
+  // One canonical value per class. 3/6/7/8/9 previously all collapsed to `other`, which left a
+  // consumer unable to distinguish a restricted-category crop-duster from a ferry permit.
+  { source: 'faa', field: 'category', value: '1', expected: 'standard' },
+  { source: 'faa', field: 'category', value: '2', expected: 'limited' },
+  { source: 'faa', field: 'category', value: '3', expected: 'restricted' },
+  { source: 'faa', field: 'category', value: '4', expected: 'experimental' },
+  { source: 'faa', field: 'category', value: '5', expected: 'provisional' },
+  { source: 'faa', field: 'category', value: '6', expected: 'multiple' },
+  { source: 'faa', field: 'category', value: '7', expected: 'primary' },
+  { source: 'faa', field: 'category', value: '8', expected: 'special-flight-permit' },
+  { source: 'faa', field: 'category', value: '9', expected: 'light-sport' },
 
   // ANAC files airframe types in the landing-type column; br_airframe already derives them.
   { source: 'br-anac', field: 'operating_environment', value: 'HELICOPTERO', expected: null },
@@ -28,9 +39,10 @@ const CASES: Array<{
   { source: 'br-anac', field: 'operating_environment', value: 'DRONE (RPAS)', expected: null },
 
   // Dual standard+restricted grants resolve to the restricting half.
-  { source: 'br-anac', field: 'category', value: 'NORMAL/RESTRITA', expected: 'limited' },
-  { source: 'br-anac', field: 'category', value: 'ACROB./RESTRITA', expected: 'limited' },
-  { source: 'br-anac', field: 'category', value: 'NORMAL/UT./REST.', expected: 'limited' },
+  { source: 'br-anac', field: 'category', value: 'NORMAL/RESTRITA', expected: 'restricted' },
+  { source: 'br-anac', field: 'category', value: 'ACROB./RESTRITA', expected: 'restricted' },
+  { source: 'br-anac', field: 'category', value: 'NORMAL/UT./REST.', expected: 'restricted' },
+  { source: 'br-anac', field: 'category', value: 'RESTRITA', expected: 'restricted' },
   { source: 'br-anac', field: 'category', value: 'NORMAL/S.ACROB.', expected: 'standard' },
   { source: 'br-anac', field: 'category', value: 'SEMI ACROBATICA', expected: 'standard' },
   { source: 'br-anac', field: 'category', value: 'UTILIDADE/S.ACROB', expected: 'standard' },

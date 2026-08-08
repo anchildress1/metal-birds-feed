@@ -52,11 +52,20 @@ export const EngineTypeSchema = z.enum([
   'other',
 ]);
 
+// Mirrors the airworthiness certificate classes registers actually issue. Restricted, primary,
+// multiple, special-flight-permit, and light-sport are distinct classes with distinct operating
+// consequences, not shades of `other` — collapsing them leaves a consumer unable to tell a
+// crop-duster from a ferry permit. `other` stays for classes outside this set.
 export const AircraftCategorySchema = z.enum([
   'standard',
   'limited',
+  'restricted',
   'experimental',
   'provisional',
+  'primary',
+  'multiple',
+  'special-flight-permit',
+  'light-sport',
   'other',
 ]);
 

@@ -84,13 +84,13 @@ mapping:
       'UTILIDADE/S.ACROB': standard
       'UTIL./ACROBATICA': standard
       'TRANSPORTE A': standard
-      RESTRITA: limited
+      RESTRITA: restricted
       # Dual certifications spanning standard and restricted. The restricted grant is the operative
       # limit on what the aircraft may do, so it governs — collapsing these to standard would
       # advertise unrestricted operation the certificate does not grant.
-      'NORMAL/RESTRITA': limited
-      'ACROB./RESTRITA': limited
-      'NORMAL/UT./REST.': limited
+      'NORMAL/RESTRITA': restricted
+      'ACROB./RESTRITA': restricted
+      'NORMAL/UT./REST.': restricted
       EXPERIMENTAL: experimental
       PROVISORIA: provisional
       # RBAC 21 special class — sailplanes, airships, and unconventional types certified without
