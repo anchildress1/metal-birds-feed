@@ -1,6 +1,7 @@
 id: no-caa
 label: Luftfartstilsynet — Norwegian Civil Aircraft Register (Norges luftfartøyregister)
 country: NO
+language: no
 encoding: utf8
 trim_all: false
 cadence_days: 1

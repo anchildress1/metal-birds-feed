@@ -75,7 +75,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_compound_no_fields.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { compound_transform: tc_airframe }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { compound_transform: tc_airframe }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/compound_transform requires fields/i);
@@ -88,7 +88,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_fields_no_compound.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { fields: ['A', 'B'] }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { fields: ['A', 'B'] }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/compound_transform requires fields/i);
@@ -112,7 +112,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_merge_empty.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: []\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: []\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -125,7 +125,7 @@ describe('loadSourceConfig', () => {
   // field unset with no diagnostic — the load must reject it instead.
   it('rejects merge_duplicates paths outside the canonical schema', () => {
     const tmp = tmpConfig('_test_merge_path.yaml');
-    const base = `id: t\nlabel: t\ncountry: CL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\n`;
+    const base = `id: t\nlabel: t\ncountry: CL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\n`;
     const mapping = `mapping:\n  registration: { field: ID }\n`;
     try {
       writeFileSync(tmp, `${base}merge_duplicates:\n  fields: ['operator.nme']\n${mapping}`);
@@ -148,7 +148,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_merge_overlap.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: ['owner.name']\n  set_on_merge:\n    owner.name: STAMPED\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: ['owner.name']\n  set_on_merge:\n    owner.name: STAMPED\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/both fields and set_on_merge/i);
@@ -167,7 +167,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_format_ods_idx.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nsheet: 0\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nsheet: 0\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       const config = loadSourceConfig(tmp);
@@ -182,7 +182,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_format_xlsx_named.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: IE\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.xlsx }\nprimary: register\ndelimiter: ','\nformat: xlsx\nsheet: Register\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: IE\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.xlsx }\nprimary: register\ndelimiter: ','\nformat: xlsx\nsheet: Register\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       const config = loadSourceConfig(tmp);
@@ -197,7 +197,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_bad_format.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: pdf\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: pdf\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -210,7 +210,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_neg_sheet.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.ods }\nprimary: f\ndelimiter: ','\nformat: ods\nsheet: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.ods }\nprimary: f\ndelimiter: ','\nformat: ods\nsheet: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -223,7 +223,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dl_file.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       const config = loadSourceConfig(tmp);
@@ -238,7 +238,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dl_file_multi.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries:\n    a: a.ods\n    b: b.ods\nprimary: a\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries:\n    a: a.ods\n    b: b.ods\nprimary: a\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/exactly one alias.*format.*file/i);
@@ -251,7 +251,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dup_path.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries:\n    a: same.txt\n    b: same.txt\nprimary: a\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries:\n    a: same.txt\n    b: same.txt\nprimary: a\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/paths must be unique/i);
@@ -264,7 +264,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_bad_primary.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: REGISTER.CSV\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: REGISTER.CSV\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/primary and joins\[\].file must match/i);
@@ -277,7 +277,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_bad_join_file.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, side: s.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: SIDE\n    key: K\n    on: K\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, side: s.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: SIDE\n    key: K\n    on: K\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/primary and joins\[\].file must match/i);
@@ -290,7 +290,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_bad_columns_key.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\ncolumns:\n  regsiter: [REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\ncolumns:\n  regsiter: [REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/must match primary or a joins\[\]\.file value/i);
@@ -303,7 +303,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_ragged_non_csv.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: { register: 1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: { register: 1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(
@@ -319,7 +319,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_ragged_join.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods, extra: extra.csv }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: { extra: 1 }\njoins:\n  - name: ex\n    file: extra\n    on: ID\n    key: ID\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.ods, extra: extra.csv }\nprimary: register\ndelimiter: ','\nformat: ods\nallowed_ragged_rows: { extra: 1 }\njoins:\n  - name: ex\n    file: extra\n    on: ID\n    key: ID\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(loadSourceConfig(tmp).allowed_ragged_rows).toEqual({ extra: 1 });
@@ -332,7 +332,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_ragged_bad_key.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: r.csv }\nprimary: register\ndelimiter: ','\nallowed_ragged_rows: { nope: 1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: r.csv }\nprimary: register\ndelimiter: ','\nallowed_ragged_rows: { nope: 1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/must match primary or a joins\[\]\.file value/i);
@@ -345,7 +345,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dup_join_names.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, a: a.txt, b: b.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: a\n    key: K\n    on: K\n  - name: side\n    file: b\n    key: K\n    on: K\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, a: a.txt, b: b.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: a\n    key: K\n    on: K\n  - name: side\n    file: b\n    key: K\n    on: K\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/joins\[\].name values must be unique/i);
@@ -358,7 +358,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_unknown_key.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nskiprows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nskiprows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -371,7 +371,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_unknown_dl_key.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\n  discover_patern: 'x'\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\n  discover_patern: 'x'\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -384,7 +384,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_unknown_map_key.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transfrom: trim_or_null }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transfrom: trim_or_null }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -397,7 +397,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_const_transform.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { constant: valid, transform: trim_or_null }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { constant: valid, transform: trim_or_null }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -410,7 +410,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_field_constant.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, constant: X }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, constant: X }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -423,7 +423,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_two_transforms.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transform: trim_or_null, array_transform: br_operational_classes }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transform: trim_or_null, array_transform: br_operational_classes }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -436,7 +436,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dup_columns.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\ncolumns:\n  f: [REG, REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\ncolumns:\n  f: [REG, REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -449,7 +449,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_neg_ragged.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_ragged_rows: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_ragged_rows: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
@@ -459,7 +459,7 @@ describe('loadSourceConfig', () => {
   });
 
   const pdfYaml = (anchorlessLine: string): string =>
-    `id: t\nlabel: t\ncountry: MV\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  field_axis: y\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${anchorlessLine}  column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  field_axis: y\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${anchorlessLine}  column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
 
   it('accepts pdf.allowed_anchorless_pages', () => {
     const tmp = tmpConfig('_test_pdf_anchorless.yaml');
@@ -506,7 +506,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dl_discover.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/fallback.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\n  discover_pattern: 'href="([^"]+\\.ods)"'\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/fallback.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\n  discover_pattern: 'href="([^"]+\\.ods)"'\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       const config = loadSourceConfig(tmp);
@@ -515,6 +515,63 @@ describe('loadSourceConfig', () => {
     } finally {
       unlinkSync(tmp);
     }
+  });
+
+  const languageConfig = (language: string): string =>
+    `id: t\nlabel: t\ncountry: NZ\nlanguage: ${language}\nencoding: utf8\ndownload:\n  url: https://example.com/register.csv\n  format: file\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`;
+
+  const withLanguageConfig = <T>(language: string, assert: (path: string) => T): T => {
+    const tmp = tmpConfig('_test_language.yaml');
+    writeFileSync(tmp, languageConfig(language));
+    try {
+      return assert(tmp);
+    } finally {
+      unlinkSync(tmp);
+    }
+  };
+
+  it.each(['en', 'es', 'pt', 'no', 'et', 'aa'])(
+    'accepts the assigned ISO 639-1 code %s',
+    (code) => {
+      withLanguageConfig(code, (path) => expect(loadSourceConfig(path).language).toBe(code));
+    }
+  );
+
+  // `em` is the load-bearing case: a well-formed typo for `en` that passes a shape-only check,
+  // then misses the exact `language === 'en'` gate and ships curated English to be reworded.
+  it.each(['em', 'xx', 'zz', 'qq'])('rejects the unassigned two-letter code %s', (code) => {
+    withLanguageConfig(code, (path) =>
+      expect(() => loadSourceConfig(path)).toThrow(/assigned ISO 639-1 code/i)
+    );
+  });
+
+  it.each(['EN', 'eng', 'e', 'e1'])('rejects the malformed language value %s', (code) => {
+    withLanguageConfig(code, (path) =>
+      expect(() => loadSourceConfig(path)).toThrow(/language must be/i)
+    );
+  });
+
+  it('rejects a mapping key that is not a canonical schema path', () => {
+    const tmp = tmpConfig('_test_mapping_key.yaml');
+    // A one-character slip in a `_source_text` companion is the case that matters: engine.ts
+    // mirrors the primary field when the key is absent, so this would silently store the
+    // English transform output as the untranslated original.
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: ES\nlanguage: es\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  airworthiness_class_source_txt: { field: CLASE }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/not a canonical schema path/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts the canonical _source_text companion keys', () => {
+    const config = loadSourceConfig(
+      resolve(import.meta.dirname, '..', '..', 'sources', 'es-aesa.yaml')
+    );
+    expect(config.mapping['airworthiness_class_source_text']).toBeDefined();
   });
 
   it('accepts prime_url when every cookie-bearing request shares its origin', () => {
@@ -553,7 +610,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dl_discover_lonely.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/discover_url.*discover_pattern.*together/i);
@@ -566,7 +623,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_dl_discover_badre.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\n  discover_pattern: '['\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.ods\n  format: file\n  entries: { register: '.' }\n  discover_url: https://example.com/index\n  discover_pattern: '['\nprimary: register\ndelimiter: ','\nformat: ods\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/discover_pattern.*valid regular expression/i);
@@ -579,7 +636,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_bad_regex.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_missing_source_id_rows:\n  max: 1\n  field: FOOTER\n  pattern: '['\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_missing_source_id_rows:\n  max: 1\n  field: FOOTER\n  pattern: '['\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/valid regular expression/i);
@@ -592,7 +649,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_record_count_ok.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: 'Total: (\\d+)'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: 'Total: (\\d+)'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       const config = loadSourceConfig(tmp);
@@ -606,7 +663,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_record_count_badre.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: '['\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: '['\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(
@@ -621,7 +678,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_record_count_nogroup.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: 'Total: \\d+'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: 'Total: \\d+'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(
@@ -636,7 +693,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_record_count_twogroups.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CA\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: '(Total): (\\d+)'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nrecord_count:\n  pattern: '(Total): (\\d+)'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(
@@ -669,7 +726,7 @@ describe('loadSourceConfig — JSON + POST sources', () => {
     const tmp = tmpConfig('_test_body_no_post.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CH\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
+      `id: t\nlabel: t\ncountry: CH\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
     );
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/body is only valid with method POST/i);
@@ -682,7 +739,7 @@ describe('loadSourceConfig — JSON + POST sources', () => {
     const tmp = tmpConfig('_test_json_post.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: CH\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  method: POST\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nrecord_path: data.items\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
+      `id: t\nlabel: t\ncountry: CH\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  method: POST\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nrecord_path: data.items\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
     );
     try {
       const config = loadSourceConfig(tmp);

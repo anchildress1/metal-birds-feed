@@ -693,6 +693,20 @@ function partyFields(mapping: FieldMap, row: Row, prefix: string, source: string
 function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown {
   const m = config.mapping;
   const s = config.id;
+
+  const airworthinessClass = scalarField(m, row, 'airworthiness_class', s);
+  const cancellationReason = scalarField(m, row, 'cancellation_reason', s);
+  const lienStatus = scalarField(m, row, 'lien_status', s);
+  const operationalClasses = arrField(m, row, 'operational_classes', s);
+  const operationalClassesSourceText = arrField(m, row, 'operational_classes_source_text', s);
+
+  // A *_source_text field mirrors its primary, except where the config already renders the primary
+  // in English at parse time (deterministic transform, e.g. es-aesa's `clase` -> es_aesa_class_en);
+  // that source declares an explicit `<field>_source_text` mapping back to the raw cell, which wins
+  // or the untranslated original is lost.
+  const sourceText = (field: string, mirrored: string | null): string | null =>
+    scalarField(m, row, `${field}_source_text`, s) ?? mirrored;
+
   return {
     source: config.id,
     source_id: sourceId,
@@ -708,9 +722,13 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     airframe_type: scalarField(m, row, 'airframe_type', s),
     category: scalarField(m, row, 'category', s),
     build_certification: scalarField(m, row, 'build_certification', s),
-    airworthiness_class: scalarField(m, row, 'airworthiness_class', s),
+    airworthiness_class: airworthinessClass,
+    airworthiness_class_source_text: sourceText('airworthiness_class', airworthinessClass),
     operating_environment: scalarField(m, row, 'operating_environment', s),
-    operational_classes: arrField(m, row, 'operational_classes', s),
+    operational_classes: operationalClasses,
+    operational_classes_source_text: operationalClassesSourceText.length
+      ? operationalClassesSourceText
+      : operationalClasses,
     engine: {
       manufacturer: scalarField(m, row, 'engine.manufacturer', s),
       model: scalarField(m, row, 'engine.model', s),
@@ -733,8 +751,10 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     max_passengers: numField(m, row, 'max_passengers', s),
     min_crew: numField(m, row, 'min_crew', s),
     airworthiness_review_date: scalarField(m, row, 'airworthiness_review_date', s),
-    cancellation_reason: scalarField(m, row, 'cancellation_reason', s),
-    lien_status: scalarField(m, row, 'lien_status', s),
+    cancellation_reason: cancellationReason,
+    cancellation_reason_source_text: sourceText('cancellation_reason', cancellationReason),
+    lien_status: lienStatus,
+    lien_status_source_text: sourceText('lien_status', lienStatus),
     interdiction_code: scalarField(m, row, 'interdiction_code', s),
   };
 }

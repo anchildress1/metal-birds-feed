@@ -886,6 +886,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-lookup',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -924,6 +925,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-join-miss',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -949,6 +951,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-join-partial',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -978,6 +981,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-join-empty',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1004,6 +1008,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-blank-reg',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1028,6 +1033,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-ws-reg',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1050,6 +1056,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-no-reg-mapping',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1072,6 +1079,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-status',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1100,6 +1108,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-status-reversed',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1129,6 +1138,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-date',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1166,6 +1176,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-date-replace',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1196,6 +1207,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-status-beats-date',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1233,6 +1245,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-date-asymmetric',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1263,6 +1276,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-identical',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1287,6 +1301,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-unmapped',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1313,6 +1328,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-completeness',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1339,6 +1355,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-completeness-reverse',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1375,6 +1392,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-completeness-conflict',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1405,6 +1423,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-canonical-match',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1434,6 +1453,7 @@ describe('engine — negative and edge cases', () => {
       id: 'synthetic-dup-budget',
       label: 'synthetic',
       country: 'US',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
       primary: 'primary',
@@ -1463,6 +1483,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     id: 'synthetic-ods',
     label: 'Synthetic ODS source for dispatch test',
     country: 'NL',
+    language: 'en',
     encoding: 'utf8',
     download: {
       url: 'https://example.com/x.ods',
@@ -1904,6 +1925,13 @@ describe('BR-ANAC fixture translation', () => {
       expect(r.lien_status).toBe('MATRICULA CANCELADA');
       expect(r.airworthiness_review_date).toBe('2026-02-18');
     });
+    // br-anac declares no *_source_text mapping, so each companion mirrors its primary. This record
+    // carries all three populated — a mirror regressing to null passes trivially against null ones.
+    it('mirrors each primary into *_source_text when the config declares no override', () => {
+      expect(r.cancellation_reason_source_text).toBe('AERONAVE EXPORTADA');
+      expect(r.lien_status_source_text).toBe('MATRICULA CANCELADA');
+      expect(r.operational_classes_source_text).toEqual(['PRIVADA']);
+    });
   });
 
   describe('PPJCR — three-way co-ownership', () => {
@@ -2253,6 +2281,13 @@ describe('AESA Spain fixture translation (PDF)', () => {
     it('types it single-engine via the engine count and labels the class in English', () => {
       expect(r.airframe_type).toBe('fixed-wing-single-engine');
       expect(r.airworthiness_class).toBe('airplane');
+    });
+    // es_aesa_class_en renders English at parse time, so the mirrored default would store English
+    // in source_text and lose the Spanish original AESA's licence requires be recoverable. The
+    // explicit airworthiness_class_source_text mapping must win over the mirror.
+    it('keeps the raw Spanish class, the explicit source_text mapping beating the mirror', () => {
+      expect(r.airworthiness_class_source_text).toBe('AVION');
+      expect(r.airworthiness_class_source_text).not.toBe(r.airworthiness_class);
     });
     it('maps the engine detail and count', () => {
       expect(r.engine.manufacturer).toBe('LYCOMING');
@@ -2770,6 +2805,12 @@ describe('DGAC Chile fixture translation', () => {
       expect(r.registration).toBe('CC-AAA');
       expect(r.country).toBe('CL');
     });
+    // The lookup renders English at parse time, so without the explicit source_text mapping the
+    // Spanish cell is gone — the same provenance loss es-aesa's class transform would cause.
+    it('keeps the Spanish USO AERONAVE alongside the canonical English token', () => {
+      expect(r.operational_classes).toEqual(['commercial']);
+      expect(r.operational_classes_source_text).toEqual(['COMERCIAL']);
+    });
     it('maps HELICOPTERO to rotorcraft with a constant valid status', () => {
       expect(r.airframe_type).toBe('rotorcraft');
       expect(r.status).toBe('valid');
@@ -2845,6 +2886,7 @@ describe('engine — merge_duplicates edge cases', () => {
     id: 'synthetic-merge',
     label: 'Synthetic merge_duplicates source',
     country: 'CL',
+    language: 'en',
     encoding: 'utf8',
     download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
     primary: 'register',
@@ -2906,6 +2948,7 @@ describe('engine — merge_duplicates edge cases', () => {
       id: 'synthetic-merge-num',
       label: 'Synthetic numeric merge field',
       country: 'CL',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
       primary: 'register',
@@ -2940,6 +2983,7 @@ describe('engine — merge_duplicates edge cases', () => {
       id: 'synthetic-merge-clobber',
       label: 'Synthetic set_on_merge clobber guard',
       country: 'CL',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
       primary: 'register',
@@ -2981,6 +3025,7 @@ describe('engine — merge_duplicates edge cases', () => {
       id: 'synthetic-merge-incumbent-clobber',
       label: 'Synthetic set_on_merge incumbent clobber guard',
       country: 'CL',
+      language: 'en',
       encoding: 'utf8',
       download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
       primary: 'register',

@@ -5,7 +5,6 @@ export const SCALAR_TRANSFORMS = [
   'trim_or_null',
   'na_or_null',
   'lowercase',
-  'uppercase',
   'int_or_null',
   'float_or_null',
   'date_yyyymmdd_or_null',
@@ -171,6 +170,9 @@ export interface SourceConfig {
   id: string;
   label: string;
   country: string;
+  // ISO 639-1 code of the language the register publishes in. `en` skips the Gemini pass entirely —
+  // asking a translator to render English as English rewords curated values and mangles bare codes.
+  language: string;
   encoding: 'utf8' | 'latin1';
   download: DownloadConfig;
   primary: string;

@@ -5,45 +5,11 @@ import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { latestKnownDate } from './recency.js';
 
-// The descriptive, hex-addressable slice of a record a consumer application renders for a plane:
-// identity, airframe, engine, performance, and ownership. Excludes registry-admin bookkeeping the
-// canonical record still carries (certification/airworthiness dates, legal_owner, lien/interdiction
-// codes, operational classes) — none of that describes the aircraft to a spotter. PII beyond
-// owner/operator name/state/country is already absent from the schema. `source` is provenance.
+// Consumer-facing per-plane slice: identity/airframe/engine/performance/ownership plus the
+// English-primary legal/admin free-text fields — not the *_source_text originals (those stay in
+// the per-source artifact for provenance), and not the fields with no consumer value (dates,
+// legal_owner, interdiction code, operational classes).
 export type { FeedRow };
-
-const COLUMNS = [
-  'icao_hex',
-  'registration',
-  'icao_type_code',
-  'status',
-  'country',
-  'manufacturer',
-  'model',
-  'serial_number',
-  'year_manufactured',
-  'airframe_type',
-  'category',
-  'engine_manufacturer',
-  'engine_model',
-  'engine_type',
-  'engine_count',
-  'engine_horsepower',
-  'engine_thrust_lbs',
-  'seats',
-  'max_passengers',
-  'cruise_speed_ktas',
-  'max_takeoff_weight_kg',
-  'owner_name',
-  'owner_kind',
-  'owner_state',
-  'owner_country',
-  'operator_name',
-  'operator_kind',
-  'operator_state',
-  'operator_country',
-  'source',
-] as const;
 
 // Records sharing an icao_hex collapse to one winner deterministically so import order can't decide
 // it: a cancelled record never shadows a live one, then the most recent known date wins, then
@@ -97,6 +63,8 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     operator_kind: r.operator.kind,
     operator_state: r.operator.state,
     operator_country: r.operator.country,
+    cancellation_reason: r.cancellation_reason,
+    airworthiness_class: r.airworthiness_class,
     source: r.source,
   }));
 };
@@ -121,14 +89,20 @@ export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
 // Stable content hash over the consolidated feed, mirroring db.ts's per-source hashRecords: sorted
 // by icao_hex (the row key) so merge/iteration order can't churn it. The scheduled deploy compares
 // this against the last-deployed hash to skip a redundant Cloud Run redeploy when nothing changed.
+// Hashes values in `COLUMNS` order rather than `JSON.stringify(row)`, which is key-order sensitive:
+// a migrated legacy slice appends its added fields after `source`, while a zod re-parse emits them
+// in schema order, so the same data hashed two ways would disagree and trigger a redundant Cloud
+// Run image build. Column order is the contract, and adding a column still changes the hash.
 export const hashFeedRows = (rows: FeedRow[]): string => {
   const hash = createHash('sha256');
   for (const row of [...rows].sort((a, b) => a.icao_hex.localeCompare(b.icao_hex)))
-    hash.update(`${row.icao_hex}\0${JSON.stringify(row)}\n`);
+    hash.update(`${row.icao_hex}\0${JSON.stringify(COLUMNS.map((column) => row[column]))}\n`);
   return hash.digest('hex');
 };
 
-const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
+// Keyed by `keyof FeedRow`, not by COLUMNS: adding a field to FeedRow must be a compile error here
+// rather than a column silently missing from the served DB. Mirrors db.ts's FlatColumn guard.
+const COLUMN_TYPES: Record<keyof FeedRow, string> = {
   icao_hex: 'TEXT PRIMARY KEY',
   registration: 'TEXT NOT NULL',
   icao_type_code: 'TEXT',
@@ -158,8 +132,16 @@ const COLUMN_TYPES: Record<(typeof COLUMNS)[number], string> = {
   operator_kind: 'TEXT',
   operator_state: 'TEXT',
   operator_country: 'TEXT',
+  cancellation_reason: 'TEXT',
+  airworthiness_class: 'TEXT',
   source: 'TEXT NOT NULL',
 };
+
+// Single source of column truth: the DDL, the INSERT, and FeedRowsSchema all derive from this,
+// so a field cannot reach FeedRow without reaching the served database.
+const COLUMNS = Object.keys(COLUMN_TYPES) as (keyof FeedRow)[];
+
+type LegacyFeedRow = Omit<FeedRow, 'cancellation_reason' | 'airworthiness_class'>;
 
 const COLUMN_DEFS = COLUMNS.map((c) => `${c} ${COLUMN_TYPES[c]}`).join(',\n  ');
 const DDL = `CREATE TABLE feed (\n  ${COLUMN_DEFS}\n);`;
@@ -175,9 +157,55 @@ const columnSchema = (type: string): z.ZodTypeAny => {
   return z.string().nullable();
 };
 
-export const FeedRowsSchema = z.array(
-  z.object(Object.fromEntries(COLUMNS.map((c) => [c, columnSchema(COLUMN_TYPES[c])])))
-) as unknown as z.ZodType<FeedRow[]>;
+type FeedRowShape = { [K in keyof FeedRow]: z.ZodType<FeedRow[K]> };
+const FeedRowObjectSchema = z.strictObject(
+  Object.fromEntries(
+    COLUMNS.map((column) => [column, columnSchema(COLUMN_TYPES[column])])
+  ) as FeedRowShape
+);
+export const FeedRowsSchema: z.ZodType<FeedRow[]> = z.array(FeedRowObjectSchema);
+const LegacyFeedRowsSchema: z.ZodType<LegacyFeedRow[]> = z.array(
+  FeedRowObjectSchema.omit({ cancellation_reason: true, airworthiness_class: true })
+);
+
+export const FEED_SLICE_VERSION = 2;
+
+export interface ParsedFeedSlice {
+  rows: FeedRow[];
+  needsMigration: boolean;
+}
+
+const CurrentFeedSliceSchema = z
+  .strictObject({ version: z.literal(FEED_SLICE_VERSION), rows: FeedRowsSchema })
+  .transform(({ rows }): ParsedFeedSlice => ({ rows, needsMigration: false }));
+
+const UnversionedCurrentFeedSliceSchema = FeedRowsSchema.transform((rows): ParsedFeedSlice => ({
+  rows,
+  needsMigration: true,
+}));
+
+const UnversionedLegacyFeedSliceSchema = LegacyFeedRowsSchema.transform(
+  (rows): ParsedFeedSlice => ({
+    rows: rows.map((row) => ({
+      ...row,
+      cancellation_reason: null,
+      airworthiness_class: null,
+    })),
+    needsMigration: true,
+  })
+);
+
+// Bounded migration: production slices predate the versioned envelope and the two additive nullable
+// fields. Exact old/current arrays upgrade once and are rewritten by the reader; malformed rows and
+// unknown envelope versions still fail closed.
+export const FeedSliceSchema = z.union([
+  CurrentFeedSliceSchema,
+  UnversionedCurrentFeedSliceSchema,
+  UnversionedLegacyFeedSliceSchema,
+]);
+
+export const serializeFeedSlice = (rows: FeedRow[]): string =>
+  JSON.stringify({ version: FEED_SLICE_VERSION, rows });
 
 // The consolidated, single-table lookup DB the service serves: one row per icao_hex across every
 // source, queried as `SELECT * FROM feed WHERE icao_hex IN (...)` — no per-country union. Built
@@ -187,7 +215,7 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
   const db = new Database(':memory:');
   try {
     db.run('PRAGMA journal_mode = OFF');
-    db.run('PRAGMA user_version = 1');
+    db.run('PRAGMA user_version = 4');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     const insert = db.prepare(

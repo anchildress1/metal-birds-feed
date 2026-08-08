@@ -7,6 +7,8 @@ import {
   buildFeedDb,
   hashFeedRows,
   FeedRowsSchema,
+  FeedSliceSchema,
+  FEED_SLICE_VERSION,
   type FeedRow,
 } from '../src/feed.js';
 
@@ -26,8 +28,10 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
   category: null,
   build_certification: null,
   airworthiness_class: null,
+  airworthiness_class_source_text: null,
   operating_environment: null,
   operational_classes: [],
+  operational_classes_source_text: [],
   engine: {
     manufacturer: null,
     model: null,
@@ -51,7 +55,9 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
   min_crew: null,
   airworthiness_review_date: null,
   cancellation_reason: null,
+  cancellation_reason_source_text: null,
   lien_status: null,
+  lien_status_source_text: null,
   interdiction_code: null,
   ...overrides,
 });
@@ -235,5 +241,61 @@ describe('FeedRowsSchema', () => {
   it('rejects a row whose numeric column carries a string', () => {
     const [row] = valid();
     expect(FeedRowsSchema.safeParse([{ ...row, year_manufactured: '1979' }]).success).toBe(false);
+  });
+});
+
+describe('FeedSliceSchema', () => {
+  const currentRows = (): FeedRow[] =>
+    toFeedRows([
+      make('1', 'a1b2c3', {
+        cancellation_reason: 'Aircraft exported',
+        airworthiness_class: 'Standard',
+      }),
+    ]);
+  const legacyRows = () =>
+    currentRows().map((row) =>
+      Object.fromEntries(
+        Object.entries(row).filter(
+          ([key]) => key !== 'cancellation_reason' && key !== 'airworthiness_class'
+        )
+      )
+    );
+  const migratedLegacyRows = (): FeedRow[] =>
+    currentRows().map((row) => ({
+      ...row,
+      cancellation_reason: null,
+      airworthiness_class: null,
+    }));
+
+  it('accepts the strict current envelope without requesting migration', () => {
+    expect(FeedSliceSchema.parse({ version: FEED_SLICE_VERSION, rows: currentRows() })).toEqual({
+      rows: currentRows(),
+      needsMigration: false,
+    });
+  });
+
+  it('migrates an unversioned current array without losing translated fields', () => {
+    expect(FeedSliceSchema.parse(currentRows())).toEqual({
+      rows: currentRows(),
+      needsMigration: true,
+    });
+  });
+
+  it('migrates an exact legacy array by adding only the new nullable fields', () => {
+    expect(FeedSliceSchema.parse(legacyRows())).toEqual({
+      rows: migratedLegacyRows(),
+      needsMigration: true,
+    });
+  });
+
+  it('rejects unknown versions and malformed legacy rows', () => {
+    const [legacy] = legacyRows();
+    const missingRequired = Object.fromEntries(
+      Object.entries(legacy).filter(([key]) => key !== 'registration')
+    );
+
+    expect(FeedSliceSchema.safeParse({ version: 999, rows: currentRows() }).success).toBe(false);
+    expect(FeedSliceSchema.safeParse([missingRequired]).success).toBe(false);
+    expect(FeedSliceSchema.safeParse([{ ...legacy, unexpected: 'drift' }]).success).toBe(false);
   });
 });

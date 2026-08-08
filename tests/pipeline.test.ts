@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
+import type { Aircraft } from '../src/schema.js';
 import { hashFeedRows } from '../src/feed.js';
 
 const REAL_FETCH = globalThis.fetch;
@@ -24,10 +25,12 @@ const mockReadFeedRows = mock();
 const mockReadDeployedFeedHash = mock();
 const mockWriteDeployedFeedHash = mock();
 const mockLog = mock();
+const mockLocalizeRecords = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
 void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
+void mock.module('../src/localize/localize.js', () => ({ localizeRecords: mockLocalizeRecords }));
 void mock.module('../src/logger.js', () => ({
   log: mockLog,
   errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
@@ -57,6 +60,7 @@ const CONFIG: SourceConfig = {
   id: 'faa',
   label: 'FAA',
   country: 'US',
+  language: 'en',
   encoding: 'latin1',
   download: {
     url: 'https://registry.faa.gov/database/ReleasableAircraft.zip',
@@ -73,6 +77,58 @@ const CONFIG: SourceConfig = {
   mapping: {},
 };
 const HASH64 = '0'.repeat(64);
+
+// toFeedRows is the real implementation here (src/feed.js is not mocked), so any record reaching a
+// non-dry-run write needs the full canonical shape, not a stub.
+const aircraft = (overrides: Partial<Aircraft> = {}): Aircraft => ({
+  source: 'faa',
+  source_id: '1',
+  registration: 'N1',
+  icao_hex: 'a1b2c3',
+  icao_type_code: null,
+  status: 'valid',
+  country: 'US',
+  manufacturer: 'CESSNA',
+  model: '172',
+  serial_number: null,
+  year_manufactured: null,
+  airframe_type: null,
+  category: null,
+  build_certification: null,
+  airworthiness_class: null,
+  airworthiness_class_source_text: null,
+  operating_environment: null,
+  operational_classes: [],
+  operational_classes_source_text: [],
+  engine: {
+    manufacturer: null,
+    model: null,
+    type: null,
+    count: null,
+    horsepower: null,
+    thrust_lbs: null,
+  },
+  owner: { name: null, kind: null, state: null, country: null },
+  operator: { name: null, kind: null, state: null, country: null },
+  legal_owner: { name: null, kind: null, state: null, country: null },
+  idera_authorised_party: null,
+  certification_date: null,
+  airworthiness_date: null,
+  expiration_date: null,
+  last_action_date: null,
+  cruise_speed_ktas: null,
+  max_takeoff_weight_kg: null,
+  seats: null,
+  max_passengers: null,
+  min_crew: null,
+  airworthiness_review_date: null,
+  cancellation_reason: null,
+  cancellation_reason_source_text: null,
+  lien_status: null,
+  lien_status_source_text: null,
+  interdiction_code: null,
+  ...overrides,
+});
 
 beforeEach(() => {
   process.env['MBF_R2_ACCOUNT_ID'] = 'account';
@@ -96,6 +152,7 @@ beforeEach(() => {
   mockReadDeployedFeedHash.mockReset();
   mockWriteDeployedFeedHash.mockReset();
   mockLog.mockReset();
+  mockLocalizeRecords.mockReset();
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
   mockDownload.mockResolvedValue(new Map([['master', Buffer.from('')]]));
@@ -103,6 +160,12 @@ beforeEach(() => {
     records: new Map(),
     stats: { total: 1, ok: 1, failed: 0 },
   });
+  mockLocalizeRecords.mockImplementation((records: unknown) =>
+    Promise.resolve({
+      records,
+      stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 },
+    })
+  );
   mockR2Write.mockResolvedValue({
     changed: false,
     record_count: 0,
@@ -134,7 +197,7 @@ describe('run', () => {
     await run('faa');
 
     expect(mockR2Constructor).toHaveBeenCalledTimes(1);
-    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null);
+    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null, expect.any(String));
   });
 
   it('aborts write when any row fails translation', async () => {
@@ -146,6 +209,55 @@ describe('run', () => {
     await expect(run('faa')).rejects.toThrow(/aborting write/i);
 
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  // The two maps must differ structurally: toHaveBeenCalledWith is deep equality, so
+  // interchangeable-looking maps let a `localized` -> `records` regression pass silently and ship
+  // untranslated text to both durable outputs.
+  it('writes localizeRecords output, not the pre-localization records, to both durable outputs', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const translated = new Map([['1', aircraft({ cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const localized = new Map([['1', aircraft({ cancellation_reason: 'AIRCRAFT EXPORTED' })]]);
+    mockTranslate.mockResolvedValueOnce({
+      records: translated,
+      stats: { total: 1, ok: 1, failed: 0 },
+    });
+    mockLocalizeRecords.mockResolvedValueOnce({
+      records: localized,
+      stats: { candidates: 1, cache_hits: 0, translated: 1, failed: 1 },
+    });
+
+    await run('faa');
+
+    expect(mockLocalizeRecords).toHaveBeenCalledWith(
+      translated,
+      'faa',
+      'en',
+      expect.anything(),
+      false
+    );
+    expect(mockR2Write).toHaveBeenCalledWith(localized, 'faa', null, expect.any(String));
+    expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', [
+      expect.objectContaining({ cancellation_reason: 'AIRCRAFT EXPORTED' }),
+    ]);
+    expect(mockLog).toHaveBeenCalledWith(
+      'warn',
+      'localize_partial_failure',
+      expect.objectContaining({ failed: 1 })
+    );
+  });
+
+  it('propagates a localizeRecords rejection (e.g. missing API key) before any durable write', async () => {
+    process.env['DRY_RUN'] = 'false';
+    mockLocalizeRecords.mockRejectedValueOnce(
+      new Error('Missing required environment variable: GEMINI_API_KEY')
+    );
+
+    await expect(run('faa')).rejects.toThrow('GEMINI_API_KEY');
+
+    expect(mockR2Write).not.toHaveBeenCalled();
+    expect(mockWriteFeedRows).not.toHaveBeenCalled();
+    expect(mockWriteState).not.toHaveBeenCalled();
   });
 
   it('does not write state when the artifact write fails', async () => {

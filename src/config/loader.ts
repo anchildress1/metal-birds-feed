@@ -10,6 +10,19 @@ import {
   type SourceConfig,
 } from '../types/config.js';
 
+// CLDR, via the runtime's own tables, is the authority on which two-letter subtags are assigned —
+// a hand-kept list would drift and silently reject a legitimate register. `fallback: 'none'`
+// returns undefined for an unassigned subtag instead of echoing the input back.
+const LANGUAGE_NAMES = new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' });
+
+const isIso639_1 = (code: string): boolean => {
+  try {
+    return LANGUAGE_NAMES.of(code) !== undefined;
+  } catch {
+    return false;
+  }
+};
+
 const isValidRegex = (pattern: string): boolean => {
   try {
     // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
@@ -82,6 +95,15 @@ const SourceConfigSchema = z
     id: z.string().min(1),
     label: z.string().min(1),
     country: z.string().min(1),
+    // Required, not defaulted: silently assuming a language decides whether a source is billed to
+    // Gemini and whether its curated values get reworded. That must be a stated choice per source.
+    // Shape alone is not enough — `em` is a well-formed typo for `en` that loads cleanly, misses
+    // the exact `language === 'en'` gate, and quietly ships curated English labels to a translator
+    // to be reworded over. The membership check is what makes that typo a load-time failure.
+    language: z
+      .string()
+      .regex(/^[a-z]{2}$/, 'language must be a lowercase two-letter code')
+      .refine(isIso639_1, { message: 'language must be an assigned ISO 639-1 code' }),
     encoding: z.enum(['utf8', 'latin1']),
     download: z
       .strictObject({
@@ -210,7 +232,20 @@ const SourceConfigSchema = z
           });
       })
       .optional(),
-    mapping: z.record(z.string(), FieldMappingSchema),
+    // A key the schema doesn't define is written into the record and stripped by re-validation, so
+    // the mapping "succeeds" while the intended field stays unset. That is worst for the
+    // `<field>_source_text` companions: `engine.ts` falls back to mirroring the primary field when
+    // the key is absent, so a typo in AESA's `airworthiness_class_source_text` would store the
+    // English transform output as the untranslated original — silently defeating the provenance the
+    // licence requires. Reject at load.
+    mapping: z.record(z.string(), FieldMappingSchema).superRefine((m, ctx) => {
+      for (const path of Object.keys(m))
+        if (!CANONICAL_PATHS.has(path))
+          ctx.addIssue({
+            code: 'custom',
+            message: `mapping key "${path}" is not a canonical schema path`,
+          });
+    }),
   })
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
     message: 'format "pdf" requires a pdf config block',

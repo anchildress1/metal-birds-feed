@@ -1,6 +1,7 @@
 id: sg-caas
 label: CAAS Singapore Civil Aircraft Register
 country: SG
+language: en
 encoding: utf8
 trim_all: true
 cadence_days: 30

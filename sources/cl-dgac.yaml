@@ -1,6 +1,7 @@
 id: cl-dgac
 label: DGAC Registro Nacional de Aeronaves
 country: CL
+language: es
 encoding: utf8
 trim_all: true
 cadence_days: 30
@@ -113,6 +114,12 @@ mapping:
     lookup:
       COMERCIAL: commercial
       PRIVADO: private
+
+  # The lookup above resolves to canonical English at parse time, discarding the Spanish cell — the
+  # same loss es-aesa's class transform causes, so the raw value is preserved the same way.
+  operational_classes_source_text:
+    field: USO AERONAVE
+    transform: trim_or_null
 
   engine.manufacturer:
     constant: ~

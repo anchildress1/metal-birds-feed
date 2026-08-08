@@ -11,7 +11,6 @@ export const OwnerKindSchema = z.enum([
   'non-citizen-co-owner',
   'other',
 ]);
-export type OwnerKind = z.infer<typeof OwnerKindSchema>;
 
 export const AircraftStatusSchema = z.enum([
   'valid',
@@ -21,7 +20,6 @@ export const AircraftStatusSchema = z.enum([
   'restricted',
   'other',
 ]);
-export type AircraftStatus = z.infer<typeof AircraftStatusSchema>;
 
 export const AirframeTypeSchema = z.enum([
   'glider',
@@ -37,7 +35,6 @@ export const AirframeTypeSchema = z.enum([
   'hybrid-lift',
   'other',
 ]);
-export type AirframeType = z.infer<typeof AirframeTypeSchema>;
 
 export const EngineTypeSchema = z.enum([
   'none',
@@ -54,7 +51,6 @@ export const EngineTypeSchema = z.enum([
   'rotary',
   'other',
 ]);
-export type EngineType = z.infer<typeof EngineTypeSchema>;
 
 export const AircraftCategorySchema = z.enum([
   'standard',
@@ -63,13 +59,10 @@ export const AircraftCategorySchema = z.enum([
   'provisional',
   'other',
 ]);
-export type AircraftCategory = z.infer<typeof AircraftCategorySchema>;
 
 export const BuildCertificationSchema = z.enum(['type-certificated', 'not-type-certificated']);
-export type BuildCertification = z.infer<typeof BuildCertificationSchema>;
 
 export const OperatingEnvironmentSchema = z.enum(['land', 'sea', 'amphibian']);
-export type OperatingEnvironment = z.infer<typeof OperatingEnvironmentSchema>;
 
 export const OwnerSchema = z.object({
   name: z.string().nullable(),
@@ -125,9 +118,15 @@ export const AircraftSchema = z.object({
   airframe_type: AirframeTypeSchema.nullable(),
   category: AircraftCategorySchema.nullable(),
   build_certification: BuildCertificationSchema.nullable(),
+  // English-primary. An untranslated value survives here rather than nulling: a translation miss
+  // leaves the pre-translation text in place.
   airworthiness_class: z.string().nullable(),
+  // Untranslated original — the provenance a licence requiring the source meaning not be distorted
+  // relies on (e.g. AESA Spain). Never read back by the pipeline; write-once at parse time.
+  airworthiness_class_source_text: z.string().nullable(),
   operating_environment: OperatingEnvironmentSchema.nullable(),
   operational_classes: z.array(z.string()),
+  operational_classes_source_text: z.array(z.string()),
   engine: EngineSchema,
   owner: OwnerSchema,
   operator: OperatorSchema,
@@ -144,7 +143,9 @@ export const AircraftSchema = z.object({
   min_crew: z.number().int().nullable(),
   airworthiness_review_date: isoDate,
   cancellation_reason: z.string().nullable(),
+  cancellation_reason_source_text: z.string().nullable(),
   lien_status: z.string().nullable(),
+  lien_status_source_text: z.string().nullable(),
   // Authoritative restriction code, preserved verbatim — its legend is registry-specific and
   // not published in machine-readable form, so consumers decode it against their own table.
   interdiction_code: z.string().nullable(),

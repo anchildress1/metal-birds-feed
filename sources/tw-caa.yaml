@@ -1,6 +1,7 @@
 id: tw-caa
 label: CAA Taiwan National Aircraft Register
 country: TW
+language: en
 encoding: utf8
 trim_all: true
 cadence_days: 30

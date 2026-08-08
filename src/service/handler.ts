@@ -143,15 +143,3 @@ export const routeRequest = async (
     return { status: 500, body: { error: 'internal error' } };
   }
 };
-
-// Convenience wrapper for callers and unit tests that already hold a parsed body.
-export const route = (
-  method: string,
-  path: string,
-  authHeader: string | null,
-  token: string | undefined,
-  body: unknown,
-  checkLimit: CheckLimit,
-  runQuery: RunQuery
-): Promise<RouteResult> =>
-  routeRequest(method, path, authHeader, token, () => Promise.resolve(body), checkLimit, runQuery);

@@ -19,12 +19,6 @@ describe('applyScalar', () => {
     it('returns empty string for empty', () => expect(applyScalar('lowercase', '')).toBe(''));
   });
 
-  describe('uppercase', () => {
-    it('uppercases and trims', () => expect(applyScalar('uppercase', ' hello ')).toBe('HELLO'));
-    it('returns empty string for blank', () => expect(applyScalar('uppercase', '   ')).toBe(''));
-    it('returns empty string for empty', () => expect(applyScalar('uppercase', '')).toBe(''));
-  });
-
   describe('int_or_null', () => {
     it('parses integer', () => expect(applyScalar('int_or_null', '1979')).toBe('1979'));
     it('returns null for empty', () => expect(applyScalar('int_or_null', '')).toBeNull());

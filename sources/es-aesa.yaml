@@ -1,6 +1,7 @@
 id: es-aesa
 label: AESA Registro de Matrícula de Aeronaves Civiles
 country: ES
+language: es
 encoding: utf8
 trim_all: true
 cadence_days: 30
@@ -110,6 +111,12 @@ mapping:
   airworthiness_class:
     field: clase
     transform: es_aesa_class_en
+
+  # es_aesa_class_en renders English at parse time, so without this the raw Spanish `clase` is lost
+  # and AESA's licence requires the untranslated original stay recoverable.
+  airworthiness_class_source_text:
+    field: clase
+    transform: trim_or_null
 
   operating_environment:
     constant: ~

@@ -1,4 +1,4 @@
-.PHONY: install dev format format-files format-check lint typecheck test build bootstrap e2e perf secret-scan commitlint clean serve build-feed deploy-only deploy
+.PHONY: install format format-check lint typecheck test build bootstrap secret-scan clean serve build-feed deploy-only deploy
 
 BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
 BUNX := $(BUN) x
@@ -13,19 +13,12 @@ FEED_SECRET ?= feed-token
 RUN_SA ?= metal-birds-feed-run
 
 install:
-	$(BUN) install && $(BUNX) lefthook install
+	$(BUN) install --frozen-lockfile && $(BUNX) lefthook install
 
-dev:
-	@echo "This is a data pipeline — run 'bun run src/pipeline.ts' to execute locally, or trigger via GitHub Actions."
 
 format:
 	$(BUNX) prettier --write .
 
-# Format only the files passed via FILES= (used by lefthook pre-commit).
-# --ignore-unknown skips files prettier can't parse (e.g., Makefile slipping past a glob);
-# empty FILES list is a no-op so the hook doesn't error on commits with no matching files.
-format-files:
-	@if [ -n "$(FILES)" ]; then $(BUNX) prettier --write --ignore-unknown $(FILES); fi
 
 format-check:
 	$(BUNX) prettier --check .
@@ -66,11 +59,7 @@ bootstrap: build
 		export REFRESH_SOURCE DRY_RUN; \
 		$(BUN) run dist/pipeline.js
 
-e2e:
-	@echo "No E2E tests — this is a data pipeline, not a web app."
 
-perf:
-	@echo "No performance tests — this is a data pipeline, not a web app."
 
 secret-scan:
 	@if command -v gitleaks > /dev/null; then \
@@ -80,8 +69,6 @@ secret-scan:
 		exit 1; \
 	fi
 
-commitlint:
-	$(BUNX) commitlint --edit $(COMMIT_MSG_FILE)
 
 clean:
 	rm -rf dist coverage node_modules feed.sqlite

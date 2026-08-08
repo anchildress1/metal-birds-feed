@@ -6,7 +6,6 @@ coverage/
 .env.*
 !.env.example
 gha-creds-*.json
-.secrets.baseline.tmp
 *.log
 logs/
 .DS_Store

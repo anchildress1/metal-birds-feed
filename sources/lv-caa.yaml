@@ -1,6 +1,7 @@
 id: lv-caa
 label: CAA Latvia Civil Aircraft Register
 country: LV
+language: en
 encoding: utf8
 trim_all: true
 cadence_days: 30

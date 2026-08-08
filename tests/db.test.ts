@@ -19,8 +19,10 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   category: null,
   build_certification: null,
   airworthiness_class: null,
+  airworthiness_class_source_text: null,
   operating_environment: null,
   operational_classes: [],
+  operational_classes_source_text: [],
   engine: {
     manufacturer: null,
     model: null,
@@ -44,7 +46,9 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   min_crew: null,
   airworthiness_review_date: null,
   cancellation_reason: null,
+  cancellation_reason_source_text: null,
   lien_status: null,
+  lien_status_source_text: null,
   interdiction_code: null,
 });
 
@@ -66,8 +70,10 @@ const populated: Aircraft = {
   category: 'standard',
   build_certification: 'type-certificated',
   airworthiness_class: 'Utility',
+  airworthiness_class_source_text: 'Utilité',
   operating_environment: 'land',
   operational_classes: ['day', 'vfr', 'night'],
+  operational_classes_source_text: ['jour', 'vfr', 'nuit'],
   engine: {
     manufacturer: 'ROTAX',
     model: '912',
@@ -91,7 +97,9 @@ const populated: Aircraft = {
   min_crew: 2,
   airworthiness_review_date: '2027-04-23',
   cancellation_reason: 'owner request',
+  cancellation_reason_source_text: 'demande du propriétaire',
   lien_status: 'none',
+  lien_status_source_text: 'aucun',
   interdiction_code: 'INT-9',
 };
 
@@ -150,6 +158,7 @@ describe('buildSqlite', () => {
       category: 'standard',
       build_certification: 'type-certificated',
       airworthiness_class: 'Utility',
+      airworthiness_class_source_text: 'Utilité',
       operating_environment: 'land',
       engine_manufacturer: 'ROTAX',
       engine_model: '912',
@@ -181,7 +190,9 @@ describe('buildSqlite', () => {
       min_crew: 2,
       airworthiness_review_date: '2027-04-23',
       cancellation_reason: 'owner request',
+      cancellation_reason_source_text: 'demande du propriétaire',
       lien_status: 'none',
+      lien_status_source_text: 'aucun',
       interdiction_code: 'INT-9',
     });
   });
@@ -206,6 +217,11 @@ describe('buildSqlite', () => {
   it('round-trips operational_classes as a JSON array column', () => {
     const row = populatedRow();
     expect(JSON.parse(row.operational_classes as string)).toEqual(['day', 'vfr', 'night']);
+    expect(JSON.parse(row.operational_classes_source_text as string)).toEqual([
+      'jour',
+      'vfr',
+      'nuit',
+    ]);
   });
 
   it('preserves null optional fields', () => {
@@ -226,7 +242,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(3);
+    expect(version.user_version).toBe(6);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -253,8 +269,10 @@ describe('buildSqlite', () => {
       'category',
       'build_certification',
       'airworthiness_class',
+      'airworthiness_class_source_text',
       'operating_environment',
       'operational_classes',
+      'operational_classes_source_text',
       'engine_manufacturer',
       'engine_model',
       'engine_type',
@@ -285,11 +303,13 @@ describe('buildSqlite', () => {
       'min_crew',
       'airworthiness_review_date',
       'cancellation_reason',
+      'cancellation_reason_source_text',
       'lien_status',
+      'lien_status_source_text',
       'interdiction_code',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(3);
+    expect(version.user_version).toBe(6);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -309,7 +329,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(3);
+    expect(version.user_version).toBe(6);
   });
 });
 

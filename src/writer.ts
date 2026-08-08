@@ -5,13 +5,19 @@ import {
   HeadObjectCommand,
   NoSuchKey,
 } from '@aws-sdk/client-s3';
+import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
-import { FeedRowsSchema } from './feed.js';
+import { FeedSliceSchema, serializeFeedSlice } from './feed.js';
 import { buildSqlite, hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
+import {
+  emptyTranslationCache,
+  TranslationCacheSchema,
+  type TranslationCache,
+} from './localize/cache.js';
 
 // R2 intermittently returns 500 "We encountered an internal error. Please try again." under load.
 // The SDK's adaptive retry rate-limiter drains its token bucket during a blip and then fast-fails
@@ -39,9 +45,12 @@ const S3_MAX_ATTEMPTS = 5;
 const MIN_RETAIN_RATIO = 0.5;
 
 export interface WriteStats {
+  // Upstream data changed. Drives last_content_change, and so staleness — never set by a
+  // translation landing or a self-heal rewrite of the same record set.
   changed: boolean;
   record_count: number;
   content_hash: string;
+  upstream_hash: string;
 }
 
 export interface R2Config {
@@ -74,10 +83,14 @@ export class R2ArtifactWriter {
   // Builds the source's SQLite artifact and writes it to aircraft/<source>.sqlite, skipping the
   // PUT when the record set is byte-for-byte the prior run's (content_hash match). `changed`
   // reports whether the artifact was rewritten so the caller can stamp last_content_change.
+  // `upstreamHash` is hashed over the pre-localization records. It is what `changed` reports, so a
+  // translation landing later never counterfeits an upstream publication. The artifact hash still
+  // gates the PUT — otherwise a translation-only improvement would never reach R2.
   async write(
     records: Map<string, Aircraft>,
     source: string,
-    priorState: SourceState | null
+    priorState: SourceState | null,
+    upstreamHash: string
   ): Promise<WriteStats> {
     const content_hash = hashRecords(records);
 
@@ -100,15 +113,21 @@ export class R2ArtifactWriter {
       );
     }
 
-    // A prior hash that is absent (legacy/first-run state) never equals the current one, so the
-    // artifact is rewritten — exactly what a format migration needs. The skip additionally
-    // requires the artifact to actually exist: state and artifact are separate objects, and an
-    // externally deleted artifact (lifecycle rule, manual cleanup) would otherwise 404 for
-    // consumers indefinitely while every run reports unchanged.
-    const dataUnchanged = priorState?.content_hash === content_hash;
-    if (dataUnchanged && (await this.artifactExists(source))) {
+    // No prior state (fresh source, or state that failed validation and self-healed to absent)
+    // matches neither hash, so the artifact is rewritten — which is also how a schema migration
+    // lands. The skip additionally requires the artifact to actually exist: state and artifact are
+    // separate objects, and an externally deleted artifact (lifecycle rule, manual cleanup) would
+    // otherwise 404 for consumers indefinitely while every run reports unchanged.
+    const artifactUnchanged = priorState?.content_hash === content_hash;
+    const upstreamUnchanged = priorState?.upstream_hash === upstreamHash;
+    if (artifactUnchanged && (await this.artifactExists(source))) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
-      return { changed: false, record_count: records.size, content_hash };
+      return {
+        changed: false,
+        record_count: records.size,
+        content_hash,
+        upstream_hash: upstreamHash,
+      };
     }
 
     const bytes = buildSqlite(records);
@@ -119,9 +138,15 @@ export class R2ArtifactWriter {
       record_count: records.size,
       bytes: bytes.byteLength,
     });
-    // `changed` reports DATA change only. A self-heal rewrite of a deleted artifact carries the
-    // same record set, so it must not stamp last_content_change or close staleness issues.
-    return { changed: !dataUnchanged, record_count: records.size, content_hash };
+    // `changed` reports UPSTREAM change only. A self-heal rewrite of a deleted artifact, or a
+    // rewrite carrying nothing but fresh translations, must not stamp last_content_change or close
+    // staleness issues — the register itself may have published nothing for months.
+    return {
+      changed: !upstreamUnchanged,
+      record_count: records.size,
+      content_hash,
+      upstream_hash: upstreamHash,
+    };
   }
 
   // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.
@@ -163,93 +188,100 @@ export class R2ArtifactWriter {
     }
   }
 
-  async readState(source: string): Promise<SourceState | null> {
+  // Shared by readState/readFeedRows/readTranslationCache: GET, parse, validate, self-heal to
+  // `fallback` on absence/corruption, rethrow a real R2 error for the caller to handle.
+  private async readJson<T>(
+    key: string,
+    schema: ZodType<T>,
+    eventPrefix: string,
+    fallback: T,
+    logContext: Record<string, unknown>
+  ): Promise<T> {
     try {
       const res = await retry(
-        () =>
-          this.client.send(
-            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_state/${source}.json` })
-          ),
+        () => this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key })),
         S3_RETRY
       );
       const body = await res.Body?.transformToString();
-      if (!body) return null;
+      if (!body) return fallback;
       let json: unknown;
       try {
         json = JSON.parse(body);
       } catch {
-        // Present-but-corrupt state is worse than absent — log it. Run proceeds fresh (re-PUT).
-        log('error', 'state_parse_failed', { source, reason: 'invalid_json' });
-        return null;
+        log('error', `${eventPrefix}_parse_failed`, { ...logContext, reason: 'invalid_json' });
+        return fallback;
       }
-      const parsed = SourceStateSchema.safeParse(json);
+      const parsed = schema.safeParse(json);
       if (!parsed.success) {
-        log('error', 'state_parse_failed', {
-          source,
+        log('error', `${eventPrefix}_parse_failed`, {
+          ...logContext,
           reason: 'schema_invalid',
           msg: parsed.error.message,
         });
-        return null;
+        return fallback;
       }
       return parsed.data;
     } catch (err) {
-      if (err instanceof NoSuchKey) return null;
-      log('error', 'state_load_failed', {
-        source,
-        msg: errorMessage(err),
-      });
+      if (err instanceof NoSuchKey) return fallback;
+      log('error', `${eventPrefix}_load_failed`, { ...logContext, msg: errorMessage(err) });
       throw err;
     }
+  }
+
+  async readState(source: string): Promise<SourceState | null> {
+    return this.readJson(`aircraft/_state/${source}.json`, SourceStateSchema, 'state', null, {
+      source,
+    });
   }
 
   async writeState(source: string, state: SourceState): Promise<void> {
     await this.put(`aircraft/_state/${source}.json`, JSON.stringify(state), 'application/json');
   }
 
+  // Persists independent of the artifact's content-hash skip gate.
+  async readTranslationCache(source: string): Promise<TranslationCache> {
+    return this.readJson(
+      `aircraft/_translation_cache/${source}.json`,
+      TranslationCacheSchema,
+      'translation_cache',
+      emptyTranslationCache(),
+      { source }
+    );
+  }
+
+  async writeTranslationCache(source: string, cache: TranslationCache): Promise<void> {
+    await this.put(
+      `aircraft/_translation_cache/${source}.json`,
+      JSON.stringify(cache),
+      'application/json'
+    );
+  }
+
   // Per-source feed slice, the build intermediate main() merges into the consolidated DB.
   // Stored as JSON so consolidation reads it back without a SQLite round trip.
   async writeFeedRows(source: string, rows: FeedRow[]): Promise<void> {
-    await this.put(`aircraft/_feed/${source}.json`, JSON.stringify(rows), 'application/json');
+    await this.put(`aircraft/_feed/${source}.json`, serializeFeedSlice(rows), 'application/json');
   }
 
   async readFeedRows(source: string): Promise<FeedRow[] | null> {
-    try {
-      const res = await retry(
-        () =>
-          this.client.send(
-            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_feed/${source}.json` })
-          ),
-        S3_RETRY
-      );
-      const body = await res.Body?.transformToString();
-      if (!body) return null;
-      let json: unknown;
+    const slice = await this.readJson(
+      `aircraft/_feed/${source}.json`,
+      FeedSliceSchema,
+      'feed_rows',
+      null,
+      { source }
+    );
+    if (slice === null) return null;
+    if (slice.needsMigration) {
       try {
-        json = JSON.parse(body);
-      } catch {
-        // Present-but-corrupt slice reads as absent (parity with readState): publishFeed then fails
-        // closed on the named source rather than crashing the whole Promise.all on a raw parse error.
-        log('error', 'feed_rows_parse_failed', { source, reason: 'invalid_json' });
-        return null;
+        await this.writeFeedRows(source, slice.rows);
+        log('info', 'feed_rows_migrated', { source });
+      } catch (err) {
+        // The validated rows remain safe for this build; the next read retries the writeback.
+        log('warn', 'feed_rows_migration_write_failed', { source, msg: errorMessage(err) });
       }
-      // Valid JSON isn't enough: a wrong-shape slice (bare object, row missing a NOT NULL column,
-      // scalar rows) would crash consolidation on merge/hash/insert. Reject it as absent so the
-      // cadence self-heal regenerates the slice instead.
-      const parsed = FeedRowsSchema.safeParse(json);
-      if (!parsed.success) {
-        log('error', 'feed_rows_parse_failed', {
-          source,
-          reason: 'schema_invalid',
-          msg: parsed.error.message,
-        });
-        return null;
-      }
-      return parsed.data;
-    } catch (err) {
-      if (err instanceof NoSuchKey) return null;
-      log('error', 'feed_rows_load_failed', { source, msg: errorMessage(err) });
-      throw err;
     }
+    return slice.rows;
   }
 
   // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads

@@ -32,8 +32,8 @@ type FlatColumn =
   | `legal_owner_${keyof Owner}`;
 
 // Single source of truth for column name → bound value. The INSERT column list and the bound
-// values both derive from this one object, so they cannot drift in order or membership. The lone
-// array (`operational_classes`) is serialized to a JSON string.
+// values both derive from this one object, so they cannot drift in order or membership. The array
+// fields (`operational_classes` and its `_source_text` twin) are serialized to JSON strings.
 const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   source: r.source,
   source_id: r.source_id,
@@ -50,8 +50,10 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   category: r.category,
   build_certification: r.build_certification,
   airworthiness_class: r.airworthiness_class,
+  airworthiness_class_source_text: r.airworthiness_class_source_text,
   operating_environment: r.operating_environment,
   operational_classes: JSON.stringify(r.operational_classes),
+  operational_classes_source_text: JSON.stringify(r.operational_classes_source_text),
   engine_manufacturer: r.engine.manufacturer,
   engine_model: r.engine.model,
   engine_type: r.engine.type,
@@ -82,7 +84,9 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   min_crew: r.min_crew,
   airworthiness_review_date: r.airworthiness_review_date,
   cancellation_reason: r.cancellation_reason,
+  cancellation_reason_source_text: r.cancellation_reason_source_text,
   lien_status: r.lien_status,
+  lien_status_source_text: r.lien_status_source_text,
   interdiction_code: r.interdiction_code,
 });
 
@@ -105,8 +109,10 @@ const DDL = `CREATE TABLE aircraft (
   category TEXT,
   build_certification TEXT,
   airworthiness_class TEXT,
+  airworthiness_class_source_text TEXT,
   operating_environment TEXT,
   operational_classes TEXT NOT NULL,
+  operational_classes_source_text TEXT NOT NULL,
   engine_manufacturer TEXT,
   engine_model TEXT,
   engine_type TEXT,
@@ -137,7 +143,9 @@ const DDL = `CREATE TABLE aircraft (
   min_crew INTEGER,
   airworthiness_review_date TEXT,
   cancellation_reason TEXT,
+  cancellation_reason_source_text TEXT,
   lien_status TEXT,
+  lien_status_source_text TEXT,
   interdiction_code TEXT
 ) STRICT`;
 
@@ -156,7 +164,7 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
   const db = new Database(':memory:');
   try {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
-    db.run('PRAGMA user_version = 3');
+    db.run('PRAGMA user_version = 6');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 
