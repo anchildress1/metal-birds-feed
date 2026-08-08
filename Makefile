@@ -39,8 +39,10 @@ lint:
 typecheck:
 	$(BUNX) tsc --noEmit -p tsconfig.eslint.json
 
+# NODE_ENV is forced, not left to bun's default: bun only defaults it to `test` when it is unset,
+# so a shell or .env that exports NODE_ENV would send fixture logs into logs/pipeline.log.
 test:
-	$(BUN) test --isolate --coverage
+	NODE_ENV=test $(BUN) test --isolate --coverage
 
 # tsconfig.json is noEmit; emit lives in tsconfig.build.json — bare tsc produces no dist/.
 build:

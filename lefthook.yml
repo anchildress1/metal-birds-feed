@@ -36,7 +36,7 @@ pre-push:
     typecheck:
       run: bun x tsc --noEmit -p tsconfig.eslint.json
     unit-tests:
-      run: bun test --isolate --coverage
+      run: make test
     # Backstop over full history (~0.7s): the pre-commit hook only sees the staged diff, so a
     # --no-verify commit, or anything committed before that hook existed, would reach the remote
     # unscanned. Nothing leaves the machine without this passing.
