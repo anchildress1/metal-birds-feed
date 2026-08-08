@@ -4,10 +4,12 @@ import { readPositiveIntegerEnv, requireEnv } from '../env.js';
 import {
   emptyTranslationCache,
   hashTranslatable,
+  isExhausted,
   TRANSLATION_CACHE_VERSION,
   type TranslatableField,
   type TranslationCache,
   type TranslationEntries,
+  type TranslationFailures,
 } from './cache.js';
 import { translateBatch, isGeminiAuthError, DEFAULT_REQUESTS_PER_MINUTE } from './gemini-client.js';
 import { log, errorMessage } from '../logger.js';
@@ -65,6 +67,26 @@ const collectCandidates = (
   return candidates;
 };
 
+// Folds this run's results into the prior cache. A hash that succeeded clears its failure count —
+// counting consecutive failures, not lifetime ones, so one bad run never accumulates toward the
+// give-up threshold. A hash that was offered and did not come back increments.
+const buildCache = (
+  prior: TranslationCache,
+  translated: TranslationEntries,
+  attempted: Set<string>
+): TranslationCache => {
+  const failures: TranslationFailures = { ...prior.failures };
+  for (const hash of attempted) {
+    if (hash in translated) delete failures[hash];
+    else failures[hash] = (failures[hash] ?? 0) + 1;
+  }
+  return {
+    version: TRANSLATION_CACHE_VERSION,
+    entries: { ...prior.entries, ...translated },
+    failures,
+  };
+};
+
 // A malformed (not missing) rate limit must not become a second hard-fail path — only an absent
 // GEMINI_API_KEY is allowed to throw. Falls back to the default and logs instead of propagating.
 const resolveRequestsPerMinute = (sourceId: string): number => {
@@ -110,10 +132,19 @@ const resolveTranslations = async (
 ): Promise<ResolvedTranslations> => {
   const { cache, ok: cacheReadSucceeded } = await readCache(writer, sourceId);
 
-  const delta = [...candidates.entries()].filter(([hash]) => !(hash in cache.entries));
+  // Skip both what is already translated and what has failed enough times to look like a property
+  // of the text rather than a bad run — otherwise a string the model reliably mangles is re-sent,
+  // and re-billed, on every refresh forever.
+  const delta = [...candidates.entries()].filter(
+    ([hash]) => !(hash in cache.entries) && !isExhausted(cache.failures, hash)
+  );
   const deltaIds = new Set(delta.map(([id]) => id));
 
   const translated: TranslationEntries = {};
+  // Only ids from chunks that actually came back. A chunk lost to an auth outage or a network blip
+  // says nothing about whether its text is translatable, and counting it would retire good strings
+  // after three bad days.
+  const attempted = new Set<string>();
   let failed = 0;
 
   // A failed cache read leaves an empty cache, which makes the delta the entire source. Translating
@@ -126,15 +157,25 @@ const resolveTranslations = async (
     // a cold source can exceed it, which would discard everything already paid for and re-bill the
     // identical delta next run, never converging. Swallowing the write keeps a persistence blip
     // from abandoning translations already bought — they still apply to this run's records.
-    const persistChunk = async (chunkTranslations: Map<string, string>): Promise<void> => {
+    const persistChunk = async (
+      chunkTranslations: Map<string, string>,
+      requested: { id: string }[]
+    ): Promise<void> => {
+      for (const { id } of requested) attempted.add(id);
       // filters out any id the model returned that wasn't requested, which would otherwise fail
       // TranslationCacheSchema on the next read and discard the whole cache
+      const before = Object.keys(translated).length;
       for (const [id, text] of chunkTranslations) if (deltaIds.has(id)) translated[id] = text;
+      // A chunk whose items were all dropped adds nothing, so this PUT would rewrite the cache
+      // byte-for-byte; the failure counts it produced are written once at the end instead.
+      if (Object.keys(translated).length === before) return;
       try {
-        await writer.writeTranslationCache(sourceId, {
-          version: TRANSLATION_CACHE_VERSION,
-          entries: { ...cache.entries, ...translated },
-        });
+        // Successes only. A run killed mid-batch never offered the later chunks, and charging them
+        // a failed attempt would retire translatable text after three interrupted runs.
+        await writer.writeTranslationCache(
+          sourceId,
+          buildCache(cache, translated, new Set(Object.keys(translated)))
+        );
       } catch (err) {
         log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
       }
@@ -164,19 +205,33 @@ const resolveTranslations = async (
     }
   }
 
-  // No write here: persistChunk already wrote after the last chunk that landed, so a second PUT
-  // would only re-upload the identical object.
-  const updatedCache: TranslationCache = {
-    version: TRANSLATION_CACHE_VERSION,
-    entries: { ...cache.entries, ...translated },
-  };
+  const updatedCache = buildCache(cache, translated, attempted);
+
+  // persistChunk records successes only, so a run where everything landed has already written this
+  // exact object and needs no second PUT. Failures are counted here, once the full delta is known —
+  // a hash missing after every chunk is what "did not come back" means — so they still need one.
+  const droppedByModel = [...attempted].some((id) => !(id in translated));
+  if (cacheReadSucceeded && droppedByModel) {
+    try {
+      await writer.writeTranslationCache(sourceId, updatedCache);
+    } catch (err) {
+      log('warn', 'localize_cache_write_failed', { source: sourceId, msg: errorMessage(err) });
+    }
+  }
+
+  // Counted from actual entries, not `candidates - delta`. An exhausted hash leaves the delta while
+  // still having no translation, so the subtraction would book it as a hit and drive `failed` to
+  // zero — silencing pipeline.ts's localize_partial_failure while the artifact carries source text.
+  const exhausted = [...candidates.keys()].filter(
+    (hash) => !(hash in updatedCache.entries) && isExhausted(updatedCache.failures, hash)
+  ).length;
 
   return {
     cache: updatedCache,
     stats: {
-      cache_hits: candidates.size - delta.length,
+      cache_hits: [...candidates.keys()].filter((hash) => hash in cache.entries).length,
       translated: Object.keys(translated).length,
-      failed,
+      failed: failed + exhausted,
     },
   };
 };

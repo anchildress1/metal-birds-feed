@@ -2,6 +2,7 @@ import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import type { Aircraft } from '../../src/schema.js';
 import {
   hashTranslatable,
+  MAX_TRANSLATION_ATTEMPTS,
   TRANSLATION_CACHE_VERSION,
   type TranslationEntries,
 } from '../../src/localize/cache.js';
@@ -23,16 +24,19 @@ void mock.module('../../src/localize/gemini-client.js', () => ({
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
 const { localizeRecords } = await import('../../src/localize/localize.js');
-type GeminiClientConfig = { onChunkTranslated?: (m: Map<string, string>) => Promise<void> };
+type GeminiClientConfig = {
+  onChunkTranslated?: (m: Map<string, string>, requested: { id: string }[]) => Promise<void>;
+};
 
 // Mirrors the real client: translations reach the caller through onChunkTranslated as each chunk
 // lands, not only via the return value. A mock that skipped the callback would let an incremental
 // persistence regression pass.
-const ok = (entries: [string, string][]) => async (_items: unknown, config: GeminiClientConfig) => {
-  const translated = new Map(entries);
-  await config.onChunkTranslated?.(translated);
-  return { translated, errors: [] };
-};
+const ok =
+  (entries: [string, string][]) => async (items: { id: string }[], config: GeminiClientConfig) => {
+    const translated = new Map(entries);
+    await config.onChunkTranslated?.(translated, items);
+    return { translated, errors: [] };
+  };
 
 const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   source: 'br-anac',
@@ -89,19 +93,24 @@ type FakeWriter = import('../../src/writer.js').R2ArtifactWriter;
 // Only the two methods localizeRecords actually calls are exercised; the rest of
 // R2ArtifactWriter's surface is irrelevant here. Mocks are returned alongside the writer (rather
 // than read back off it) so assertions don't trip @typescript-eslint/unbound-method.
-const cacheEnvelope = (entries: TranslationEntries = {}) => ({
+const cacheEnvelope = (
+  entries: TranslationEntries = {},
+  failures: Record<string, number> = {}
+) => ({
   version: TRANSLATION_CACHE_VERSION,
   entries,
+  failures,
 });
 
 const fakeWriter = (
-  entries: TranslationEntries = {}
+  entries: TranslationEntries = {},
+  failures: Record<string, number> = {}
 ): {
   writer: FakeWriter;
   readTranslationCache: ReturnType<typeof mock>;
   writeTranslationCache: ReturnType<typeof mock>;
 } => {
-  const readTranslationCache = mock(() => Promise.resolve(cacheEnvelope(entries)));
+  const readTranslationCache = mock(() => Promise.resolve(cacheEnvelope(entries, failures)));
   const writeTranslationCache = mock(() => Promise.resolve());
   return {
     writer: { readTranslationCache, writeTranslationCache } as unknown as FakeWriter,
@@ -182,13 +191,16 @@ describe('localizeRecords', () => {
     ]);
     // Two chunks: the first lands and is persisted, the second throws. Without per-chunk
     // persistence the first chunk's paid-for translation would be discarded with the batch.
-    translateBatch.mockImplementation(async (_items: unknown, config: GeminiClientConfig) => {
-      await config.onChunkTranslated?.(new Map([[hashA, 'Aircraft exported']]));
-      return {
-        translated: new Map([[hashA, 'Aircraft exported']]),
-        errors: [new Error('chunk 2')],
-      };
-    });
+    translateBatch.mockImplementation(
+      async (items: { id: string }[], config: GeminiClientConfig) => {
+        // Only the first chunk reports back; the second errored, so its items are never attempted.
+        await config.onChunkTranslated?.(new Map([[hashA, 'Aircraft exported']]), [items[0]]);
+        return {
+          translated: new Map([[hashA, 'Aircraft exported']]),
+          errors: [new Error('chunk 2')],
+        };
+      }
+    );
     const { writer, writeTranslationCache } = fakeWriter();
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -213,6 +225,60 @@ describe('localizeRecords', () => {
     await localizeRecords(records, 'br-anac', 'pt', writer);
 
     expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+  });
+
+  it('records a failed attempt so a repeatedly-mangled string stops being re-billed', async () => {
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    // Offered, nothing came back — the per-item drop path, not a chunk error.
+    translateBatch.mockImplementation(ok([]));
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}, { [hash]: 1 }));
+  });
+
+  it('reports an exhausted hash as a failure, not a cache hit', async () => {
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer } = fakeWriter({}, { [hash]: MAX_TRANSLATION_ATTEMPTS });
+
+    const { stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    // Booking it as a hit would drive failed to 0 and silence localize_partial_failure while the
+    // artifact still carries source text.
+    expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 1 });
+  });
+
+  it('stops offering a hash once it has failed the attempt limit', async () => {
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer } = fakeWriter({}, { [hash]: MAX_TRANSLATION_ATTEMPTS });
+
+    const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(translateBatch).not.toHaveBeenCalled();
+    expect(stats.translated).toBe(0);
+    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
+  });
+
+  it('clears the failure count when a previously-failing hash succeeds', async () => {
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
+    // Below the limit, so still offered — counting consecutive failures, not lifetime ones.
+    const { writer, writeTranslationCache } = fakeWriter(
+      {},
+      { [hash]: MAX_TRANSLATION_ATTEMPTS - 1 }
+    );
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).toHaveBeenLastCalledWith(
+      'br-anac',
+      cacheEnvelope({ [hash]: 'Aircraft exported' }, {})
+    );
   });
 
   it('resolves from cache without calling Gemini', async () => {

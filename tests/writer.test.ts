@@ -525,8 +525,8 @@ describe('R2ArtifactWriter — state', () => {
 });
 
 describe('R2ArtifactWriter — translation cache', () => {
-  const cache = { version: 1 as const, entries: { [HASH64]: 'Aircraft exported' } };
-  const emptyCache = { version: 1 as const, entries: {} };
+  const cache = { version: 2 as const, entries: { [HASH64]: 'Aircraft exported' }, failures: {} };
+  const emptyCache = { version: 2 as const, entries: {}, failures: {} };
   const cacheResponse = (value: unknown) => ({
     Body: { transformToString: () => Promise.resolve(JSON.stringify(value)) },
   });
