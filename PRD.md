@@ -98,11 +98,11 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 **R0.3 FAA mapping config.** Declarative YAML (`sources/faa.yaml`) that maps FAA columns to canonical fields, including:
 
 - Field renames
-- Code → enum lookups (TYPE REGISTRANT 1–9 → `owner.kind`; STATUS CODE → `status`; TYPE AIRCRAFT → `airframe_type`; TYPE ENGINE → `engine.type`; AC-CAT → `category`; BUILD-CERT-IND → `build_certification`)
+- Code → enum lookups (TYPE REGISTRANT 1–9 → `owner.kind`; STATUS CODE → `status`; TYPE AIRCRAFT → `airframe_type`; TYPE ENGINE → `engine.type`; AC-CAT → `operating_environment`; BUILD-CERT-IND → `build_certification`)
 - Unit conversions (mph → knots for cruise speed)
 - Date parsing (YYYYMMDD → ISO date)
 - Cross-table joins (MASTER.MFR_MDL_CODE → ACFTREF; MASTER.ENG_MFR_MDL → ENGINE)
-- CERTIFICATION packed-string parser (first char → `airworthiness_class`; remaining → `operational_classes` array)
+- CERTIFICATION packed-string parser (first char → `category` and `airworthiness_class`; remaining → `operational_classes` array)
 
 **R0.4 Translation engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
 

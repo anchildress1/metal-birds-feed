@@ -81,6 +81,27 @@ describe('attributionFor', () => {
     }
   });
 
+  // The README credit block claims to reproduce what the service serves. An unenforced claim of
+  // exactness is how the paraphrased copies got there in the first place.
+  //
+  // The expected IDs are pinned rather than derived from the block: comparing the block against
+  // itself passes just as happily with a credit deleted, which is the regression this guards. Every
+  // source without mandated wording belongs here, so a new open source must be credited too.
+  const CREDITED_IDS = ['faa', 'lv-caa', 'nl-ilt'];
+
+  it('serves the README source credits exactly as written', () => {
+    const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'README.md'), 'utf8');
+    const block = doc.slice(
+      doc.indexOf('Additional source credits'),
+      doc.indexOf('Correspondence, po')
+    );
+    const credited = [...block.matchAll(/^- \*\*.+?\*\* \(`([a-zA-Z0-9_-]+)`\) — (.+)$/gm)].map(
+      (m) => [m[1], m[2]] as const
+    );
+    expect(credited.map(([id]) => id).sort()).toEqual([...CREDITED_IDS].sort());
+    expect(credited.map(([id]) => [id, attributionFor(id)] as const)).toEqual(credited);
+  });
+
   // A notice recorded without its source ID silently drops out of the pairing check above.
   it('records a source ID against every verbatim notice', () => {
     const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'DATA_LICENSES.md'), 'utf8');
