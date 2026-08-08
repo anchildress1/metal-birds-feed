@@ -184,9 +184,17 @@ const translateAtRate = async (
     } catch (reason) {
       results.push({ status: 'rejected', reason });
     }
-    // Outside the try on purpose: a throwing callback would otherwise record the same chunk as both
-    // fulfilled and rejected, turning bought translations into counted failures.
-    if (value) await config.onChunkTranslated?.(value, items);
+    // Outside the result try/catch so a throwing callback cannot record the same chunk as both
+    // fulfilled and rejected — but wrapped in its own, because letting it propagate would abort the
+    // whole batch and discard every other chunk's already-paid results. The contract says the
+    // caller swallows its failures; this makes that structural instead of documented.
+    if (value) {
+      try {
+        await config.onChunkTranslated?.(value, items);
+      } catch (err) {
+        log('warn', 'localize_chunk_callback_failed', { msg: String(err) });
+      }
+    }
   }
   return results;
 };

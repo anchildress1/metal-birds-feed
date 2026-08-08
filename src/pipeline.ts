@@ -6,7 +6,7 @@ import { loadSourceConfig } from './config/loader.js';
 import { download } from './downloader.js';
 import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
-import { R2ArtifactWriter, type R2Config } from './writer.js';
+import { MIN_RETAIN_RATIO, R2ArtifactWriter, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
 import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
@@ -89,12 +89,21 @@ export async function run(sourceId: string): Promise<RunResult> {
     log('info', 'dry_run_mode', { source: sourceId, records: records.size });
   }
 
+  // Pruning the translation cache is destructive and happens before writer.write's retain-ratio
+  // guard can reject a truncated upstream, so the same threshold is applied here first — otherwise
+  // a short-but-parseable download would prune the cache to its truncated candidate set, fail the
+  // artifact write, and leave the next healthy run to re-buy every dropped translation.
+  const priorCount = priorState?.record_count;
+  const allowPrune =
+    priorCount === undefined || priorCount === 0 || records.size / priorCount >= MIN_RETAIN_RATIO;
+
   const { records: localized, stats: localizeStats } = await localizeRecords(
     records,
     sourceId,
     config.language,
     writer,
-    dryRun
+    dryRun,
+    allowPrune
   );
   log('info', 'localize_summary', { source: sourceId, ...localizeStats });
   if (localizeStats.failed > 0)

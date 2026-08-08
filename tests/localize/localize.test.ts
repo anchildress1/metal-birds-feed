@@ -228,15 +228,35 @@ describe('localizeRecords', () => {
   });
 
   it('records a failed attempt so a repeatedly-mangled string stops being re-billed', async () => {
-    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const kept = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const dropped = hashTranslatable('lien_status', 'GRAVAME');
+    const records = new Map([
+      ['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA', lien_status: 'GRAVAME' })],
+    ]);
+    // The chunk worked and the model rejected one item — the per-item drop path. Enough came back
+    // that this cannot be read as a truncated response, so the drop is charged an attempt.
+    translateBatch.mockImplementation(ok([[kept, 'Aircraft exported']]));
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).toHaveBeenLastCalledWith(
+      'br-anac',
+      cacheEnvelope({ [kept]: 'Aircraft exported' }, { [dropped]: 1 })
+    );
+  });
+
+  it('charges no attempt when a chunk returns too little to be a per-item rejection', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    // Offered, nothing came back — the per-item drop path, not a chunk error.
+    // A model that self-truncates inside the response schema returns well-formed JSON with fewer
+    // items, reaching the drop path rather than the error path. Charging those would retire the
+    // chunk's tail after three runs — the exact harm the attempt limit exists to prevent.
     translateBatch.mockImplementation(ok([]));
     const { writer, writeTranslationCache } = fakeWriter();
 
     await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}, { [hash]: 1 }));
+    expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
   it('reports an exhausted hash as a failure, not a cache hit', async () => {
@@ -279,6 +299,69 @@ describe('localizeRecords', () => {
       'br-anac',
       cacheEnvelope({ [hash]: 'Aircraft exported' }, {})
     );
+  });
+
+  it('drops cache entries and failures for text upstream no longer publishes', async () => {
+    const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
+    const staleFailure = hashTranslatable('lien_status', 'GRAVAME ANTIGO');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer, writeTranslationCache } = fakeWriter(
+      { [live]: 'Aircraft exported', [stale]: 'Old reason' },
+      { [staleFailure]: 2 }
+    );
+
+    await localizeRecords(records, 'br-anac', 'pt', writer, false, true);
+
+    expect(translateBatch).not.toHaveBeenCalled();
+    expect(writeTranslationCache).toHaveBeenCalledWith(
+      'br-anac',
+      cacheEnvelope({ [live]: 'Aircraft exported' }, {})
+    );
+  });
+
+  it('withholds pruning when the candidate set collapses but the record count did not', async () => {
+    const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    // A mapping typo or an upstream column rename can null a field on most rows without changing
+    // records.size, so the caller's record-count gate says prune while the candidate set has
+    // collapsed. Only 1 of 4 cached entries is still a candidate — below the retention floor.
+    const { writer, writeTranslationCache } = fakeWriter({
+      [live]: 'Aircraft exported',
+      [hashTranslatable('cancellation_reason', 'MOTIVO A')]: 'Reason A',
+      [hashTranslatable('cancellation_reason', 'MOTIVO B')]: 'Reason B',
+      [hashTranslatable('cancellation_reason', 'MOTIVO C')]: 'Reason C',
+    });
+
+    await localizeRecords(records, 'br-anac', 'pt', writer, false, true);
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
+  it('keeps stale entries when the caller withholds permission to prune', async () => {
+    const live = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer, writeTranslationCache } = fakeWriter({
+      [live]: 'Aircraft exported',
+      [stale]: 'Old reason',
+    });
+
+    // allowPrune defaults false: a truncated upstream reaches here before writer.write can reject
+    // it, and pruning against its short candidate set would discard paid translations for good.
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
+  });
+
+  it('does not write a pruned cache on a dry run', async () => {
+    const stale = hashTranslatable('cancellation_reason', 'MOTIVO ANTIGO');
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const { writer, writeTranslationCache } = fakeWriter({ [stale]: 'Old reason' });
+
+    await localizeRecords(records, 'br-anac', 'pt', writer, true, true);
+
+    expect(writeTranslationCache).not.toHaveBeenCalled();
   });
 
   it('resolves from cache without calling Gemini', async () => {

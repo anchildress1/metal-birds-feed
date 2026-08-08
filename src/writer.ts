@@ -42,7 +42,7 @@ const S3_MAX_ATTEMPTS = 5;
 // upstream (an HTTP-success-but-short download that parses cleanly), not a real shrinkage —
 // aircraft registries don't lose half their fleet in a refresh. Refuse rather than overwrite the
 // good artifact with a partial one.
-const MIN_RETAIN_RATIO = 0.5;
+export const MIN_RETAIN_RATIO = 0.5;
 
 export interface WriteStats {
   // Upstream data changed. Drives last_content_change, and so staleness — never set by a
