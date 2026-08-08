@@ -3220,3 +3220,61 @@ describe('CAA NZ fixture translation', () => {
     expect(stats.ok).toBe(0);
   });
 });
+
+describe('unmatched lookup reporting', () => {
+  const config = {
+    id: 'synthetic-lookup',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: {
+      registration: { field: 'REG' },
+      status: { constant: 'valid' },
+      country: { constant: 'US' },
+      airframe_type: { field: 'KIND', lookup: { Known: 'glider' }, default: null },
+    },
+  };
+
+  // 55,611 identical lines came out of one FAA run before this: the value is a property of the
+  // register, so the row count is the only thing repetition adds — and it buried the errors.
+  it('reports one line per distinct unmatched value, carrying the row count', async () => {
+    const rows = ['ID,REG,KIND', '1,N1,Mystery', '2,N2,Mystery', '3,N3,Mystery', '4,N4,Other'];
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await translate(config, new Map([['f', Buffer.from(rows.join('\n'))]]));
+      const lines = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('translate_lookup_default'));
+      expect(lines).toHaveLength(2);
+      expect(lines.some((l) => l.includes('value=Mystery') && l.includes('rows=3'))).toBe(true);
+      expect(lines.some((l) => l.includes('value=Other') && l.includes('rows=1'))).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('does not carry counts from one source into the next', async () => {
+    const rows = ['ID,REG,KIND', '1,N1,Mystery'];
+    const buf = new Map([['f', Buffer.from(rows.join('\n'))]]);
+    await translate(config, buf);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await translate(config, buf);
+      const line = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes('translate_lookup_default'));
+      expect(line).toContain('rows=1');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});

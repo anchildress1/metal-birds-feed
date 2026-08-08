@@ -105,10 +105,21 @@ const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: num
     );
 };
 
+// One line per distinct unrecognized value, carrying how many rows hit it — the magnitude is the
+// part that says whether a code is a stray or half the register.
+const reportUnmatchedLookups = (): void => {
+  for (const [key, rows] of [...unmatchedLookups].sort((a, b) => b[1] - a[1])) {
+    const [source, field, value] = key.split('\u0000');
+    log('warn', 'translate_lookup_default', { source, field, value, rows });
+  }
+  unmatchedLookups.clear();
+};
+
 export async function translate(
   config: SourceConfig,
   files: Map<string, Buffer>
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
+  unmatchedLookups.clear();
   const joinMaps = await buildJoinMaps(config, files);
   const missingSourceIdPolicy = buildMissingSourceIdPolicy(config);
 
@@ -163,6 +174,7 @@ export async function translate(
   // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
   // logging translate_complete before a guard that can still throw would misreport the run as done.
   if (failed === 0) assertRecordCount(config, primaryBuf, records.size);
+  reportUnmatchedLookups();
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }
@@ -589,6 +601,12 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // bounded-skip mechanism in this engine (missing-id budget, ragged-row budget, anchorless-page
 // budget) logs when it fires; this warns for the same reason, so a source that starts emitting an
 // unrecognized code is visible in the run log instead of silently blending into "other".
+// Counted per distinct (field, value) for the run, not logged per row. An unrecognized code is a
+// property of the register, so one row and 300,000 rows carry the same information — and at FAA's
+// volume the per-row form emitted tens of thousands of identical lines, burying the errors someone
+// actually needed to read. The count is reported once, with the total, in translate_complete.
+const unmatchedLookups = new Map<string, number>();
+
 function resolveLookup(
   value: string,
   lookup: Record<string, string | null>,
@@ -600,7 +618,10 @@ function resolveLookup(
   // must not return the prototype function.
   if (Object.hasOwn(lookup, value)) return lookup[value];
   if (defaultValue !== undefined) {
-    if (value !== '') log('warn', 'translate_lookup_default', { source, field, value });
+    if (value !== '') {
+      const key = `${source}\u0000${field}\u0000${value}`;
+      unmatchedLookups.set(key, (unmatchedLookups.get(key) ?? 0) + 1);
+    }
     return defaultValue;
   }
   if (value === '') return null;
