@@ -8,7 +8,7 @@
         "@aws-sdk/client-s3": "^3.1101.0",
         "@google/genai": "^2.15.0",
         "csv-parse": "^7.0.1",
-        "hucre": "^0.6.2",
+        "hucre": "^1.0.0",
         "js-yaml": "^5.2.3",
         "unpdf": "^1.8.0",
         "unzipper": "^0.12.5",
@@ -361,7 +361,7 @@
 
     "https-proxy-agent": ["https-proxy-agent@7.0.6", "", { "dependencies": { "agent-base": "^7.1.2", "debug": "4" } }, "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw=="],
 
-    "hucre": ["hucre@0.6.2", "", { "bin": { "hucre": "./dist/cli.mjs" } }, "sha512-o1PqTiKfx37tFmiiPElwpEfFvlXcXn5CEgDbt1uYk1bVvzDNEIAIKnxrKhfcHLZx6jc5PdofOy8PuwJcIZsqUg=="],
+    "hucre": ["hucre@1.0.0", "", { "bin": { "hucre": "./dist/cli.mjs" } }, "sha512-+K5H8z3P8/oAxPpHgvzWbTcsae2X+XoeXk9YqxAvYsuuIoXMK8PMAxmsbeRb3MuHA4fgJlBBCY/G016eQkNokA=="],
 
     "ignore": ["ignore@5.3.2", "", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
 
