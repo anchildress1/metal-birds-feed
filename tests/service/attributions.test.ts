@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { attributionFor } from '../../src/service/attributions.js';
 import { loadSourceConfig } from '../../src/config/loader.js';
@@ -45,5 +45,53 @@ describe('attributionFor', () => {
     const line = attributionFor('zz-new');
     expect(line.length).toBeGreaterThan(0);
     expect(line).toContain('zz-new');
+  });
+
+  // DATA_LICENSES.md is the authority for mandated wording (AGENTS.md), but nothing checked that
+  // the served string still matches it — the two could drift silently, and the licence conditions
+  // are the half that matters. Any notice recorded there verbatim must be what the consumer sees.
+  // DATA_LICENSES.md records fixed wording in three forms, and only one of them was checked. AESA's
+  // required citation and NZ's required credit are conditions of those licences — losing either from
+  // the served string is a licence breach, not a cosmetic drift — and both were entirely unguarded.
+  // `Served verbatim` is the whole notice; the other two are substrings the notice must carry.
+  const RECORDED =
+    /(Served verbatim|Required citation, verbatim|Required credit, verbatim) \(([a-zA-Z0-9_-]+)\): "([^"]+)"/g;
+
+  const recordedWording = (): Array<{ label: string; id: string; text: string }> => {
+    const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'DATA_LICENSES.md'), 'utf8');
+    const section = doc.slice(doc.indexOf('## Required Notices'), doc.indexOf('## Update cadence'));
+    return [...section.matchAll(RECORDED)].map((m) => ({ label: m[1], id: m[2], text: m[3] }));
+  };
+
+  it('serves every verbatim-recorded notice exactly as DATA_LICENSES.md records it', () => {
+    // The source ID is part of the recorded syntax so the pairing is asserted, not just the set of
+    // strings: two notices swapped between their NOTICES keys would leave both consumers displaying
+    // someone else's licence condition while a set-membership check still passed.
+    const whole = recordedWording().filter((r) => r.label === 'Served verbatim');
+    expect(whole.length).toBeGreaterThan(0);
+    expect(whole.map(({ id }) => attributionFor(id))).toEqual(whole.map(({ text }) => text));
+  });
+
+  it('carries every required citation and credit inside the served notice', () => {
+    const required = recordedWording().filter((r) => r.label !== 'Served verbatim');
+    expect(required.length).toBeGreaterThan(0);
+    for (const { id, text, label } of required) {
+      expect(`${id}: ${attributionFor(id)}`).toContain(text);
+      expect(label).toMatch(/^Required (citation|credit), verbatim$/);
+    }
+  });
+
+  // A notice recorded without its source ID silently drops out of the pairing check above.
+  it('records a source ID against every verbatim notice', () => {
+    const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'DATA_LICENSES.md'), 'utf8');
+    const section = doc.slice(doc.indexOf('## Required Notices'), doc.indexOf('## Update cadence'));
+    const unbound = [
+      ...section.matchAll(
+        /(?:Served verbatim|Required citation, verbatim|Required credit, verbatim)(?: \(([^)]+)\))?:/g
+      ),
+    ]
+      .filter((m) => m[1] === undefined)
+      .map((m) => m[0]);
+    expect(unbound).toEqual([]);
   });
 });
