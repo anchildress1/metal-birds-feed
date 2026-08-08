@@ -97,6 +97,10 @@ One queryable artifact per source — filter or point-lookup on any column (ever
 A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table indexed by `icao_hex`, so a lookup is one `WHERE icao_hex IN (...)` on one table, never a union across per-country files.
 
 - **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership), each row carrying the source's exact `attribution` line so a consumer credits it verbatim and only when that row is displayed. ≤ 500 hexes; misses omitted.
+- **`POST /feed/registration`** `{ "registrations": ["C-FABC", …] }` → same payload keyed by the normalized registration, plus `icao_hex` (the caller keyed by something else, so the hex is new information). Punctuation and case are normalized on both sides — `C-FABC`, `c fabc`, and `CFABC` all reach the same row. ≤ 500 marks; misses omitted.
+
+  Why both: `icao_hex` is what an ADS-B blip carries, but only 6 of 15 sources publish one — about 60k of 418k records are unreachable by hex. Registration is required and present in every source, so this endpoint reaches the rest. Cancelled registrations are excluded from the feed so a reissued mark cannot make the key ambiguous.
+
 - Gated by a bearer secret (`FEED_TOKEN`, validated present and ≥ 16 chars at startup; a UUID is the convention) and rate-limited — a private API, not a public one. Every request presents the secret.
 - Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image.
 - Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.

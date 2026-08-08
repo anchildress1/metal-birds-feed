@@ -4,6 +4,7 @@ import type { Aircraft } from '../src/schema.js';
 import {
   toFeedRows,
   mergeFeedRows,
+  registrationKey,
   buildFeedDb,
   hashFeedRows,
   FeedRowsSchema,
@@ -141,11 +142,31 @@ describe('mergeFeedRows', () => {
     expect(merged).toHaveLength(2);
   });
 
-  it('never lets a cancelled row replace a live one across sources', () => {
+  it('drops a cancelled row carried by a stale slice, whichever order it arrives in', () => {
     const live = [rowFor('a1b2c3', 'faa', 'valid', 'LIVE')];
-    const dead = [rowFor('a1b2c3', 'ca', 'cancelled', 'DEAD')];
-    expect(mergeFeedRows([live, dead])[0]?.registration).toBe('LIVE');
-    expect(mergeFeedRows([dead, live])[0]?.registration).toBe('LIVE');
+    // toFeedRows no longer emits cancelled rows, but slices written before that change are still in
+    // R2 and get reused for a failed or cadence-skipped source — so merge has to reject them too.
+    const stale = [{ ...live[0], source: 'ca', status: 'cancelled', registration: 'DEAD' }];
+    expect(mergeFeedRows([live, stale])[0]?.registration).toBe('LIVE');
+    expect(mergeFeedRows([stale, live])[0]?.registration).toBe('LIVE');
+    expect(mergeFeedRows([stale])).toHaveLength(0);
+  });
+});
+
+describe('registrationKey', () => {
+  it("normalizes each registry's punctuation to one form", () => {
+    expect(registrationKey('C-FABC')).toBe('CFABC');
+    expect(registrationKey('N12345')).toBe('N12345');
+    expect(registrationKey('VH-XYZ')).toBe('VHXYZ');
+    expect(registrationKey('zk aac')).toBe('ZKAAC');
+  });
+});
+
+describe('cancelled records', () => {
+  // Excluded from the feed only; the per-source artifact still carries the full history.
+  it('never reach the served feed', () => {
+    expect(toFeedRows([make('1', 'a1b2c3', { status: 'cancelled' })])).toHaveLength(0);
+    expect(toFeedRows([make('1', 'a1b2c3', { status: 'valid' })])).toHaveLength(1);
   });
 });
 

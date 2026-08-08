@@ -7,6 +7,7 @@ import type { SourceState } from '../src/cadence.js';
 const FEED_ROW: FeedRow = {
   icao_hex: 'a1b2c3',
   registration: 'N1',
+  registration_key: 'N1',
   icao_type_code: null,
   status: 'valid',
   country: 'US',

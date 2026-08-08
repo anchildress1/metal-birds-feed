@@ -6,6 +6,10 @@
 export interface FeedRow {
   icao_hex: string;
   registration: string;
+  // Normalized lookup key: uppercase, punctuation stripped. Separate from `registration` because
+  // that one is the register's published form — displayed to users, and licence terms (AESA) require
+  // the source meaning not be distorted. This is derived and exists only to be matched against.
+  registration_key: string;
   icao_type_code: string | null;
   status: string;
   country: string;

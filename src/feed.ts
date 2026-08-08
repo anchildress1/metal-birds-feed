@@ -11,6 +11,12 @@ import { latestKnownDate } from './recency.js';
 // legal_owner, interdiction code, operational classes).
 export type { FeedRow };
 
+// Registries punctuate marks differently — FAA "N12345", TC "C-FABC", CASA "VH-XYZ" — and a caller
+// holding a tail number off a photo should not have to know which. Uppercase and strip everything
+// that is not alphanumeric, on both the stored key and the query, so the two meet in one form.
+export const registrationKey = (registration: string): string =>
+  registration.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
 // Records sharing an icao_hex collapse to one winner deterministically so import order can't decide
 // it: a cancelled record never shadows a live one, then the most recent known date wins, then
 // source_id breaks the tie. Mirrors the engine's resolveRecency principle.
@@ -29,6 +35,11 @@ const preferWinner = (a: Aircraft, b: Aircraft): Aircraft => {
 export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   const byHex = new Map<string, Aircraft>();
   for (const r of records) {
+    // Cancelled marks are excluded from the served feed, not from the artifact: the feed enriches
+    // live traffic, so a deregistered mark is never asked about, and marks get reissued — keeping
+    // them is what would make registration ambiguous as a lookup key. The per-source artifact still
+    // carries the full history.
+    if (r.status === 'cancelled') continue;
     if (r.icao_hex === null) continue;
     const incumbent = byHex.get(r.icao_hex);
     byHex.set(r.icao_hex, incumbent === undefined ? r : preferWinner(incumbent, r));
@@ -36,6 +47,7 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   return [...byHex.entries()].map(([icao_hex, r]) => ({
     icao_hex,
     registration: r.registration,
+    registration_key: registrationKey(r.registration),
     icao_type_code: r.icao_type_code,
     status: r.status,
     country: r.country,
@@ -79,8 +91,12 @@ export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
   const byHex = new Map<string, FeedRow>();
   for (const group of groups) {
     for (const row of group) {
-      const incumbent = byHex.get(row.icao_hex);
-      if (incumbent === undefined || incumbent.status === 'cancelled') byHex.set(row.icao_hex, row);
+      // Also filtered here, not only in toFeedRows: slices written before cancelled rows were
+      // excluded still sit in R2 and are reused verbatim for any source that fails or is
+      // cadence-skipped, so without this a stale slice would keep injecting deregistered marks —
+      // and they are exactly what makes registration_key ambiguous.
+      if (row.status === 'cancelled') continue;
+      if (byHex.get(row.icao_hex) === undefined) byHex.set(row.icao_hex, row);
     }
   }
   return [...byHex.values()];
@@ -105,6 +121,7 @@ export const hashFeedRows = (rows: FeedRow[]): string => {
 const COLUMN_TYPES: Record<keyof FeedRow, string> = {
   icao_hex: 'TEXT PRIMARY KEY',
   registration: 'TEXT NOT NULL',
+  registration_key: 'TEXT NOT NULL',
   icao_type_code: 'TEXT',
   status: 'TEXT NOT NULL',
   country: 'TEXT NOT NULL',
@@ -211,13 +228,34 @@ export const serializeFeedSlice = (rows: FeedRow[]): string =>
 // source, queried as `SELECT * FROM feed WHERE icao_hex IN (...)` — no per-country union. Built
 // in memory and serialized to bytes (no filesystem), matching db.ts. `country` is indexed so a
 // consumer can also scope by registration country. PRAGMA user_version marks the producer shape.
+// Checked before insert, not left to the unique index: the insert is INSERT OR REPLACE, so a
+// collision would silently drop one aircraft instead of raising. Two rows sharing a normalized mark
+// means either a reissued registration the source never marked cancelled, or the same mark in two
+// registries — both are real upstream questions, and picking a winner would answer them by accident.
+// Mirrors the engine's duplicate-source_id rule: refuse rather than last-wins.
+const assertUniqueRegistrationKeys = (rows: FeedRow[]): void => {
+  const seen = new Map<string, string>();
+  const collisions: string[] = [];
+  for (const row of rows) {
+    const prior = seen.get(row.registration_key);
+    if (prior === undefined) seen.set(row.registration_key, row.icao_hex);
+    else collisions.push(`${row.registration_key} (${prior} and ${row.icao_hex})`);
+  }
+  if (collisions.length > 0)
+    throw new Error(
+      `Refusing to build feed: ${collisions.length} registration_key collision(s) — ${collisions.slice(0, 5).join(', ')}${collisions.length > 5 ? ', …' : ''}`
+    );
+};
+
 export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
+  assertUniqueRegistrationKeys(rows);
   const db = new Database(':memory:');
   try {
     db.run('PRAGMA journal_mode = OFF');
-    db.run('PRAGMA user_version = 4');
+    db.run('PRAGMA user_version = 5');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
+    db.run('CREATE UNIQUE INDEX idx_feed_registration_key ON feed (registration_key)');
     const insert = db.prepare(
       `INSERT OR REPLACE INTO feed (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map(() => '?').join(', ')})`
     );

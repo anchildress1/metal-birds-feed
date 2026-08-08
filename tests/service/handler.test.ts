@@ -15,6 +15,7 @@ import {
 const rec = (hex: string, reg: string): FeedRow => ({
   icao_hex: hex,
   registration: reg,
+  registration_key: reg.toUpperCase().replace(/[^A-Z0-9]/g, ''),
   icao_type_code: null,
   status: 'valid',
   country: 'US',
@@ -254,5 +255,60 @@ describe('route', () => {
 
     expect(res.status).toBe(200);
     expect(loadBody).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('/feed/registration', () => {
+  const ok: RunQuery = () => Promise.resolve([rec('a1b2c3', 'C-FABC')]);
+  const call = (body: unknown) =>
+    routeRequest(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      () => Promise.resolve(body),
+      () => Promise.resolve(true),
+      ok
+    );
+
+  it('keys the response by the normalized registration, not the hex', async () => {
+    const res = await call({ registrations: ['C-FABC'] });
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body as object)).toEqual(['CFABC']);
+  });
+
+  it('accepts any punctuation the caller happens to have', async () => {
+    for (const sent of ['C-FABC', 'c fabc', 'CFABC', 'c-fabc']) {
+      const res = await call({ registrations: [sent] });
+      expect(Object.keys(res.body as object)).toEqual(['CFABC']);
+    }
+  });
+
+  it('returns the hex on a registration lookup, since the caller keyed by something else', async () => {
+    const res = await call({ registrations: ['C-FABC'] });
+    expect((res.body as Record<string, { icao_hex?: string }>)['CFABC']?.icao_hex).toBe('a1b2c3');
+  });
+
+  it('never leaks the internal key into the payload', async () => {
+    const res = await call({ registrations: ['C-FABC'] });
+    expect(JSON.stringify(res.body)).not.toContain('registration_key');
+  });
+
+  it('rejects the whole request on a value that cannot be a mark', async () => {
+    expect((await call({ registrations: ['C-FABC', '!'] })).status).toBe(400);
+    expect((await call({ registrations: 'C-FABC' })).status).toBe(400);
+  });
+
+  it('still 404s an unknown path', async () => {
+    const res = await routeRequest(
+      'POST',
+      '/feed/nope',
+      'Bearer t',
+      't',
+      () => Promise.resolve({}),
+      () => Promise.resolve(true),
+      ok
+    );
+    expect(res.status).toBe(404);
   });
 });
