@@ -142,14 +142,10 @@ describe('mergeFeedRows', () => {
     expect(merged).toHaveLength(2);
   });
 
-  it('drops a cancelled row carried by a stale slice, whichever order it arrives in', () => {
-    const live = [rowFor('a1b2c3', 'faa', 'valid', 'LIVE')];
-    // toFeedRows no longer emits cancelled rows, but slices written before that change are still in
-    // R2 and get reused for a failed or cadence-skipped source — so merge has to reject them too.
-    const stale = [{ ...live[0], source: 'ca', status: 'cancelled', registration: 'DEAD' }];
-    expect(mergeFeedRows([live, stale])[0]?.registration).toBe('LIVE');
-    expect(mergeFeedRows([stale, live])[0]?.registration).toBe('LIVE');
-    expect(mergeFeedRows([stale])).toHaveLength(0);
+  it('keeps the first slice to claim a hex, since no slice carries a cancelled row', () => {
+    const faa = [rowFor('a1b2c3', 'faa', 'valid', 'N1')];
+    const ca = [rowFor('a1b2c3', 'ca', 'valid', 'C-2')];
+    expect(mergeFeedRows([faa, ca])[0]?.registration).toBe('N1');
   });
 });
 

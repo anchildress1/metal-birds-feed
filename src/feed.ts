@@ -90,12 +90,10 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
 export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
   const byHex = new Map<string, FeedRow>();
   for (const group of groups) {
+    // No cancelled filter here. Every slice is written by toFeedRows, which excludes them, and the
+    // pre-change slices were deleted so each source regenerated one — filtering again would be a
+    // compatibility shim for data that no longer exists.
     for (const row of group) {
-      // Also filtered here, not only in toFeedRows: slices written before cancelled rows were
-      // excluded still sit in R2 and are reused verbatim for any source that fails or is
-      // cadence-skipped, so without this a stale slice would keep injecting deregistered marks —
-      // and they are exactly what makes registration_key ambiguous.
-      if (row.status === 'cancelled') continue;
       if (byHex.get(row.icao_hex) === undefined) byHex.set(row.icao_hex, row);
     }
   }
