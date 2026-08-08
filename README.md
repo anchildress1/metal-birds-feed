@@ -65,7 +65,7 @@ diffs forever after.
 
 ```bash
 cp .env.example .env  # fill in MBF_R2_* and GEMINI_API_KEY
-make bootstrap        # auto-loads .env, runs the full pipeline with no time cap
+make refresh          # auto-loads .env, runs the full pipeline with no time cap
 ```
 
 Tail `logs/pipeline.log` for `event=write_progress` ticks (every 5s during writes).
@@ -104,7 +104,7 @@ A private, authenticated point-lookup API for an authorized consumer application
 - Gated by a bearer secret (`FEED_TOKEN`, validated present and ≥ 16 chars at startup; a UUID is the convention) and rate-limited — a private API, not a public one. Every request presents the secret.
 - Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image.
 - Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.
-- `make build-feed` rebuilds the DB from every durable per-source `_feed` slice in R2. `make deploy` runs that build first (so an ambient stale `feed.sqlite` is never deployed), then `make deploy-only` ships it. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
+- `make build-feed` refreshes every source and then rebuilds the DB from the per-source `_feed` slices in R2 (`make assemble-feed` skips the refresh and only assembles — that is what CI calls, since its refresh matrix has already written the slices). `make deploy` assembles first (so an ambient stale `feed.sqlite` is never deployed) then ships it — it does not re-pull upstream, so run `make refresh` beforehand if the deploy should carry new register data. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
 ## Setup
 
@@ -124,9 +124,9 @@ make install
 | `make typecheck`    | TypeScript type check                             |
 | `make test`         | Run unit tests with coverage                      |
 | `make build`        | Compile TypeScript to `dist/`                     |
-| `make bootstrap`    | One-shot local initial load (reads `.env`)        |
+| `make refresh`      | Pull every source (reads `.env`)                  |
 | `make serve`        | Run the feed service locally (`MBF_FEED_DB_PATH`) |
-| `make build-feed`   | Rebuild `feed.sqlite` from every R2 feed slice    |
+| `make build-feed`   | Refresh every source, then assemble `feed.sqlite` |
 | `make deploy-only`  | Deploy the on-disk `feed.sqlite` to Cloud Run     |
 | `make deploy`       | Rebuild and deploy the feed service to Cloud Run  |
 | `make secret-scan`  | Scan for accidentally committed secrets           |
