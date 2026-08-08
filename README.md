@@ -107,8 +107,14 @@ A private, authenticated point-lookup API for an authorized consumer application
 
 ### Running the Feed Service Locally
 
+Assembly reads the slices out of R2, so the four `MBF_R2_*` values must already be exported or
+present in `.env` — `make assemble-feed` aborts naming the missing one otherwise. Serving needs
+neither: it only opens the local file.
+
 ```bash
-make build-feed                        # pulls every source's _feed slice from R2, writes feed.sqlite
+cp .env.example .env                   # fill in MBF_R2_ACCOUNT_ID / ACCESS_KEY_ID / SECRET_ACCESS_KEY / BUCKET_NAME
+make assemble-feed                     # pulls every source's _feed slice from R2, writes feed.sqlite
+                                       # (`make build-feed` re-pulls all 15 registers first)
 export FEED_TOKEN=$(uuidgen)           # ≥16 chars required; a UUID is the convention
 export MBF_FEED_DB_PATH=./feed.sqlite  # defaults to the service root if unset
 make serve                             # starts on PORT (default 8080)
@@ -184,10 +190,11 @@ make install
 
 ## Sources
 
-Sources active or cleared in the private operator pipeline, ordered alphabetically by
-country. ID is the `sources/<id>.yaml` config stem — "—" means onboarding is cleared but
-no config is checked in yet. Full correspondence (email, sent/reply dates) and per-source
-restrictions live in [DATA_LICENSES.md](DATA_LICENSES.md).
+Sources active in the private operator pipeline, ordered alphabetically by country. ID is
+the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contributing rows
+— and every source still in triage — are tracked in
+[DATA_LICENSES.md](DATA_LICENSES.md) and
+[docs/source-onboarding-checklist.md](docs/source-onboarding-checklist.md), not here.
 
 <!-- prettier-ignore-start -->
 | ID | Agency | Country | Status |
@@ -202,12 +209,10 @@ restrictions live in [DATA_LICENSES.md](DATA_LICENSES.md).
 | `nl-ilt` | ILT | Netherlands | ✅ Live |
 | `nz-caa` | CAA NZ | New Zealand | ✅ Live |
 | `no-caa` | Luftfartstilsynet | Norway | ✅ Live |
-| — | CAA Oman | Oman | 🛠️ No dataset yet |
 | `sg-caas` | CAAS | Singapore | ✅ Live |
 | `es-aesa` | AESA | Spain | ✅ Live |
 | `ch-foca` | FOCA / BAZL | Switzerland | ✅ Live |
 | `tw-caa` | CAA Taiwan | Taiwan | ✅ Live |
-| — | CAAT | Thailand | 🛠️ Fetch blocked |
 | `faa` | FAA | United States | ✅ Live |
 <!-- prettier-ignore-end -->
 
@@ -249,7 +254,7 @@ Required upstream notices, kept short:
 
 [AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
 
-1. **Pick the source ID.** No generator script — it's `<iso-country-code>-<agency-abbrev>`, lowercase, hyphenated (e.g. `nl-ilt`, `br-anac`, `tc-ca`). `faa` is the one bare exception (globally unambiguous). This slug is the filename stem for every surface below, so decide it first — renaming later means touching all seven.
+1. **Pick the source ID.** No generator script — it's `<iso-country-code>-<agency-abbrev>`, lowercase, hyphenated (e.g. `nl-ilt`, `br-anac`, `nz-caa`). Two checked-in IDs predate the rule and are not templates for new ones: `faa` is bare (globally unambiguous) and `tc-ca` is agency-first (the rule would give `ca-tc`). This slug is the shared identifier across every surface below — a filename stem for the config and fixtures, a row or map key everywhere else — so decide it first — renaming later means touching all seven.
 2. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
 3. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
 4. New source onboarding touches **all seven surfaces** or the source is incomplete:
@@ -260,7 +265,7 @@ Required upstream notices, kept short:
    - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
    - `src/service/attributions.ts` `NOTICES[<source-id>]` — the exact wording served in the feed API's `attribution` field; a missing entry silently falls back to a generic slug credit.
    - `docs/source-onboarding-checklist.md` `✅ Done` row — keeps the triage snapshot from losing a shipped source.
-5. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
+5. New scalar, array, or compound transforms require updates in **two places** simultaneously or the loader rejects the config: the name array in `src/types/config.ts` and the handler map in `src/transforms.ts`. `src/config/loader.ts` validates off those same arrays, so it needs no edit.
 
 The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path).
 
