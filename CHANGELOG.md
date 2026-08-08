@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.0](https://github.com/anchildress1/metal-birds-feed/compare/v0.1.1...v0.2.0) (2026-08-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* **localize:** `translations_en` is gone from the canonical record; the `cancellation_reason_en` / `airworthiness_class_en` feed columns are now `cancellation_reason` / `airworthiness_class`. Consumers must re-read both databases.
+
+### Features
+
+* **localize:** persist translations per chunk instead of once per run ([#94](https://github.com/anchildress1/metal-birds-feed/issues/94)) ([c7ff632](https://github.com/anchildress1/metal-birds-feed/commit/c7ff632d330fe12190c074b6b2d881a3496b7c7a))
+* **localize:** prune cache entries upstream no longer publishes ([#96](https://github.com/anchildress1/metal-birds-feed/issues/96)) ([ccb2aaa](https://github.com/anchildress1/metal-birds-feed/commit/ccb2aaa76879911fea9f6eee1e8167779f194cb2))
+* **localize:** render translatable register fields English-primary via Gemini ([#93](https://github.com/anchildress1/metal-birds-feed/issues/93)) ([563075a](https://github.com/anchildress1/metal-birds-feed/commit/563075ab79574b8307825eebdf9e04875a66b3f2))
+* **localize:** stop re-billing text the model reliably mangles ([#95](https://github.com/anchildress1/metal-birds-feed/issues/95)) ([8fb9fa9](https://github.com/anchildress1/metal-birds-feed/commit/8fb9fa9057a7232d813ee9b07b8ca68961cde3c8))
+* **nz-caa:** add the CAA New Zealand register as a hex-bearing source ([#92](https://github.com/anchildress1/metal-birds-feed/issues/92)) ([54816e9](https://github.com/anchildress1/metal-birds-feed/commit/54816e91bafc772d957d86034d3110fe9f3bfcf6))
+
+
+### Bug Fixes
+
+* **mv-caa:** match the register PDF's relative discover href ([#85](https://github.com/anchildress1/metal-birds-feed/issues/85)) ([47fc9ed](https://github.com/anchildress1/metal-birds-feed/commit/47fc9ed366359b9728564535a4166c7058caa99a))
+
 ## [0.1.1](https://github.com/anchildress1/metal-birds-feed/compare/v0.1.0...v0.1.1) (2026-07-26)
 
 
