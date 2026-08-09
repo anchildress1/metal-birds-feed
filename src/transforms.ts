@@ -321,6 +321,14 @@ const brAirframe = (value: string): string | null => {
   return null;
 };
 
+// ANAC states "not certified" in the certification-category column. That is not a category, so
+// `category` nulls it — but the fact itself is a build-certification statement, and dropping it
+// would lose something the register publishes. Every other value says nothing about type
+// certification and yields null, which is why this is a transform rather than a lookup: a lookup
+// would have to enumerate two dozen labels to null, or log a drift warning on each one.
+const brBuildCertification = (value: string): string | null =>
+  value.trim().toUpperCase() === 'NÃO CERTIFICADA' ? 'not-type-certificated' : null;
+
 // No status column upstream; a populated cancellation date is the cancellation signal.
 const brStatus = (value: string): string => (value.trim().length > 0 ? 'cancelled' : 'valid');
 
@@ -648,6 +656,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   br_registration: brRegistration,
   ee_registration: eeRegistration,
   br_airframe: brAirframe,
+  br_build_certification: brBuildCertification,
   br_status: brStatus,
   br_party_name: brPartyName,
   br_party_state: brPartyState,

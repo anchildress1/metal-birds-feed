@@ -242,7 +242,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(6);
+    expect(version.user_version).toBe(7);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -309,7 +309,7 @@ describe('buildSqlite', () => {
       'interdiction_code',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(6);
+    expect(version.user_version).toBe(7);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -329,7 +329,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(6);
+    expect(version.user_version).toBe(7);
   });
 });
 

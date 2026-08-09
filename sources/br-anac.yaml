@@ -73,7 +73,7 @@ mapping:
       TRANSPORTE: standard
       UTILIDADE: standard
       ACROBATICA: standard
-      PRIMARIA: standard
+      PRIMARIA: primary
       'NORMAL/UTILIDADE': standard
       'NORMAL/ACROBATICA': standard
       'TRANSP.REGIONAL': standard
@@ -85,25 +85,28 @@ mapping:
       'UTIL./ACROBATICA': standard
       'TRANSPORTE A': standard
       RESTRITA: restricted
-      # Dual certifications spanning standard and restricted. The restricted grant is the operative
-      # limit on what the aircraft may do, so it governs — collapsing these to standard would
-      # advertise unrestricted operation the certificate does not grant.
-      'NORMAL/RESTRITA': restricted
-      'ACROB./RESTRITA': restricted
-      'NORMAL/UT./REST.': restricted
+      # Two coexisting certificates, not one narrowed grant: a restricted certificate does not
+      # supersede the normal/utility/acrobatic one it is held alongside, and which applies depends
+      # on the aircraft's current configuration. Naming either half alone asserts something the
+      # register does not.
+      'NORMAL/RESTRITA': multiple
+      'ACROB./RESTRITA': multiple
+      'NORMAL/UT./REST.': multiple
       EXPERIMENTAL: experimental
       PROVISORIA: provisional
       # RBAC 21 special class — sailplanes, airships, and unconventional types certified without
       # issued type-certification requirements. A real category, outside the canonical four.
       'CLASSE ESPECIAL': other
-      # Neither states a certification category: one is the absence of certification, the other an
-      # operating authorization for RPAS. Recognized, but the category enum has no value for them.
+      # A stated authorization outside the named categories, not the absence of one.
+      'RPAS AUTORIZADO': other
+      # The absence of a category, which is not a category — but the fact is not lost: it is what
+      # `build_certification` below reads this same column for.
       'NÃO CERTIFICADA': ~
-      'RPAS AUTORIZADO': ~
     default: ~
 
   build_certification:
-    constant: ~
+    field: DS_CATEGORIA_HOMOLOGACAO
+    transform: br_build_certification
 
   airworthiness_class:
     field: TP_CA
