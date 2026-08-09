@@ -87,4 +87,14 @@ describe('log', () => {
     });
     expect(() => log('info', 'test_event')).not.toThrow();
   });
+
+  // Guards the refresh log against fixture noise: this suite itself must never append to
+  // pipeline.log, or a concurrent live run's diagnostics are interleaved beyond reading.
+  it('writes to the test log, never the pipeline log', () => {
+    spyOn(console, 'log').mockImplementation(() => {});
+    log('info', 'test_event');
+    const path = mockAppendFileSync.mock.calls[0]?.[0] as string;
+    expect(path).toEndWith('/logs/test.log');
+    expect(path).not.toContain('pipeline.log');
+  });
 });

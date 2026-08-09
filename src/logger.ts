@@ -8,7 +8,14 @@ export type LogLevel = 'info' | 'warn' | 'error';
 export const errorMessage = (err: unknown): string =>
   err instanceof Error ? err.message : String(err);
 
-const LOG_PATH = join(process.cwd(), 'logs', 'pipeline.log');
+// Tests share this logger, and a `bun test` run concurrent with a live refresh interleaves
+// thousands of fixture lines into the real run's log — the diagnostics for a 15-minute refresh
+// become unreadable. Bun sets NODE_ENV=test, so the two never contend for the same file.
+const LOG_PATH = join(
+  process.cwd(),
+  'logs',
+  process.env.NODE_ENV === 'test' ? 'test.log' : 'pipeline.log'
+);
 const ESCAPED_QUOTE = String.raw`\"`;
 let logDirReady = false;
 
