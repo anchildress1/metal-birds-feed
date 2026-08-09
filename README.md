@@ -105,6 +105,34 @@ A private, authenticated point-lookup API for an authorized consumer application
 - Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.
 - `make build-feed` refreshes every source and then rebuilds the DB from the per-source `_feed` slices in R2 (`make assemble-feed` skips the refresh and only assembles — that is what CI calls, since its refresh matrix has already written the slices). `make deploy` assembles first (so an ambient stale `feed.sqlite` is never deployed) then ships it — it does not re-pull upstream, so run `make refresh` beforehand if the deploy should carry new register data. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
+### Running the Feed Service Locally
+
+Assembly reads the slices out of R2, so the four `MBF_R2_*` values must already be exported or
+present in `.env` — `make assemble-feed` aborts naming the missing one otherwise. Serving needs
+neither: it only opens the local file.
+
+```bash
+cp .env.example .env                   # fill in MBF_R2_ACCOUNT_ID / ACCESS_KEY_ID / SECRET_ACCESS_KEY / BUCKET_NAME
+make assemble-feed                     # pulls every source's _feed slice from R2, writes feed.sqlite
+                                       # (`make build-feed` re-pulls all 15 registers first)
+export FEED_TOKEN=$(uuidgen)           # ≥16 chars required; a UUID is the convention
+export MBF_FEED_DB_PATH=./feed.sqlite  # defaults to the service root if unset
+make serve                             # starts on PORT (default 8080)
+```
+
+Call it with the bearer token from a single batched request — up to 500 hexes per call:
+
+```bash
+curl -s http://localhost:8080/feed \
+  -H "Authorization: Bearer $FEED_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"hexes": ["a1b2c3", "d4e5f6"]}'
+```
+
+Misses are omitted from the response map rather than returned as nulls. `FEED_TOKEN` in
+production is a Google Secret Manager binding on the Cloud Run service — never place the real
+value in `.env` or any committed file.
+
 ## Setup
 
 ```bash
@@ -162,31 +190,30 @@ make install
 
 ## Sources
 
-Sources active in the private operator pipeline, ordered alphabetically by country. Source
-IDs remain in backticks where a source has a checked-in or planned config. The full
-source-use tracker (every country contacted, sent/reply dates, status, and known storage
-or cache restrictions) lives in [DATA_LICENSES.md](DATA_LICENSES.md).
+Sources active in the private operator pipeline, ordered alphabetically by country. ID is
+the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contributing rows
+— and every source still in triage — are tracked in
+[DATA_LICENSES.md](DATA_LICENSES.md) and
+[docs/source-onboarding-checklist.md](docs/source-onboarding-checklist.md), not here.
 
 <!-- prettier-ignore-start -->
-| Agency | Country | Email | Sent | Reply | Status |
-| --- | --- | --- | --- | --- | --- |
-| CASA — au-casa | Australia | none | n/a | open | live |
-| ANAC Brasil — br-anac | Brazil | rab@anac.gov.br | 2026-05-05 | confirmed | live |
-| Transport Canada — tc-ca | Canada | none | n/a | open | live |
-| DGAC — cl-dgac | Chile | registro.aeronaves@dgac.gob.cl | 2026-05-10 | confirmed | live |
-| Transpordiamet — ee-tram | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed | live |
-| CAA Latvia — lv-caa | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
-| CAA Maldives — mv-caa | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
-| ILT — nl-ilt | Netherlands | none | n/a | open | live |
-| CAA NZ — nz-caa | New Zealand | info@caa.govt.nz | 2026-05-05 | pending | live |
-| Luftfartstilsynet — no-caa | Norway | postmottak@caa.no | 2026-05-05 | pending | live |
-| CAA Oman — om-caa (pending impl) | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
-| CAAS — sg-caas | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed | live |
-| AESA — es-aesa | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | open | live |
-| FOCA / BAZL — ch-foca | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
-| CAA Taiwan — tw-caa | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
-| CAAT Thailand | Thailand | inter_focalpoint@caat.or.th | 2026-05-10 | confirmed | cleared |
-| FAA — faa | United States | none | n/a | open | live |
+| ID | Agency | Country | Status |
+| --- | --- | --- | --- |
+| `au-casa` | CASA | Australia | ✅ Live |
+| `br-anac` | ANAC Brasil | Brazil | ✅ Live |
+| `tc-ca` | Transport Canada | Canada | ✅ Live |
+| `cl-dgac` | DGAC | Chile | ✅ Live |
+| `ee-tram` | Transpordiamet | Estonia | ✅ Live |
+| `lv-caa` | CAA Latvia | Latvia | ✅ Live |
+| `mv-caa` | CAA Maldives | Maldives | ✅ Live |
+| `nl-ilt` | ILT | Netherlands | ✅ Live |
+| `nz-caa` | CAA NZ | New Zealand | ✅ Live |
+| `no-caa` | Luftfartstilsynet | Norway | ✅ Live |
+| `sg-caas` | CAAS | Singapore | ✅ Live |
+| `es-aesa` | AESA | Spain | ✅ Live |
+| `ch-foca` | FOCA / BAZL | Switzerland | ✅ Live |
+| `tw-caa` | CAA Taiwan | Taiwan | ✅ Live |
+| `faa` | FAA | United States | ✅ Live |
 <!-- prettier-ignore-end -->
 
 Full correspondence/status detail: [DATA_LICENSES.md](DATA_LICENSES.md).
@@ -227,17 +254,28 @@ Required upstream notices, kept short:
 
 [AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
 
-1. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
-2. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
-3. New source onboarding touches **all five surfaces** or the source is incomplete:
+1. **Pick the source ID.** No generator script — it's `<iso-country-code>-<agency-abbrev>`, lowercase, hyphenated (e.g. `nl-ilt`, `br-anac`, `nz-caa`). Two checked-in IDs predate the rule and are not templates for new ones: `faa` is bare (globally unambiguous) and `tc-ca` is agency-first (the rule would give `ca-tc`). This slug is the shared identifier across every surface below — a filename stem for the config and fixtures, a row or map key everywhere else — so decide it first — renaming later means touching all seven.
+2. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
+3. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
+4. New source onboarding touches **all seven surfaces** or the source is incomplete:
    - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls` | `json` | `pdf` | `html`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
    - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
    - `DATA_LICENSES.md` — classification, permitted uses, attribution wording quoted exactly (not the full reply — see AGENTS.md).
    - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
    - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
-4. New scalar or compound transforms require updates in **three places** simultaneously or the loader rejects the config: enum in `src/types/config.ts`, handler in `src/transforms.ts`, allowlist in `src/config/loader.ts`.
+   - `src/service/attributions.ts` `NOTICES[<source-id>]` — the exact wording served in the feed API's `attribution` field; a missing entry silently falls back to a generic slug credit.
+   - `docs/source-onboarding-checklist.md` `✅ Done` row — keeps the triage snapshot from losing a shipped source.
+5. New scalar, array, or compound transforms require updates in **two places** simultaneously or the loader rejects the config: the name array in `src/types/config.ts` and the handler map in `src/transforms.ts`. `src/config/loader.ts` validates off those same arrays, so it needs no edit.
 
 The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path).
+
+## Author
+
+**Ashley Childress**
+
+[![dev.to](https://img.shields.io/badge/dev.to-0A0A0A?logo=devdotto&logoColor=fff&style=for-the-badge)](https://dev.to/anchildress1) [![LinkedIn](https://img.shields.io/badge/linkedin-%230077B5.svg?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/anchildress1/) [![X](https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/anchildress1) [![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/anchildress1)
+
+---
 
 ## License
 

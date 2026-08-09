@@ -13,8 +13,8 @@ Run via lefthook pre-commit (`scripts: check-sources-sorted` in lefthook.yml) or
 directly: `python3 scripts/check-sources-sorted.py`.
 
 Conventions per PRD:
-    - README sources table sits under the `## Sources` heading. Country is the second
-      pipe-delimited column (parts[2] after `line.split('|')`).
+    - README sources table sits under the `## Sources` heading. Country is the third
+      pipe-delimited column (parts[3] after `line.split('|')`), following ID and Agency.
 
 The validator is intentionally specific to this file and column — no auto-discovery,
 no markdown-table parser dependency. If the doc structure changes, update CONFIG below
@@ -32,7 +32,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # (file path relative to REPO_ROOT, table-section heading marker, country-column index)
 CONFIG = [
-    (REPO_ROOT / "README.md", "## Sources", 2),
+    (REPO_ROOT / "README.md", "## Sources", 3),
 ]
 
 
