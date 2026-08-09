@@ -15,6 +15,7 @@ import {
 const rec = (hex: string, reg: string): FeedRow => ({
   icao_hex: hex,
   registration: reg,
+  registration_key: reg.toUpperCase().replace(/[^A-Z0-9]/g, ''),
   icao_type_code: null,
   status: 'valid',
   country: 'US',
@@ -97,7 +98,23 @@ describe('parseHexes', () => {
   });
 
   it('400s on a malformed hex', () => {
-    expectHttp(() => parseHexes({ hexes: ['A1B2C3'] }), 400); // uppercase rejected
+    expectHttp(() => parseHexes({ hexes: ['zzzzzz'] }), 400);
+    expectHttp(() => parseHexes({ hexes: ['a1b2c'] }), 400);
+    expectHttp(() => parseHexes({ hexes: ['a1b2c3d'] }), 400);
+  });
+
+  // Case carries no information in a Mode S address, and rejecting one spelling made the two routes
+  // disagree — /feed/registration normalized the equivalent input while this 400'd.
+  it('accepts an uppercase hex and lowercases it to match the stored column', () => {
+    expect(parseHexes({ hexes: ['A1B2C3'] })).toEqual(['a1b2c3']);
+  });
+
+  it('accepts mixed case and surrounding whitespace', () => {
+    expect(parseHexes({ hexes: [' A1b2C3 '] })).toEqual(['a1b2c3']);
+  });
+
+  it('dedups case variants of one address so the cap counts it once', () => {
+    expect(parseHexes({ hexes: ['A1B2C3', 'a1b2c3', 'A1b2c3'] })).toEqual(['a1b2c3']);
   });
 
   it('400s on a non-string element', () => {
@@ -161,6 +178,84 @@ describe('route', () => {
   const boom: RunQuery = () => Promise.reject(new Error('d1 down'));
   const pass: CheckLimit = () => Promise.resolve(true);
   const deny: CheckLimit = () => Promise.resolve(false);
+
+  // The `ok` stub ignores its SQL and params, so every normalization case below would still pass
+  // if the route queried the hex column, or passed the caller's raw punctuated input straight
+  // through. These two capture what actually reaches the database.
+  const capture = (): { calls: Array<[string, string[]]>; run: RunQuery } => {
+    const calls: Array<[string, string[]]> = [];
+    return {
+      calls,
+      run: (sql, params) => {
+        calls.push([sql, params]);
+        return Promise.resolve([rec('a1b2c3', 'N1')]);
+      },
+    };
+  };
+
+  it('queries registration_key with normalized, deduplicated parameters', async () => {
+    const spy = capture();
+    await route(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      { registrations: ['C-FABC', 'c fabc', 'CFABC'] },
+      pass,
+      spy.run
+    );
+    expect(spy.calls).toHaveLength(1);
+    const [sql, params] = spy.calls[0];
+    expect(sql).toContain('registration_key');
+    expect(sql).not.toContain('icao_hex IN');
+    expect(params).toEqual(['CFABC']);
+  });
+
+  // Both routes normalize now, so this pins the selector and that the caller's casing reaches the
+  // database in the stored form rather than as sent.
+  it('queries icao_hex with lowercased parameters, not the registration key', async () => {
+    const spy = capture();
+    await route('POST', '/feed', 'Bearer t', 't', { hexes: ['A1B2C3', 'a1b2c3'] }, pass, spy.run);
+    expect(spy.calls).toHaveLength(1);
+    const [sql, params] = spy.calls[0];
+    expect(sql).toContain('icao_hex');
+    expect(sql).not.toContain('registration_key IN');
+    expect(params).toEqual(['a1b2c3']);
+  });
+
+  // The reason /feed/registration exists: nine registers publish no hex, and those rows must come
+  // back with icao_hex explicitly null rather than being absent from the response.
+  it('returns a hex-less row with a null icao_hex on the registration route', async () => {
+    const hexless: FeedRow = { ...rec('a1b2c3', 'PH-ABC'), icao_hex: null };
+    const res = await route(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      { registrations: ['PH-ABC'] },
+      pass,
+      () => Promise.resolve([hexless])
+    );
+    const body = res.body as Record<string, { icao_hex?: string | null }>;
+    expect(Object.keys(body)).toEqual(['PHABC']);
+    expect(body['PHABC']).toHaveProperty('icao_hex', null);
+  });
+
+  // A cleared (ambiguous) mark can never match the IN-list, so this only guards against a producer
+  // bug reaching the response as a literal "null" map key.
+  it('omits a row whose response key is null rather than keying it "null"', async () => {
+    const cleared: FeedRow = { ...rec('a1b2c3', 'N1'), registration_key: null };
+    const res = await route(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      { registrations: ['N1'] },
+      pass,
+      () => Promise.resolve([cleared])
+    );
+    expect(res.body).toEqual({});
+  });
 
   it('404s an unknown path', async () => {
     const res = await route('POST', '/other', 'Bearer t', 't', { hexes: [] }, pass, ok);
@@ -254,5 +349,60 @@ describe('route', () => {
 
     expect(res.status).toBe(200);
     expect(loadBody).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('/feed/registration', () => {
+  const ok: RunQuery = () => Promise.resolve([rec('a1b2c3', 'C-FABC')]);
+  const call = (body: unknown) =>
+    routeRequest(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      () => Promise.resolve(body),
+      () => Promise.resolve(true),
+      ok
+    );
+
+  it('keys the response by the normalized registration, not the hex', async () => {
+    const res = await call({ registrations: ['C-FABC'] });
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body as object)).toEqual(['CFABC']);
+  });
+
+  it('accepts any punctuation the caller happens to have', async () => {
+    for (const sent of ['C-FABC', 'c fabc', 'CFABC', 'c-fabc']) {
+      const res = await call({ registrations: [sent] });
+      expect(Object.keys(res.body as object)).toEqual(['CFABC']);
+    }
+  });
+
+  it('returns the hex on a registration lookup, since the caller keyed by something else', async () => {
+    const res = await call({ registrations: ['C-FABC'] });
+    expect((res.body as Record<string, { icao_hex?: string }>)['CFABC']?.icao_hex).toBe('a1b2c3');
+  });
+
+  it('never leaks the internal key into the payload', async () => {
+    const res = await call({ registrations: ['C-FABC'] });
+    expect(JSON.stringify(res.body)).not.toContain('registration_key');
+  });
+
+  it('rejects the whole request on a value that cannot be a mark', async () => {
+    expect((await call({ registrations: ['C-FABC', '!'] })).status).toBe(400);
+    expect((await call({ registrations: 'C-FABC' })).status).toBe(400);
+  });
+
+  it('still 404s an unknown path', async () => {
+    const res = await routeRequest(
+      'POST',
+      '/feed/nope',
+      'Bearer t',
+      't',
+      () => Promise.resolve({}),
+      () => Promise.resolve(true),
+      ok
+    );
+    expect(res.status).toBe(404);
   });
 });

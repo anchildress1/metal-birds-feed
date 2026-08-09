@@ -59,18 +59,17 @@ need a local bootstrap.
 
 ## Initial Load (Bootstrap)
 
-The first FAA load against an empty R2 bucket writes ~312k records × 3 index paths,
-which exceeds GHA's per-job timeout. Run it once locally; cadence runs handle
-diffs forever after.
+The first FAA load translates ~315k records and PUTs the whole artifact, which exceeds
+GHA's per-job timeout. Run it once locally; cadence runs handle diffs forever after.
 
 ```bash
 cp .env.example .env  # fill in MBF_R2_* and GEMINI_API_KEY
-make bootstrap        # auto-loads .env, runs the full pipeline with no time cap
+make refresh          # auto-loads .env, runs the full pipeline with no time cap
 ```
 
-Tail `logs/pipeline.log` for `event=write_progress` ticks (every 5s during writes).
-Override the source via `.env`'s `REFRESH_SOURCE` value (e.g., `REFRESH_SOURCE=nl-ilt`
-to populate only the Dutch register).
+Tail `logs/pipeline.log` for `event=pipeline_complete` per source and `event=feed_published`
+at the end. Override the source via `.env`'s `REFRESH_SOURCE` value (e.g.,
+`REFRESH_SOURCE=nl-ilt` to populate only the Dutch register).
 
 For sources whose initial load fits the GHA budget, skip the local bootstrap and
 trigger the workflow directly:
@@ -86,7 +85,7 @@ gh workflow run refresh.yml                    # all sources, respecting per-sou
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `aircraft/<source>.sqlite`                  | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON, with an untranslated `operational_classes_source_text` JSON twin). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
 | `aircraft/_state/<source>.json`             | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                                                                                          |
-| `aircraft/_feed/<source>.json`              | Versioned per-source feed slice (hex-collapsed descriptive columns) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                                                                                                          |
+| `aircraft/_feed/<source>.json`              | Versioned per-source feed slice (descriptive columns, collapsed on hex where the register publishes one and on the normalized mark where it does not) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                        |
 | `aircraft/_feed/_deployed.json`             | Content hash of the feed last deployed to Cloud Run — the scheduled deploy redeploys only when the freshly built feed differs from it                                                                                                                                                                                    |
 | `aircraft/_translation_cache/<source>.json` | Versioned free-text hash → English text, for Gemini delta translation of the four English-primary fields (see AGENTS.md)                                                                                                                                                                                                 |
 
@@ -94,13 +93,17 @@ One queryable artifact per source — filter or point-lookup on any column (ever
 
 ## Feed Service
 
-A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table indexed by `icao_hex`, so a lookup is one `WHERE icao_hex IN (...)` on one table, never a union across per-country files.
+A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table carrying two unique keys, `icao_hex` and the normalized `registration_key`, so a lookup is one `WHERE <key> IN (...)` on one table, never a union across per-country files. Both columns are nullable; SQLite does not treat NULLs as equal, so a row missing one key still holds the other.
 
-- **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership), each row carrying the source's exact `attribution` line so a consumer credits it verbatim and only when that row is displayed. ≤ 500 hexes; misses omitted.
+- **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership), each row carrying the source's exact `attribution` line so a consumer credits it verbatim and only when that row is displayed. Case is normalized — `A004B3` and `a004b3` reach the same row, and the map key is always the lowercase form. ≤ 500 hexes; misses omitted.
+- **`POST /feed/registration`** `{ "registrations": ["C-FABC", …] }` → same payload keyed by the normalized registration, plus `icao_hex` (the caller keyed by something else, so the hex is new information). Punctuation and case are normalized on both sides — `C-FABC`, `c fabc`, and `CFABC` all reach the same row. ≤ 500 marks; misses omitted.
+
+  Why both: `icao_hex` is what an ADS-B blip carries, but only 6 of 15 sources publish one at all, and just 5 publish one for every row — 51,981 of 413,000 records have none. Registration is required and present in every source, so hex-less records enter the feed keyed on the mark alone and `icao_hex` comes back null for them. Cancelled registrations are excluded from the feed so a reissued mark cannot make the key ambiguous. Where two aircraft still normalize to one mark (Canada renders the 3-character mark `ABC` as `CF-ABC` and the 4-character mark `FABC` as `C-FABC`), neither owns the key: it is cleared, so the lookup misses rather than answering with the wrong aircraft.
+
 - Gated by a bearer secret (`FEED_TOKEN`, validated present and ≥ 16 chars at startup; a UUID is the convention) and rate-limited — a private API, not a public one. Every request presents the secret.
 - Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image.
 - Redeploys **when the consolidated feed actually changes**, not on every cron tick: the scheduled `deploy-feed` job rebuilds the DB and deploys only if it differs from what is live (tracked by `_deployed.json`). A single source's failure never blocks shipping another source's update, and an all-unchanged run does not redeploy.
-- `make build-feed` rebuilds the DB from every durable per-source `_feed` slice in R2. `make deploy` runs that build first (so an ambient stale `feed.sqlite` is never deployed), then `make deploy-only` ships it. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
+- `make build-feed` refreshes every source and then rebuilds the DB from the per-source `_feed` slices in R2 (`make assemble-feed` skips the refresh and only assembles — that is what CI calls, since its refresh matrix has already written the slices). `make deploy` assembles first (so an ambient stale `feed.sqlite` is never deployed) then ships it — it does not re-pull upstream, so run `make refresh` beforehand if the deploy should carry new register data. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
 
 ## Setup
 
@@ -111,22 +114,25 @@ make install
 
 ## Available Commands
 
-| Command             | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `make install`      | Install dependencies and git hooks                |
-| `make format`       | Format code with Prettier                         |
-| `make format-check` | Check formatting (non-destructive, used in CI)    |
-| `make lint`         | Run ESLint                                        |
-| `make typecheck`    | TypeScript type check                             |
-| `make test`         | Run unit tests with coverage                      |
-| `make build`        | Compile TypeScript to `dist/`                     |
-| `make bootstrap`    | One-shot local initial load (reads `.env`)        |
-| `make serve`        | Run the feed service locally (`MBF_FEED_DB_PATH`) |
-| `make build-feed`   | Rebuild `feed.sqlite` from every R2 feed slice    |
-| `make deploy-only`  | Deploy the on-disk `feed.sqlite` to Cloud Run     |
-| `make deploy`       | Rebuild and deploy the feed service to Cloud Run  |
-| `make secret-scan`  | Scan for accidentally committed secrets           |
-| `make clean`        | Remove build artifacts                            |
+| Command              | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `make help`          | List the commands below (default target)            |
+| `make install`       | Install dependencies and git hooks                  |
+| `make format`        | Format code with Prettier                           |
+| `make format-check`  | Check formatting (non-destructive, used in CI)      |
+| `make lint`          | Run ESLint                                          |
+| `make typecheck`     | TypeScript type check                               |
+| `make test`          | Run unit tests with coverage                        |
+| `make check`         | format-check + lint + typecheck + test (CI gate)    |
+| `make build`         | Compile TypeScript to `dist/`                       |
+| `make refresh`       | Pull every source (reads `.env`)                    |
+| `make serve`         | Run the feed service locally (`MBF_FEED_DB_PATH`)   |
+| `make assemble-feed` | Build `feed.sqlite` from the R2 slices (no refresh) |
+| `make build-feed`    | Refresh every source, then assemble `feed.sqlite`   |
+| `make deploy-only`   | Deploy the on-disk `feed.sqlite` to Cloud Run       |
+| `make deploy`        | Rebuild and deploy the feed service to Cloud Run    |
+| `make secret-scan`   | Scan for accidentally committed secrets             |
+| `make clean`         | Remove build artifacts                              |
 
 ## Required GitHub Actions Configuration
 

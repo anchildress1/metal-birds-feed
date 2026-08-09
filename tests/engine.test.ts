@@ -3220,3 +3220,112 @@ describe('CAA NZ fixture translation', () => {
     expect(stats.ok).toBe(0);
   });
 });
+
+describe('unmatched lookup reporting', () => {
+  const config = {
+    id: 'synthetic-lookup',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: {
+      registration: { field: 'REG' },
+      status: { constant: 'valid' },
+      country: { constant: 'US' },
+      airframe_type: { field: 'KIND', lookup: { Known: 'glider' }, default: null },
+    },
+  };
+
+  // 55,611 identical lines came out of one FAA run before this: the value is a property of the
+  // register, so the row count is the only thing repetition adds — and it buried the errors.
+  it('reports one line per distinct unmatched value, carrying the row count', async () => {
+    const rows = ['ID,REG,KIND', '1,N1,Mystery', '2,N2,Mystery', '3,N3,Mystery', '4,N4,Other'];
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await translate(config, new Map([['f', Buffer.from(rows.join('\n'))]]));
+      const lines = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('translate_lookup_default'));
+      expect(lines).toHaveLength(2);
+      expect(lines.some((l) => l.includes('value=Mystery') && l.includes('rows=3'))).toBe(true);
+      expect(lines.some((l) => l.includes('value=Other') && l.includes('rows=1'))).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('does not carry counts from one source into the next', async () => {
+    const rows = ['ID,REG,KIND', '1,N1,Mystery'];
+    const buf = new Map([['f', Buffer.from(rows.join('\n'))]]);
+    await translate(config, buf);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await translate(config, buf);
+      const line = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes('translate_lookup_default'));
+      expect(line).toContain('rows=1');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // The refresh matrix runs sources concurrently in one process. A single shared accumulator let
+  // either run's entry clear the other's counts and report values under the wrong source id.
+  it('keeps the counts of concurrently translated sources apart', async () => {
+    const a = { ...config, id: 'src-a' };
+    const b = { ...config, id: 'src-b' };
+    const bufA = new Map([['f', Buffer.from(['ID,REG,KIND', '1,N1,Alpha'].join('\n'))]]);
+    const bufB = new Map([
+      ['f', Buffer.from(['ID,REG,KIND', '1,N1,Beta', '2,N2,Beta'].join('\n'))],
+    ]);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await Promise.all([translate(a, bufA), translate(b, bufB)]);
+      const lines = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('translate_lookup_default'));
+      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Alpha'))).toBe(true);
+      expect(
+        lines.some(
+          (l) => l.includes('source=src-b') && l.includes('value=Beta') && l.includes('rows=2')
+        )
+      ).toBe(true);
+      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Beta'))).toBe(false);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // A record-count mismatch is upstream drift, and the unrecognized values are the evidence for
+  // it. Throwing before the flush withheld them from exactly the run that needed them.
+  it('reports unmatched values even when the record-count guard throws', async () => {
+    const counted = {
+      ...config,
+      id: 'src-counted',
+      // Matched against the decoded primary, so the published total can sit in a normal cell.
+      record_count: { pattern: 'TOTAL=(\\d+)' },
+    } as typeof config;
+    const rows = ['ID,REG,KIND,NOTE', '1,N1,Mystery,TOTAL=99'];
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(
+        translate(counted, new Map([['f', Buffer.from(rows.join('\n'))]]))
+      ).rejects.toThrow(/publishes 99/);
+      const lines = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('translate_lookup_default'));
+      expect(lines.some((l) => l.includes('value=Mystery'))).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});

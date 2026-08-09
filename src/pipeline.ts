@@ -374,7 +374,12 @@ export const publishFeed = async (sources: string[], dryRun: boolean): Promise<s
     const writer = new R2ArtifactWriter(r2ConfigFromEnv(), false);
     const loaded = await Promise.all(sources.map((source) => writer.readFeedRows(source)));
     const missing = sources.filter((_, index) => loaded[index] === null);
-    if (missing.length > 0) throw new Error(`Missing feed rows for: ${missing.join(', ')}`);
+    // Fails closed rather than publishing a partial feed. Names the fix because the cause is
+    // almost always ordering: slices are written by the refresh, and this only assembles them.
+    if (missing.length > 0)
+      throw new Error(
+        `Missing feed rows for: ${missing.join(', ')}. Run \`make refresh\` (or \`make build-feed\` to refresh and assemble in one step) — these sources have not written a feed slice yet.`
+      );
     const groups = loaded.filter((group): group is FeedRow[] => group !== null);
     const rows = mergeFeedRows(groups);
     const hash = hashFeedRows(rows);

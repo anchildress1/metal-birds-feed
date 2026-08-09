@@ -137,7 +137,9 @@ jobs:
           MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
           MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
           MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
-        run: make build-feed
+        # assemble-feed, not build-feed: the refresh matrix above already wrote every slice, and
+        # build-feed would re-download all 15 registers on each deploy.
+        run: make assemble-feed
 
       - name: Authenticate to Google Cloud
         if: steps.feed.outputs.changed == 'true'

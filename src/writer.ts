@@ -31,6 +31,10 @@ export const isTransientS3Error = (err: unknown): boolean => {
   return status === undefined || status >= 500 || status === 429;
 };
 
+// Enough to show the failing field and whether more than one thing is wrong; the total count is
+// logged alongside, so nothing is silently truncated.
+const MAX_LOGGED_ISSUES = 5;
+
 const S3_RETRY: RetryOptions = {
   isRetryable: isTransientS3Error,
   onRetry: (attempt, err) => log('warn', 's3_retry', { attempt, msg: errorMessage(err) }),
@@ -213,10 +217,20 @@ export class R2ArtifactWriter {
       }
       const parsed = schema.safeParse(json);
       if (!parsed.success) {
+        // Bounded, not `parsed.error.message`: a feed slice is an array of up to 315k rows, so a
+        // shape change fails every row and Zod's pretty-printed message ran to 3.1 million lines
+        // for one rejected slice — 83 MB of log from a single self-healing event, which buried
+        // every other diagnostic in the run. The count carries the magnitude; the first few
+        // issues carry the cause, and they are identical across rows anyway.
+        const { issues } = parsed.error;
         log('error', `${eventPrefix}_parse_failed`, {
           ...logContext,
           reason: 'schema_invalid',
-          msg: parsed.error.message,
+          issues: issues.length,
+          msg: issues
+            .slice(0, MAX_LOGGED_ISSUES)
+            .map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`)
+            .join('; '),
         });
         return fallback;
       }
