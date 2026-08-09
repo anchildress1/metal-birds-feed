@@ -36,7 +36,8 @@ const CASES: Array<{
   { source: 'faa', field: 'category', value: '8', expected: 'special-flight-permit' },
   { source: 'faa', field: 'category', value: '9', expected: 'light-sport' },
 
-  // ANAC files airframe types in the landing-type column; br_airframe already derives them.
+  // ANAC files airframe types in the landing-type column. None states an operating environment;
+  // see sources/br-anac.yaml for why DRONE (RPAS) is not covered by br_airframe the way H/G are.
   { source: 'br-anac', field: 'operating_environment', value: 'HELICOPTERO', expected: null },
   { source: 'br-anac', field: 'operating_environment', value: 'GIROCOPTERO', expected: null },
   { source: 'br-anac', field: 'operating_environment', value: 'DRONE (RPAS)', expected: null },
