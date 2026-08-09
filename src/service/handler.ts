@@ -17,7 +17,9 @@ export type { FeedRow };
 // caller keyed by something else and the hex is new information; on /feed it stays the map key and
 // is absent from the value, exactly as before.
 export type FeedResponseRow = Omit<FeedRow, 'icao_hex' | 'registration_key'> & {
-  icao_hex?: string;
+  // Present only on /feed/registration, and null there for the nine registers that publish no
+  // Mode S address — the caller learns the hex is unavailable rather than that the field is missing.
+  icao_hex?: string | null;
   type: string | null;
   engine: string | null;
   attribution: string;
@@ -120,14 +122,19 @@ export const toResponseMap = (
   byRegistration = false
 ): Record<string, FeedResponseRow> => {
   const out: Record<string, FeedResponseRow> = {};
-  for (const { icao_hex, registration_key, ...rest } of rows)
-    out[byRegistration ? registration_key : icao_hex] = {
+  for (const { icao_hex, registration_key, ...rest } of rows) {
+    const key = byRegistration ? registration_key : icao_hex;
+    // Unreachable in practice: a NULL key cannot have matched the IN-list that selected the row.
+    // Skipping rather than coercing keeps a producer bug from surfacing as a "null" map entry.
+    if (key === null) continue;
+    out[key] = {
       ...rest,
       ...(byRegistration ? { icao_hex } : {}),
       type: composeMakerModel(rest.manufacturer, rest.model),
       engine: composeMakerModel(rest.engine_manufacturer, rest.engine_model),
       attribution: attributionFor(rest.source),
     };
+  }
   return out;
 };
 

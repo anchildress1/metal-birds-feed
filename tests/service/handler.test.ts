@@ -207,6 +207,40 @@ describe('route', () => {
     expect(params).toEqual(['a1b2c3']);
   });
 
+  // The reason /feed/registration exists: nine registers publish no hex, and those rows must come
+  // back with icao_hex explicitly null rather than being absent from the response.
+  it('returns a hex-less row with a null icao_hex on the registration route', async () => {
+    const hexless: FeedRow = { ...rec('a1b2c3', 'PH-ABC'), icao_hex: null };
+    const res = await route(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      { registrations: ['PH-ABC'] },
+      pass,
+      () => Promise.resolve([hexless])
+    );
+    const body = res.body as Record<string, { icao_hex?: string | null }>;
+    expect(Object.keys(body)).toEqual(['PHABC']);
+    expect(body['PHABC']).toHaveProperty('icao_hex', null);
+  });
+
+  // A cleared (ambiguous) mark can never match the IN-list, so this only guards against a producer
+  // bug reaching the response as a literal "null" map key.
+  it('omits a row whose response key is null rather than keying it "null"', async () => {
+    const cleared: FeedRow = { ...rec('a1b2c3', 'N1'), registration_key: null };
+    const res = await route(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      { registrations: ['N1'] },
+      pass,
+      () => Promise.resolve([cleared])
+    );
+    expect(res.body).toEqual({});
+  });
+
   it('404s an unknown path', async () => {
     const res = await route('POST', '/other', 'Bearer t', 't', { hexes: [] }, pass, ok);
     expect(res.status).toBe(404);

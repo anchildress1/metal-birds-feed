@@ -4,12 +4,17 @@
 // the feed table built in feed.ts; adding a column there + in the producer's COLUMNS list surfaces
 // here.
 export interface FeedRow {
-  icao_hex: string;
+  // Null for the nine registers that publish no Mode S address. Those rows exist to be reached by
+  // registration_key; `/feed` selects on this column, and SQL `IN` never matches NULL, so they stay
+  // invisible to the hex route without a second filter.
+  icao_hex: string | null;
   registration: string;
   // Normalized lookup key: uppercase, punctuation stripped. Separate from `registration` because
   // that one is the register's published form — displayed to users, and licence terms (AESA) require
   // the source meaning not be distorted. This is derived and exists only to be matched against.
-  registration_key: string;
+  // Null when the mark is ambiguous across the merged feed: two aircraft normalizing to one key
+  // cannot both be served for it, and answering with either would be wrong rather than incomplete.
+  registration_key: string | null;
   icao_type_code: string | null;
   status: string;
   country: string;

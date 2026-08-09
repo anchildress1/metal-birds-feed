@@ -642,20 +642,13 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     expect(command.input.Key).toBe('aircraft/_feed/faa.json');
   });
 
-  it('reports a migratable legacy slice as present and writes the current envelope back', async () => {
-    mockSend
-      .mockResolvedValueOnce({
-        Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
-      })
-      .mockResolvedValueOnce({});
-    const writer = new R2ArtifactWriter(R2_CONFIG, false);
-
-    expect(await writer.feedRowsExist('faa')).toBe(true);
-    const put = putCalls().find((call) => call.input.Key === 'aircraft/_feed/faa.json');
-    expect(JSON.parse(String(put?.input.Body))).toEqual({
-      version: FEED_SLICE_VERSION,
-      rows: [FEED_ROW],
+  // A pre-v3 slice is short by every hex-less record, so it is treated as absent rather than
+  // migrated — regenerating from the register is the only way to recover the missing rows.
+  it('reports a pre-versioned slice as missing so it regenerates', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
     });
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).feedRowsExist('faa')).toBe(false);
   });
 
   it('reports a structurally-invalid slice as missing so it self-heals', async () => {
@@ -716,38 +709,11 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
   });
 
-  it('migrates a legacy slice and persists the current envelope', async () => {
-    mockSend
-      .mockResolvedValueOnce({
-        Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
-      })
-      .mockResolvedValueOnce({});
-    const writer = new R2ArtifactWriter(R2_CONFIG, false);
-
-    expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
-    const put = putCalls().find((call) => call.input.Key === 'aircraft/_feed/faa.json');
-    expect(JSON.parse(String(put?.input.Body))).toEqual({
-      version: FEED_SLICE_VERSION,
-      rows: [FEED_ROW],
+  it('returns null for a pre-versioned slice instead of an incomplete row set', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
     });
-  });
-
-  it('returns migrated rows when the writeback fails so another source can still deploy', async () => {
-    mockSend
-      .mockResolvedValueOnce({
-        Body: { transformToString: () => Promise.resolve(JSON.stringify([legacyFeedRow()])) },
-      })
-      .mockRejectedValueOnce(s3Error('Access Denied', 403));
-    const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
-      expect(logSpy.mock.calls.map((call) => String(call[0])).join('\n')).toContain(
-        'event=feed_rows_migration_write_failed'
-      );
-    } finally {
-      logSpy.mockRestore();
-    }
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).readFeedRows('faa')).toBeNull();
   });
 
   it('treats a valid-JSON but wrong-shape slice as absent (structural validation)', async () => {
