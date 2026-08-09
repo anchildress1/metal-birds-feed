@@ -2,6 +2,14 @@
 
 Authoritative rules for AI agents in this repo. Overrides any conflicting local file. Read `PRD.md` for context, this file for rules.
 
+## Audience
+
+- Only AI agents read this file; assume zero human readers.
+- Treat `AGENTS.md` and every other agent instruction or skill file as a machine-operational control surface.
+- Optimize for deterministic execution: state scopes, triggers, priorities, required actions, prohibitions, and exit conditions explicitly.
+- Exclude human onboarding, persuasion, tutorials, motivational rationale, narrative transitions, and status prose unless they materially disambiguate agent behavior.
+- Human-facing documentation conventions apply only to product documentation; never use them to shape agent control files.
+
 ## Hard prohibitions
 
 - PII allowed: `owner.{name,kind,state,country}` + `operator.{name,kind,state,country}`. Drop street/street2/city/postal-code/county/region/care-of at the mapping config. A country reachable from an address's trailing component is permitted — read it, don't assume it from the register's own country.
@@ -110,7 +118,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 - `actions/*`: tagged major. All others: commit SHA + version comment (`@abc123 # v4.1.0`).
 - `refresh.yml` discovers `sources/*.yaml` automatically — no workflow edit when adding a source.
-- **Deploy trigger:** `deploy-feed` runs on an actual feed content change, not per-source success. `!cancelled()` means one source failing (its prior slice is reused) never blocks shipping another's update; the build step gates the deploy on `_deployed.json`. The rule is "redeploy iff the consolidated feed changed."
+- **Deploy triggers:** scheduled `deploy-feed` runs on an actual feed content change, not per-source success. `!cancelled()` means one source failing (its prior slice is reused) never blocks shipping another's update; the build step gates that deploy on `_deployed.json`. Service code ships separately only when Release Please creates a new version from a merged release PR: the release workflow checks out the exact released SHA, assembles a fresh feed from R2, deploys regardless of the feed-change marker, then advances the marker after success. The rule is "redeploy when the consolidated feed changed or a new version was released" — ordinary merges never deploy service code before a release.
 - **Refresh cadence:** where a declared cadence and the observed publishing rhythm differ, run at the **more frequent** of the two, and record both in `DATA_LICENSES.md`. Per-source `cadence_days` gates actual work; sources without it run every time the cron fires. Sources publishing faster than the cron need their own workflow. The downloader sends no conditional-request headers, so each run is a full fetch — `content_hash` still gates the PUT.
 
 ## Commits
