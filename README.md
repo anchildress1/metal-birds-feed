@@ -235,7 +235,16 @@ Required upstream notices, kept short:
 - DGAC Chile: source data from the Dirección General de Aeronáutica Civil (DGAC) of Chile — **sole official source and copyright holder** — [dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves](https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/); reused non-commercially for research and reference under Ley N° 17.336 (Chilean Intellectual Property Law), confirmed in writing by DGAC 2026-07-22, normalized into this project schema without implying endorsement.
 - Norway: source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — [data.norge.no](https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f); publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.
 - New Zealand: source data from the Civil Aviation Authority of New Zealand — [aviation.govt.nz](https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/); the CAA is acknowledged as the source as its terms require, treated as Private-use and normalized into this project schema without implying endorsement.
-- Public-domain, CC0, and open-government sources without a specific notice above are credited here as a courtesy; the full source list is tracked in [DATA_LICENSES.md](DATA_LICENSES.md).
+- **CAA Taiwan** (`tw-caa`): Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=4499&lang=1). Licensed under the Open Government Data License, v1.0. Wording supplied by CAA and used verbatim; redistribution is permitted only for a non-commercial, source-available project.
+- **ANAC Brazil** (`br-anac`): Source: Agência Nacional de Aviação Civil (ANAC), Brazil — [sistemas.anac.gov.br](https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/). Open data requiring no prior authorization, but proper citation of the source is mandatory.
+
+Additional source credits — each line is the exact string `attributionFor()` serves with those rows. Registers whose own terms mandate particular wording are credited in the required-notice list above instead; that wording is recorded in [DATA_LICENSES.md](DATA_LICENSES.md) and is what the service returns.
+
+- **FAA United States** (`faa`) — Source: Federal Aviation Administration (FAA), United States — public-domain civil aircraft registry, normalized into this project schema without implying endorsement.
+- **CAA Latvia** (`lv-caa`) — Source: Civil Aviation Agency of Latvia (CAA Latvia) — open aviation registry, normalized into this project schema without implying endorsement.
+- **ILT Netherlands** (`nl-ilt`) — Source: Human Environment and Transport Inspectorate (ILT), Netherlands — open aviation registry, normalized into this project schema without implying endorsement.
+
+Correspondence, posture, and storage terms for every source are tracked in [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ---
 
