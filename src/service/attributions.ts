@@ -11,8 +11,11 @@ const NOTICES: Record<string, string> = {
     'Reproduced and distributed with the permission of the Government of Canada. This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.',
   'au-casa':
     'Source data from the Civil Aviation Safety Authority (CASA), Australia, licensed under CC BY 4.0, normalized into this project schema without implying endorsement.',
+  // ANAC states the register is open data needing no prior authorization, but that "proper citation
+  // of the source is mandatory" (Brazilian Aeronautical Registry Technical Branch, 2026-05-12). No
+  // wording was prescribed; the citation itself is the condition, so it cannot be dropped.
   'br-anac':
-    'Source: Agência Nacional de Aviação Civil (ANAC), Brazil — open aviation registry, normalized into this project schema without implying endorsement.',
+    'Source: Agência Nacional de Aviação Civil (ANAC), Brazil — https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/; open data reused with the mandatory source citation, normalized into this project schema without implying endorsement.',
   'ee-tram':
     'Data source: Estonian Transport Administration (Transpordiamet) — https://transpordiamet.ee/ohusoidukite-register; reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.',
   'lv-caa':
@@ -33,8 +36,11 @@ const NOTICES: Record<string, string> = {
     'Source data from the Dirección General de Aeronáutica Civil (DGAC) of Chile — the sole official source and copyright holder of the information — https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/; reused non-commercially for research and reference under Ley N° 17.336, normalized into this project schema without implying endorsement.',
   'ch-foca':
     'Source data from the Federal Office of Civil Aviation (FOCA / BAZL), Switzerland — https://app02.bazl.admin.ch/web/bazl/en/; redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.',
+  // CAA Taiwan supplied this wording and it was accepted verbatim (Nicholas Liaw, Flight Standards
+  // Division, 2026-05-15). The first sentence is theirs and must not be reworded; permission is
+  // conditional on OGDL v1.0 and on the register link accompanying the credit.
   'tw-caa':
-    'Source: Civil Aeronautics Administration (CAA Taiwan) — aviation registry, normalized into this project schema without implying endorsement.',
+    'Source: Civil Aviation Administration, MOTC R.O.C. — caa.gov.tw. Licensed under the Open Government Data License, v1.0. Register: https://www.caa.gov.tw/article.aspx?a=4499&lang=1; normalized into this project schema without implying endorsement.',
 };
 
 // A source slug with no mapped notice still gets a credit rather than an empty string — a displayed
