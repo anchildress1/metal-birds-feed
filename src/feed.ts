@@ -165,7 +165,10 @@ export const resolveRegistrationAmbiguity = (rows: FeedRow[]): FeedRow[] => {
     log('warn', 'feed_registration_key_ambiguous', {
       marks: cleared.size,
       rows_dropped: dropped,
-      sample: [...cleared].sort().slice(0, 10).join(','),
+      sample: [...cleared]
+        .sort((a, b) => a.localeCompare(b))
+        .slice(0, 10)
+        .join(','),
     });
   return resolved;
 };
