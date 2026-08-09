@@ -98,7 +98,23 @@ describe('parseHexes', () => {
   });
 
   it('400s on a malformed hex', () => {
-    expectHttp(() => parseHexes({ hexes: ['A1B2C3'] }), 400); // uppercase rejected
+    expectHttp(() => parseHexes({ hexes: ['zzzzzz'] }), 400);
+    expectHttp(() => parseHexes({ hexes: ['a1b2c'] }), 400);
+    expectHttp(() => parseHexes({ hexes: ['a1b2c3d'] }), 400);
+  });
+
+  // Case carries no information in a Mode S address, and rejecting one spelling made the two routes
+  // disagree — /feed/registration normalized the equivalent input while this 400'd.
+  it('accepts an uppercase hex and lowercases it to match the stored column', () => {
+    expect(parseHexes({ hexes: ['A1B2C3'] })).toEqual(['a1b2c3']);
+  });
+
+  it('accepts mixed case and surrounding whitespace', () => {
+    expect(parseHexes({ hexes: [' A1b2C3 '] })).toEqual(['a1b2c3']);
+  });
+
+  it('dedups case variants of one address so the cap counts it once', () => {
+    expect(parseHexes({ hexes: ['A1B2C3', 'a1b2c3', 'A1b2c3'] })).toEqual(['a1b2c3']);
   });
 
   it('400s on a non-string element', () => {
@@ -195,11 +211,11 @@ describe('route', () => {
     expect(params).toEqual(['CFABC']);
   });
 
-  // The hex route is strict rather than normalizing (parseHexes rejects anything but 6 lowercase
-  // characters), so this pins the selector and the pass-through, not a transformation.
-  it('queries icao_hex for the hex route, not the registration key', async () => {
+  // Both routes normalize now, so this pins the selector and that the caller's casing reaches the
+  // database in the stored form rather than as sent.
+  it('queries icao_hex with lowercased parameters, not the registration key', async () => {
     const spy = capture();
-    await route('POST', '/feed', 'Bearer t', 't', { hexes: ['a1b2c3'] }, pass, spy.run);
+    await route('POST', '/feed', 'Bearer t', 't', { hexes: ['A1B2C3', 'a1b2c3'] }, pass, spy.run);
     expect(spy.calls).toHaveLength(1);
     const [sql, params] = spy.calls[0];
     expect(sql).toContain('icao_hex');

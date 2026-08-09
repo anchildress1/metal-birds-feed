@@ -68,19 +68,23 @@ export const authorize = (header: string | null, token: string | undefined): voi
     throw new HttpError(401, 'unauthorized');
 };
 
-// Rejects the whole request on any malformed hex rather than silently dropping bad entries — a
-// caller sending garbage should learn, not get a quietly-partial map. Dedups before the cap so a
-// payload of repeated hexes is measured by its unique count, and the IN-list stays minimal.
+// Case is not information in a Mode S address: "A004B3" and "a004b3" are the same aircraft, and
+// rejecting one of them made the two routes disagree — /feed/registration normalizes its input
+// while this rejected the equivalent. Lowercased to match the stored column, which is what the
+// registers publish and what feed.ts writes. Dedups after normalization so mixed-case repeats count
+// once against the cap and the IN-list stays minimal. Anything that still is not a 6-character hex
+// string fails the whole request rather than being dropped: a caller sending garbage should learn,
+// not get a quietly-partial map.
 export const parseHexes = (body: unknown): string[] => {
   const raw = (body as { hexes?: unknown } | null)?.hexes;
   if (!Array.isArray(raw)) throw new HttpError(400, 'hexes must be an array');
-  const deduped = [...new Set(raw)];
+  const normalized = raw.map((h) => (typeof h === 'string' ? h.trim().toLowerCase() : ''));
+  const deduped = [...new Set(normalized)];
   if (deduped.length > MAX_HEXES) throw new HttpError(400, `too many hexes (max ${MAX_HEXES})`);
   for (const h of deduped) {
-    if (typeof h !== 'string' || !HEX_RE.test(h))
-      throw new HttpError(400, 'each hex must be 6 lowercase hex characters');
+    if (!HEX_RE.test(h)) throw new HttpError(400, 'each hex must be 6 hexadecimal characters');
   }
-  return deduped as string[];
+  return deduped;
 };
 
 export const buildSelect = (count: number): string =>
