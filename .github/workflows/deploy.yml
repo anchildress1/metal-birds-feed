@@ -68,15 +68,21 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      # Release path only. The refresh caller passes no version, so this is skipped rather than
-      # asserted against an empty string.
+      # Keyed on `force` — the release caller is the only forced one — rather than on the version
+      # being non-empty. Skipping when the string is blank makes the check disable itself the moment
+      # the upstream output stops arriving, which is the one failure it exists to catch; keyed this
+      # way an absent version fails the release instead of waving it through.
       - name: Verify released version
-        if: ${{ inputs.expected_version != '' }}
+        if: ${{ inputs.force }}
         env:
           RELEASE_TAG: ${{ inputs.expected_tag }}
           RELEASE_VERSION: ${{ inputs.expected_version }}
         run: |
           set -euo pipefail
+          # Both must be present. An empty value would otherwise compare equal to an empty
+          # package.json version, turning a broken upstream output into a silent pass.
+          test -n "$RELEASE_VERSION"
+          test -n "$RELEASE_TAG"
           package_version="$(jq -r '.version' package.json)"
           test "$package_version" = "$RELEASE_VERSION"
           test "$RELEASE_TAG" = "v$RELEASE_VERSION"

@@ -185,9 +185,13 @@ describe('deploy workflow contract', () => {
     // inputs instead.
     expect(namedStep(steps, 'Assemble feed').if).toBeUndefined();
     expect(namedStep(steps, 'Assemble feed').run).toBe('make assemble-feed');
-    expect(namedStep(steps, 'Verify released version').if).toBe(
-      "${{ inputs.expected_version != '' }}"
-    );
+    // Keyed on force, never on the version string being non-empty: the latter lets the check
+    // switch itself off exactly when the upstream output breaks. The emptiness assertions below
+    // are what turn a missing version into a failed release rather than a skipped one.
+    const verify = namedStep(steps, 'Verify released version');
+    expect(verify.if).toBe('${{ inputs.force }}');
+    expect(verify.run).toContain('test -n "$RELEASE_VERSION"');
+    expect(verify.run).toContain('test -n "$RELEASE_TAG"');
   });
 
   it('keeps deployment credentials scoped to the steps that consume them', async () => {
