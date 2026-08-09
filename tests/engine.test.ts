@@ -1981,8 +1981,7 @@ describe('BR-ANAC fixture translation', () => {
     beforeAll(() => {
       r = brRecords.get('PRAFV')!;
     });
-    it('leaves airframe_type null (no canonical UAV enum)', () =>
-      expect(r.airframe_type).toBeNull());
+    it('maps the RPA class to the uav airframe type', () => expect(r.airframe_type).toBe('uav'));
     it('maps DRONE to engine type other', () => expect(r.engine.type).toBe('other'));
   });
 

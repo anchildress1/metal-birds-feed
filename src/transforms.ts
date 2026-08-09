@@ -304,10 +304,14 @@ const lastCommaSegmentOrNull = (value: string): string | null => {
 };
 
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
-// unpowered (glider); RPA/unknown -> null (no canonical UAV enum).
+// unpowered (glider). RPA is the register's own class for a remotely piloted aircraft and carries
+// no structural digit, so it maps to `uav` rather than being dropped — nulling it left nothing in
+// the record marking the aircraft unmanned, since TP_POUSO states no operating environment for one
+// either. Anything else unrecognized is still null.
 const brAirframe = (value: string): string | null => {
   const v = value.trim().toUpperCase();
-  if (v.length < 2 || v === 'RPA') return null;
+  if (v === 'RPA') return 'uav';
+  if (v.length < 2) return null;
   const kind = v[0];
   if (kind === 'H') return 'rotorcraft';
   if (kind === 'G') return 'gyroplane';

@@ -121,10 +121,8 @@ mapping:
       'POUSO NA AGUA': sea
       ANFIBIO: amphibian
       # ANAC files airframe types in this column instead of a landing environment, so none of these
-      # states one. HELICOPTERO and GIROCOPTERO restate what br_airframe already derives from
-      # CD_CLS (H/G). DRONE (RPAS) does not: CD_CLS is RPA, which br_airframe also nulls for want
-      # of a canonical UAV airframe type, so nothing in the record marks the aircraft unmanned.
-      # Representing that needs a schema addition, not a different mapping here.
+      # states one. Each restates what br_airframe already derives from CD_CLS — H, G, and RPA
+      # respectively — so nulling here loses nothing.
       HELICOPTERO: ~
       GIROCOPTERO: ~
       'DRONE (RPAS)': ~

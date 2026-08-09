@@ -33,6 +33,11 @@ export const AirframeTypeSchema = z.enum([
   'powered-parachute',
   'gyroplane',
   'hybrid-lift',
+  // Unmanned is strictly a different axis from the structural values above — a drone is itself a
+  // rotorcraft or a fixed-wing — but the registers that publish it say only "RPA" and give no
+  // structure to place it on that axis. Recording what the register states beats nulling the field
+  // and losing the one fact it does give.
+  'uav',
   'other',
 ]);
 

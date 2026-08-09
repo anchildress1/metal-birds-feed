@@ -624,8 +624,9 @@ describe('br_airframe', () => {
     expect(applyScalar('br_airframe', 'A1P')).toBe('fixed-wing-single-engine'));
   it('maps a gyroplane class (G1P) to gyroplane', () =>
     expect(applyScalar('br_airframe', 'G1P')).toBe('gyroplane'));
-  it('returns null for RPA (drones not in canonical UAV enum)', () =>
-    expect(applyScalar('br_airframe', 'RPA')).toBeNull());
+  it('maps RPA to uav', () => expect(applyScalar('br_airframe', 'RPA')).toBe('uav'));
+  it('is case- and whitespace-insensitive for RPA', () =>
+    expect(applyScalar('br_airframe', ' rpa ')).toBe('uav'));
   it('returns null for an unknown class code', () =>
     expect(applyScalar('br_airframe', 'X9Z')).toBeNull());
   it('returns null for a non-digit engine-count character (e.g. LXP)', () =>
