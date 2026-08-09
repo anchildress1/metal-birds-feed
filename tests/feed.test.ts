@@ -101,6 +101,24 @@ describe('toFeedRows', () => {
     expect(rows).toEqual([]);
   });
 
+  // The hex-bearing counterpart is kept (the hex still reaches it) but must carry a null key, not
+  // ''. An empty key is unreachable — parseRegistrations requires 2-10 alphanumerics — and two of
+  // them would otherwise read as one ambiguous mark and clear each other.
+  it('nulls the mark of a hex-bearing record whose registration normalizes to nothing', () => {
+    const [row] = toFeedRows([make('1', 'a1b2c3', { registration: '- -' })]);
+    expect(row?.icao_hex).toBe('a1b2c3');
+    expect(row?.registration_key).toBeNull();
+  });
+
+  it('does not treat two empty marks as an ambiguous collision', () => {
+    const merged = mergeFeedRows([
+      toFeedRows([make('1', 'a1b2c3', { registration: '- -' })]),
+      toFeedRows([make('2', '4d5e6f', { registration: '...' })]),
+    ]);
+    expect(merged).toHaveLength(2);
+    expect(merged.every((r) => r.registration_key === null)).toBe(true);
+  });
+
   it('still excludes cancelled hex-less records', () => {
     const rows = toFeedRows([make('1', null, { status: 'cancelled' })]);
     expect(rows).toEqual([]);

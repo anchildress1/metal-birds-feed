@@ -66,7 +66,10 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   return collapsed.map(([icao_hex, r]) => ({
     icao_hex,
     registration: r.registration,
-    registration_key: registrationKey(r.registration),
+    // Null, not '': a mark of pure punctuation normalizes to nothing, and no caller can send an
+    // empty key (parseRegistrations requires 2-10 alphanumerics). Storing '' would put an
+    // unreachable value in the unique index and let two such rows read as an ambiguous mark.
+    registration_key: registrationKey(r.registration) || null,
     icao_type_code: r.icao_type_code,
     status: r.status,
     country: r.country,
