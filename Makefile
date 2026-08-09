@@ -101,7 +101,11 @@ assemble-feed: build
 		MBF_FEED_DB_OUT=feed.sqlite $(BUN) run dist/publish-feed.js; \
 		test -s feed.sqlite
 
-build-feed: refresh assemble-feed ## Refresh every source, then assemble feed.sqlite
+# Sequenced through the recipe, not prerequisites: `make -j build-feed` would otherwise be free to
+# assemble the previous run's slices while the refresh that replaces them is still writing.
+build-feed: ## Refresh every source, then assemble feed.sqlite
+	$(MAKE) refresh
+	$(MAKE) assemble-feed
 
 # Deploy whatever feed.sqlite is on disk. Separate from build-feed so CI (which already built and
 # change-checked the DB) can deploy without a second build; `make deploy` chains both for operators.
@@ -121,4 +125,6 @@ deploy-only:
 # assemble-feed, not build-feed: deploying rebuilds the DB from the slices already in R2 so an
 # ambient stale feed.sqlite is never shipped, but it does not re-pull every register — run
 # `make refresh` first if you want new upstream data in the deploy.
-deploy: assemble-feed deploy-only ## Assemble the feed from R2 and ship it to Cloud Run
+deploy: ## Assemble the feed from R2 and ship it to Cloud Run
+	$(MAKE) assemble-feed
+	$(MAKE) deploy-only
