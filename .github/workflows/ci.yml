@@ -23,7 +23,8 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        # GitHub-owned actions intentionally follow the repository's major-tag update policy.
+        uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         with:
           fetch-depth: 0
 
@@ -63,7 +64,7 @@ jobs:
         run: make test
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         if: always()
         with:
           name: coverage-report

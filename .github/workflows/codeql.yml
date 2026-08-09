@@ -30,7 +30,8 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        # GitHub-owned actions intentionally follow the repository's major-tag update policy.
+        uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6

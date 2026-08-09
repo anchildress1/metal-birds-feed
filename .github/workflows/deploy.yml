@@ -56,7 +56,8 @@ jobs:
 
     steps:
       - name: Checkout code to deploy
-        uses: actions/checkout@v7
+        # GitHub-owned actions intentionally follow the repository's major-tag update policy.
+        uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         with:
           ref: ${{ inputs.ref }}
 
