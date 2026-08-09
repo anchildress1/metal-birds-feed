@@ -86,12 +86,16 @@ describe('deploy workflow contract', () => {
   // last records a hash that is not live. Every workflow is scanned rather than a named list, so a
   // deploy added to a brand-new file is caught too.
   it('is the only workflow that deploys', async () => {
-    const files = readdirSync(workflowsDir).filter((f) => f.endsWith('.yml'));
+    // `.yaml` is as valid as `.yml` to Actions, and `make deploy` reaches Cloud Run just as
+    // `make deploy-only` does — matching one of each pair would let a second deploy path in while
+    // this test stayed green. `\bmake deploy\b` covers both targets and still rejects an unrelated
+    // `make deployment-docs`.
+    const files = readdirSync(workflowsDir).filter((f) => /\.ya?ml$/.test(f));
     const workflows = await Promise.all(
       files.map(async (file) => ({ file, text: await readFile(join(workflowsDir, file), 'utf8') }))
     );
     const deployers = workflows
-      .filter(({ text }) => text.includes('make deploy-only') || text.includes('gcloud run deploy'))
+      .filter(({ text }) => /\bmake deploy\b/.test(text) || text.includes('gcloud run deploy'))
       .map(({ file }) => file);
 
     expect(deployers).toEqual(['deploy.yml']);
