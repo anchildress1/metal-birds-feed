@@ -658,6 +658,30 @@ describe('R2ArtifactWriter — feed intermediates', () => {
     expect(await new R2ArtifactWriter(R2_CONFIG, false).feedRowsExist('faa')).toBe(false);
   });
 
+  // One rejected slice used to emit Zod's full issue list: 315k rows x ~10 lines = 3.15 million
+  // lines and 59 MB from a single self-healing event, which buried every other diagnostic in the
+  // run. The count must survive so the magnitude is still visible.
+  it('bounds the schema-failure log instead of dumping an issue per row', async () => {
+    const rows = Array.from({ length: 2000 }, (_, i) => ({ icao_hex: `a${i}` }));
+    mockSend.mockResolvedValue({
+      Body: { transformToString: () => Promise.resolve(JSON.stringify({ version: 3, rows })) },
+    });
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await new R2ArtifactWriter(R2_CONFIG, false).readFeedRows('faa')).toBeNull();
+      const line = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes('event=feed_rows_parse_failed'));
+      expect(line).toBeDefined();
+      expect(line?.split('\n')).toHaveLength(1);
+      expect(line?.length).toBeLessThan(2000);
+      // Nothing silently truncated: the real total is reported alongside the sample.
+      expect(line).toMatch(/issues=\d{3,}/);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
   it('reports an absent slice as missing so it self-heals', async () => {
     mockSend.mockRejectedValue(noSuchKey());
     expect(await new R2ArtifactWriter(R2_CONFIG, false).feedRowsExist('faa')).toBe(false);
