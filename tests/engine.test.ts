@@ -3277,4 +3277,55 @@ describe('unmatched lookup reporting', () => {
       logSpy.mockRestore();
     }
   });
+
+  // The refresh matrix runs sources concurrently in one process. A single shared accumulator let
+  // either run's entry clear the other's counts and report values under the wrong source id.
+  it('keeps the counts of concurrently translated sources apart', async () => {
+    const a = { ...config, id: 'src-a' };
+    const b = { ...config, id: 'src-b' };
+    const bufA = new Map([['f', Buffer.from(['ID,REG,KIND', '1,N1,Alpha'].join('\n'))]]);
+    const bufB = new Map([
+      ['f', Buffer.from(['ID,REG,KIND', '1,N1,Beta', '2,N2,Beta'].join('\n'))],
+    ]);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await Promise.all([translate(a, bufA), translate(b, bufB)]);
+      const lines = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('translate_lookup_default'));
+      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Alpha'))).toBe(true);
+      expect(
+        lines.some(
+          (l) => l.includes('source=src-b') && l.includes('value=Beta') && l.includes('rows=2')
+        )
+      ).toBe(true);
+      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Beta'))).toBe(false);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // A record-count mismatch is upstream drift, and the unrecognized values are the evidence for
+  // it. Throwing before the flush withheld them from exactly the run that needed them.
+  it('reports unmatched values even when the record-count guard throws', async () => {
+    const counted = {
+      ...config,
+      id: 'src-counted',
+      // Matched against the decoded primary, so the published total can sit in a normal cell.
+      record_count: { pattern: 'TOTAL=(\\d+)' },
+    } as typeof config;
+    const rows = ['ID,REG,KIND,NOTE', '1,N1,Mystery,TOTAL=99'];
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(
+        translate(counted, new Map([['f', Buffer.from(rows.join('\n'))]]))
+      ).rejects.toThrow(/publishes 99/);
+      const lines = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('translate_lookup_default'));
+      expect(lines.some((l) => l.includes('value=Mystery'))).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
 });

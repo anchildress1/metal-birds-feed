@@ -107,19 +107,21 @@ const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: num
 
 // One line per distinct unrecognized value, carrying how many rows hit it — the magnitude is the
 // part that says whether a code is a stray or half the register.
-const reportUnmatchedLookups = (): void => {
-  for (const [key, rows] of [...unmatchedLookups].sort((a, b) => b[1] - a[1])) {
-    const [source, field, value] = key.split('\u0000');
+const reportUnmatchedLookups = (source: string): void => {
+  const forSource = unmatchedLookups.get(source);
+  if (forSource === undefined) return;
+  for (const [key, rows] of [...forSource].sort((a, b) => b[1] - a[1])) {
+    const [field, value] = key.split('\u0000');
     log('warn', 'translate_lookup_default', { source, field, value, rows });
   }
-  unmatchedLookups.clear();
+  unmatchedLookups.delete(source);
 };
 
 export async function translate(
   config: SourceConfig,
   files: Map<string, Buffer>
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
-  unmatchedLookups.clear();
+  unmatchedLookups.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
   const missingSourceIdPolicy = buildMissingSourceIdPolicy(config);
 
@@ -173,8 +175,11 @@ export async function translate(
   // Runs before the "complete" log and only when there are no row-level failures: pipeline.ts's
   // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
   // logging translate_complete before a guard that can still throw would misreport the run as done.
+  // Flushed before the count guard, not after: a record-count mismatch is upstream drift, and the
+  // unrecognized values are the evidence for it — throwing first would withhold them from the only
+  // run that needed them.
+  reportUnmatchedLookups(config.id);
   if (failed === 0) assertRecordCount(config, primaryBuf, records.size);
-  reportUnmatchedLookups();
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }
@@ -605,7 +610,9 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // property of the register, so one row and 300,000 rows carry the same information — and at FAA's
 // volume the per-row form emitted tens of thousands of identical lines, burying the errors someone
 // actually needed to read. The count is reported once, with the total, in translate_complete.
-const unmatchedLookups = new Map<string, number>();
+// Partitioned by source rather than one flat map: translate() is async, so two sources running
+// concurrently would otherwise clear each other's counts and report each other's values.
+const unmatchedLookups = new Map<string, Map<string, number>>();
 
 function resolveLookup(
   value: string,
@@ -619,8 +626,10 @@ function resolveLookup(
   if (Object.hasOwn(lookup, value)) return lookup[value];
   if (defaultValue !== undefined) {
     if (value !== '') {
-      const key = `${source}\u0000${field}\u0000${value}`;
-      unmatchedLookups.set(key, (unmatchedLookups.get(key) ?? 0) + 1);
+      const forSource = unmatchedLookups.get(source) ?? new Map<string, number>();
+      const key = `${field}\u0000${value}`;
+      forSource.set(key, (forSource.get(key) ?? 0) + 1);
+      unmatchedLookups.set(source, forSource);
     }
     return defaultValue;
   }

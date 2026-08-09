@@ -163,6 +163,50 @@ describe('route', () => {
   const pass: CheckLimit = () => Promise.resolve(true);
   const deny: CheckLimit = () => Promise.resolve(false);
 
+  // The `ok` stub ignores its SQL and params, so every normalization case below would still pass
+  // if the route queried the hex column, or passed the caller's raw punctuated input straight
+  // through. These two capture what actually reaches the database.
+  const capture = (): { calls: Array<[string, string[]]>; run: RunQuery } => {
+    const calls: Array<[string, string[]]> = [];
+    return {
+      calls,
+      run: (sql, params) => {
+        calls.push([sql, params]);
+        return Promise.resolve([rec('a1b2c3', 'N1')]);
+      },
+    };
+  };
+
+  it('queries registration_key with normalized, deduplicated parameters', async () => {
+    const spy = capture();
+    await route(
+      'POST',
+      '/feed/registration',
+      'Bearer t',
+      't',
+      { registrations: ['C-FABC', 'c fabc', 'CFABC'] },
+      pass,
+      spy.run
+    );
+    expect(spy.calls).toHaveLength(1);
+    const [sql, params] = spy.calls[0];
+    expect(sql).toContain('registration_key');
+    expect(sql).not.toContain('icao_hex IN');
+    expect(params).toEqual(['CFABC']);
+  });
+
+  // The hex route is strict rather than normalizing (parseHexes rejects anything but 6 lowercase
+  // characters), so this pins the selector and the pass-through, not a transformation.
+  it('queries icao_hex for the hex route, not the registration key', async () => {
+    const spy = capture();
+    await route('POST', '/feed', 'Bearer t', 't', { hexes: ['a1b2c3'] }, pass, spy.run);
+    expect(spy.calls).toHaveLength(1);
+    const [sql, params] = spy.calls[0];
+    expect(sql).toContain('icao_hex');
+    expect(sql).not.toContain('registration_key IN');
+    expect(params).toEqual(['a1b2c3']);
+  });
+
   it('404s an unknown path', async () => {
     const res = await route('POST', '/other', 'Bearer t', 't', { hexes: [] }, pass, ok);
     expect(res.status).toBe(404);
