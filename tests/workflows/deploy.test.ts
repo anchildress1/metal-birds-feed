@@ -185,6 +185,14 @@ describe('deploy workflow contract', () => {
     // inputs instead.
     expect(namedStep(steps, 'Assemble feed').if).toBeUndefined();
     expect(namedStep(steps, 'Assemble feed').run).toBe('make assemble-feed');
+
+    // Fail-closed assembly is the design, so the recovery instructions are the deliverable. Scoped
+    // to the assemble step's own outcome: a failed version check must not print refresh advice.
+    const explain = namedStep(steps, 'Explain the assembly failure');
+    expect(explain.if).toBe("${{ failure() && steps.feed.outcome == 'failure' }}");
+    expect(explain.run).toContain('Registry Refresh');
+    expect(explain.run).toContain('Re-run failed jobs');
+    expect(explain.run).toContain('::error title=Feed assembly failed::');
     // Keyed on force, never on the version string being non-empty: the latter lets the check
     // switch itself off exactly when the upstream output breaks. The emptiness assertions below
     // are what turn a missing version into a failed release rather than a skipped one.

@@ -98,6 +98,36 @@ jobs:
           MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}
         run: make assemble-feed
 
+      # Assembly is the step that fails closed when a source has no slice at the current
+      # FEED_SLICE_VERSION. publishFeed names the sources but prescribes a local `make refresh`,
+      # which is not the recovery from inside a release run — this translates it. Scoped to the
+      # assemble step's own outcome so a failed version check does not print refresh instructions.
+      - name: Explain the assembly failure
+        if: ${{ failure() && steps.feed.outcome == 'failure' }}
+        env:
+          IS_RELEASE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Feed assembly failed"
+            echo
+            echo "If the log names missing feed slices, a source has not written one at the current"
+            echo "\`FEED_SLICE_VERSION\`. The build refuses to publish a partial feed rather than ship"
+            echo "a gap, so nothing was deployed and the deployed-feed marker is untouched."
+            echo
+            echo "**Recovery**"
+            echo
+            echo "1. Run the **Registry Refresh** workflow and let it finish writing slices."
+            echo "2. Return to this run and choose **Re-run failed jobs**."
+            if [ "$IS_RELEASE" = "true" ]; then
+              echo
+              echo "> Use *Re-run failed jobs*, not *Re-run all jobs*. Release Please would find the"
+              echo "> release already created, report \`release_created=false\`, and the deploy would"
+              echo "> be skipped instead of retried."
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::error title=Feed assembly failed::Run Registry Refresh, then 'Re-run failed jobs' on this run. See the job summary."
+
       - name: Authenticate to Google Cloud
         if: ${{ steps.feed.outputs.changed == 'true' || inputs.force }}
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
