@@ -8,17 +8,48 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A run that creates a release also deploys it. A later push may queue, but it must never cancel
+  # the release deployment halfway through.
+  cancel-in-progress: false
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      release_sha: ${{ steps.release.outputs.sha }}
+      release_tag: ${{ steps.release.outputs.tag_name }}
+      release_version: ${{ steps.release.outputs.version }}
     permissions:
       contents: write
       pull-requests: write
       issues: write
     steps:
-      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+      - name: Create or update release
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ github.token }}
+
+  # Deploys via the shared reusable workflow rather than its own steps, so the release path and the
+  # refresh path cannot drift. force: the released code ships even when the feed data is unchanged —
+  # a version bump is itself a reason to deploy.
+  deploy:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    # Passed down to the called workflow, which can only downgrade them.
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.release-please.outputs.release_sha }}
+      force: true
+      expected_version: ${{ needs.release-please.outputs.release_version }}
+      expected_tag: ${{ needs.release-please.outputs.release_tag }}
+    secrets:
+      MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+      MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+      MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+      MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}

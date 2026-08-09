@@ -3,3 +3,4 @@
 - [x] Add dispatch logic in `download()` — stream when `Content-Length` ≥ threshold or absent, buffer otherwise
 - [x] Log download mode selection (`buffer` vs `stream`) with content length
 - [x] Add stream path tests to `tests/downloader.test.ts` (below threshold, at threshold, absent `Content-Length`, unwanted entries autodrained, missing entry throws)
+- [ ] **After the 1.0.0 release PR merges:** drop `"release-as": "1.0.0"` from `release-please-config.json`. The option is sticky — release-please keeps recomputing 1.0.0, the release PR tries to re-create an existing tag, `release_created` stays falsy and the deploy job is skipped, so releases stop working with nothing red to show for it. `tests/release-please.test.ts` fails the moment `package.json` reaches the pinned version, so CI forces this rather than the checkbox.

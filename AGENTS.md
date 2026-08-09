@@ -2,6 +2,14 @@
 
 Authoritative rules for AI agents in this repo. Overrides any conflicting local file. Read `PRD.md` for context, this file for rules.
 
+## Audience
+
+- Only AI agents read this file; assume zero human readers.
+- Treat `AGENTS.md` and every other agent instruction or skill file as a machine-operational control surface.
+- Optimize for deterministic execution: state scopes, triggers, priorities, required actions, prohibitions, and exit conditions explicitly.
+- Exclude human onboarding, persuasion, tutorials, motivational rationale, narrative transitions, and status prose unless they materially disambiguate agent behavior.
+- Human-facing documentation conventions apply only to product documentation; never use them to shape agent control files.
+
 ## Hard prohibitions
 
 - PII allowed: `owner.{name,kind,state,country}` + `operator.{name,kind,state,country}`. Drop street/street2/city/postal-code/county/region/care-of at the mapping config. A country reachable from an address's trailing component is permitted — read it, don't assume it from the register's own country.
@@ -21,7 +29,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Code style
 
 - `??`/`??=` over null/undefined checks. `?.` over guard clauses.
-- `const fn = () =>` over `function fn()`. `const` over `let`. Never `var`.
+- `const fn = () =>` over `function fn()`. `const` over `let`. Never `var`. Exception: a module-private helper called above its own definition stays a `function` declaration — `engine.ts` relies on hoisting, and converting one to `const` is a TDZ crash, not a style win. Nothing enforces this rule mechanically, so read the call order before converting.
 - No `as T` unless TS cannot narrow structurally.
 - `await` over `.then()`/`.catch()`. Never `await` inside `for`/`while` — use `Promise.all`/`allSettled` + `.map()`. Exception: inherently sequential consumption (stream pumps, backoff chains) where each iteration depends on the previous — state the WHY inline.
 - Max cognitive complexity per function: 15.
@@ -83,6 +91,12 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - `src/schema.ts` = canonical Zod schema. All engine output validates against it before entering the artifact.
 - `src/engine.ts` = source-agnostic. New registry = new YAML + (when needed) new transform/parser path. Never edit row-translation logic for one source.
 - `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()`, no filesystem). Table `aircraft`: every canonical field its own typed column, nested objects flattened, arrays as JSON strings. `PRAGMA user_version` is the producer shape marker; bump on any column/contract change.
+- **Three version markers, bumped independently — check all three on every schema change.** `db.ts` `PRAGMA user_version` (per-source artifact) · `feed.ts` `PRAGMA user_version` (consolidated `feed.sqlite`) · `FEED_SLICE_VERSION` (the R2 JSON intermediate). Their numbers coinciding is chance, never a reason to skip one.
+  - The two `PRAGMA user_version` markers describe the **consumer-facing contract**; `FEED_SLICE_VERSION` describes the **slice's structure**. They answer different questions, so they do not move together.
+  - Widening a canonical enum's **value domain** is a contract change: bump the `user_version` of every DB whose table carries that column. A widened `category` shipped to the feed under a stale marker once, so consumers were told a shape version that predated the values they were being served.
+  - A value-domain change does **not** bump `FEED_SLICE_VERSION`. That marker exists so a structurally older slice — one short by rows the current producer keeps — fails validation instead of publishing the gap. A widened enum leaves the slice structurally identical and merely un-refreshed; nulls are legal in every version, so the stale cells self-heal on the source's normal cadence. Bumping anyway would invalidate all 15 slices at once and fail the next release deploy closed for no correctness gain.
+  - Column add/remove/rename on `aircraft` → `db.ts`. On `feed` → `feed.ts` **and** `FEED_SLICE_VERSION` (the structure genuinely changed).
+  - `tests/db.test.ts` and `tests/feed.test.ts` pin each marker; update the assertion in the same commit or the bump is not real.
 - R2 keys (strict):
   - `aircraft/<source>.sqlite` — per-source artifact.
   - `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` / `upstream_hash`. The hashes are deliberately separate: `content_hash` covers the written artifact and gates the PUT, so a translation-only improvement still ships; `upstream_hash` covers the same records _before_ localization and is what `changed` reports, so a late translation never stamps `last_content_change` for a register that published nothing. Every field required — a state missing one fails validation, self-heals to absent, and the source rewrites once. Never add an optional-field fallback for an older shape.
@@ -106,7 +120,12 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 - `actions/*`: tagged major. All others: commit SHA + version comment (`@abc123 # v4.1.0`).
 - `refresh.yml` discovers `sources/*.yaml` automatically — no workflow edit when adding a source.
-- **Deploy trigger:** `deploy-feed` runs on an actual feed content change, not per-source success. `!cancelled()` means one source failing (its prior slice is reused) never blocks shipping another's update; the build step gates the deploy on `_deployed.json`. The rule is "redeploy iff the consolidated feed changed."
+- **One deploy job, in `deploy.yml`, reached only by `workflow_call`.** Two callers: `release-please.yml` on a release (`force: true` — a version bump ships even with unchanged data) and `refresh.yml` after the daily pull (`force: false` — the called workflow assembles, then deploys only when the result differs from `_deployed.json`). Never give `deploy.yml` a trigger of its own, and never add deploy steps to a caller: `tests/workflows/deploy.test.ts` scans every `.yml`/`.yaml` workflow for `/\bmake deploy\b/` (covering `make deploy` and `make deploy-only`) or `gcloud run deploy`, and fails if a second one appears.
+- **Its concurrency group is the constant `cloud-run-deploy` (`queue: max`, `cancel-in-progress: false`).** Inside a called workflow `${{ github.workflow }}` resolves to the _caller's_ name, so an interpolated group would file the release deploy and the refresh deploy separately — the race the group exists to prevent — and can cancel the caller. The explicit maximal queue is required: GitHub's default retains only one pending run and replaces it when a third arrives, which can silently discard a forced release deploy. Queue rather than cancel: a deploy killed halfway leaves the service updated while the marker still names the old hash. Until actionlint ships `concurrency.queue` support, `.github/actionlint.yaml` ignores only its stale unknown-key error and `tests/workflows/deploy.test.ts` pins the value to `max`.
+- **A caller must grant `contents: read` + `id-token: write`.** Called-workflow permissions can only be downgraded by the caller, so an omitted grant breaks Workload Identity at deploy time, not at lint time. Pass exactly the four declared R2 credentials; never use `secrets: inherit`.
+- **The release deploy assembles from existing R2 slices; it does not refresh first.** `resolveAllSources()` reads `sources/*.yaml` at the released commit and `publishFeed` fails closed when any of them lacks a current slice, so a release that adds a source or bumps `FEED_SLICE_VERSION` fails to deploy until a refresh has written slices for it. That ordering is deliberate — running the 15-register pull inside the release path would add ~30 minutes to every release and contend with the `registry-refresh-gemini` quota group. Land such a change, let a refresh run (cron or manual `refresh.yml` dispatch), then release. Recovery is: run `refresh.yml`, then **Re-run failed jobs** on the same release run — not _Re-run all jobs_, which makes Release Please see the release as already created, report `release_created=false`, and skip the deploy instead of retrying it. `deploy.yml`'s `Explain the assembly failure` step prints exactly that, scoped to the assemble step's own outcome so a failed version check does not print refresh advice. Never relax the fail-closed check to get past it.
+- A `refresh.yml` run waiting on `cloud-run-deploy` keeps holding `registry-refresh-gemini` while it waits, because its deploy job is the last thing in that run. A manual refresh dispatched during a release deploy therefore sits blocked with no visible cause until the release finishes. One-directional, so it cannot deadlock — do not "fix" it by giving the deploy its own group.
+- Ad-hoc deploys (rollback, retry, shipping without a release) are a local `make deploy` — same R2 slices, same path. Do not add a `workflow_dispatch` deploy button.
 - **Refresh cadence:** where a declared cadence and the observed publishing rhythm differ, run at the **more frequent** of the two, and record both in `DATA_LICENSES.md`. Per-source `cadence_days` gates actual work; sources without it run every time the cron fires. Sources publishing faster than the cron need their own workflow. The downloader sends no conditional-request headers, so each run is a full fetch — `content_hash` still gates the PUT.
 
 ## Commits

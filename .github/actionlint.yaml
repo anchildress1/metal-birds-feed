@@ -1,0 +1,8 @@
+paths:
+  .github/workflows/deploy.yml:
+    ignore:
+      # GitHub added concurrency.queue in May 2026. No released actionlint knows it yet: the
+      # newest is v1.7.12 (2026-03-30), and CI resolves that same latest. Drop this once a
+      # release postdating the feature ships.
+      # tests/workflows/deploy.test.ts pins the ignored value to the only accepted setting.
+      - 'unexpected key "queue" for "concurrency" section'

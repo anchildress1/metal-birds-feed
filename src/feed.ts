@@ -308,7 +308,12 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
   const db = new Database(':memory:');
   try {
     db.run('PRAGMA journal_mode = OFF');
-    db.run('PRAGMA user_version = 6');
+    // 7 widens the `category` value domain by five values — `restricted`, `multiple`, `primary`,
+    // `special-flight-permit`, `light-sport` — where version 6 collapsed all of them into `other`.
+    // The feed serves that column, so the widening reaches consumers here exactly as it does in the
+    // per-source artifact, and none of the five may be read as if it were a version-6 feed.
+    // Versioned independently of db.ts; the numbers coinciding is chance.
+    db.run('PRAGMA user_version = 7');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     // Unique rather than plain: NULLs never collide in a SQLite unique index, so hex-less rows and
