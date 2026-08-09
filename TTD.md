@@ -3,3 +3,4 @@
 - [x] Add dispatch logic in `download()` — stream when `Content-Length` ≥ threshold or absent, buffer otherwise
 - [x] Log download mode selection (`buffer` vs `stream`) with content length
 - [x] Add stream path tests to `tests/downloader.test.ts` (below threshold, at threshold, absent `Content-Length`, unwanted entries autodrained, missing entry throws)
+- [ ] **After the 1.0.0 release PR merges:** drop `"release-as": "1.0.0"` from `release-please-config.json`. The option is sticky — release-please keeps emitting 1.0.0 on every subsequent run until it is removed, so conventional-commit versioning stays frozen while it is present.

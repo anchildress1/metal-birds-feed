@@ -367,9 +367,13 @@ describe('buildFeedDb', () => {
   });
 
   it('pins the producer shape marker', () => {
+    // The feed's user_version is independent of db.ts's and is the contract for the consolidated
+    // DB the service serves. Bump it for a column change AND for a value-domain widening on a
+    // column the feed carries: a canonical enum once gained values while only db.ts was bumped,
+    // leaving the feed advertising a shape version that predated the values it was serving.
     const db = Database.deserialize(buildFeedDb([]));
     try {
-      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 6 });
+      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 7 });
     } finally {
       db.close();
     }

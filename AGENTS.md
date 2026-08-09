@@ -21,7 +21,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 ## Code style
 
 - `??`/`??=` over null/undefined checks. `?.` over guard clauses.
-- `const fn = () =>` over `function fn()`. `const` over `let`. Never `var`.
+- `const fn = () =>` over `function fn()`. `const` over `let`. Never `var`. Exception: a module-private helper called above its own definition stays a `function` declaration — `engine.ts` relies on hoisting, and converting one to `const` is a TDZ crash, not a style win. Nothing enforces this rule mechanically, so read the call order before converting.
 - No `as T` unless TS cannot narrow structurally.
 - `await` over `.then()`/`.catch()`. Never `await` inside `for`/`while` — use `Promise.all`/`allSettled` + `.map()`. Exception: inherently sequential consumption (stream pumps, backoff chains) where each iteration depends on the previous — state the WHY inline.
 - Max cognitive complexity per function: 15.
@@ -83,6 +83,10 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - `src/schema.ts` = canonical Zod schema. All engine output validates against it before entering the artifact.
 - `src/engine.ts` = source-agnostic. New registry = new YAML + (when needed) new transform/parser path. Never edit row-translation logic for one source.
 - `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()`, no filesystem). Table `aircraft`: every canonical field its own typed column, nested objects flattened, arrays as JSON strings. `PRAGMA user_version` is the producer shape marker; bump on any column/contract change.
+- **Three version markers, bumped independently — check all three on every schema change.** `db.ts` `PRAGMA user_version` (per-source artifact) · `feed.ts` `PRAGMA user_version` (consolidated `feed.sqlite`) · `FEED_SLICE_VERSION` (the R2 JSON intermediate). Their numbers coinciding is chance, never a reason to skip one.
+  - Widening a canonical enum's **value domain** is a contract change, not just a column change: bump every marker whose table carries that column. A widened `category` shipped to the feed under a stale marker once, so consumers were told a shape version that predated the values they were being served.
+  - Column add/remove/rename on `aircraft` → `db.ts`. On `feed` → `feed.ts` **and** `FEED_SLICE_VERSION`.
+  - `tests/db.test.ts` and `tests/feed.test.ts` pin each marker; update the assertion in the same commit or the bump is not real.
 - R2 keys (strict):
   - `aircraft/<source>.sqlite` — per-source artifact.
   - `aircraft/_state/<source>.json` — last-run / last-content-change / `content_hash` / `upstream_hash`. The hashes are deliberately separate: `content_hash` covers the written artifact and gates the PUT, so a translation-only improvement still ships; `upstream_hash` covers the same records _before_ localization and is what `changed` reports, so a late translation never stamps `last_content_change` for a register that published nothing. Every field required — a state missing one fails validation, self-heals to absent, and the source rewrites once. Never add an optional-field fallback for an older shape.
