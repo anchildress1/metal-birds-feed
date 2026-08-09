@@ -304,10 +304,14 @@ const lastCommaSegmentOrNull = (value: string): string | null => {
 };
 
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
-// unpowered (glider); RPA/unknown -> null (no canonical UAV enum).
+// unpowered (glider). RPA is the register's own class for a remotely piloted aircraft and carries
+// no structural digit, so it maps to `uav` rather than being dropped — nulling it left nothing in
+// the record marking the aircraft unmanned, since TP_POUSO states no operating environment for one
+// either. Anything else unrecognized is still null.
 const brAirframe = (value: string): string | null => {
   const v = value.trim().toUpperCase();
-  if (v.length < 2 || v === 'RPA') return null;
+  if (v === 'RPA') return 'uav';
+  if (v.length < 2) return null;
   const kind = v[0];
   if (kind === 'H') return 'rotorcraft';
   if (kind === 'G') return 'gyroplane';
@@ -320,6 +324,14 @@ const brAirframe = (value: string): string | null => {
   }
   return null;
 };
+
+// ANAC states "not certified" in the certification-category column. That is not a category, so
+// `category` nulls it — but the fact itself is a build-certification statement, and dropping it
+// would lose something the register publishes. Every other value says nothing about type
+// certification and yields null, which is why this is a transform rather than a lookup: a lookup
+// would have to enumerate two dozen labels to null, or log a drift warning on each one.
+const brBuildCertification = (value: string): string | null =>
+  value.trim().toUpperCase() === 'NÃO CERTIFICADA' ? 'not-type-certificated' : null;
 
 // No status column upstream; a populated cancellation date is the cancellation signal.
 const brStatus = (value: string): string => (value.trim().length > 0 ? 'cancelled' : 'valid');
@@ -648,6 +660,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   br_registration: brRegistration,
   ee_registration: eeRegistration,
   br_airframe: brAirframe,
+  br_build_certification: brBuildCertification,
   br_status: brStatus,
   br_party_name: brPartyName,
   br_party_state: brPartyState,

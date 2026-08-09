@@ -1981,8 +1981,7 @@ describe('BR-ANAC fixture translation', () => {
     beforeAll(() => {
       r = brRecords.get('PRAFV')!;
     });
-    it('leaves airframe_type null (no canonical UAV enum)', () =>
-      expect(r.airframe_type).toBeNull());
+    it('maps the RPA class to the uav airframe type', () => expect(r.airframe_type).toBe('uav'));
     it('maps DRONE to engine type other', () => expect(r.engine.type).toBe('other'));
   });
 
@@ -1992,7 +1991,7 @@ describe('BR-ANAC fixture translation', () => {
       r = brRecords.get('PPASW')!;
     });
     it('maps MOTOR TURBOHELICE to turbo-prop', () => expect(r.engine.type).toBe('turbo-prop'));
-    it('maps RESTRITA to the limited category', () => expect(r.category).toBe('limited'));
+    it('maps RESTRITA to the restricted category', () => expect(r.category).toBe('restricted'));
   });
 
   describe('PPACK — UTF-8 accented owner name round-trip', () => {

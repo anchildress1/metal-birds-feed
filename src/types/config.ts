@@ -27,6 +27,7 @@ export const SCALAR_TRANSFORMS = [
   'casa_engine_detail_or_null',
   'br_registration',
   'br_airframe',
+  'br_build_certification',
   'br_status',
   'br_party_name',
   'br_party_state',

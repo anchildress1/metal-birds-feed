@@ -73,19 +73,40 @@ mapping:
       TRANSPORTE: standard
       UTILIDADE: standard
       ACROBATICA: standard
-      PRIMARIA: standard
+      PRIMARIA: primary
       'NORMAL/UTILIDADE': standard
       'NORMAL/ACROBATICA': standard
       'TRANSP.REGIONAL': standard
       'TRANSPORTE A/B': standard
       'TRANSPORTE B': standard
-      RESTRITA: limited
+      'NORMAL/S.ACROB.': standard
+      'SEMI ACROBATICA': standard
+      'UTILIDADE/S.ACROB': standard
+      'UTIL./ACROBATICA': standard
+      'TRANSPORTE A': standard
+      RESTRITA: restricted
+      # Two coexisting certificates, not one narrowed grant: a restricted certificate does not
+      # supersede the normal/utility/acrobatic one it is held alongside, and which applies depends
+      # on the aircraft's current configuration. Naming either half alone asserts something the
+      # register does not.
+      'NORMAL/RESTRITA': multiple
+      'ACROB./RESTRITA': multiple
+      'NORMAL/UT./REST.': multiple
       EXPERIMENTAL: experimental
       PROVISORIA: provisional
+      # RBAC 21 special class — sailplanes, airships, and unconventional types certified without
+      # issued type-certification requirements. A real category, outside the canonical four.
+      'CLASSE ESPECIAL': other
+      # A stated authorization outside the named categories, not the absence of one.
+      'RPAS AUTORIZADO': other
+      # The absence of a category, which is not a category — but the fact is not lost: it is what
+      # `build_certification` below reads this same column for.
+      'NÃO CERTIFICADA': ~
     default: ~
 
   build_certification:
-    constant: ~
+    field: DS_CATEGORIA_HOMOLOGACAO
+    transform: br_build_certification
 
   airworthiness_class:
     field: TP_CA
@@ -99,6 +120,12 @@ mapping:
       'POUSO EM TERRA': land
       'POUSO NA AGUA': sea
       ANFIBIO: amphibian
+      # ANAC files airframe types in this column instead of a landing environment, so none of these
+      # states one. Each restates what br_airframe already derives from CD_CLS — H, G, and RPA
+      # respectively — so nulling here loses nothing.
+      HELICOPTERO: ~
+      GIROCOPTERO: ~
+      'DRONE (RPAS)': ~
     default: ~
 
   operational_classes:

@@ -164,7 +164,9 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
   const db = new Database(':memory:');
   try {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
-    db.run('PRAGMA user_version = 6');
+    // 7 widens the category and build_certification value domains; a version-aware consumer must
+    // not read `restricted` or `light-sport` as if it were reading a version-6 artifact.
+    db.run('PRAGMA user_version = 7');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

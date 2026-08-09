@@ -33,6 +33,11 @@ export const AirframeTypeSchema = z.enum([
   'powered-parachute',
   'gyroplane',
   'hybrid-lift',
+  // Unmanned is strictly a different axis from the structural values above — a drone is itself a
+  // rotorcraft or a fixed-wing — but the registers that publish it say only "RPA" and give no
+  // structure to place it on that axis. Recording what the register states beats nulling the field
+  // and losing the one fact it does give.
+  'uav',
   'other',
 ]);
 
@@ -52,15 +57,30 @@ export const EngineTypeSchema = z.enum([
   'other',
 ]);
 
+// Mirrors the airworthiness certificate classes registers actually issue. Restricted, primary,
+// multiple, special-flight-permit, and light-sport are distinct classes with distinct operating
+// consequences, not shades of `other` — collapsing them leaves a consumer unable to tell a
+// crop-duster from a ferry permit. `other` stays for classes outside this set.
 export const AircraftCategorySchema = z.enum([
   'standard',
   'limited',
+  'restricted',
   'experimental',
   'provisional',
+  'primary',
+  'multiple',
+  'special-flight-permit',
+  'light-sport',
   'other',
 ]);
 
-export const BuildCertificationSchema = z.enum(['type-certificated', 'not-type-certificated']);
+// Light Sport is a third builder-certification state, not a flavour of the other two: the FAA
+// publishes it as its own code (ardata.pdf, Builder Certification Code 2) for ~10k aircraft.
+export const BuildCertificationSchema = z.enum([
+  'type-certificated',
+  'not-type-certificated',
+  'light-sport',
+]);
 
 export const OperatingEnvironmentSchema = z.enum(['land', 'sea', 'amphibian']);
 

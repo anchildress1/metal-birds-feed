@@ -595,6 +595,22 @@ describe('ee_registration', () => {
     expect(applyScalar('ee_registration', '')).toBeNull());
 });
 
+describe('br_build_certification', () => {
+  it('reads the not-certified statement as a build certification', () =>
+    expect(applyScalar('br_build_certification', 'NÃO CERTIFICADA')).toBe('not-type-certificated'));
+  it('is case- and whitespace-insensitive', () =>
+    expect(applyScalar('br_build_certification', '  não certificada ')).toBe(
+      'not-type-certificated'
+    ));
+  // Every other ANAC category says nothing about type certification; asserting one would invent it.
+  it('returns null for a category that states nothing about type certification', () =>
+    expect(applyScalar('br_build_certification', 'NORMAL')).toBeNull());
+  it('returns null for an experimental category', () =>
+    expect(applyScalar('br_build_certification', 'EXPERIMENTAL')).toBeNull());
+  it('returns null for a blank cell', () =>
+    expect(applyScalar('br_build_certification', '')).toBeNull());
+});
+
 describe('br_airframe', () => {
   it('maps a single-engine landplane (L1P) to fixed-wing-single-engine', () =>
     expect(applyScalar('br_airframe', 'L1P')).toBe('fixed-wing-single-engine'));
@@ -608,8 +624,9 @@ describe('br_airframe', () => {
     expect(applyScalar('br_airframe', 'A1P')).toBe('fixed-wing-single-engine'));
   it('maps a gyroplane class (G1P) to gyroplane', () =>
     expect(applyScalar('br_airframe', 'G1P')).toBe('gyroplane'));
-  it('returns null for RPA (drones not in canonical UAV enum)', () =>
-    expect(applyScalar('br_airframe', 'RPA')).toBeNull());
+  it('maps RPA to uav', () => expect(applyScalar('br_airframe', 'RPA')).toBe('uav'));
+  it('is case- and whitespace-insensitive for RPA', () =>
+    expect(applyScalar('br_airframe', ' rpa ')).toBe('uav'));
   it('returns null for an unknown class code', () =>
     expect(applyScalar('br_airframe', 'X9Z')).toBeNull());
   it('returns null for a non-digit engine-count character (e.g. LXP)', () =>

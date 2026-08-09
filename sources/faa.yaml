@@ -130,28 +130,34 @@ mapping:
       'H': hybrid-lift
       'O': other
 
+  # Airworthiness Classification Code, one canonical value per class (ardata.pdf). Closed list, so
+  # no default — a tenth code means the FAA changed the field and the run should fail loudly.
   category:
     field: 'CERTIFICATION'
     transform: faa_cert_class
     lookup:
+      # ardata.pdf documents 1-9 only. 0 is emitted anyway (7 rows) with no published meaning, so
+      # it is recognized-but-unmappable rather than guessed at.
+      '0': ~
       '1': standard
       '2': limited
-      '3': other
+      '3': restricted
       '4': experimental
       '5': provisional
-      '6': other
-      '7': other
-      '8': other
-      '9': other
-    default: ~
+      '6': multiple
+      '7': primary
+      '8': special-flight-permit
+      '9': light-sport
 
+  # Builder Certification Code is a closed 0/1/2 list in ardata.pdf, so it carries no default —
+  # a fourth code means the FAA changed the field and the run should fail rather than null 300k rows.
   build_certification:
     field: 'acft.BUILD-CERT-IND'
     transform: trim_or_null
     lookup:
       '0': type-certificated
       '1': not-type-certificated
-    default: ~
+      '2': light-sport
 
   airworthiness_class:
     field: 'CERTIFICATION'
