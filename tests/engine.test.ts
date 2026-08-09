@@ -2940,6 +2940,38 @@ describe('engine — merge_duplicates edge cases', () => {
     expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
   });
 
+  it('rejects a prototype-chain merge path when the loader boundary is bypassed', async () => {
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER'],
+      ['1', 'CC-AAA', 'FIRST PARTY'],
+      ['1', 'CC-AAA', 'SECOND PARTY'],
+    ]);
+    try {
+      const { records, stats } = await translate(
+        buildMergeConfig({ 'owner.__proto__.polluted': 'yes' }),
+        new Map([['register', buf]])
+      );
+      expect(stats.failed).toBe(1);
+      expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
+      expect(Object.hasOwn(Object.prototype, 'polluted')).toBe(false);
+    } finally {
+      Reflect.deleteProperty(Object.prototype, 'polluted');
+    }
+  });
+
+  it('rejects a merge path that descends into an array when the loader boundary is bypassed', async () => {
+    const config = buildMergeConfig({ 'operational_classes.0': 'commercial' });
+    config.mapping.operational_classes = { field: 'CLASS' };
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER', 'CLASS'],
+      ['1', 'CC-AAA', 'FIRST PARTY', 'private'],
+      ['1', 'CC-AAA', 'SECOND PARTY', 'private'],
+    ]);
+    const { records, stats } = await translate(config, new Map([['register', buf]]));
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')!.operational_classes).toEqual(['private']);
+  });
+
   // A non-string merge field is a misconfiguration: merge can only concatenate strings, so the row
   // fails loudly rather than silently dropping the candidate's differing value.
   it('fails the row when a declared merge field is not a string', async () => {

@@ -715,6 +715,20 @@ describe('parseJson', () => {
     );
   });
 
+  it('rejects an inherited record_path property instead of consuming polluted data', async () => {
+    Object.defineProperty(Object.prototype, 'inheritedRecords', {
+      configurable: true,
+      value: [{ r: 'BAD' }],
+    });
+    try {
+      await expect(parseJson(jbuf('{"data":{}}'), jopts('data.inheritedRecords'))).rejects.toThrow(
+        /missing own property "inheritedRecords"/i
+      );
+    } finally {
+      Reflect.deleteProperty(Object.prototype, 'inheritedRecords');
+    }
+  });
+
   it('throws when record_path traverses through a non-object', async () => {
     await expect(parseJson(jbuf('{"data":"x"}'), jopts('data.items'))).rejects.toThrow(
       /does not resolve to an object/i
