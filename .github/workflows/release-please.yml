@@ -48,4 +48,8 @@ jobs:
       force: true
       expected_version: ${{ needs.release-please.outputs.release_version }}
       expected_tag: ${{ needs.release-please.outputs.release_tag }}
-    secrets: inherit
+    secrets:
+      MBF_R2_ACCOUNT_ID: ${{ secrets.MBF_R2_ACCOUNT_ID }}
+      MBF_R2_ACCESS_KEY_ID: ${{ secrets.MBF_R2_ACCESS_KEY_ID }}
+      MBF_R2_SECRET_ACCESS_KEY: ${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}
+      MBF_R2_BUCKET_NAME: ${{ secrets.MBF_R2_BUCKET_NAME }}

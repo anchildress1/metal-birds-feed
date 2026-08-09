@@ -25,15 +25,22 @@ const CallerJobSchema = z.looseObject({
   if: z.string().optional(),
   uses: z.string(),
   with: z.record(z.string(), z.unknown()),
-  secrets: z.string(),
+  secrets: z.record(z.string(), z.string()),
   permissions: z.record(z.string(), z.string()),
 });
 
 const DeployWorkflowSchema = z.looseObject({
   on: z.looseObject({
-    workflow_call: z.looseObject({ inputs: z.record(z.string(), z.looseObject({})) }),
+    workflow_call: z.looseObject({
+      inputs: z.record(z.string(), z.looseObject({})),
+      secrets: z.record(z.string(), z.looseObject({ required: z.boolean() })),
+    }),
   }),
-  concurrency: z.object({ group: z.string(), 'cancel-in-progress': z.boolean() }),
+  concurrency: z.object({
+    group: z.string(),
+    queue: z.literal('max'),
+    'cancel-in-progress': z.boolean(),
+  }),
   jobs: z.looseObject({
     deploy: z.looseObject({
       'timeout-minutes': z.number(),
@@ -67,6 +74,12 @@ const namedStep = (
 };
 
 const CHANGE_GATE = "${{ steps.feed.outputs.changed == 'true' || inputs.force }}";
+const R2_SECRETS = {
+  MBF_R2_ACCOUNT_ID: '${{ secrets.MBF_R2_ACCOUNT_ID }}',
+  MBF_R2_ACCESS_KEY_ID: '${{ secrets.MBF_R2_ACCESS_KEY_ID }}',
+  MBF_R2_SECRET_ACCESS_KEY: '${{ secrets.MBF_R2_SECRET_ACCESS_KEY }}',
+  MBF_R2_BUCKET_NAME: '${{ secrets.MBF_R2_BUCKET_NAME }}',
+};
 
 describe('deploy workflow contract', () => {
   // Two jobs deploying one Cloud Run service both advance _deployed.json, and whichever writes
@@ -74,12 +87,13 @@ describe('deploy workflow contract', () => {
   // deploy added to a brand-new file is caught too.
   it('is the only workflow that deploys', async () => {
     const files = readdirSync(workflowsDir).filter((f) => f.endsWith('.yml'));
-    const deployers: string[] = [];
-    for (const file of files) {
-      const text = await readFile(join(workflowsDir, file), 'utf8');
-      if (text.includes('make deploy-only') || text.includes('gcloud run deploy'))
-        deployers.push(file);
-    }
+    const workflows = await Promise.all(
+      files.map(async (file) => ({ file, text: await readFile(join(workflowsDir, file), 'utf8') }))
+    );
+    const deployers = workflows
+      .filter(({ text }) => text.includes('make deploy-only') || text.includes('gcloud run deploy'))
+      .map(({ file }) => file);
+
     expect(deployers).toEqual(['deploy.yml']);
   });
 
@@ -90,6 +104,7 @@ describe('deploy workflow contract', () => {
     const deploy = await readDeploy();
     expect(deploy.concurrency).toEqual({
       group: 'cloud-run-deploy',
+      queue: 'max',
       'cancel-in-progress': false,
     });
     expect(deploy.concurrency.group).not.toContain('github.workflow');
@@ -104,6 +119,9 @@ describe('deploy workflow contract', () => {
       'force',
       'ref',
     ]);
+    expect(deploy.on.workflow_call.secrets).toEqual(
+      Object.fromEntries(Object.keys(R2_SECRETS).map((secret) => [secret, { required: true }]))
+    );
   });
 
   it.each(['release-please.yml', 'refresh.yml'])(
@@ -111,7 +129,7 @@ describe('deploy workflow contract', () => {
     async (file) => {
       const job = await callerJob(file);
       expect(job.uses).toBe('./.github/workflows/deploy.yml');
-      expect(job.secrets).toBe('inherit');
+      expect(job.secrets).toEqual(R2_SECRETS);
       // Callers can only downgrade the called workflow's permissions, so a caller that omits
       // id-token: write breaks Workload Identity auth at deploy time, not at lint time.
       expect(job.permissions).toEqual({ contents: 'read', 'id-token': 'write' });
@@ -120,6 +138,10 @@ describe('deploy workflow contract', () => {
 
   it('forces the release deploy and pins it to the released commit', async () => {
     const job = await callerJob('release-please.yml');
+    const steps = (await readDeploy()).jobs.deploy.steps;
+    const checkout = namedStep(steps, 'Checkout code to deploy');
+    const verify = namedStep(steps, 'Verify released version');
+
     expect(job.if).toBe("${{ needs.release-please.outputs.release_created == 'true' }}");
     expect(job.with).toEqual({
       ref: '${{ needs.release-please.outputs.release_sha }}',
@@ -127,6 +149,13 @@ describe('deploy workflow contract', () => {
       expected_version: '${{ needs.release-please.outputs.release_version }}',
       expected_tag: '${{ needs.release-please.outputs.release_tag }}',
     });
+    expect(checkout.with?.['ref']).toBe('${{ inputs.ref }}');
+    expect(verify.env).toEqual({
+      RELEASE_TAG: '${{ inputs.expected_tag }}',
+      RELEASE_VERSION: '${{ inputs.expected_version }}',
+    });
+    expect(verify.run).toContain('test "$package_version" = "$RELEASE_VERSION"');
+    expect(verify.run).toContain('test "$RELEASE_TAG" = "v$RELEASE_VERSION"');
   });
 
   // force must stay false here or every quiet refresh redeploys, which is the cost the

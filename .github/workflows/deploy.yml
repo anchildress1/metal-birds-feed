@@ -25,6 +25,15 @@ on:
         required: false
         default: ''
         type: string
+    secrets:
+      MBF_R2_ACCOUNT_ID:
+        required: true
+      MBF_R2_ACCESS_KEY_ID:
+        required: true
+      MBF_R2_SECRET_ACCESS_KEY:
+        required: true
+      MBF_R2_BUCKET_NAME:
+        required: true
 
 # A constant, never `${{ github.workflow }}`: inside a called workflow that expression resolves to
 # the CALLER's name, which would file a release deploy and a refresh deploy under different groups —
@@ -32,6 +41,7 @@ on:
 # a deploy killed halfway leaves the service updated while _deployed.json still names the old hash.
 concurrency:
   group: cloud-run-deploy
+  queue: max
   cancel-in-progress: false
 
 jobs:
