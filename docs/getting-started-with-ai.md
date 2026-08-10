@@ -101,37 +101,39 @@ The assistant checks for everything else — Bun, make, python3 — and installs
 
 ## Step 3 — Point Your Assistant at the Skill
 
-### Claude Code — nothing to do
+The skill ships at `.agents/skills/setup-metal-birds-feed/SKILL.md` — a vendor-neutral location
+rather than a tool-specific one, so neither assistant is privileged over the other.
 
-The skill ships at `.claude/skills/setup-metal-birds-feed/SKILL.md` and is discovered
-automatically. Start Claude Code from inside the project folder:
-
-```bash
-claude
-```
-
-### Codex — just point it at the file
-
-Codex discovers skills from its own directories (`.agents/skills` in the repo or your home
-folder) — it does not read `.claude/skills/`. So start Codex from inside the project folder:
+**Both tools work the same way.** Start from inside the project folder:
 
 ```bash
-codex
+claude      # or: codex
 ```
 
 and say:
 
-> Read `.claude/skills/setup-metal-birds-feed/SKILL.md` and follow it to set up this project.
+> Read `.agents/skills/setup-metal-birds-feed/SKILL.md` and follow it to set up this project.
 
 That is the whole setup. It works because the skill is a plain Markdown file in the repo you just
-cloned.
+cloned — no configuration, no install step.
 
-If you'd rather have Codex pick it up automatically, symlink it into a directory Codex does scan:
+### Optional: let your assistant find it on its own
+
+Each tool scans its own directory, and neither scans `.agents/skills` inside a repo. One symlink
+fixes that for whichever you use:
 
 ```bash
+# Claude Code — scans ~/.claude/skills and .claude/skills
+mkdir -p .claude/skills
+ln -s "$(pwd)/.agents/skills/setup-metal-birds-feed" .claude/skills/setup-metal-birds-feed
+
+# Codex — scans ~/.agents/skills
 mkdir -p ~/.agents/skills
-ln -s "$(pwd)/.claude/skills/setup-metal-birds-feed" ~/.agents/skills/setup-metal-birds-feed
+ln -s "$(pwd)/.agents/skills/setup-metal-birds-feed" ~/.agents/skills/setup-metal-birds-feed
 ```
+
+Both follow symlinks and read the same file, so there is still one copy to maintain. `.claude/` is
+gitignored here, so that first symlink stays local to your machine.
 
 ---
 
@@ -266,7 +268,7 @@ Assistants stall. Usually it's one of these:
 | Symptom                                        | What to try                                                              |
 | ---------------------------------------------- | ------------------------------------------------------------------------ |
 | It loops on a failing command                  | "Stop. Show me the exact error and don't fix it yet."                    |
-| It never mentions the skill                    | "Read `.claude/skills/setup-metal-birds-feed/SKILL.md` and follow it."   |
+| It never mentions the skill                    | "Read `.agents/skills/setup-metal-birds-feed/SKILL.md` and follow it."   |
 | It asks for secrets in chat                    | Refuse. Put them in `.env` and say you did. That is the correct behavior |
 | It claims something worked but nothing changed | "Run the verification step again and show me the actual output."         |
 | MCP tools aren't available                     | `claude mcp list` / `codex mcp list`, then restart the assistant         |

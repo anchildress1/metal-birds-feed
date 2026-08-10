@@ -152,7 +152,7 @@ credentials, first pull, local feed service — without assuming you read TypeSc
 
 - [docs/getting-started.md](docs/getting-started.md) — do it yourself, command by command
 - [docs/getting-started-with-ai.md](docs/getting-started-with-ai.md) — have Claude Code or Codex
-  drive it, via the setup skill in `.claude/skills/setup-metal-birds-feed/`
+  drive it, via the setup skill in `.agents/skills/setup-metal-birds-feed/`
 
 Either way, the registry clearances in [DATA_LICENSES.md](DATA_LICENSES.md) are Ashley's and several
 are granted by name — a fork owes its own per-source assessment before pulling anything.

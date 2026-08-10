@@ -6,7 +6,7 @@ const root = join(import.meta.dir, '..');
 const paths = {
   manual: 'docs/getting-started.md',
   assistant: 'docs/getting-started-with-ai.md',
-  skill: '.claude/skills/setup-metal-birds-feed/SKILL.md',
+  skill: '.agents/skills/setup-metal-birds-feed/SKILL.md',
   readme: 'README.md',
 } as const;
 
