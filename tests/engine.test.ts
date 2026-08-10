@@ -2962,13 +2962,15 @@ describe('engine — merge_duplicates edge cases', () => {
       );
       expect(stats.failed).toBe(1);
       expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
-      // Compare descriptors, not the method itself: a pollution swaps a non-enumerable accessor
-      // for an enumerable data property, so the descriptor differs on more than `value`.
+      // Compare descriptors rather than reading the method: `expect(Object.prototype.toString)`
+      // trips @typescript-eslint/unbound-method. Pollution shows up as a changed `value` — the
+      // other attributes survive, since assigning to an existing writable data property leaves
+      // its descriptor flags alone.
       expect(Object.getOwnPropertyDescriptor(Object.prototype, 'toString')).toEqual(descriptor);
     } finally {
-      // Restore the descriptor rather than assigning: a polluting assignment would have replaced
-      // a non-enumerable method with an enumerable data property, and every later for-in in the
-      // process would see it.
+      // defineProperty rather than assignment: assignment would restore the function value but
+      // silently no-op if a future guard change ever left the property non-writable, and this
+      // must not leave a polluted prototype behind for the rest of the process.
       Object.defineProperty(Object.prototype, 'toString', descriptor);
     }
   });
