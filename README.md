@@ -55,10 +55,11 @@ load in CI is ever worth the runner minutes. Smaller sources (TC ~37k, NL ILT ~3
 cleanly inside it and don't need a local bootstrap.
 
 > [!NOTE]
-> R2 bills by object operations and stored bytes, not aircraft rows. This pipeline writes a small,
-> fixed set of objects per configured source, so a fresh bootstrap is expected to fit the standard
-> free tier. Check account-wide R2 usage before running it; the allowance is shared across the
-> account, not reserved for this repository.
+> One-time billing. R2 bills by object operations and stored bytes, not aircraft rows, but a cold
+> bootstrap of every configured source still lands outside the free tier — the operator's own bill
+> for this came in under **$6 USD**, so budget roughly **$5-10**. Steady-state diffs stay well
+> inside the free tier (~10k ops/source/month). That allowance is account-wide, not reserved for
+> this repository, so check existing R2 usage before running it.
 
 ## Initial Load (Bootstrap)
 

@@ -62,13 +62,17 @@ describe('onboarding contract', () => {
     }
   );
 
+  // Inverted from "do not promise a charge". The charge is the *supported* claim: this project's
+  // own cold bootstrap billed under $6, so a doc promising the free tier walks a first-time user
+  // into a real bill unwarned. Reasoning from object counts says it should be free; the invoice
+  // says otherwise, and the invoice wins.
   it.each<Surface>(['manual', 'assistant', 'skill', 'readme'])(
-    'does not promise an unsupported R2 charge on %s',
+    'discloses the one-time R2 bootstrap charge on %s',
     async (surface) => {
       const text = await readSurface(surface);
 
-      expect(text).not.toMatch(/\$5\s*[–-]\s*10/i);
-      expect(text).not.toMatch(/one-time[^\n]*R2 charge/i);
+      expect(text).toMatch(/\$5\s*[–-]\s*10/);
+      expect(text).not.toMatch(/expected to fit the standard free tier/i);
     }
   );
 

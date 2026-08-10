@@ -47,12 +47,12 @@ Everything up to it runs on your laptop.
 
 ## What It Costs 💸
 
-| Service            | Required?           | Cost                                                                                  |
-| ------------------ | ------------------- | ------------------------------------------------------------------------------------- |
-| Cloudflare R2      | Yes                 | A fresh bootstrap is expected to fit the standard free tier; check account-wide usage |
-| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                   |
-| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                |
-| GitHub             | Only for automation | Free                                                                                  |
+| Service            | Required?           | Cost                                                                                                                                |
+| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare R2      | Yes                 | Free tier covers steady state. **One-time ~$5–10 USD** for a cold bootstrap; the allowance is account-wide, so check existing usage |
+| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                                                                 |
+| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                                                              |
+| GitHub             | Only for automation | Free                                                                                                                                |
 
 R2 bills object operations and stored bytes, not aircraft rows. This pipeline writes a small,
 fixed set of objects per configured source. The free allowance is shared across your Cloudflare
@@ -258,8 +258,10 @@ warnings apply:
   sets on its own CI refresh job — not a GitHub limit (hosted runners allow 6 hours) and not a
   local measurement
 
-- Check account-wide R2 usage first. The pipeline is expected to fit the standard free tier, but
-  that allowance is shared with every other R2 workload in the account
+- It triggers a **one-time R2 charge of roughly $5–10** for a cold load of every configured
+  source. That is measured, not estimated — this project's own bootstrap billed under $6.
+  Steady-state refreshes afterwards stay inside the free tier, but the allowance is shared with
+  every other R2 workload in your account, so check existing usage first
 - Remaining non-English sources need `GEMINI_API_KEY` set or the run stops
 - **Re-read [DATA_LICENSES.md](../DATA_LICENSES.md) first, then delete what you're not covered
   for.** Some of these permissions were granted to Ashley personally and do not extend to you.

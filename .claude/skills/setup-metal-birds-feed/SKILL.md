@@ -138,8 +138,10 @@ the user to look).
   quote that as steady state and say a cold first pull is longer. **Not** the 30 minutes quoted
   elsewhere in this repo — that is this repo's own `timeout-minutes` on the CI refresh job, not a
   platform limit (GitHub allows 6h) and not a local measurement
-- account-wide R2 usage checked; the pipeline writes a fixed set of objects per configured source
-  and is expected to fit the standard free tier, but the allowance is shared across the account
+- one-time R2 charge of roughly $5-10 for a cold load of every configured source — observed, not
+  estimated: the operator's own bootstrap billed under $6. Steady-state refreshes stay inside the
+  free tier. The allowance is account-wide, so have the user check existing R2 usage rather than
+  assume this repo has it to itself
 - `GEMINI_API_KEY` set if any remaining source declares a non-English `language:`
 - the user has read `DATA_LICENSES.md` **and removed the `sources/<id>.yaml` of every source their
   own assessment does not cover.** Acknowledging that Ashley's clearances do not transfer is not
