@@ -101,39 +101,46 @@ The assistant checks for everything else — Bun, make, python3 — and installs
 
 ## Step 3 — Point Your Assistant at the Skill
 
-The skill ships at `.agents/skills/setup-metal-birds-feed/SKILL.md` — a vendor-neutral location
-rather than a tool-specific one, so neither assistant is privileged over the other.
+The skill lives at `.agents/skills/setup-metal-birds-feed/SKILL.md` — a vendor-neutral location,
+so neither assistant is privileged over the other. There is exactly one copy of it.
 
-**Both tools work the same way.** Start from inside the project folder:
+### Claude Code — nothing to do
+
+The repo ships a symlink at `.claude/skills/setup-metal-birds-feed` pointing at that file, and
+Claude Code follows symlinks when it scans `.claude/skills/`. So it finds the skill on its own:
 
 ```bash
-claude      # or: codex
+claude
 ```
 
-and say:
+Then just say **"Set up this project locally."**
 
-> Read `.agents/skills/setup-metal-birds-feed/SKILL.md` and follow it to set up this project.
+### Codex — one symlink, or just point at the file
 
-That is the whole setup. It works because the skill is a plain Markdown file in the repo you just
-cloned — no configuration, no install step.
-
-### Optional: let your assistant find it on its own
-
-Each tool scans its own directory, and neither scans `.agents/skills` inside a repo. One symlink
-fixes that for whichever you use:
+Codex scans `~/.agents/skills`, not the repo's `.agents/skills`. Either link it once:
 
 ```bash
-# Claude Code — scans ~/.claude/skills and .claude/skills
-mkdir -p .claude/skills
-ln -s "$(pwd)/.agents/skills/setup-metal-birds-feed" .claude/skills/setup-metal-birds-feed
-
-# Codex — scans ~/.agents/skills
 mkdir -p ~/.agents/skills
 ln -s "$(pwd)/.agents/skills/setup-metal-birds-feed" ~/.agents/skills/setup-metal-birds-feed
 ```
 
-Both follow symlinks and read the same file, so there is still one copy to maintain. `.claude/` is
-gitignored here, so that first symlink stays local to your machine.
+…or skip that entirely and tell it where to look:
+
+```bash
+codex
+```
+
+> Read `.agents/skills/setup-metal-birds-feed/SKILL.md` and follow it to set up this project.
+
+Both work. The second needs no setup at all, because the skill is a plain Markdown file in the repo
+you just cloned.
+
+> [!NOTE]
+> **Windows without WSL:** git only recreates the shipped symlink if symlinks are enabled
+> (`git config --global core.symlinks true`, plus Developer Mode or an elevated shell). Without
+> that, `.claude/skills/setup-metal-birds-feed` clones as a text file containing a path, and Claude
+> Code will not find the skill. Use the "point at the file" instruction above instead, or work
+> inside WSL where symlinks behave normally.
 
 ---
 

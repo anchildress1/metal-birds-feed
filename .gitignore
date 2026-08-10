@@ -12,7 +12,11 @@ logs/
 __pycache__/
 # Local agent scratch (worktrees, session state) stays out of git — except the shipped setup
 # skill, which is a deliverable and has to survive a clone.
-.claude/
+# `.claude/*` and not `.claude/`: git cannot re-include anything under an excluded *directory*.
+# The only tracked entry is the symlink that lets Claude Code discover the skill whose real home
+# is .agents/skills/ — everything else under .claude/ is local agent scratch.
+.claude/*
+!.claude/skills/
 .bun/
 
 # Consolidated feed DB — built by the pipeline, baked into the Cloud Run image at deploy

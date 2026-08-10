@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { readFile } from 'node:fs/promises';
+import { lstat, readlink, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const root = join(import.meta.dir, '..');
@@ -16,6 +16,19 @@ const readSurface = async (surface: Surface): Promise<string> =>
   readFile(join(root, paths[surface]), 'utf8');
 
 describe('onboarding contract', () => {
+  // Claude Code scans only .claude/skills; Codex scans .agents/skills. One tracked symlink lets
+  // both reach the single real copy. If it is ever committed as a regular file there are silently
+  // two skills to keep in sync, which is exactly the drift this suite exists to prevent.
+  it('ships .claude/skills as a symlink to the real .agents copy', async () => {
+    const link = join(root, '.claude/skills/setup-metal-birds-feed');
+
+    expect((await lstat(link)).isSymbolicLink()).toBe(true);
+    expect(await readlink(link)).toBe('../../.agents/skills/setup-metal-birds-feed');
+    await expect(readFile(join(link, 'SKILL.md'), 'utf8')).resolves.toContain(
+      'name: setup-metal-birds-feed'
+    );
+  });
+
   it('keeps the local server and proof request in one shell', async () => {
     const [manual, skill] = await Promise.all([readSurface('manual'), readSurface('skill')]);
 
