@@ -62,19 +62,47 @@ describe('onboarding contract', () => {
     }
   );
 
-  // Inverted from "do not promise a charge". The charge is the *supported* claim: this project's
-  // own cold bootstrap billed under $6, so a doc promising the free tier walks a first-time user
-  // into a real bill unwarned. Reasoning from object counts says it should be free; the invoice
-  // says otherwise, and the invoice wins.
+  // Both absolutes are wrong and this wording has swung between them twice. The pipeline writes a
+  // handful of objects per source (one PutObjectCommand site, `src/writer.ts`) plus ~1 cache object
+  // per 200 strings (`MAX_BATCH_ITEMS`), which alone sits inside R2's free allowance — so "you will
+  // be charged" overpromises. But the allowance is account-wide and this operator has seen a real
+  // sub-$6 bill, so "it fits the free tier" underwarns. The honest frame is conditional, and that
+  // is what these assertions pin.
   it.each<Surface>(['manual', 'assistant', 'skill', 'readme'])(
-    'discloses the one-time R2 bootstrap charge on %s',
+    'frames the R2 charge as account-conditional on %s',
     async (surface) => {
       const text = await readSurface(surface);
 
-      expect(text).toMatch(/\$5\s*[–-]\s*10/);
+      expect(text).toMatch(/account-wide|shared/i);
       expect(text).not.toMatch(/expected to fit the standard free tier/i);
+      expect(text).not.toMatch(
+        /triggers a \*\*?one-time R2 charge|carries a one-time|will be billed/i
+      );
     }
   );
+
+  // `/feed/registration` only accepts keys matching /^[A-Z0-9]{2,10}$/ (`src/service/handler.ts`).
+  // The feed table permits any nonblank registration, so an unbounded pick can select a row the
+  // endpoint is guaranteed to reject — turning the proof request into a false negative.
+  it.each<Surface>(['manual', 'skill'])(
+    'restricts the proof lookup to keys the endpoint accepts on %s',
+    async (surface) => {
+      const text = await readSurface(surface);
+
+      expect(text).toContain('length(registration_key) BETWEEN 2 AND 10');
+    }
+  );
+
+  // Phase 6 and Phase 7 both call `openssl rand`. Without it in preflight every check passes and
+  // the failure lands after the user may already have run a full refresh.
+  it('checks for openssl before anything depends on it', async () => {
+    const skill = await readSurface('skill');
+
+    expect(skill).toContain('openssl version');
+    expect(skill.indexOf('openssl version')).toBeLessThan(
+      skill.indexOf('FEED_TOKEN=$(openssl rand -hex 16)')
+    );
+  });
 
   it.each<Surface>(['manual', 'assistant', 'skill'])(
     'defines completeness from configured sources on %s',

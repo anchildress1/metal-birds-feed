@@ -248,8 +248,9 @@ The skill hard-codes these. They are not suggestions the assistant may talk itse
 - It never writes a credential it wasn't given, and never generates a placeholder that looks real
 - It never echoes the contents of `.env` to the screen
 - It never commits `.env`, and never disables the secret scanner
-- It confirms with you before the full configured-source pull, which carries a one-time ~$5–10 R2
-  charge, and has you check account-wide usage first
+- It confirms with you before the full configured-source pull and has you check account-wide R2
+  usage first — the pipeline is small on its own, but the free allowance is shared, so a charge
+  depends on what else your account already uses
 - It confirms with you before any Cloud Run deploy, because that puts data on a server
 - It sends you to `DATA_LICENSES.md` rather than deciding a licensing question itself
 

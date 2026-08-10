@@ -47,12 +47,12 @@ Everything up to it runs on your laptop.
 
 ## What It Costs 💸
 
-| Service            | Required?           | Cost                                                                                                                                |
-| ------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare R2      | Yes                 | Free tier covers steady state. **One-time ~$5–10 USD** for a cold bootstrap; the allowance is account-wide, so check existing usage |
-| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                                                                 |
-| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                                                              |
-| GitHub             | Only for automation | Free                                                                                                                                |
+| Service            | Required?           | Cost                                                                                                                                                                                                |
+| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare R2      | Yes                 | Free on its own — this pipeline stays inside the allowance. But it's account-wide: if other R2 workloads already use it, a bootstrap can tip you over (operator has seen <$6). Check existing usage |
+| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                                                                                                                                 |
+| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                                                                                                                              |
+| GitHub             | Only for automation | Free                                                                                                                                                                                                |
 
 R2 bills object operations and stored bytes, not aircraft rows. This pipeline writes a small,
 fixed set of objects per configured source. The free allowance is shared across your Cloudflare
@@ -258,10 +258,11 @@ warnings apply:
   sets on its own CI refresh job — not a GitHub limit (hosted runners allow 6 hours) and not a
   local measurement
 
-- It triggers a **one-time R2 charge of roughly $5–10** for a cold load of every configured
-  source. That is measured, not estimated — this project's own bootstrap billed under $6.
-  Steady-state refreshes afterwards stay inside the free tier, but the allowance is shared with
-  every other R2 workload in your account, so check existing usage first
+- **It may cost you, depending on your account.** This pipeline writes only a handful of objects
+  per source, which on its own stays inside R2's free allowance. That allowance is account-wide,
+  though — if you already use R2 for other things, a cold load can push you past it. This project's
+  operator has seen a monthly bill under $6 on such an account. Check your existing R2 usage before
+  starting; on a fresh account used for nothing else, expect no charge
 - Remaining non-English sources need `GEMINI_API_KEY` set or the run stops
 - **Re-read [DATA_LICENSES.md](../DATA_LICENSES.md) first, then delete what you're not covered
   for.** Some of these permissions were granted to Ashley personally and do not extend to you.
@@ -336,7 +337,7 @@ Now start the API and prove it answers for a key selected from your own database
 
   MARK=$(bun -e 'import { Database } from "bun:sqlite";
     console.log(new Database("feed.sqlite", { readonly: true })
-      .query("SELECT registration_key FROM feed WHERE registration_key IS NOT NULL LIMIT 1")
+      .query("SELECT registration_key FROM feed WHERE registration_key IS NOT NULL AND length(registration_key) BETWEEN 2 AND 10 LIMIT 1")
       .get().registration_key)')
   echo "Looking up: $MARK"
   RESPONSE=$(curl --fail-with-body -sS http://localhost:8080/feed/registration \

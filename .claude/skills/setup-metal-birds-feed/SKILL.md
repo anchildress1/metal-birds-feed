@@ -37,17 +37,18 @@ the whole toolchain be proven correct before the user creates a single account.
 Run each; report as one table, not one message per check.
 
 ```bash
-bun --version; git --version; make --version; python3 --version; command -v gitleaks || echo "gitleaks: absent"
+bun --version; git --version; make --version; python3 --version; openssl version; command -v gitleaks || echo "gitleaks: absent"
 ```
 
-| Tool       | Required for                                         | If absent                                                        |
-| ---------- | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| `bun`      | everything                                           | `curl -fsSL https://bun.sh/install \| bash`, then a new shell    |
-| `git`      | clone                                                | macOS `xcode-select --install` · Debian `apt-get install -y git` |
-| `make`     | every command in this skill                          | macOS Xcode CLT · Debian `apt-get install -y make`               |
-| `python3`  | `scripts/check-sources-sorted.py` on a README commit | Debian `apt-get install -y python3`                              |
-| `gitleaks` | any `git commit` (unglobbed pre-commit hook)         | `brew install gitleaks`; defer if not committing                 |
-| `gcloud`   | Phase 7 only                                         | Skip unless the user asks to deploy                              |
+| Tool       | Required for                                         | If absent                                                         |
+| ---------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `bun`      | everything                                           | `curl -fsSL https://bun.sh/install \| bash`, then a new shell     |
+| `git`      | clone                                                | macOS `xcode-select --install` · Debian `apt-get install -y git`  |
+| `make`     | every command in this skill                          | macOS Xcode CLT · Debian `apt-get install -y make`                |
+| `python3`  | `scripts/check-sources-sorted.py` on a README commit | Debian `apt-get install -y python3`                               |
+| `openssl`  | minting `FEED_TOKEN` in Phase 6 and Phase 7          | Debian `apt-get install -y openssl`; absent on minimal WSL images |
+| `gitleaks` | any `git commit` (unglobbed pre-commit hook)         | `brew install gitleaks`; defer if not committing                  |
+| `gcloud`   | Phase 7 only                                         | Skip unless the user asks to deploy                               |
 
 `.tool-versions` pins `bun 1.3.14`. A newer Bun is fine. If the user has mise or asdf, `mise install`
 resolves the pin.
@@ -138,10 +139,11 @@ the user to look).
   quote that as steady state and say a cold first pull is longer. **Not** the 30 minutes quoted
   elsewhere in this repo — that is this repo's own `timeout-minutes` on the CI refresh job, not a
   platform limit (GitHub allows 6h) and not a local measurement
-- one-time R2 charge of roughly $5-10 for a cold load of every configured source — observed, not
-  estimated: the operator's own bootstrap billed under $6. Steady-state refreshes stay inside the
-  free tier. The allowance is account-wide, so have the user check existing R2 usage rather than
-  assume this repo has it to itself
+- R2 usage checked account-wide. The pipeline writes a handful of objects per configured source
+  plus ~1 cache object per 200 new strings, which alone stays inside the free allowance — so a
+  charge depends on what else the account already uses, and this operator's sub-$6 bill is an
+  account-level figure, not one this pipeline is shown to have caused. Present it as possible, not
+  guaranteed; never tell the user a cold load will definitely bill them
 - `GEMINI_API_KEY` set if any remaining source declares a non-English `language:`
 - the user has read `DATA_LICENSES.md` **and removed the `sources/<id>.yaml` of every source their
   own assessment does not cover.** Acknowledging that Ashley's clearances do not transfer is not
@@ -201,7 +203,7 @@ which misses and reads as a broken service:
 
   MARK=$(bun -e 'import { Database } from "bun:sqlite";
     console.log(new Database("feed.sqlite", { readonly: true })
-      .query("SELECT registration_key FROM feed WHERE registration_key IS NOT NULL LIMIT 1")
+      .query("SELECT registration_key FROM feed WHERE registration_key IS NOT NULL AND length(registration_key) BETWEEN 2 AND 10 LIMIT 1")
       .get().registration_key)')
   RESPONSE=$(curl --fail-with-body -sS http://localhost:8080/feed/registration \
     -H "Authorization: Bearer $FEED_TOKEN" \
