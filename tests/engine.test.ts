@@ -2940,22 +2940,36 @@ describe('engine — merge_duplicates edge cases', () => {
     expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
   });
 
+  // The leaf must be a real own property of Object.prototype. With a made-up leaf the final
+  // `Object.hasOwn(node, leaf)` throws on its own, so the test passes even with the parent
+  // own-property guard deleted — it would assert nothing. `toString` exists, so reaching
+  // Object.prototype means the assignment lands and the process is genuinely polluted.
+  //
+  // Note which guard this pins: the parent `Object.hasOwn` check, not the null/non-object/array
+  // check beside it. Object.prototype is a plain non-null object, so the type guard waves
+  // `__proto__` straight through. The own-property check is the only barrier here.
   it('rejects a prototype-chain merge path when the loader boundary is bypassed', async () => {
     const buf = await odsBuffer([
       ['ID', 'REG', 'OWNER'],
       ['1', 'CC-AAA', 'FIRST PARTY'],
       ['1', 'CC-AAA', 'SECOND PARTY'],
     ]);
+    const descriptor = Object.getOwnPropertyDescriptor(Object.prototype, 'toString')!;
     try {
       const { records, stats } = await translate(
-        buildMergeConfig({ 'owner.__proto__.polluted': 'yes' }),
+        buildMergeConfig({ 'owner.__proto__.toString': 'PWNED' }),
         new Map([['register', buf]])
       );
       expect(stats.failed).toBe(1);
       expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
-      expect(Object.hasOwn(Object.prototype, 'polluted')).toBe(false);
+      // Compare descriptors, not the method itself: a pollution swaps a non-enumerable accessor
+      // for an enumerable data property, so the descriptor differs on more than `value`.
+      expect(Object.getOwnPropertyDescriptor(Object.prototype, 'toString')).toEqual(descriptor);
     } finally {
-      Reflect.deleteProperty(Object.prototype, 'polluted');
+      // Restore the descriptor rather than assigning: a polluting assignment would have replaced
+      // a non-enumerable method with an enumerable data property, and every later for-in in the
+      // process would see it.
+      Object.defineProperty(Object.prototype, 'toString', descriptor);
     }
   });
 
