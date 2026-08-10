@@ -48,19 +48,23 @@ costs zero PUTs and a changed one costs a single (tens-of-MB) PUT.
 | Records   | ~312k all new         | ~3–6k changed (~1–2%)            |
 | R2 writes | 1 PUT (full artifact) | 0 (unchanged) or 1 PUT (changed) |
 
-FAA's first load doesn't fit GHA's 30-minute job cap, so it's run once locally — see
-below. Smaller sources (TC ~37k, NL ILT ~3k) populate cleanly inside the cap and don't
-need a local bootstrap.
+FAA's first load doesn't fit the 30-minute `timeout-minutes` this repo sets on the refresh
+job (`refresh.yml`), so it's run once locally — see below. That ceiling is ours, not
+GitHub's: hosted runners allow 6 hours per job, so raising it is an option if a cold FAA
+load in CI is ever worth the runner minutes. Smaller sources (TC ~37k, NL ILT ~3k) populate
+cleanly inside it and don't need a local bootstrap.
 
 > [!NOTE]
-> One-time billing. Bootstrapping all live sources in one pass exceeds the 1 M Class A
-> operations included in Cloudflare's free tier — expect a one-time charge of roughly **~$5-10 USD**.
-> Steady-state monthly diffs stay well inside the free tier (~10k ops/source/month).
+> R2 bills by object operations and stored bytes, not aircraft rows. This pipeline writes a small,
+> fixed set of objects per configured source, so a fresh bootstrap is expected to fit the standard
+> free tier. Check account-wide R2 usage before running it; the allowance is shared across the
+> account, not reserved for this repository.
 
 ## Initial Load (Bootstrap)
 
-The first FAA load translates ~315k records and PUTs the whole artifact, which exceeds
-GHA's per-job timeout. Run it once locally; cadence runs handle diffs forever after.
+The first FAA load translates ~315k records and PUTs the whole artifact, which exceeds the
+refresh job's 30-minute `timeout-minutes`. Run it once locally; cadence runs handle diffs
+forever after.
 
 ```bash
 cp .env.example .env  # fill in MBF_R2_* and GEMINI_API_KEY
@@ -71,7 +75,7 @@ Tail `logs/pipeline.log` for `event=pipeline_complete` per source and `event=fee
 at the end. Override the source via `.env`'s `REFRESH_SOURCE` value (e.g.,
 `REFRESH_SOURCE=nl-ilt` to populate only the Dutch register).
 
-For sources whose initial load fits the GHA budget, skip the local bootstrap and
+For sources whose initial load fits that timeout, skip the local bootstrap and
 trigger the workflow directly:
 
 ```bash
@@ -114,7 +118,7 @@ neither: it only opens the local file.
 ```bash
 cp .env.example .env                   # fill in MBF_R2_ACCOUNT_ID / ACCESS_KEY_ID / SECRET_ACCESS_KEY / BUCKET_NAME
 make assemble-feed                     # pulls every source's _feed slice from R2, writes feed.sqlite
-                                       # (`make build-feed` re-pulls all 15 registers first)
+                                       # (`make build-feed` re-pulls every configured register first)
 export FEED_TOKEN=$(uuidgen)           # ≥16 chars required; a UUID is the convention
 export MBF_FEED_DB_PATH=./feed.sqlite  # defaults to the service root if unset
 make serve                             # starts on PORT (default 8080)
@@ -139,6 +143,16 @@ value in `.env` or any committed file.
 # Install dependencies and hooks
 make install
 ```
+
+**Setting up a self-hosted copy and not a developer?** Two guides cover the whole path — accounts,
+credentials, first pull, local feed service — without assuming you read TypeScript:
+
+- [docs/getting-started.md](docs/getting-started.md) — do it yourself, command by command
+- [docs/getting-started-with-ai.md](docs/getting-started-with-ai.md) — have Claude Code or Codex
+  drive it, via the setup skill in `.claude/skills/setup-metal-birds-feed/`
+
+Either way, the registry clearances in [DATA_LICENSES.md](DATA_LICENSES.md) are Ashley's and several
+are granted by name — a fork owes its own per-source assessment before pulling anything.
 
 ## Available Commands
 
