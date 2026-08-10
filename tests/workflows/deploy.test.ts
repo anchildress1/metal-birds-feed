@@ -96,12 +96,17 @@ describe('deploy workflow contract', () => {
         .filter(({ line }) => line.includes(`nosemgrep: ${MUTABLE_ACTION_RULE}`))
     );
 
-    // Without this the test passes vacuously the moment the rule id drifts: semgrep renames the
-    // rule, every suppression stops matching the filter, the loop iterates zero times and reports
-    // green forever while unbounded suppressions sit in the workflows.
+    // Guards against the loop below going vacuous: with zero matches it never executes and the
+    // test reports green regardless. That happens when the suppression comments are removed or
+    // reworded while this constant stays put.
+    //
+    // It cannot detect semgrep renaming the rule upstream. Both the workflow comments and this
+    // constant hold the same hardcoded string, so a rename leaves them agreeing with each other
+    // and disagreeing with the scanner — the suppressions silently stop suppressing and every
+    // assertion here still passes. Only running semgrep catches that, which CI does separately.
     expect(
       suppressions.length,
-      'no mutable-action suppressions found — has the rule id drifted?'
+      'no mutable-action suppressions found — were the comments removed or reworded?'
     ).toBeGreaterThan(0);
 
     for (const suppression of suppressions) {
