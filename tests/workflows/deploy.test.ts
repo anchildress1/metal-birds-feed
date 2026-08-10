@@ -96,6 +96,14 @@ describe('deploy workflow contract', () => {
         .filter(({ line }) => line.includes(`nosemgrep: ${MUTABLE_ACTION_RULE}`))
     );
 
+    // Without this the test passes vacuously the moment the rule id drifts: semgrep renames the
+    // rule, every suppression stops matching the filter, the loop iterates zero times and reports
+    // green forever while unbounded suppressions sit in the workflows.
+    expect(
+      suppressions.length,
+      'no mutable-action suppressions found — has the rule id drifted?'
+    ).toBeGreaterThan(0);
+
     for (const suppression of suppressions) {
       expect(
         suppression.line,
