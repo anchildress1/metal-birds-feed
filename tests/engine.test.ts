@@ -11,6 +11,25 @@ import type { SourceConfig } from '../src/types/config.js';
 
 const FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'faa');
 const CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'faa.yaml');
+const DUPLICATE_JOIN_CONFIG: SourceConfig = {
+  id: 'synthetic-join-duplicate',
+  label: 'synthetic',
+  country: 'US',
+  language: 'en',
+  encoding: 'utf8',
+  download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+  primary: 'primary',
+  delimiter: ',',
+  trim_all: true,
+  format: 'csv',
+  joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }],
+  source_id: 'ID',
+  registration: 'REG',
+  mapping: {
+    registration: { field: 'REG' },
+    manufacturer: { field: 'j.EXTRA', transform: 'trim_or_null' },
+  },
+};
 
 function fixtureBuffer(filename: string): Buffer {
   return readFileSync(resolve(FIXTURES, 'input', filename));
@@ -974,6 +993,28 @@ describe('engine — negative and edge cases', () => {
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.manufacturer).toBe('Cessna');
     expect(records.get('2')?.manufacturer).toBeNull();
+  });
+
+  it('rejects conflicting rows with the same join key', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n1,Cessna\n1,Piper\n', 'utf8')],
+    ]);
+
+    await expect(translate(DUPLICATE_JOIN_CONFIG, files)).rejects.toThrow(
+      'Source "synthetic-join-duplicate": join "j" has conflicting duplicate key "1"'
+    );
+  });
+
+  it('accepts byte-identical rows with the same join key', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')],
+      ['jf', Buffer.from('K,EXTRA\n1,Cessna\n1,Cessna\n', 'utf8')],
+    ]);
+
+    const { records, stats } = await translate(DUPLICATE_JOIN_CONFIG, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.manufacturer).toBe('Cessna');
   });
 
   it('skips the join-hit floor when the primary has no rows', async () => {

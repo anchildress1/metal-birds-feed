@@ -50,6 +50,15 @@ const DeployWorkflowSchema = z.looseObject({
   }),
 });
 
+const CIWorkflowSchema = z.looseObject({
+  jobs: z.looseObject({
+    test: z.looseObject({
+      permissions: z.record(z.string(), z.string()),
+      steps: z.array(StepSchema),
+    }),
+  }),
+});
+
 const workflowsDir = join(import.meta.dir, '..', '..', '.github', 'workflows');
 const read = async (file: string): Promise<unknown> =>
   load(await readFile(join(workflowsDir, file), 'utf8'));
@@ -83,7 +92,15 @@ const R2_SECRETS = {
   MBF_R2_BUCKET_NAME: '${{ secrets.MBF_R2_BUCKET_NAME }}',
 };
 
-describe('deploy workflow contract', () => {
+describe('workflow contracts', () => {
+  it('installs CI dependencies without lifecycle scripts or write permissions', async () => {
+    const ci = CIWorkflowSchema.parse(await read('ci.yml')).jobs.test;
+    expect(ci.permissions).toEqual({ contents: 'read' });
+    expect(namedStep(ci.steps, 'Install dependencies').run).toBe(
+      'bun install --frozen-lockfile --ignore-scripts'
+    );
+  });
+
   it('limits mutable-action suppressions to GitHub-owned major tags', async () => {
     const files = readdirSync(workflowsDir).filter((file) => /\.ya?ml$/.test(file));
     const workflows = await Promise.all(
