@@ -373,7 +373,7 @@ describe('buildFeedDb', () => {
     // leaving the feed advertising a shape version that predated the values it was serving.
     const db = Database.deserialize(buildFeedDb([]));
     try {
-      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 7 });
+      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 8 });
     } finally {
       db.close();
     }

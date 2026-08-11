@@ -31,7 +31,7 @@ export const MAX_TRANSLATION_ATTEMPTS = 3;
 // fail validation as one generation instead of accumulating unreachable hashes forever.
 export const TRANSLATION_CACHE_VERSION = 2;
 
-export const TranslationCacheSchema = z
+const CurrentTranslationCacheSchema = z
   .object({
     version: z.literal(TRANSLATION_CACHE_VERSION),
     entries: TranslationEntriesSchema,
@@ -43,7 +43,7 @@ export const TranslationCacheSchema = z
   })
   .strict();
 
-export type TranslationCache = z.infer<typeof TranslationCacheSchema>;
+export type TranslationCache = z.infer<typeof CurrentTranslationCacheSchema>;
 export type TranslationEntries = TranslationCache['entries'];
 export type TranslationFailures = TranslationCache['failures'];
 
@@ -52,6 +52,22 @@ export const emptyTranslationCache = (): TranslationCache => ({
   entries: {},
   failures: {},
 });
+
+// A recognized-but-obsolete generation (any other numeric `version`) resets to a fresh current
+// envelope instead of failing as corruption — the caller bills the whole source once and writes
+// the reset cache back, replacing the stale R2 object. `.refine` excludes the current version so
+// a malformed current-version envelope still falls through to genuine corruption below, rather
+// than being silently reset and losing the distinction the writer's rethrow-on-corruption relies
+// on (see writer.ts readTranslationCache).
+const ObsoleteTranslationCacheSchema = z
+  .looseObject({ version: z.number().int() })
+  .refine((v) => v.version !== TRANSLATION_CACHE_VERSION)
+  .transform(() => emptyTranslationCache());
+
+export const TranslationCacheSchema: z.ZodType<TranslationCache> = z.union([
+  CurrentTranslationCacheSchema,
+  ObsoleteTranslationCacheSchema,
+]);
 
 export const isExhausted = (failures: TranslationFailures, hash: string): boolean =>
   (failures[hash] ?? 0) >= MAX_TRANSLATION_ATTEMPTS;

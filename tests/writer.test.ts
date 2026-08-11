@@ -571,11 +571,22 @@ describe('R2ArtifactWriter — translation cache', () => {
     );
   });
 
-  it('throws for an obsolete cache generation so localization degrades for the run', async () => {
+  it('resets to a fresh current-version cache for an obsolete generation, not a rethrow', async () => {
     mockSend.mockResolvedValueOnce({
       Body: {
         transformToString: () =>
           Promise.resolve(JSON.stringify({ version: 0, entries: { [HASH64]: 'stale' } })),
+      },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+  });
+
+  it('throws for a malformed envelope at the current version', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: {
+        transformToString: () =>
+          Promise.resolve(JSON.stringify({ version: 2, entries: { [HASH64]: 'stale' } })),
       },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);

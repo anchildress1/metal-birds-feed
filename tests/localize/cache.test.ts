@@ -52,10 +52,22 @@ describe('TranslationCacheSchema', () => {
     expect(TranslationCacheSchema.safeParse(emptyTranslationCache()).success).toBe(true);
   });
 
-  it('rejects an obsolete cache generation', () => {
-    expect(
-      TranslationCacheSchema.safeParse({ version: 0, entries: { [hash]: 'stale' } }).success
-    ).toBe(false);
+  // A recognized-but-obsolete generation resets to a fresh current envelope rather than failing
+  // as corruption, so a version bump self-heals: the caller bills the source once and writes the
+  // reset cache back, replacing the stale R2 object instead of degrading to source text forever.
+  it('resets an obsolete cache generation to a fresh current envelope', () => {
+    const parsed = TranslationCacheSchema.safeParse({
+      version: 0,
+      entries: { [hash]: 'stale' },
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual(emptyTranslationCache());
+  });
+
+  it('rejects data with no numeric version at all', () => {
+    expect(TranslationCacheSchema.safeParse({ entries: {} }).success).toBe(false);
+    expect(TranslationCacheSchema.safeParse([]).success).toBe(false);
+    expect(TranslationCacheSchema.safeParse('not an object').success).toBe(false);
   });
 
   it('rejects a key that is not a 64-char hex hash', () => {
