@@ -2940,6 +2940,54 @@ describe('engine — merge_duplicates edge cases', () => {
     expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
   });
 
+  // The leaf must be a real own property of Object.prototype. With a made-up leaf the final
+  // `Object.hasOwn(node, leaf)` throws on its own, so the test passes even with the parent
+  // own-property guard deleted — it would assert nothing. `toString` exists, so reaching
+  // Object.prototype means the assignment lands and the process is genuinely polluted.
+  //
+  // Note which guard this pins: the parent `Object.hasOwn` check, not the null/non-object/array
+  // check beside it. Object.prototype is a plain non-null object, so the type guard waves
+  // `__proto__` straight through. The own-property check is the only barrier here.
+  it('rejects a prototype-chain merge path when the loader boundary is bypassed', async () => {
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER'],
+      ['1', 'CC-AAA', 'FIRST PARTY'],
+      ['1', 'CC-AAA', 'SECOND PARTY'],
+    ]);
+    const descriptor = Object.getOwnPropertyDescriptor(Object.prototype, 'toString')!;
+    try {
+      const { records, stats } = await translate(
+        buildMergeConfig({ 'owner.__proto__.toString': 'PWNED' }),
+        new Map([['register', buf]])
+      );
+      expect(stats.failed).toBe(1);
+      expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
+      // Compare descriptors rather than reading the method: `expect(Object.prototype.toString)`
+      // trips @typescript-eslint/unbound-method. Pollution shows up as a changed `value` — the
+      // other attributes survive, since assigning to an existing writable data property leaves
+      // its descriptor flags alone.
+      expect(Object.getOwnPropertyDescriptor(Object.prototype, 'toString')).toEqual(descriptor);
+    } finally {
+      // defineProperty rather than assignment: assignment would restore the function value but
+      // silently no-op if a future guard change ever left the property non-writable, and this
+      // must not leave a polluted prototype behind for the rest of the process.
+      Object.defineProperty(Object.prototype, 'toString', descriptor);
+    }
+  });
+
+  it('rejects a merge path that descends into an array when the loader boundary is bypassed', async () => {
+    const config = buildMergeConfig({ 'operational_classes.0': 'commercial' });
+    config.mapping.operational_classes = { field: 'CLASS' };
+    const buf = await odsBuffer([
+      ['ID', 'REG', 'OWNER', 'CLASS'],
+      ['1', 'CC-AAA', 'FIRST PARTY', 'private'],
+      ['1', 'CC-AAA', 'SECOND PARTY', 'private'],
+    ]);
+    const { records, stats } = await translate(config, new Map([['register', buf]]));
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')!.operational_classes).toEqual(['private']);
+  });
+
   // A non-string merge field is a misconfiguration: merge can only concatenate strings, so the row
   // fails loudly rather than silently dropping the candidate's differing value.
   it('fails the row when a declared merge field is not a string', async () => {

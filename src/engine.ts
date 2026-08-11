@@ -269,7 +269,10 @@ const setPath = (obj: Record<string, unknown>, path: string, value: unknown): vo
   let node = obj;
   for (const key of parents) {
     if (!Object.hasOwn(node, key)) throw new Error(`merge path "${path}" is not a canonical path`);
-    node = node[key] as Record<string, unknown>;
+    const next = Reflect.get(node, key);
+    if (next === null || typeof next !== 'object' || Array.isArray(next))
+      throw new Error(`merge path "${path}" is not a canonical path`);
+    node = next as Record<string, unknown>;
   }
   if (!Object.hasOwn(node, leaf)) throw new Error(`merge path "${path}" is not a canonical path`);
   node[leaf] = value;

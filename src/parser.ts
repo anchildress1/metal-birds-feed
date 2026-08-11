@@ -162,7 +162,12 @@ const navigateToArray = (root: unknown, path: string | undefined): unknown[] => 
       if (node === null || typeof node !== 'object') {
         throw new TypeError(`JSON record_path "${path}" does not resolve to an object at "${key}"`);
       }
-      node = (node as Record<string, unknown>)[key];
+      if (!Object.hasOwn(node, key)) {
+        throw new TypeError(
+          `JSON record_path "${path}" did not resolve to an array; missing own property "${key}"`
+        );
+      }
+      node = Reflect.get(node, key);
     }
   }
   if (!Array.isArray(node)) {
