@@ -55,13 +55,9 @@ load in CI is ever worth the runner minutes. Smaller sources (TC ~37k, NL ILT ~3
 cleanly inside it and don't need a local bootstrap.
 
 > [!NOTE]
-> R2 billing. This pipeline's own footprint is small — a handful of object writes per configured
-> source per run, plus roughly one translation-cache write per 200 new strings — which on its own
-> sits well inside Cloudflare's free tier (1 M Class A operations and 10 GB storage per month).
-> The allowance is account-wide, though, not reserved for this repository: where other R2 workloads
-> have already consumed it, a cold bootstrap can tip the account over. This operator has seen a
-> monthly bill under **$6 USD** on such an account — an account-level figure, not one this pipeline
-> is shown to have caused. Check existing R2 usage before a first full load.
+> R2 billing. The operator's first data load incurred approximately **$6.50 USD** in R2 charges.
+> That is an observed bill, not a guaranteed quote or a claim about which billing dimension caused
+> it. Check current R2 pricing and your account usage before pulling data.
 
 ## Initial Load (Bootstrap)
 

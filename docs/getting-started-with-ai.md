@@ -75,7 +75,8 @@ brew install codex
 Verify with `codex --version`. Full instructions:
 [learn.chatgpt.com/docs/codex/cli](https://learn.chatgpt.com/docs/codex/cli)
 
-Requires a paid ChatGPT plan or an OpenAI API key.
+Codex is available with ChatGPT plans, including Free and Go; usage limits vary by plan. An OpenAI
+API key is another option and is billed separately.
 
 ---
 
@@ -115,32 +116,24 @@ claude
 
 Then just say **"Set up this project locally."**
 
-### Codex — one symlink, or just point at the file
+### Codex — nothing to do
 
-Codex scans `~/.agents/skills`, not the repo's `.agents/skills`. Either link it once:
-
-```bash
-mkdir -p ~/.agents/skills
-ln -s "$(pwd)/.agents/skills/setup-metal-birds-feed" ~/.agents/skills/setup-metal-birds-feed
-```
-
-…or skip that entirely and tell it where to look:
+Codex scans repository-local `.agents/skills` from the current directory up to the repository root.
+Start it from the repository you just cloned:
 
 ```bash
 codex
 ```
 
-> Read `.agents/skills/setup-metal-birds-feed/SKILL.md` and follow it to set up this project.
-
-Both work. The second needs no setup at all, because the skill is a plain Markdown file in the repo
-you just cloned.
+Then just say **"Set up this project locally."** Codex discovers the checked-in skill automatically.
 
 > [!NOTE]
 > **Windows without WSL:** git only recreates the shipped symlink if symlinks are enabled
 > (`git config --global core.symlinks true`, plus Developer Mode or an elevated shell). Without
 > that, `.claude/skills/setup-metal-birds-feed` clones as a text file containing a path, and Claude
-> Code will not find the skill. Use the "point at the file" instruction above instead, or work
-> inside WSL where symlinks behave normally.
+> Code will not find the skill automatically. Tell Claude Code to read
+> `.agents/skills/setup-metal-birds-feed/SKILL.md` directly, or work inside WSL where symlinks behave
+> normally. Codex uses the real `.agents` copy and is unaffected.
 
 ---
 
@@ -257,9 +250,9 @@ The skill hard-codes these. They are not suggestions the assistant may talk itse
 - It never writes a credential it wasn't given, and never generates a placeholder that looks real
 - It never echoes the contents of `.env` to the screen
 - It never commits `.env`, and never disables the secret scanner
-- It confirms with you before the full configured-source pull and has you check account-wide R2
-  usage first — the pipeline is small on its own, but the free allowance is shared, so a charge
-  depends on what else your account already uses
+- It confirms with you before the full configured-source pull and reports that the operator's first
+  data load incurred approximately $6.50 USD in R2 charges — an observed bill, not a guaranteed
+  quote or a claim about which billing dimension caused it
 - It confirms with you before any Cloud Run deploy, because that puts data on a server
 - It sends you to `DATA_LICENSES.md` rather than deciding a licensing question itself
 

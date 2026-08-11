@@ -139,11 +139,9 @@ the user to look).
   quote that as steady state and say a cold first pull is longer. **Not** the 30 minutes quoted
   elsewhere in this repo — that is this repo's own `timeout-minutes` on the CI refresh job, not a
   platform limit (GitHub allows 6h) and not a local measurement
-- R2 usage checked account-wide. The pipeline writes a handful of objects per configured source
-  plus ~1 cache object per 200 new strings, which alone stays inside the free allowance — so a
-  charge depends on what else the account already uses, and this operator's sub-$6 bill is an
-  account-level figure, not one this pipeline is shown to have caused. Present it as possible, not
-  guaranteed; never tell the user a cold load will definitely bill them
+- R2 pricing and account usage checked. State that the operator's first data load incurred
+  approximately $6.50 USD in R2 charges. Present that as an observed bill, not a guaranteed quote
+  or a claim about which billing dimension caused it
 - `GEMINI_API_KEY` set if any remaining source declares a non-English `language:`
 - the user has read `DATA_LICENSES.md` **and removed the `sources/<id>.yaml` of every source their
   own assessment does not cover.** Acknowledging that Ashley's clearances do not transfer is not
@@ -231,33 +229,92 @@ ID with the user, set it on the existing `GCP_PROJECT_ID=` line in `.env`, then 
 first-deploy dependencies without printing the feed token:
 
 ```bash
-export GCP_PROJECT_ID=the-confirmed-project-id
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com secretmanager.googleapis.com iam.googleapis.com \
-  --project="$GCP_PROJECT_ID"
-PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role="roles/run.builder"
-gcloud iam service-accounts create metal-birds-feed-run \
-  --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
-FEED_TOKEN=$(openssl rand -hex 16) && \
-  test "${#FEED_TOKEN}" -ge 16 && \
+(
+  set -eu
+  export GCP_PROJECT_ID=the-confirmed-project-id
+  gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
+    artifactregistry.googleapis.com secretmanager.googleapis.com iam.googleapis.com \
+    --project="$GCP_PROJECT_ID"
+  PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/run.builder"
+  gcloud iam service-accounts create metal-birds-feed-run \
+    --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
+  FEED_TOKEN=$(openssl rand -hex 16)
+  test "${#FEED_TOKEN}" -ge 16
   printf '%s' "$FEED_TOKEN" | gcloud secrets create feed-token \
-  --data-file=- --project="$GCP_PROJECT_ID"
-gcloud secrets add-iam-policy-binding feed-token \
-  --member="serviceAccount:metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
-make deploy
+    --data-file=- --project="$GCP_PROJECT_ID"
+  gcloud secrets add-iam-policy-binding feed-token \
+    --member="serviceAccount:metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
+  make deploy
+)
 ```
 
 The deploy token is generated immediately before Secret Manager stores it; it is not the temporary
-local token from Phase 6. Retrieve it later without printing it using
-`export FEED_TOKEN=$(gcloud secrets versions access latest --secret=feed-token
---project="$GCP_PROJECT_ID")`. Stop if the service account or secret already exists; this is the
-first-deploy path, not an overwrite path. `make deploy` assembles from R2 first, so a stale local
-`feed.sqlite` is never shipped. It does not re-pull upstream. Confirm immediately before running it
-because it publishes data to a server.
+local token from Phase 6. If either resource existed before this attempt, stop; this is the
+first-deploy path, not an overwrite path. The block is fail-closed, not transactional. If this
+attempt created a resource before a later command failed, do not rerun the whole block.
+
+### Recover an interrupted first deploy
+
+Use this only after confirming the fixed-name resources were created by the interrupted attempt in
+the confirmed project:
+
+```bash
+(
+  set -eu
+  export GCP_PROJECT_ID=the-confirmed-project-id
+  SERVICE_ACCOUNT="metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+  SERVICE_ACCOUNT_MATCH=$(gcloud iam service-accounts list \
+    --filter="email=$SERVICE_ACCOUNT" --limit=1 --format='value(email)' \
+    --project="$GCP_PROJECT_ID")
+  if [ -z "$SERVICE_ACCOUNT_MATCH" ]; then
+    gcloud iam service-accounts create metal-birds-feed-run \
+      --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
+  fi
+  SECRET_MATCH=$(gcloud secrets list --filter='name=feed-token' \
+    --limit=1 --format='value(name)' --project="$GCP_PROJECT_ID")
+  if [ -z "$SECRET_MATCH" ]; then
+    FEED_TOKEN=$(openssl rand -hex 16)
+    test "${#FEED_TOKEN}" -ge 16
+    printf '%s' "$FEED_TOKEN" | gcloud secrets create feed-token \
+      --data-file=- --project="$GCP_PROJECT_ID"
+  else
+    ENABLED_VERSION=$(gcloud secrets versions list feed-token --filter='state=ENABLED' \
+      --limit=1 --format='value(name)' --project="$GCP_PROJECT_ID")
+    if [ -z "$ENABLED_VERSION" ]; then
+      FEED_TOKEN=$(openssl rand -hex 16)
+      test "${#FEED_TOKEN}" -ge 16
+      printf '%s' "$FEED_TOKEN" | gcloud secrets versions add feed-token \
+        --data-file=- --project="$GCP_PROJECT_ID"
+    fi
+  fi
+  gcloud secrets add-iam-policy-binding feed-token \
+    --member="serviceAccount:$SERVICE_ACCOUNT" \
+    --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
+  make deploy
+)
+```
+
+Retrieve the token later without printing it:
+
+```bash
+export GCP_PROJECT_ID=the-confirmed-project-id
+if FEED_TOKEN=$(gcloud secrets versions access latest \
+  --secret=feed-token --project="$GCP_PROJECT_ID") && \
+  test "${#FEED_TOKEN}" -ge 16; then
+  export FEED_TOKEN
+else
+  unset FEED_TOKEN
+  printf '%s\n' 'Could not retrieve a valid feed token.' >&2
+  false
+fi
+```
+
+`make deploy` assembles from R2 first, so a stale local `feed.sqlite` is never shipped. It does not
+re-pull upstream. Confirm immediately before running it because it publishes data to a server.
 
 ## MCP configuration
 

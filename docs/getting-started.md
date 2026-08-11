@@ -47,16 +47,15 @@ Everything up to it runs on your laptop.
 
 ## What It Costs 💸
 
-| Service            | Required?           | Cost                                                                                                                                                                                                |
-| ------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare R2      | Yes                 | Free on its own — this pipeline stays inside the allowance. But it's account-wide: if other R2 workloads already use it, a bootstrap can tip you over (operator has seen <$6). Check existing usage |
-| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                                                                                                                                 |
-| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                                                                                                                              |
-| GitHub             | Only for automation | Free                                                                                                                                                                                                |
+| Service            | Required?           | Cost                                                                                                                                                   |
+| ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cloudflare R2      | Yes                 | The operator's observed bill for the first data load was approximately $6.50 USD in R2 charges. That is not a guaranteed quote; your charge may differ |
+| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                                                                                    |
+| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                                                                                 |
+| GitHub             | Only for automation | Free                                                                                                                                                   |
 
-R2 bills object operations and stored bytes, not aircraft rows. This pipeline writes a small,
-fixed set of objects per configured source. The free allowance is shared across your Cloudflare
-account, so check existing usage before a full pull. Step 7 starts with one registry first.
+R2 bills object operations and stored bytes, not aircraft rows. This is not a claim about which
+billing dimension caused the observed charge. Step 7 starts with one registry first.
 
 ---
 
@@ -258,11 +257,9 @@ warnings apply:
   sets on its own CI refresh job — not a GitHub limit (hosted runners allow 6 hours) and not a
   local measurement
 
-- **It may cost you, depending on your account.** This pipeline writes only a handful of objects
-  per source, which on its own stays inside R2's free allowance. That allowance is account-wide,
-  though — if you already use R2 for other things, a cold load can push you past it. This project's
-  operator has seen a monthly bill under $6 on such an account. Check your existing R2 usage before
-  starting; on a fresh account used for nothing else, expect no charge
+- **It may cost you.** This project's operator incurred approximately $6.50 USD in R2 charges on
+  the first data load. That is an observed bill, not a guaranteed quote or a claim about which
+  billing dimension caused it. Check current R2 pricing and your account usage before starting
 - Remaining non-English sources need `GEMINI_API_KEY` set or the run stops
 - **Re-read [DATA_LICENSES.md](../DATA_LICENSES.md) first, then delete what you're not covered
   for.** Some of these permissions were granted to Ashley personally and do not extend to you.
@@ -390,35 +387,91 @@ Export the same value for the setup commands, then provision the APIs, runtime i
 and permission that the deploy recipe expects:
 
 ```bash
-export GCP_PROJECT_ID=your-project-id
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com secretmanager.googleapis.com iam.googleapis.com \
-  --project="$GCP_PROJECT_ID"
-PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role="roles/run.builder"
-gcloud iam service-accounts create metal-birds-feed-run \
-  --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
-FEED_TOKEN=$(openssl rand -hex 16) && \
-  test "${#FEED_TOKEN}" -ge 16 && \
+(
+  set -eu
+  export GCP_PROJECT_ID=your-project-id
+  gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
+    artifactregistry.googleapis.com secretmanager.googleapis.com iam.googleapis.com \
+    --project="$GCP_PROJECT_ID"
+  PROJECT_NUMBER=$(gcloud projects describe "$GCP_PROJECT_ID" --format='value(projectNumber)')
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/run.builder"
+  gcloud iam service-accounts create metal-birds-feed-run \
+    --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
+  FEED_TOKEN=$(openssl rand -hex 16)
+  test "${#FEED_TOKEN}" -ge 16
   printf '%s' "$FEED_TOKEN" | gcloud secrets create feed-token \
-  --data-file=- --project="$GCP_PROJECT_ID"
-gcloud secrets add-iam-policy-binding feed-token \
-  --member="serviceAccount:metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
-make deploy
+    --data-file=- --project="$GCP_PROJECT_ID"
+  gcloud secrets add-iam-policy-binding feed-token \
+    --member="serviceAccount:metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
+  make deploy
+)
 ```
 
-These are first-deploy commands. If the service account or secret already exists, stop rather than
-overwriting it; use the existing deployment's operator procedure instead.
+These are first-deploy commands. If the service account or secret existed before this attempt, stop
+rather than overwriting it; use the existing deployment's operator procedure instead.
+
+The block stops on the first failure but cannot roll back cloud resources already created. If this
+attempt created something before a later command failed, **do not rerun the whole block**.
+
+### Recover an interrupted first deploy
+
+Use this only after confirming the fixed-name resources were created by the interrupted attempt in
+this project. It verifies or creates the runtime identity, verifies that the secret has an enabled
+payload version rather than trusting the secret metadata alone, applies the binding, and deploys:
+
+```bash
+(
+  set -eu
+  export GCP_PROJECT_ID=the-confirmed-project-id
+  SERVICE_ACCOUNT="metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
+  SERVICE_ACCOUNT_MATCH=$(gcloud iam service-accounts list \
+    --filter="email=$SERVICE_ACCOUNT" --limit=1 --format='value(email)' \
+    --project="$GCP_PROJECT_ID")
+  if [ -z "$SERVICE_ACCOUNT_MATCH" ]; then
+    gcloud iam service-accounts create metal-birds-feed-run \
+      --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
+  fi
+  SECRET_MATCH=$(gcloud secrets list --filter='name=feed-token' \
+    --limit=1 --format='value(name)' --project="$GCP_PROJECT_ID")
+  if [ -z "$SECRET_MATCH" ]; then
+    FEED_TOKEN=$(openssl rand -hex 16)
+    test "${#FEED_TOKEN}" -ge 16
+    printf '%s' "$FEED_TOKEN" | gcloud secrets create feed-token \
+      --data-file=- --project="$GCP_PROJECT_ID"
+  else
+    ENABLED_VERSION=$(gcloud secrets versions list feed-token --filter='state=ENABLED' \
+      --limit=1 --format='value(name)' --project="$GCP_PROJECT_ID")
+    if [ -z "$ENABLED_VERSION" ]; then
+      FEED_TOKEN=$(openssl rand -hex 16)
+      test "${#FEED_TOKEN}" -ge 16
+      printf '%s' "$FEED_TOKEN" | gcloud secrets versions add feed-token \
+        --data-file=- --project="$GCP_PROJECT_ID"
+    fi
+  fi
+  gcloud secrets add-iam-policy-binding feed-token \
+    --member="serviceAccount:$SERVICE_ACCOUNT" \
+    --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
+  make deploy
+)
+```
 
 When a client needs the deployed token in a later shell, retrieve it from the vault without printing
 it:
 
 ```bash
-export FEED_TOKEN=$(gcloud secrets versions access latest \
-  --secret=feed-token --project="$GCP_PROJECT_ID")
+export GCP_PROJECT_ID=the-confirmed-project-id
+if FEED_TOKEN=$(gcloud secrets versions access latest \
+  --secret=feed-token --project="$GCP_PROJECT_ID") && \
+  test "${#FEED_TOKEN}" -ge 16; then
+  export FEED_TOKEN
+else
+  unset FEED_TOKEN
+  printf '%s\n' 'Could not retrieve a valid feed token.' >&2
+  false
+fi
 ```
 
 This rebuilds `feed.sqlite` from R2 (so a stale local file is never shipped) and deploys it to Cloud
