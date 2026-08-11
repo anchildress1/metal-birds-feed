@@ -166,9 +166,10 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
     // 7 widens the category and build_certification value domains; a version-aware consumer must
     // not read `restricted` or `light-sport` as if it were reading a version-6 artifact.
-    // 8 narrows several numeric columns to non-negative: a row carrying a negative engine_count,
-    // horsepower, thrust, seat count, cruise speed, or takeoff weight now fails translation instead
-    // of reaching the artifact, so a version-8-or-later consumer may rely on that guarantee.
+    // 8 narrows nine numeric columns to non-negative — engine_count, engine_horsepower,
+    // engine_thrust_lbs, year_manufactured, cruise_speed_ktas, max_takeoff_weight_kg, seats,
+    // max_passengers, min_crew — so a row carrying a negative value in any of them now fails
+    // translation instead of reaching the artifact; a version-8-or-later consumer may rely on that.
     db.run('PRAGMA user_version = 8');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);

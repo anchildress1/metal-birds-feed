@@ -305,8 +305,11 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // `special-flight-permit`, `light-sport` — where version 6 collapsed all of them into `other`.
     // The feed serves that column, so the widening reaches consumers here exactly as it does in the
     // per-source artifact, and none of the five may be read as if it were a version-6 feed.
-    // 8 mirrors db.ts's non-negative narrowing on the same numeric columns: every row here already
-    // passed that check upstream at the per-source artifact, so the guarantee carries through.
+    // 8 mirrors db.ts's non-negative narrowing on the same numeric columns: a row written by this
+    // producer onward already passed that check upstream at the per-source artifact. Same tolerance
+    // as the v7 widening above — a pre-change slice that hasn't hit its source's normal refresh
+    // cadence yet could still carry a stale negative value; FEED_SLICE_VERSION doesn't bump for a
+    // value-domain change, so it self-heals on the next refresh rather than failing every slice.
     // Versioned independently of db.ts; the numbers coinciding is chance.
     db.run('PRAGMA user_version = 8');
     db.run(DDL);

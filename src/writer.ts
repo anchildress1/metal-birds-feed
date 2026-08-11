@@ -15,7 +15,8 @@ import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
 import {
   emptyTranslationCache,
-  TranslationCacheSchema,
+  ParsedTranslationCacheSchema,
+  TRANSLATION_CACHE_VERSION,
   type TranslationCache,
 } from './localize/cache.js';
 
@@ -264,18 +265,30 @@ export class R2ArtifactWriter {
     await this.put(`aircraft/_state/${source}.json`, JSON.stringify(state), 'application/json');
   }
 
-  // Persists independent of the artifact's content-hash skip gate. `rethrowOnCorruption: true` so
-  // localize.ts's readCache sees a corrupt cache as a failed read (ok: false), not as "nothing
-  // cached yet" — the latter would bill Gemini for the whole source instead of degrading for a run.
+  // Persists independent of the artifact's content-hash skip gate. Three outcomes, per
+  // ParsedTranslationCacheSchema: corruption or an unrecognized-newer version rethrows
+  // (`rethrowOnCorruption: true`) so localize.ts's readCache sees a failed read (ok: false) rather
+  // than "nothing cached yet" — the latter would bill Gemini for the whole source instead of
+  // degrading for a run. A recognized older generation resets and logs here, where `source` is
+  // available — the reset happens inside the schema, which has no per-call context to log with.
   async readTranslationCache(source: string): Promise<TranslationCache> {
-    return this.readJson(
+    const result = await this.readJson(
       `aircraft/_translation_cache/${source}.json`,
-      TranslationCacheSchema,
+      ParsedTranslationCacheSchema,
       'translation_cache',
-      emptyTranslationCache(),
+      { kind: 'current' as const, cache: emptyTranslationCache() },
       { source },
       true
     );
+    if (result.kind === 'obsolete') {
+      log('warn', 'translation_cache_obsolete_reset', {
+        source,
+        from_version: result.priorVersion,
+        to_version: TRANSLATION_CACHE_VERSION,
+      });
+      return emptyTranslationCache();
+    }
+    return result.cache;
   }
 
   async writeTranslationCache(source: string, cache: TranslationCache): Promise<void> {

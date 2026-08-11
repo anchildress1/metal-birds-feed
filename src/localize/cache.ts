@@ -27,8 +27,10 @@ const TranslationFailuresSchema = z.record(
 // property of the text, not a bad day.
 export const MAX_TRANSLATION_ATTEMPTS = 3;
 
-// Bump when the model, prompt, or generation contract changes. The envelope makes obsolete entries
-// fail validation as one generation instead of accumulating unreachable hashes forever.
+// Bump when the model, prompt, or generation contract changes. A recognized older envelope resets
+// to a fresh empty one rather than accumulating unreachable hashes forever — see
+// ObsoleteTranslationCacheSchema below for how "recognized older" is distinguished from corruption
+// and from a newer envelope this build predates.
 export const TRANSLATION_CACHE_VERSION = 2;
 
 const CurrentTranslationCacheSchema = z
@@ -53,21 +55,42 @@ export const emptyTranslationCache = (): TranslationCache => ({
   failures: {},
 });
 
-// A recognized-but-obsolete generation (any other numeric `version`) resets to a fresh current
-// envelope instead of failing as corruption — the caller bills the whole source once and writes
-// the reset cache back, replacing the stale R2 object. `.refine` excludes the current version so
-// a malformed current-version envelope still falls through to genuine corruption below, rather
-// than being silently reset and losing the distinction the writer's rethrow-on-corruption relies
-// on (see writer.ts readTranslationCache).
+// Three-way discrimination the writer needs: an unrecognized/malformed body at any version, a
+// recognized older generation (reset), or the current envelope — see writer.ts readTranslationCache
+// for what each does (rethrow, log-and-reset, or pass through) and why it needs to know which.
+export type ParsedTranslationCache =
+  { kind: 'current'; cache: TranslationCache } | { kind: 'obsolete'; priorVersion: number };
+
+const CurrentTranslationCacheEnvelopeSchema = CurrentTranslationCacheSchema.transform(
+  (cache): ParsedTranslationCache => ({ kind: 'current', cache })
+);
+
+// Only a version strictly OLDER than current is a recognized prior generation, and only that
+// resets — an object whose internal shape is also malformed still resets, since an old generation
+// is discarded unconditionally regardless of its shape, so validating it further would change
+// nothing observable. A version NEWER than current must NOT match: it means this build is older
+// than the code that wrote the cache (e.g. an ad-hoc rollback, AGENTS.md's supported recovery
+// path), and silently resetting it would destroy translations a later release already paid for.
+// It falls through to genuine corruption/rethrow instead, which degrades for one run without
+// touching the R2 object — the safe default when the shape can't be understood.
 const ObsoleteTranslationCacheSchema = z
   .looseObject({ version: z.number().int() })
-  .refine((v) => v.version !== TRANSLATION_CACHE_VERSION)
-  .transform(() => emptyTranslationCache());
+  .refine((v) => v.version < TRANSLATION_CACHE_VERSION)
+  .transform((v): ParsedTranslationCache => ({ kind: 'obsolete', priorVersion: v.version }));
 
-export const TranslationCacheSchema: z.ZodType<TranslationCache> = z.union([
-  CurrentTranslationCacheSchema,
+// Genuine corruption (no numeric version at all, a current-version body that fails validation, or
+// a version newer than this build knows) matches neither branch and fails the union.
+export const ParsedTranslationCacheSchema: z.ZodType<ParsedTranslationCache> = z.union([
+  CurrentTranslationCacheEnvelopeSchema,
   ObsoleteTranslationCacheSchema,
 ]);
+
+// Flattens the discriminated result to a bare cache for callers that don't need to know a reset
+// happened (tests, anything reading a cache without the write-back/logging writer.ts does).
+export const TranslationCacheSchema: z.ZodType<TranslationCache> =
+  ParsedTranslationCacheSchema.transform((r) =>
+    r.kind === 'current' ? r.cache : emptyTranslationCache()
+  );
 
 export const isExhausted = (failures: TranslationFailures, hash: string): boolean =>
   (failures[hash] ?? 0) >= MAX_TRANSLATION_ATTEMPTS;
