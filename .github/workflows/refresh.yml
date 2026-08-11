@@ -32,7 +32,8 @@ jobs:
       sources: ${{ steps.list.outputs.sources }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        # GitHub-owned actions intentionally follow the repository's major-tag update policy.
+        uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
 
       - name: Enumerate sources
         id: list
@@ -70,7 +71,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -98,7 +99,7 @@ jobs:
         run: bun run dist/pipeline.js
 
       - name: Upload refresh logs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
         if: always()
         with:
           name: refresh-logs-${{ matrix.source }}-${{ github.run_id }}

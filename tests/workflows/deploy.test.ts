@@ -74,6 +74,8 @@ const namedStep = (
 };
 
 const CHANGE_GATE = "${{ steps.feed.outputs.changed == 'true' || inputs.force }}";
+const MUTABLE_ACTION_RULE =
+  'yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag';
 const R2_SECRETS = {
   MBF_R2_ACCOUNT_ID: '${{ secrets.MBF_R2_ACCOUNT_ID }}',
   MBF_R2_ACCESS_KEY_ID: '${{ secrets.MBF_R2_ACCESS_KEY_ID }}',
@@ -82,6 +84,39 @@ const R2_SECRETS = {
 };
 
 describe('deploy workflow contract', () => {
+  it('limits mutable-action suppressions to GitHub-owned major tags', async () => {
+    const files = readdirSync(workflowsDir).filter((file) => /\.ya?ml$/.test(file));
+    const workflows = await Promise.all(
+      files.map(async (file) => ({ file, text: await readFile(join(workflowsDir, file), 'utf8') }))
+    );
+    const suppressions = workflows.flatMap(({ file, text }) =>
+      text
+        .split('\n')
+        .map((line, index) => ({ file, line, number: index + 1 }))
+        .filter(({ line }) => line.includes(`nosemgrep: ${MUTABLE_ACTION_RULE}`))
+    );
+
+    // Guards against the loop below going vacuous: with zero matches it never executes and the
+    // test reports green regardless. That happens when the suppression comments are removed or
+    // reworded while this constant stays put.
+    //
+    // It cannot detect semgrep renaming the rule upstream. Both the workflow comments and this
+    // constant hold the same hardcoded string, so a rename leaves them agreeing with each other
+    // and disagreeing with the scanner — the suppressions silently stop suppressing and every
+    // assertion here still passes. Only running semgrep catches that, which CI does separately.
+    expect(
+      suppressions.length,
+      'no mutable-action suppressions found — were the comments removed or reworded?'
+    ).toBeGreaterThan(0);
+
+    for (const suppression of suppressions) {
+      expect(
+        suppression.line,
+        `${suppression.file}:${suppression.number} suppresses mutable-action detection outside the actions/* major-tag policy`
+      ).toMatch(new RegExp(`uses: actions/[^@\\s]+@v\\d+ # nosemgrep: ${MUTABLE_ACTION_RULE}$`));
+    }
+  });
+
   // Two jobs deploying one Cloud Run service both advance _deployed.json, and whichever writes
   // last records a hash that is not live. Every workflow is scanned rather than a named list, so a
   // deploy added to a brand-new file is caught too.
