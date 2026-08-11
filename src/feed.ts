@@ -177,9 +177,9 @@ export const resolveRegistrationAmbiguity = (rows: FeedRow[]): FeedRow[] => {
 // by icao_hex (the row key) so merge/iteration order can't churn it. The scheduled deploy compares
 // this against the last-deployed hash to skip a redundant Cloud Run redeploy when nothing changed.
 // Hashes values in `COLUMNS` order rather than `JSON.stringify(row)`, which is key-order sensitive:
-// a migrated legacy slice appends its added fields after `source`, while a zod re-parse emits them
-// in schema order, so the same data hashed two ways would disagree and trigger a redundant Cloud
-// Run image build. Column order is the contract, and adding a column still changes the hash.
+// object construction order can legitimately differ between code paths producing the same row, so
+// the same data hashed two ways could disagree and trigger a redundant Cloud Run image build.
+// Column order is the contract, and adding a column still changes the hash.
 export const hashFeedRows = (rows: FeedRow[]): string => {
   const hash = createHash('sha256');
   // hex alone is no longer a total order: hex-less rows all sort equal on it, so the mark and the
@@ -257,21 +257,14 @@ const FeedRowObjectSchema = z.strictObject(
 export const FeedRowsSchema: z.ZodType<FeedRow[]> = z.array(FeedRowObjectSchema);
 export const FEED_SLICE_VERSION = 3;
 
-export interface ParsedFeedSlice {
-  rows: FeedRow[];
-  needsMigration: boolean;
-}
-
 // Only the current version is accepted. Earlier slices are structurally readable — every column
 // they carry still validates — but they were written when the producer dropped hex-less records, so
 // they are silently short by exactly the rows this version exists to serve. Migrating one would
 // publish that gap; failing closed drops the source to "no slice", which the pipeline already
 // self-heals by regenerating it from the register.
-const CurrentFeedSliceSchema = z
+export const FeedSliceSchema: z.ZodType<FeedRow[]> = z
   .strictObject({ version: z.literal(FEED_SLICE_VERSION), rows: FeedRowsSchema })
-  .transform(({ rows }): ParsedFeedSlice => ({ rows, needsMigration: false }));
-
-export const FeedSliceSchema: z.ZodType<ParsedFeedSlice> = CurrentFeedSliceSchema;
+  .transform(({ rows }) => rows);
 
 export const serializeFeedSlice = (rows: FeedRow[]): string =>
   JSON.stringify({ version: FEED_SLICE_VERSION, rows });

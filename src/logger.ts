@@ -29,6 +29,8 @@ const ensureLogDir = (): void => {
   }
 };
 
+// Register-derived text (an upstream cell echoed into an error/lookup-default log field) can carry
+// a raw newline; unescaped it would start a second, unprefixed logfmt line in the output stream.
 function escape(v: unknown): string {
   let s: string;
   if (v == null) {
@@ -44,6 +46,7 @@ function escape(v: unknown): string {
       s = '[Unserializable]';
     }
   }
+  s = s.replaceAll(/[\r\n\t]/g, ' ');
   return s.includes(' ') || s.includes('"') ? `"${s.replaceAll('"', ESCAPED_QUOTE)}"` : s;
 }
 

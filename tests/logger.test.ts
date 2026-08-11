@@ -66,6 +66,14 @@ describe('log', () => {
     expect(output).toContain('\\"hi\\"');
   });
 
+  it('collapses control whitespace so field values cannot forge log lines', () => {
+    const spy = spyOn(console, 'log').mockImplementation(() => {});
+    log('error', 'test_event', { msg: 'first\nsecond\tthird\rfourth' });
+    const output = spy.mock.calls[0]?.[0] as string;
+    expect(output).toContain('msg="first second third fourth"');
+    expect(output).not.toMatch(/[\r\n\t]/);
+  });
+
   it('handles undefined field values without throwing', () => {
     const spy = spyOn(console, 'log').mockImplementation(() => {});
     log('info', 'test_event', { missing: undefined });

@@ -561,15 +561,17 @@ describe('R2ArtifactWriter — translation cache', () => {
     expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
   });
 
-  it('returns an empty cache for invalid JSON', async () => {
+  it('throws for invalid JSON so localization does not rebill the whole source', async () => {
     mockSend.mockResolvedValueOnce({
       Body: { transformToString: () => Promise.resolve('{not json') },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
   });
 
-  it('returns a current empty cache for an obsolete cache generation', async () => {
+  it('throws for an obsolete cache generation so localization degrades for the run', async () => {
     mockSend.mockResolvedValueOnce({
       Body: {
         transformToString: () =>
@@ -577,7 +579,9 @@ describe('R2ArtifactWriter — translation cache', () => {
       },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
   });
 
   it('rethrows a non-NoSuchKey cache read error', async () => {

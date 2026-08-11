@@ -461,11 +461,10 @@ describe('FeedSliceSchema', () => {
         )
       )
     );
-  it('accepts the strict current envelope without requesting migration', () => {
-    expect(FeedSliceSchema.parse({ version: FEED_SLICE_VERSION, rows: currentRows() })).toEqual({
-      rows: currentRows(),
-      needsMigration: false,
-    });
+  it('accepts the strict current envelope and unwraps to the row array', () => {
+    expect(FeedSliceSchema.parse({ version: FEED_SLICE_VERSION, rows: currentRows() })).toEqual(
+      currentRows()
+    );
   });
 
   // Pre-v3 slices are structurally readable but were written by a producer that discarded hex-less
