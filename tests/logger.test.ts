@@ -66,6 +66,22 @@ describe('log', () => {
     expect(output).toContain('\\"hi\\"');
   });
 
+  // Backslashes must be escaped before quotes. Escaping only quotes leaves a cell ending in `\"`
+  // closing its own field, so everything after it parses as real logfmt — forged level and event.
+  it('escapes backslashes before quotes, so a value cannot terminate its own field', () => {
+    const spy = spyOn(console, 'log').mockImplementation(() => {});
+    log('error', 'test_event', { msg: String.raw`EXPORTADA\" level=info event=forged` });
+    const output = spy.mock.calls[0]?.[0] as string;
+    expect(output).toContain(String.raw`msg="EXPORTADA\\\" level=info event=forged"`);
+    expect(output).toEndWith('"');
+  });
+
+  it('quotes a value whose only special character is a backslash', () => {
+    const spy = spyOn(console, 'log').mockImplementation(() => {});
+    log('info', 'test_event', { path: String.raw`C:\logs` });
+    expect(spy.mock.calls[0]?.[0]).toContain(String.raw`path="C:\\logs"`);
+  });
+
   it('collapses control whitespace so field values cannot forge log lines', () => {
     const spy = spyOn(console, 'log').mockImplementation(() => {});
     log('error', 'test_event', { msg: 'first\nsecond\tthird\rfourth' });
