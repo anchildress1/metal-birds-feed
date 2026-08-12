@@ -119,9 +119,8 @@ const fakeWriter = (
   };
 };
 
-// A translating run opens with one pre-flight PUT proving the cache is writable before any Gemini
-// spend, so "persistence broke mid-run" has to let that first write through and reject the rest.
-// Rejecting every write instead exercises the unwritable-cache gate, which never reaches Gemini.
+// Rejecting every write exercises the pre-flight gate instead, which never reaches Gemini — so a
+// mid-run persistence failure has to let the first write through.
 const failWritesAfterPreflight = (writer: FakeWriter, error: Error): void => {
   let calls = 0;
   (writer.writeTranslationCache as ReturnType<typeof mock>).mockImplementation(() => {
@@ -216,8 +215,7 @@ describe('localizeRecords', () => {
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    // Pre-flight write, then the landed chunk. No third: the end-of-run write would rewrite what
-    // the chunk already persisted.
+    // Pre-flight write, then the landed chunk.
     expect(writeTranslationCache).toHaveBeenCalledTimes(2);
     expect(writeTranslationCache).toHaveBeenLastCalledWith(
       'br-anac',
@@ -510,9 +508,6 @@ describe('localizeRecords', () => {
     expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
   });
 
-  // The write-side twin of the read gate above. A cache that cannot be written keeps nothing the
-  // run buys, so translating anyway re-sends and re-bills the identical delta on every future run
-  // while the job stays green — unbounded spend that no failing check ever surfaces.
   it('skips translation when the cache cannot be written, rather than re-billing every run', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
@@ -543,9 +538,8 @@ describe('localizeRecords', () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
-    // readTranslationCache already collapsed the old generation to a fresh envelope. Without the
-    // pre-flight write that reset only reaches R2 if the run gets far enough to persist results,
-    // so a run that buys nothing leaves the stale object in place to be reset — and re-bought.
+    // Without the pre-flight write, a run that buys nothing leaves the stale object in place to be
+    // reset — and re-bought — next run.
     const { writer, writeTranslationCache } = fakeWriter();
 
     await localizeRecords(records, 'br-anac', 'pt', writer);
@@ -642,8 +636,7 @@ describe('localizeRecords', () => {
     await expect(localizeRecords(records, 'br-anac', 'pt', writer)).rejects.toThrow(
       /GEMINI_API_KEY rejected by Gemini/
     );
-    // The pre-flight write precedes the Gemini call and so still happens; what must not is a write
-    // carrying results, since the throw abandons the run before any exist.
+    // The pre-flight write precedes the Gemini call, so it still happens — but carries no results.
     expect(writeTranslationCache).toHaveBeenCalledTimes(1);
     expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
   });

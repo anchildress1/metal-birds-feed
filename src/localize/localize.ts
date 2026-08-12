@@ -152,13 +152,9 @@ const readCache = async (
   }
 };
 
-// Writability is the read gate from the other side, and has to be settled before the spend rather
-// than after it. A cache that reads fine but cannot be written keeps nothing a run buys, so the
-// identical delta is re-sent and re-billed on every run forever while the job stays green — the
-// same shape of indefinitely-repeating cost that makes a rejected GEMINI_API_KEY a hard failure
-// rather than a warning. Writing back the object just read costs one PUT and settles it. When the
-// read reset an obsolete generation, that PUT is also what makes the reset durable, so a version
-// bump cannot re-reset and re-buy the same delta on every subsequent run.
+// A cache that reads fine but cannot be written keeps nothing a run buys, so the identical delta is
+// re-billed every run. Proving writability before the spend also makes an obsolete-generation reset
+// durable, bounding a version bump to one paid regeneration.
 const persistCache = async (
   writer: R2ArtifactWriter,
   sourceId: string,
@@ -226,8 +222,6 @@ const resolveTranslations = async (
   // against it would bill a full-source batch and then discard the result, since the write below is
   // gated on the same read having succeeded — and the next run would repeat it. Degrade to source
   // text for this run instead; the following run reads the real cache and translates only the delta.
-  // persistCache applies the same reasoning to the write side — see it for why an unwritable cache
-  // must stop the batch instead of degrading into an unbounded re-bill.
   const translating =
     delta.length > 0 &&
     !dryRun &&
