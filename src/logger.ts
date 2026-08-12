@@ -47,7 +47,8 @@ function escape(v: unknown): string {
     }
   }
   s = s.replaceAll(/[\r\n\t]/g, ' ');
-  return s.includes(' ') || s.includes('"') ? `"${s.replaceAll('"', ESCAPED_QUOTE)}"` : s;
+  if (!s.includes(' ') && !s.includes('"') && !s.includes('\\')) return s;
+  return `"${s.replaceAll('\\', '\\\\').replaceAll('"', ESCAPED_QUOTE)}"`;
 }
 
 export function log(level: LogLevel, event: string, fields: Record<string, unknown> = {}): void {
