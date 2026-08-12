@@ -30,7 +30,7 @@ const intOrNull = (value: string): string | null => {
   const v = value.trim();
   if (v.length === 0) return null;
   const n = Number(v);
-  return Number.isFinite(n) ? String(Math.trunc(n)) : null;
+  return Number.isSafeInteger(n) ? String(n) : null;
 };
 
 const floatOrNull = (value: string): string | null => {

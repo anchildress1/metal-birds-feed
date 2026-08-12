@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, spyOn } from 'bun:test';
 import type { Aircraft } from '../../src/schema.js';
 import {
   hashTranslatable,
@@ -119,6 +119,16 @@ const fakeWriter = (
   };
 };
 
+// Rejecting every write exercises the pre-flight gate instead, which never reaches Gemini — so a
+// mid-run persistence failure has to let the first write through.
+const failWritesAfterPreflight = (writer: FakeWriter, error: Error): void => {
+  let calls = 0;
+  (writer.writeTranslationCache as ReturnType<typeof mock>).mockImplementation(() => {
+    calls += 1;
+    return calls === 1 ? Promise.resolve() : Promise.reject(error);
+  });
+};
+
 describe('localizeRecords', () => {
   beforeEach(() => {
     translateBatch.mockReset();
@@ -205,8 +215,9 @@ describe('localizeRecords', () => {
 
     const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
-    expect(writeTranslationCache).toHaveBeenCalledWith(
+    // Pre-flight write, then the landed chunk.
+    expect(writeTranslationCache).toHaveBeenCalledTimes(2);
+    expect(writeTranslationCache).toHaveBeenLastCalledWith(
       'br-anac',
       cacheEnvelope({ [hashA]: 'Aircraft exported' })
     );
@@ -224,7 +235,8 @@ describe('localizeRecords', () => {
 
     await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+    // The pre-flight write and the chunk's — the end-of-run write is what must not fire.
+    expect(writeTranslationCache).toHaveBeenCalledTimes(2);
   });
 
   it('records a failed attempt so a repeatedly-mangled string stops being re-billed', async () => {
@@ -256,7 +268,9 @@ describe('localizeRecords', () => {
 
     await localizeRecords(records, 'br-anac', 'pt', writer);
 
-    expect(writeTranslationCache).not.toHaveBeenCalled();
+    // Only the pre-flight write, carrying the cache exactly as read — no failure count recorded.
+    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
   });
 
   it('reports an exhausted hash as a failure, not a cache hit', async () => {
@@ -407,7 +421,9 @@ describe('localizeRecords', () => {
 
     expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 1 });
     expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
-    expect(writeTranslationCache).not.toHaveBeenCalled();
+    // The pre-flight write only — an all-errors batch adds nothing to persist.
+    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
   });
 
   it('falls back to the original text on a non-auth Gemini error, without throwing', async () => {
@@ -422,7 +438,8 @@ describe('localizeRecords', () => {
 
     expect(stats.failed).toBe(1);
     expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
-    expect(writeTranslationCache).not.toHaveBeenCalled();
+    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
   });
 
   it('counts a partial response accurately and still caches the entries that came back', async () => {
@@ -443,8 +460,11 @@ describe('localizeRecords', () => {
     expect(stats).toEqual({ candidates: 2, cache_hits: 0, translated: 1, failed: 1 });
     expect(result.get('1')!.cancellation_reason).toBe('Aircraft exported');
     expect(result.get('1')!.airworthiness_class).toBe('CA PADRAO');
-    const cache = writeTranslationCache.mock.calls[0][1] as ReturnType<typeof cacheEnvelope>;
-    expect(cache).toEqual(cacheEnvelope({ [hashA]: 'Aircraft exported' }));
+    const calls = writeTranslationCache.mock.calls;
+    const cache = calls[calls.length - 1][1] as ReturnType<typeof cacheEnvelope>;
+    // Enough of the chunk came back to read the gap as a per-item rejection, so the missing hash is
+    // charged an attempt rather than cached.
+    expect(cache).toEqual(cacheEnvelope({ [hashA]: 'Aircraft exported' }, { [hashB]: 1 }));
     expect(cache.entries[hashB]).toBeUndefined();
   });
 
@@ -488,6 +508,45 @@ describe('localizeRecords', () => {
     expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
   });
 
+  it('skips translation when the cache cannot be written, rather than re-billing every run', async () => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
+    const { writer, writeTranslationCache } = fakeWriter();
+    (writer.writeTranslationCache as ReturnType<typeof mock>).mockRejectedValue(
+      new Error('AccessDenied')
+    );
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+
+    try {
+      const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
+
+      expect(translateBatch).not.toHaveBeenCalled();
+      // One attempt, which failed — the gate must not retry into the batch it just refused.
+      expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+      expect(stats).toEqual({ candidates: 1, cache_hits: 0, translated: 0, failed: 0 });
+      expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=localize_cache_unwritable');
+      expect(logged).toContain('source=br-anac');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('persists an obsolete-generation reset before spending, so a version bump bills once', async () => {
+    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
+    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
+    // Without the pre-flight write, a run that buys nothing leaves the stale object in place to be
+    // reset — and re-bought — next run.
+    const { writer, writeTranslationCache } = fakeWriter();
+
+    await localizeRecords(records, 'br-anac', 'pt', writer);
+
+    expect(writeTranslationCache.mock.calls[0]).toEqual(['br-anac', cacheEnvelope({})]);
+  });
+
   it('degrades on an access-denied cache read the same as a transient one', async () => {
     const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
@@ -509,9 +568,7 @@ describe('localizeRecords', () => {
     const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
     const { writer } = fakeWriter();
-    (writer.writeTranslationCache as ReturnType<typeof mock>).mockRejectedValue(
-      new Error('R2 down')
-    );
+    failWritesAfterPreflight(writer, new Error('R2 down'));
 
     const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
@@ -526,7 +583,7 @@ describe('localizeRecords', () => {
       $metadata: { httpStatusCode: 403 },
     });
     const { writer } = fakeWriter();
-    (writer.writeTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
+    failWritesAfterPreflight(writer, error);
 
     const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);
 
@@ -579,7 +636,9 @@ describe('localizeRecords', () => {
     await expect(localizeRecords(records, 'br-anac', 'pt', writer)).rejects.toThrow(
       /GEMINI_API_KEY rejected by Gemini/
     );
-    expect(writeTranslationCache).not.toHaveBeenCalled();
+    // The pre-flight write precedes the Gemini call, so it still happens — but carries no results.
+    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
+    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
   });
 
   it('never calls Gemini or writes the cache in dry-run mode, and leaves the original text in place', async () => {

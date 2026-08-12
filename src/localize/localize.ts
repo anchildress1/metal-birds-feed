@@ -152,6 +152,23 @@ const readCache = async (
   }
 };
 
+// A cache that reads fine but cannot be written keeps nothing a run buys, so the identical delta is
+// re-billed every run. Proving writability before the spend also makes an obsolete-generation reset
+// durable, bounding a version bump to one paid regeneration.
+const persistCache = async (
+  writer: R2ArtifactWriter,
+  sourceId: string,
+  cache: TranslationCache
+): Promise<boolean> => {
+  try {
+    await writer.writeTranslationCache(sourceId, cache);
+    return true;
+  } catch (err) {
+    log('warn', 'localize_cache_unwritable', { source: sourceId, msg: errorMessage(err) });
+    return false;
+  }
+};
+
 const resolveTranslations = async (
   candidates: Map<string, Candidate>,
   sourceId: string,
@@ -205,7 +222,12 @@ const resolveTranslations = async (
   // against it would bill a full-source batch and then discard the result, since the write below is
   // gated on the same read having succeeded — and the next run would repeat it. Degrade to source
   // text for this run instead; the following run reads the real cache and translates only the delta.
-  if (delta.length > 0 && !dryRun && cacheReadSucceeded) {
+  const translating =
+    delta.length > 0 &&
+    !dryRun &&
+    cacheReadSucceeded &&
+    (await persistCache(writer, sourceId, cache));
+  if (translating) {
     const apiKey = requireEnv('GEMINI_API_KEY'); // outside try/catch: a missing key must throw, not degrade
     // Persist as each chunk lands rather than once at the end: the job has a wall-clock timeout and
     // a cold source can exceed it, which would discard everything already paid for and re-bill the

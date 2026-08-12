@@ -373,7 +373,7 @@ describe('buildFeedDb', () => {
     // leaving the feed advertising a shape version that predated the values it was serving.
     const db = Database.deserialize(buildFeedDb([]));
     try {
-      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 7 });
+      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 8 });
     } finally {
       db.close();
     }
@@ -461,11 +461,10 @@ describe('FeedSliceSchema', () => {
         )
       )
     );
-  it('accepts the strict current envelope without requesting migration', () => {
-    expect(FeedSliceSchema.parse({ version: FEED_SLICE_VERSION, rows: currentRows() })).toEqual({
-      rows: currentRows(),
-      needsMigration: false,
-    });
+  it('accepts the strict current envelope and unwraps to the row array', () => {
+    expect(FeedSliceSchema.parse({ version: FEED_SLICE_VERSION, rows: currentRows() })).toEqual(
+      currentRows()
+    );
   });
 
   // Pre-v3 slices are structurally readable but were written by a producer that discarded hex-less

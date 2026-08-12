@@ -23,7 +23,9 @@ describe('applyScalar', () => {
     it('parses integer', () => expect(applyScalar('int_or_null', '1979')).toBe('1979'));
     it('returns null for empty', () => expect(applyScalar('int_or_null', '')).toBeNull());
     it('returns null for non-numeric', () => expect(applyScalar('int_or_null', 'abc')).toBeNull());
-    it('truncates decimal', () => expect(applyScalar('int_or_null', '2.9')).toBe('2'));
+    it('returns null for a decimal', () => expect(applyScalar('int_or_null', '2.9')).toBeNull());
+    it('returns null for an unsafe integer', () =>
+      expect(applyScalar('int_or_null', '9007199254740992')).toBeNull());
     it('handles whitespace', () => expect(applyScalar('int_or_null', ' 42 ')).toBe('42'));
     // Number.parseInt would silently stop at the comma and return 1 — a wrong value that looks
     // plausible — instead of nulling a field parse* can't actually make sense of.

@@ -561,23 +561,65 @@ describe('R2ArtifactWriter — translation cache', () => {
     expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
   });
 
-  it('returns an empty cache for invalid JSON', async () => {
+  it('throws for invalid JSON so localization does not rebill the whole source', async () => {
     mockSend.mockResolvedValueOnce({
       Body: { transformToString: () => Promise.resolve('{not json') },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
   });
 
-  it('returns a current empty cache for an obsolete cache generation', async () => {
+  it('resets to a fresh current-version cache for an obsolete generation and logs the reset', async () => {
     mockSend.mockResolvedValueOnce({
       Body: {
         transformToString: () =>
           Promise.resolve(JSON.stringify({ version: 0, entries: { [HASH64]: 'stale' } })),
       },
     });
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=translation_cache_obsolete_reset');
+      expect(logged).toContain('source=faa');
+      expect(logged).toContain('from_version=0');
+      expect(logged).toContain('to_version=2');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // A version newer than current means this build predates the code that wrote the cache (e.g. an
+  // ad-hoc rollback) — resetting it would destroy translations a later release already paid for.
+  it('throws rather than resets for a version newer than current', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: {
+        transformToString: () =>
+          Promise.resolve(
+            JSON.stringify({ version: 3, entries: { [HASH64]: 'from the future' }, failures: {} })
+          ),
+      },
+    });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
+  });
+
+  it('throws for a malformed envelope at the current version', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: {
+        transformToString: () =>
+          Promise.resolve(JSON.stringify({ version: 2, entries: { [HASH64]: 'stale' } })),
+      },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
   });
 
   it('rethrows a non-NoSuchKey cache read error', async () => {

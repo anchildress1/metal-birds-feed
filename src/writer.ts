@@ -15,7 +15,8 @@ import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
 import {
   emptyTranslationCache,
-  TranslationCacheSchema,
+  ParsedTranslationCacheSchema,
+  TRANSLATION_CACHE_VERSION,
   type TranslationCache,
 } from './localize/cache.js';
 
@@ -192,14 +193,23 @@ export class R2ArtifactWriter {
     }
   }
 
+  // Distinguishes "present but corrupt" from a normal thrown R2 error so a caller that opted into
+  // `rethrowOnCorruption` (translation-cache reads, where corruption must not look like "nothing
+  // cached yet") doesn't get double-logged when the outer catch below also logs on the way out.
+  private static readonly CorruptJsonError = class extends Error {};
+
   // Shared by readState/readFeedRows/readTranslationCache: GET, parse, validate, self-heal to
   // `fallback` on absence/corruption, rethrow a real R2 error for the caller to handle.
+  // `rethrowOnCorruption` trades that self-heal for a throw specifically on invalid-JSON/schema
+  // failures (not on genuine absence) — state and feed slices want the self-heal, but a corrupt
+  // translation cache must not read back as an empty-but-legitimate one; see readTranslationCache.
   private async readJson<T>(
     key: string,
     schema: ZodType<T>,
     eventPrefix: string,
     fallback: T,
-    logContext: Record<string, unknown>
+    logContext: Record<string, unknown>,
+    rethrowOnCorruption = false
   ): Promise<T> {
     try {
       const res = await retry(
@@ -213,6 +223,7 @@ export class R2ArtifactWriter {
         json = JSON.parse(body);
       } catch {
         log('error', `${eventPrefix}_parse_failed`, { ...logContext, reason: 'invalid_json' });
+        if (rethrowOnCorruption) throw new R2ArtifactWriter.CorruptJsonError(key);
         return fallback;
       }
       const parsed = schema.safeParse(json);
@@ -232,11 +243,13 @@ export class R2ArtifactWriter {
             .map((i) => `${i.path.join('.') || '<root>'}: ${i.message}`)
             .join('; '),
         });
+        if (rethrowOnCorruption) throw new R2ArtifactWriter.CorruptJsonError(key);
         return fallback;
       }
       return parsed.data;
     } catch (err) {
       if (err instanceof NoSuchKey) return fallback;
+      if (err instanceof R2ArtifactWriter.CorruptJsonError) throw err;
       log('error', `${eventPrefix}_load_failed`, { ...logContext, msg: errorMessage(err) });
       throw err;
     }
@@ -252,15 +265,30 @@ export class R2ArtifactWriter {
     await this.put(`aircraft/_state/${source}.json`, JSON.stringify(state), 'application/json');
   }
 
-  // Persists independent of the artifact's content-hash skip gate.
+  // Persists independent of the artifact's content-hash skip gate. Three outcomes, per
+  // ParsedTranslationCacheSchema: corruption or an unrecognized-newer version rethrows
+  // (`rethrowOnCorruption: true`) so localize.ts's readCache sees a failed read (ok: false) rather
+  // than "nothing cached yet" — the latter would bill Gemini for the whole source instead of
+  // degrading for a run. A recognized older generation resets and logs here, where `source` is
+  // available — the reset happens inside the schema, which has no per-call context to log with.
   async readTranslationCache(source: string): Promise<TranslationCache> {
-    return this.readJson(
+    const result = await this.readJson(
       `aircraft/_translation_cache/${source}.json`,
-      TranslationCacheSchema,
+      ParsedTranslationCacheSchema,
       'translation_cache',
-      emptyTranslationCache(),
-      { source }
+      { kind: 'current' as const, cache: emptyTranslationCache() },
+      { source },
+      true
     );
+    if (result.kind === 'obsolete') {
+      log('warn', 'translation_cache_obsolete_reset', {
+        source,
+        from_version: result.priorVersion,
+        to_version: TRANSLATION_CACHE_VERSION,
+      });
+      return emptyTranslationCache();
+    }
+    return result.cache;
   }
 
   async writeTranslationCache(source: string, cache: TranslationCache): Promise<void> {
@@ -278,24 +306,9 @@ export class R2ArtifactWriter {
   }
 
   async readFeedRows(source: string): Promise<FeedRow[] | null> {
-    const slice = await this.readJson(
-      `aircraft/_feed/${source}.json`,
-      FeedSliceSchema,
-      'feed_rows',
-      null,
-      { source }
-    );
-    if (slice === null) return null;
-    if (slice.needsMigration) {
-      try {
-        await this.writeFeedRows(source, slice.rows);
-        log('info', 'feed_rows_migrated', { source });
-      } catch (err) {
-        // The validated rows remain safe for this build; the next read retries the writeback.
-        log('warn', 'feed_rows_migration_write_failed', { source, msg: errorMessage(err) });
-      }
-    }
-    return slice.rows;
+    return this.readJson(`aircraft/_feed/${source}.json`, FeedSliceSchema, 'feed_rows', null, {
+      source,
+    });
   }
 
   // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads

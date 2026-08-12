@@ -741,6 +741,32 @@ describe('main', () => {
     );
   });
 
+  it('logs when the staleness issue create request rejects', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const oldChange = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    const recentRun = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentRun,
+      last_content_change: oldChange,
+      content_hash: HASH64,
+    });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockRejectedValueOnce(new Error('socket reset'));
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockLog).toHaveBeenCalledWith('error', 'staleness_issue_error', {
+      source: 'faa',
+      msg: 'socket reset',
+    });
+  });
+
   it('calls closeStalenessIssues when content changes on a cadence-tracked source', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';

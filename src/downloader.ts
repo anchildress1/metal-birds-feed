@@ -214,11 +214,7 @@ const resolveDownloadUrl = async (
 const extractFile = (buf: Buffer, entries: Record<string, string>): Map<string, Buffer> => {
   // Loader enforces exactly one alias for `format: 'file'`; the path value is conventional
   // (the URL is the file). The single-alias key becomes the engine's lookup name.
-  const aliases = Object.keys(entries);
-  const alias = aliases[0];
-  if (alias === undefined) {
-    throw new Error('download.entries must contain exactly one alias for format=file');
-  }
+  const alias = Object.keys(entries)[0];
   return new Map([[alias, buf]]);
 };
 

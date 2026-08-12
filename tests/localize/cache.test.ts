@@ -2,6 +2,7 @@ import { describe, it, expect } from 'bun:test';
 import {
   emptyTranslationCache,
   hashTranslatable,
+  ParsedTranslationCacheSchema,
   TRANSLATION_CACHE_VERSION,
   TranslationCacheSchema,
 } from '../../src/localize/cache.js';
@@ -52,9 +53,34 @@ describe('TranslationCacheSchema', () => {
     expect(TranslationCacheSchema.safeParse(emptyTranslationCache()).success).toBe(true);
   });
 
-  it('rejects an obsolete cache generation', () => {
+  // A recognized-but-obsolete generation resets to a fresh current envelope rather than failing
+  // as corruption, so a version bump self-heals: the caller bills the source once and writes the
+  // reset cache back, replacing the stale R2 object instead of degrading to source text forever.
+  it('resets an obsolete cache generation to a fresh current envelope', () => {
+    const parsed = TranslationCacheSchema.safeParse({
+      version: 0,
+      entries: { [hash]: 'stale' },
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toEqual(emptyTranslationCache());
+  });
+
+  it('rejects data with no numeric version at all', () => {
+    expect(TranslationCacheSchema.safeParse({ entries: {} }).success).toBe(false);
+    expect(TranslationCacheSchema.safeParse([]).success).toBe(false);
+    expect(TranslationCacheSchema.safeParse('not an object').success).toBe(false);
+  });
+
+  // A version NEWER than current means this build predates the code that wrote the cache (e.g. an
+  // ad-hoc rollback). Resetting it would destroy translations a later release already paid for, so
+  // it must fail like corruption rather than match the "recognized older generation" reset path.
+  it('rejects a version newer than current rather than resetting it', () => {
     expect(
-      TranslationCacheSchema.safeParse({ version: 0, entries: { [hash]: 'stale' } }).success
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION + 1,
+        entries: { [hash]: 'from the future' },
+        failures: {},
+      }).success
     ).toBe(false);
   });
 
@@ -95,6 +121,31 @@ describe('TranslationCacheSchema', () => {
         version: TRANSLATION_CACHE_VERSION,
         entries: {},
       }).success
+    ).toBe(false);
+  });
+});
+
+describe('ParsedTranslationCacheSchema', () => {
+  // writer.ts's readTranslationCache needs this discriminator to log a reset with the prior
+  // version — see the flattened TranslationCacheSchema tests above for the plain-value contract.
+  it('discriminates a current envelope from a recognized older generation', () => {
+    const current = ParsedTranslationCacheSchema.safeParse(emptyTranslationCache());
+    expect(current).toMatchObject({ success: true, data: { kind: 'current' } });
+
+    const obsolete = ParsedTranslationCacheSchema.safeParse({ version: 1, entries: {} });
+    expect(obsolete).toMatchObject({ success: true, data: { kind: 'obsolete', priorVersion: 1 } });
+  });
+
+  it('still rejects a newer version and current-version corruption', () => {
+    expect(
+      ParsedTranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION + 1,
+        entries: {},
+      }).success
+    ).toBe(false);
+    expect(
+      ParsedTranslationCacheSchema.safeParse({ version: TRANSLATION_CACHE_VERSION, entries: {} })
+        .success
     ).toBe(false);
   });
 });

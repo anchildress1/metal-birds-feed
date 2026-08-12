@@ -89,6 +89,37 @@ describe('AircraftSchema', () => {
   });
 
   for (const field of [
+    'year_manufactured',
+    'cruise_speed_ktas',
+    'max_takeoff_weight_kg',
+    'seats',
+    'max_passengers',
+    'min_crew',
+  ] as const) {
+    it(`rejects a negative ${field}`, () => {
+      expect(AircraftSchema.safeParse({ ...base, [field]: -1 }).success).toBe(false);
+    });
+
+    it(`accepts zero for ${field}`, () => {
+      expect(AircraftSchema.safeParse({ ...base, [field]: 0 }).success).toBe(true);
+    });
+  }
+
+  for (const field of ['count', 'horsepower', 'thrust_lbs'] as const) {
+    it(`rejects a negative engine.${field}`, () => {
+      expect(
+        AircraftSchema.safeParse({ ...base, engine: { ...base.engine, [field]: -1 } }).success
+      ).toBe(false);
+    });
+
+    it(`accepts zero for engine.${field}`, () => {
+      expect(
+        AircraftSchema.safeParse({ ...base, engine: { ...base.engine, [field]: 0 } }).success
+      ).toBe(true);
+    });
+  }
+
+  for (const field of [
     'certification_date',
     'airworthiness_date',
     'expiration_date',

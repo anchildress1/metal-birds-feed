@@ -261,6 +261,25 @@ const closeWithLogging = async (source: string, token: string, repo: string): Pr
   }
 };
 
+// Mirrors closeWithLogging: createStalenessIssue's fetches aren't individually try/caught, and
+// emitStaleness batches many of these behind Promise.allSettled — without this wrapper a rejected
+// fetch (DNS/timeout/reset) vanishes into an unread settled result, and the exact "register has
+// gone silent" condition this feature exists to catch goes unreported with no log trace at all.
+const createWithLogging = async (
+  entry: StalenessEntry,
+  token: string,
+  repo: string
+): Promise<void> => {
+  try {
+    await createStalenessIssue(entry, token, repo);
+  } catch (err) {
+    log('error', 'staleness_issue_error', {
+      source: entry.source,
+      msg: errorMessage(err),
+    });
+  }
+};
+
 interface Failure {
   source: string;
   msg: string;
@@ -335,7 +354,7 @@ const emitStaleness = async (
   const { token, repo } = gh;
   if (!dryRun && token && repo)
     await Promise.allSettled(
-      stalenessEntries.filter((e) => e.overdue).map((e) => createStalenessIssue(e, token, repo))
+      stalenessEntries.filter((e) => e.overdue).map((e) => createWithLogging(e, token, repo))
     );
 };
 

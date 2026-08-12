@@ -540,7 +540,14 @@ async function buildJoinMaps(
       const index = new Map<string, Row>();
       for (const row of rows) {
         const key = row[join.key] ?? '';
-        if (key) index.set(key, row);
+        if (!key) continue;
+        const incumbent = index.get(key);
+        if (incumbent !== undefined && !Bun.deepEquals(incumbent, row)) {
+          throw new Error(
+            `Source "${config.id}": join "${join.name}" has conflicting duplicate key "${key}"`
+          );
+        }
+        index.set(key, row);
       }
       return [join.name, index] as const;
     })
