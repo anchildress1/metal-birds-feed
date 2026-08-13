@@ -32,6 +32,7 @@ const base: Aircraft = {
   owner: { name: null, kind: null, state: null, country: null },
   operator: { name: null, kind: null, state: null, country: null },
   legal_owner: { name: null, kind: null, state: null, country: null },
+  propeller: null,
   idera_authorised_party: null,
   certification_date: '1979-06-20',
   airworthiness_date: null,

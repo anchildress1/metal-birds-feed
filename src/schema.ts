@@ -148,6 +148,14 @@ export const AircraftSchema = z.object({
   operational_classes: z.array(z.string()),
   operational_classes_source_text: z.array(z.string()),
   engine: EngineSchema,
+  // One undifferentiated string, not a maker/model pair like `engine`: registers publish the
+  // propeller as free text with no consistent boundary — TKA Lithuania alone emits "Woodcomp SR 200"
+  // (no separator), "Neuform, CR3-V-R2H" (maker, model), "HARTZELL PROPELLER INC., HC-C2YR-IBFP,
+  // CH42724B" (maker, model, serial), and makers whose own names contain the comma
+  // (AB "Sportinė aviacija", LAK P4-90). Any split rule would invent a structure the register does
+  // not state. Never a translation candidate, for the same reason as idera_authorised_party: it is
+  // part numbers and proper nouns, which a translator mangles rather than renders.
+  propeller: z.string().nullable(),
   owner: OwnerSchema,
   operator: OperatorSchema,
   legal_owner: LegalOwnerSchema,

@@ -808,6 +808,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
       horsepower: numField(m, row, 'engine.horsepower', s),
       thrust_lbs: numField(m, row, 'engine.thrust_lbs', s),
     },
+    propeller: scalarField(m, row, 'propeller', s),
     owner: partyFields(m, row, 'owner', s),
     operator: partyFields(m, row, 'operator', s),
     legal_owner: partyFields(m, row, 'legal_owner', s),

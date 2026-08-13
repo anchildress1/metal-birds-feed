@@ -129,6 +129,7 @@ const aircraft = (overrides: Partial<Aircraft> = {}): Aircraft => ({
   cancellation_reason_source_text: null,
   lien_status: null,
   lien_status_source_text: null,
+  propeller: null,
   interdiction_code: null,
   ...overrides,
 });

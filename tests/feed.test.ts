@@ -44,6 +44,7 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
   owner: { name: null, kind: null, state: null, country: null },
   operator: { name: null, kind: null, state: null, country: null },
   legal_owner: { name: null, kind: null, state: null, country: null },
+  propeller: null,
   idera_authorised_party: null,
   certification_date: null,
   airworthiness_date: null,

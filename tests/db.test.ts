@@ -34,6 +34,7 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   owner: { name: null, kind: null, state: null, country: null },
   operator: { name: null, kind: null, state: null, country: null },
   legal_owner: { name: null, kind: null, state: null, country: null },
+  propeller: null,
   idera_authorised_party: null,
   certification_date: null,
   airworthiness_date: null,
@@ -85,6 +86,7 @@ const populated: Aircraft = {
   owner: { name: 'Beispiel, Anna', kind: 'co-owner', state: 'SO', country: 'Switzerland' },
   operator: { name: 'Betrieb AG', kind: 'corporation', state: 'BE', country: 'Germany' },
   legal_owner: { name: 'Leasing Trust Ltd', kind: 'corporation', state: null, country: 'Ireland' },
+  propeller: null,
   idera_authorised_party: 'IDERA Bank AG',
   certification_date: '2025-08-15',
   airworthiness_date: '2024-01-02',
@@ -178,6 +180,7 @@ describe('buildSqlite', () => {
       legal_owner_kind: 'corporation',
       legal_owner_state: null,
       legal_owner_country: 'Ireland',
+      propeller: null,
       idera_authorised_party: 'IDERA Bank AG',
       certification_date: '2025-08-15',
       airworthiness_date: '2024-01-02',
@@ -242,7 +245,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(8);
+    expect(version.user_version).toBe(9);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -291,6 +294,7 @@ describe('buildSqlite', () => {
       'legal_owner_kind',
       'legal_owner_state',
       'legal_owner_country',
+      'propeller',
       'idera_authorised_party',
       'certification_date',
       'airworthiness_date',
@@ -309,7 +313,7 @@ describe('buildSqlite', () => {
       'interdiction_code',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(8);
+    expect(version.user_version).toBe(9);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -329,7 +333,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(8);
+    expect(version.user_version).toBe(9);
   });
 });
 
