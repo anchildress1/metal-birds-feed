@@ -3417,3 +3417,75 @@ describe('unmatched lookup reporting', () => {
     }
   });
 });
+
+describe('latest_snapshot_by', () => {
+  const config: SourceConfig = {
+    id: 'synthetic-snapshot',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    latest_snapshot_by: 'PUB',
+    mapping: {
+      registration: { field: 'REG' },
+      status: { field: 'ST', lookup: { A: 'valid', C: 'cancelled' } },
+      country: { constant: 'US' },
+    },
+  };
+  const parse = async (rows: string[], cfg: SourceConfig = config) =>
+    translate(cfg, new Map([['f', Buffer.from(rows.join('\n'))]]));
+
+  // The reason this exists: an accumulating register keeps a row per publication, so the same mark
+  // appears cancelled in the newest and active in an older one. Keeping both serves the stale row.
+  it('keeps only the newest publication, so a superseded row cannot survive', async () => {
+    const { records, stats } = await parse([
+      'ID,REG,ST,PUB',
+      '1,N1,A,2025-04-29',
+      '2,N1,C,2026-03-09',
+      '3,N2,A,2026-03-09',
+    ]);
+    expect(stats.total).toBe(2);
+    expect([...records.values()].map((r) => r.registration).sort()).toEqual(['N1', 'N2']);
+    expect(records.get('2')?.status).toBe('cancelled');
+    expect(records.get('1')).toBeUndefined();
+  });
+
+  it('leaves rows untouched when no snapshot column is declared', async () => {
+    const { stats } = await parse(['ID,REG,ST,PUB', '1,N1,A,2025-04-29', '2,N2,A,2026-03-09'], {
+      ...config,
+      latest_snapshot_by: undefined,
+    });
+    expect(stats.total).toBe(2);
+  });
+
+  // An upstream rename would otherwise drop every row and translate zero records — a far quieter
+  // failure than refusing to run.
+  it('throws when the column holds no value on any row', async () => {
+    await expect(parse(['ID,REG,ST,PUB', '1,N1,A,', '2,N2,A,'])).rejects.toThrow(
+      /latest_snapshot_by column "PUB" is empty on all 2 rows/
+    );
+  });
+
+  it('reports what it dropped', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await parse(['ID,REG,ST,PUB', '1,N1,A,2025-04-29', '2,N2,A,2026-03-09']);
+      const line = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes('translate_snapshot_filtered'));
+      expect(line).toContain('snapshot=2026-03-09');
+      expect(line).toContain('kept=1');
+      expect(line).toContain('dropped=1');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});

@@ -182,6 +182,7 @@ const SourceConfigSchema = z
     skip_rows: z.number().int().nonnegative().optional(),
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
     allowed_ragged_rows: z.record(z.string(), z.number().int().nonnegative()).optional(),
+    latest_snapshot_by: z.string().min(1).optional(),
     allowed_missing_source_id_rows: z
       .strictObject({
         max: z.number().int().nonnegative(),

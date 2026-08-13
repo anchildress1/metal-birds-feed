@@ -117,6 +117,35 @@ const reportUnmatchedLookups = (source: string): void => {
   unmatchedLookups.delete(source);
 };
 
+// Keeps only the newest publication for a register whose feed accumulates snapshots instead of
+// replacing them. Throws rather than returning nothing when the column holds no value anywhere: an
+// upstream rename would otherwise drop every row, and a source that translates zero records is a
+// far quieter failure than one that refuses to run.
+const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
+  const column = config.latest_snapshot_by;
+  if (column === undefined || rows.length === 0) return rows;
+  let latest = '';
+  for (const row of rows) {
+    const value = row[column] ?? '';
+    if (value > latest) latest = value;
+  }
+  if (latest === '')
+    throw new Error(
+      `Source "${config.id}": latest_snapshot_by column "${column}" is empty on all ${rows.length} rows — renamed upstream?`
+    );
+  const kept = rows.filter((row) => (row[column] ?? '') === latest);
+  // Dropping the bulk of the file is the normal case here, so say so: the count is what shows the
+  // filter caught a real publication boundary rather than silently keeping one stray row.
+  log('info', 'translate_snapshot_filtered', {
+    source: config.id,
+    column,
+    snapshot: latest,
+    kept: kept.length,
+    dropped: rows.length - kept.length,
+  });
+  return kept;
+};
+
 export async function translate(
   config: SourceConfig,
   files: Map<string, Buffer>
@@ -129,7 +158,9 @@ export async function translate(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
-  const rows = await parsePrimary(primaryBuf, config);
+  // Before assertJoinHits and the translate loop, so joins are checked against the rows that will
+  // actually be translated and stats.total counts them rather than the whole accumulated history.
+  const rows = keepLatestSnapshot(config, await parsePrimary(primaryBuf, config));
   assertJoinHits(config, joinMaps, rows);
 
   const records = new Map<string, Aircraft>();

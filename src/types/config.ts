@@ -194,6 +194,13 @@ export interface SourceConfig {
   // fields and a long row silently drops cells. Defaults to 0 for every unlisted file.
   allowed_ragged_rows?: Record<string, number>;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
+  // Column naming the publication a row belongs to, for registers published as an accumulating
+  // history rather than a current snapshot: every row not in the newest publication is dropped
+  // before translation. Values compare as strings, so the format must sort lexicographically
+  // (ISO-8601 dates do). Without it such a register serves stale rows — an aircraft deregistered in
+  // the newest publication still has an active row in an older one, and the feed drops the
+  // cancelled row and keeps the stale active one, answering a lookup with a wrong record.
+  latest_snapshot_by?: string;
   joins: JoinConfig[];
   source_id: string;
   source_id_transform?: ScalarTransformName;
