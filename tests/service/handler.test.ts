@@ -2,6 +2,7 @@ import { describe, it, expect, mock } from 'bun:test';
 import {
   authorize,
   parseHexes,
+  parseRegistrations,
   buildSelect,
   toResponseMap,
   routeRequest,
@@ -11,11 +12,12 @@ import {
   type CheckLimit,
   type RouteResult,
 } from '../../src/service/handler.js';
+import { registrationKey } from '../../src/registration.js';
 
 const rec = (hex: string, reg: string): FeedRow => ({
   icao_hex: hex,
   registration: reg,
-  registration_key: reg.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+  registration_key: registrationKey(reg),
   icao_type_code: null,
   status: 'valid',
   country: 'US',
@@ -209,6 +211,13 @@ describe('route', () => {
     expect(sql).toContain('registration_key');
     expect(sql).not.toContain('icao_hex IN');
     expect(params).toEqual(['CFABC']);
+  });
+
+  // The query key and the stored key must come from one function. While they were separate copies
+  // of the same regex, a change to either silently missed every lookup instead of failing.
+  it('normalizes a query mark to exactly what the producer stores', () => {
+    const marks = ['C-FABC', 'N12345', 'VH-XYZ', 'LY AYP', 'zk.aac', '9h abc'];
+    expect(parseRegistrations({ registrations: marks })).toEqual(marks.map(registrationKey));
   });
 
   // Both routes normalize now, so this pins the selector and that the caller's casing reaches the

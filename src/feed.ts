@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { latestKnownDate } from './recency.js';
+import { registrationKey } from './registration.js';
 import { log } from './logger.js';
 
 // Consumer-facing per-plane slice: identity/airframe/engine/performance/ownership plus the
@@ -12,11 +13,8 @@ import { log } from './logger.js';
 // legal_owner, interdiction code, operational classes).
 export type { FeedRow };
 
-// Registries punctuate marks differently — FAA "N12345", TC "C-FABC", CASA "VH-XYZ" — and a caller
-// holding a tail number off a photo should not have to know which. Uppercase and strip everything
-// that is not alphanumeric, on both the stored key and the query, so the two meet in one form.
-export const registrationKey = (registration: string): string =>
-  registration.toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Re-exported so existing importers (and tests) keep reaching it from here.
+export { registrationKey };
 
 // Records sharing an icao_hex collapse to one winner deterministically so import order can't decide
 // it: a cancelled record never shadows a live one, then the most recent known date wins, then
