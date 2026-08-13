@@ -20,6 +20,10 @@ const NOTICES: Record<string, string> = {
     'Data source: Estonian Transport Administration (Transpordiamet) — https://transpordiamet.ee/ohusoidukite-register; reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.',
   'lv-caa':
     'Source: Civil Aviation Agency of Latvia (CAA Latvia) — open aviation registry, normalized into this project schema without implying endorsement.',
+  // CC BY 4.0 makes attribution, licence identification, and indication of changes conditions of
+  // the licence, so all three have to survive into the served line — a courtesy credit would not.
+  'lt-tka':
+    'Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); retrieved from https://data.gov.lt and changed by normalization into this project schema, without implying endorsement.',
   'mv-caa':
     "Source data from the Civil Aviation Authority of the Republic of Maldives — https://www.caa.gov.mv/; reproduced with the CAA's written permission, normalized into this project schema without implying endorsement. Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission.",
   'nl-ilt':

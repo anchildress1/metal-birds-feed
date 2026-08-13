@@ -66,7 +66,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 - **Exhaust all research options before the first contact email.** National open-data portals (CKAN/Aporta/data.gov.\* listings), register pages, ToS / disclaimer text, robots policy, public license declarations. Email only once research is exhausted and storage/caching posture is still Unknown.
 - **Never send a follow-up before the 30-day window expires.** A duplicate ask reads as noise and earns nothing.
-- Record findings in lockstep: `DATA_LICENSES.md` (correspondence row + source-use detail, storage/cache restrictions, register-specific contact for the eventual follow-up) + `docs/source-onboarding-checklist.md` (in-flight row). Add the `README.md` sources row only once active or cleared.
+- Record findings in lockstep: `DATA_LICENSES.md` (correspondence row + source-use detail, storage/cache restrictions) + `docs/source-onboarding-checklist.md` (in-flight row). Add the `README.md` sources row only once active or cleared.
+- **Do not keep an agency email address in `DATA_LICENSES.md` unless that agency actually replied.** Reverses the earlier rule that kept a contact against an eventual follow-up. The address for a non-replier earns nothing — Gmail is the record of who was written to and is the ground truth for whether anything came back — while the tracker accumulates stale addresses that read as verified and are not: the recorded Lithuanian contact had bounced at send time and sat in the table for three months. `Email` is `n/a` for any row whose `Reply` is `pending`.
 - After recon on an already-emailed agency: update docs, move on. Exception — a new fact materially changes the ask (not "please confirm what we already asked"). Rare. Default is no.
 
 ## Engine extension points (use, don't reinvent)
