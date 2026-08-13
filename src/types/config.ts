@@ -13,6 +13,7 @@ export const SCALAR_TRANSFORMS = [
   'date_ddmmyyyy_or_null',
   'date_dmmmyy_or_null',
   'iso_date_only_or_null',
+  'iso_year_or_null',
   'first_line_or_null',
   'collapse_ws_or_null',
   'mv_idera_party',

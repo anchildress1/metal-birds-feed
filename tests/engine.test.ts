@@ -3489,3 +3489,73 @@ describe('latest_snapshot_by', () => {
     }
   });
 });
+
+describe('TKA Lithuania fixture translation', () => {
+  let r: Map<string, Aircraft>;
+  let s: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
+    const buf = readFileSync(
+      resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv')
+    );
+    const out = await translate(config, new Map([['register', buf]]));
+    r = out.records;
+    s = out.stats;
+  });
+
+  // data.gov.lt keeps every prior publication in the same table; only the newest may be translated.
+  it('drops the superseded publications', () => {
+    expect(s.total).toBe(11);
+    expect(s.ok).toBe(11);
+    expect(s.failed).toBe(0);
+    expect([...r.values()].some((a) => a.registration === 'LY SAO')).toBe(false);
+  });
+
+  it('keeps both rows of a mark duplicated inside one publication', () => {
+    expect([...r.values()].filter((a) => a.registration === 'LY AXX')).toHaveLength(2);
+  });
+
+  it('maps a reserved mark to a non-registration status', () => {
+    const reserved = [...r.values()].find((a) => a.registration === 'LY JVD')!;
+    expect(reserved.status).toBe('other');
+  });
+
+  it('reads the mark verbatim, space and all', () => {
+    expect([...r.values()].every((a) => /^LY [A-Z]{3}$/.test(a.registration))).toBe(true);
+  });
+
+  it('publishes no Mode S address', () => {
+    expect([...r.values()].every((a) => a.icao_hex === null)).toBe(true);
+  });
+
+  it('carries no owner or operator name, only the party kind', () => {
+    expect([...r.values()].every((a) => a.owner.name === null && a.operator.name === null)).toBe(
+      true
+    );
+    expect([...r.values()].some((a) => a.owner.kind !== null)).toBe(true);
+  });
+
+  it('maps airframe kinds, including the seaplane environment', () => {
+    const seaplane = [...r.values()].find((a) => a.registration === 'LY YYL')!;
+    expect(seaplane.airframe_type).toBe('fixed-wing');
+    expect(seaplane.operating_environment).toBe('sea');
+    expect([...r.values()].find((a) => a.registration === 'LY GSC')!.airframe_type).toBe('glider');
+    expect([...r.values()].find((a) => a.registration === 'LY OCQ')!.airframe_type).toBe('balloon');
+    expect([...r.values()].find((a) => a.registration === 'LY KKE')!.airframe_type).toBe(
+      'gyroplane'
+    );
+  });
+
+  it('keeps the propeller string verbatim rather than splitting it', () => {
+    const withProp = [...r.values()].find((a) => a.propeller !== null)!;
+    expect(withProp.propeller).toContain(',');
+  });
+
+  it('takes the year out of the full manufacture date', () => {
+    expect([...r.values()].some((a) => a.year_manufactured !== null)).toBe(true);
+    expect(
+      [...r.values()].every((a) => a.year_manufactured === null || a.year_manufactured > 1900)
+    ).toBe(true);
+  });
+});

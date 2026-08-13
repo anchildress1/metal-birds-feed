@@ -104,7 +104,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | LCAA | Liberia | n/a | 2026-05-11 | pending | sent |
 | LCAA | Libya | none | n/a | none | excluded: sanctions |
 | n/a | Liechtenstein | none | n/a | confirmed | excluded |
-| TKA | Lithuania | n/a | 2026-05-10 | none (auto-ack only) | cleared: open (CC BY 4.0 via data.gov.lt) |
+| TKA | Lithuania | n/a | 2026-05-10 | none (auto-ack only) | live: open (CC BY 4.0 via data.gov.lt), no reply needed |
 | DAC | Luxembourg | n/a | 2026-05-10 | pending | sent |
 | AACM | Macao (SAR) | n/a | 2026-05-10 | pending | sent |
 | CAA Macedonia | Macedonia (North) | n/a | 2026-05-10 | pending | sent |

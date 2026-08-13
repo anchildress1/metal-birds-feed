@@ -94,6 +94,12 @@ const isoDateOnlyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(head.slice(0, 4), head.slice(5, 7), head.slice(8, 10));
 };
 
+// Year out of a plain ISO date, for registers publishing a full manufacture date where the
+// canonical schema keeps only year_manufactured. Validates the whole date first so a malformed
+// value yields null rather than four plausible leading digits.
+const isoYearOrNull = (value: string): string | null =>
+  isoDateOnlyOrNull(value)?.slice(0, 4) ?? null;
+
 const MONTH_ABBR: Record<string, string> = {
   jan: '01',
   feb: '02',
@@ -645,6 +651,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
   date_dmmmyy_or_null: dateDmmmyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
+  iso_year_or_null: isoYearOrNull,
   first_line_or_null: firstLineOrNull,
   collapse_ws_or_null: collapseWsOrNull,
   mv_idera_party: mvIderaParty,
