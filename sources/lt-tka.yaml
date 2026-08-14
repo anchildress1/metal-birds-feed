@@ -22,10 +22,13 @@ format: csv
 # history: a mark deregistered in the newest one still has an active row in an older one.
 latest_snapshot_by: duomenu_sviezumas
 
-# Not registracijos_nr: two LY AXX rows share the current publication with conflicting airframe data
-# and identical registration dates, so recency cannot resolve them and the run would fail. vda_id is
-# unique per row but is reissued each publication — this register offers no stable per-aircraft key,
-# so the artifact is a snapshot rather than a tracked history.
+# Not registracijos_nr: TKA loads duplicate rows for a mark, with conflicting airframe data and
+# identical registration dates that recency cannot resolve. LY AXX has been duplicated in all five
+# published snapshots, and the register is capable of far worse — its 2025-06-10 publication carried
+# 2,749 duplicated marks, 2,501 of them conflicting, against 2,841 distinct marks. Keying on the mark
+# fails the run on one row today and on thousands if that recurs. vda_id is unique per row but is
+# reissued each publication, so this register offers no stable per-aircraft key and the artifact is a
+# snapshot rather than a tracked history.
 source_id: vda_id
 registration: registracijos_nr
 
