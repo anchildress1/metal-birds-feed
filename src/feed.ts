@@ -30,7 +30,7 @@ const preferWinner = (a: Aircraft, b: Aircraft): Aircraft => {
 };
 
 // Per-source slice: one row per aircraft, collapsed on icao_hex where the register publishes one
-// and on the normalized mark where it does not. Nine of fifteen registers publish no Mode S
+// and on the normalized mark where it does not. Ten of sixteen registers publish no Mode S
 // address, so keying the whole slice on hex silently excluded them from the feed entirely.
 export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   const byHex = new Map<string, Aircraft>();
@@ -40,7 +40,11 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     // live traffic, so a deregistered mark is never asked about, and marks get reissued — keeping
     // them is what would make registration ambiguous as a lookup key. The per-source artifact still
     // carries the full history.
-    if (r.status === 'cancelled') continue;
+    //
+    // Reserved marks are excluded for the opposite reason: no airframe exists yet, so nothing can
+    // ever transmit one. Serving them is worse than a miss, because a register may fill the type
+    // column with the intended model and the row then reads as a real aircraft.
+    if (r.status === 'cancelled' || r.status === 'reserved') continue;
     if (r.icao_hex !== null) {
       const incumbent = byHex.get(r.icao_hex);
       byHex.set(r.icao_hex, incumbent === undefined ? r : preferWinner(incumbent, r));
@@ -309,7 +313,12 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // cadence yet could still carry a stale negative value; FEED_SLICE_VERSION doesn't bump for a
     // value-domain change, so it self-heals on the next refresh rather than failing every slice.
     // Versioned independently of db.ts; the numbers coinciding is chance.
-    db.run('PRAGMA user_version = 8');
+    // 9 removes reserved marks from the feed. Not a value-domain widening — `reserved` never
+    // reaches this table — but the row set changed: a mark that answered a lookup under version 8
+    // now returns nothing, and a consumer must not read that miss as a version-8 gap.
+    // FEED_SLICE_VERSION still does not move: no producer before this change could emit `reserved`,
+    // so no existing slice carries a reserved row for the merge to let through.
+    db.run('PRAGMA user_version = 9');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     // Unique rather than plain: NULLs never collide in a SQLite unique index, so hex-less rows and

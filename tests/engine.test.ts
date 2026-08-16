@@ -3516,9 +3516,12 @@ describe('TKA Lithuania fixture translation', () => {
     expect([...r.values()].filter((a) => a.registration === 'LY AXX')).toHaveLength(2);
   });
 
-  it('maps a reserved mark to a non-registration status', () => {
+  // TKA fills `tipas` on a reserved row with the intended model, so `other` would have served this
+  // mark as a real aircraft. It stays in the artifact; toFeedRows is what keeps it off the feed.
+  it('maps a reserved mark to reserved, not other', () => {
     const reserved = [...r.values()].find((a) => a.registration === 'LY JVD')!;
-    expect(reserved.status).toBe('other');
+    expect(reserved.status).toBe('reserved');
+    expect(reserved.model).toBe('JAK-42');
   });
 
   it('reads the mark verbatim, space and all', () => {

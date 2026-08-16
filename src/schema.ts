@@ -18,6 +18,12 @@ export const AircraftStatusSchema = z.enum([
   'expired',
   'cancelled',
   'restricted',
+  // A mark held against a future registration, with no airframe behind it yet. Distinct from every
+  // other value here, which describe an aircraft's standing: this one says there is no aircraft.
+  // It needs its own value because `other` reaches the served feed, and TKA Lithuania fills a
+  // reserved row's type column with the intended model — so `other` answered a tail-number lookup
+  // with a plausible aircraft that does not exist. `toFeedRows` excludes it for that reason.
+  'reserved',
   'other',
 ]);
 

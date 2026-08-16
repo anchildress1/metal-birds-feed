@@ -125,6 +125,25 @@ describe('toFeedRows', () => {
     expect(rows).toEqual([]);
   });
 
+  // A reserved mark has no airframe behind it, so nothing can transmit it — and registers publish
+  // the intended model against the row, which would read as a real aircraft if it were served.
+  it('excludes reserved marks whether or not the register publishes a hex', () => {
+    expect(toFeedRows([make('1', null, { status: 'reserved', model: 'JAK-42' })])).toEqual([]);
+    expect(toFeedRows([make('2', 'a1b2c3', { status: 'reserved' })])).toEqual([]);
+  });
+
+  // The exclusion must not cost the live aircraft its mark: dropping the reserved row before the
+  // collapse is what keeps this from reading as a duplicate-mark ambiguity and nulling both keys.
+  it('leaves a live record holding a mark a reserved row also claims', () => {
+    const rows = toFeedRows([
+      make('1', null, { status: 'reserved', registration: 'LY JVD' }),
+      make('2', null, { status: 'valid', registration: 'LY-JVD' }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.registration_key).toBe('LYJVD');
+    expect(rows[0]?.status).toBe('valid');
+  });
+
   it('maps nested owner/operator/engine and descriptive fields into flat columns', () => {
     const [row] = toFeedRows([
       make('1', 'a1b2c3', {
@@ -374,7 +393,7 @@ describe('buildFeedDb', () => {
     // leaving the feed advertising a shape version that predated the values it was serving.
     const db = Database.deserialize(buildFeedDb([]));
     try {
-      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 8 });
+      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 9 });
     } finally {
       db.close();
     }

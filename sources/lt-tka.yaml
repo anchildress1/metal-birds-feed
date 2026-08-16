@@ -46,14 +46,16 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # "Registruoti ženklai" is a reserved mark with no aircraft behind it, not a registration state.
+  # "Registruoti ženklai" is a mark held for a future registration with no aircraft behind it. TKA
+  # still fills `tipas` with the intended model, so it must not map to `other` — that reaches the
+  # served feed and answers a tail-number lookup with an aircraft that does not exist.
   status:
     field: statusas
     lookup:
       'Registruotas': valid
       'Laikinas registravimas': valid
       'Registravimas panaikintas': cancelled
-      'Registruoti ženklai': other
+      'Registruoti ženklai': reserved
 
   country:
     constant: LT

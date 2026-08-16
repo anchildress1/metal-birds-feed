@@ -174,7 +174,10 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // translation instead of reaching the artifact; a version-8-or-later consumer may rely on that.
     // 9 adds the propeller column — registers publish it as one undifferentiated free-text string,
     // so it is not a maker/model pair and the service does not compose it.
-    db.run('PRAGMA user_version = 9');
+    // 10 widens the `status` value domain with `reserved`, for a mark held against a future
+    // registration with no airframe behind it; a version-9-or-earlier consumer would read it as an
+    // aircraft in some unnamed state rather than as no aircraft at all.
+    db.run('PRAGMA user_version = 10');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 
