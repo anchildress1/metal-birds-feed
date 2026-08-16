@@ -2547,6 +2547,33 @@ describe('record_count guard (ee-tram)', () => {
   });
 });
 
+// lt-tka counts against the parsed rows, not the translated records: its published total covers
+// the accumulated history that latest_snapshot_by then filters down to one publication.
+describe('record_count against a separately published total (lt-tka)', () => {
+  const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
+  const register = (): Buffer =>
+    readFileSync(resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv'));
+  const files = (): Map<string, Buffer> => new Map([['register', register()]]);
+
+  it('counts the parsed rows, not the smaller translated set', async () => {
+    const { records, stats } = await translate(config, files(), '{"_data":[{"count()":13}]}');
+    expect(stats.total).toBe(11);
+    expect(records.size).toBe(11);
+  });
+
+  it('fails loudly when the download is short of the published total', async () => {
+    await expect(translate(config, files(), '{"_data":[{"count()":14}]}')).rejects.toThrow(
+      /parsed 13 records but the source publishes 14/
+    );
+  });
+
+  it('names the endpoint when the published total cannot be found there', async () => {
+    await expect(translate(config, files(), '{"_data":[]}')).rejects.toThrow(
+      /pattern matched no count in https:\/\/get\.data\.gov\.lt/
+    );
+  });
+});
+
 const SG_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'sg-caas');
 const SG_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'sg-caas.yaml');
 
@@ -3499,7 +3526,13 @@ describe('TKA Lithuania fixture translation', () => {
     const buf = readFileSync(
       resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv')
     );
-    const out = await translate(config, new Map([['register', buf]]));
+    // Real shape of the `?count()` endpoint, carrying the fixture's own row count. The guard is
+    // against the parsed rows, so this is all 13 — both publications, before the snapshot filter.
+    const published = readFileSync(
+      resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'count.json'),
+      'utf8'
+    );
+    const out = await translate(config, new Map([['register', buf]]), published);
     r = out.records;
     s = out.stats;
   });

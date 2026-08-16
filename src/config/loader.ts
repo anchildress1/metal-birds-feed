@@ -177,6 +177,8 @@ const SourceConfigSchema = z
           .refine(hasOneCaptureGroup, {
             message: 'record_count.pattern must have exactly one capture group',
           }),
+        url: z.url().optional(),
+        against: z.enum(['parsed', 'translated']).optional(),
       })
       .optional(),
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),

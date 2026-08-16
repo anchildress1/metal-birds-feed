@@ -2,7 +2,12 @@ import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { crc32 } from 'node:zlib';
-import { download, STREAM_THRESHOLD_BYTES, type RetryOptions } from '../src/downloader.js';
+import {
+  download,
+  fetchPublishedTotal,
+  STREAM_THRESHOLD_BYTES,
+  type RetryOptions,
+} from '../src/downloader.js';
 import { loadSourceConfig } from '../src/config/loader.js';
 import type { DownloadConfig } from '../src/types/config.js';
 
@@ -101,6 +106,28 @@ const mockFetchSequence = (responses: MockResponse[]): ReturnType<typeof mock> =
 
 afterEach(() => {
   globalThis.fetch = REAL_FETCH;
+});
+
+describe('fetchPublishedTotal', () => {
+  it('returns the body text and passes the register headers through', async () => {
+    const fn = mock().mockResolvedValue(new Response('{"_data":[{"count()":17571}]}'));
+    setFetch(fn);
+
+    const body = await fetchPublishedTotal('https://example.test/count', { 'x-k': 'v' });
+
+    expect(body).toContain('17571');
+    const [, init] = fn.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toEqual({ 'x-k': 'v' });
+  });
+
+  // A count that cannot be read is not a reason to accept an unverified download.
+  it('fails after retries when the endpoint stays down', async () => {
+    setFetch(mock().mockResolvedValue(new Response('nope', { status: 500 })));
+
+    await expect(
+      fetchPublishedTotal('https://example.test/count', undefined, FAST_RETRY)
+    ).rejects.toThrow(/Record count fetch failed/);
+  });
 });
 
 describe('download', () => {

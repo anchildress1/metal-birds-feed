@@ -22,6 +22,16 @@ format: csv
 # history: a mark deregistered in the newest one still has an active row in an older one.
 latest_snapshot_by: duomenu_sviezumas
 
+# Spinta pages its responses and closes every one with a `_page.next` cursor whether or not more
+# rows follow — a truncated download is byte-for-byte indistinguishable from a complete one, and
+# nothing else would catch it: the file publishes no total of its own, and the writer's retain-ratio
+# floor only fires past a 50% loss. Counted against the parsed rows because `count()` covers the
+# accumulated history, which is what the download contains before latest_snapshot_by runs.
+record_count:
+  url: https://get.data.gov.lt/datasets/gov/tka/registras/Irasas/:format/json?count()
+  pattern: '"count\(\)":\s*(\d+)'
+  against: parsed
+
 # Not registracijos_nr: TKA loads duplicate rows for a mark, with conflicting airframe data and
 # identical registration dates that recency cannot resolve. LY AXX has been duplicated in all five
 # published snapshots, and the register is capable of far worse — its 2025-06-10 publication carried

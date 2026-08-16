@@ -91,17 +91,25 @@ interface MissingSourceIdPolicy {
 // capture group. It's still matched against the decoded primary file — externally-fetched register
 // content — so ReDoS risk is bounded by review, not by sandboxing: keep these patterns simple
 // (bounded quantifiers, no nested unbounded repetition) and treat them as reviewed code at PR time.
-const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: number): void => {
+const assertRecordCount = (
+  config: SourceConfig,
+  primaryBuf: Buffer,
+  counts: { parsed: number; translated: number },
+  publishedTotal?: string
+): void => {
   const check = config.record_count;
   if (!check) return;
-  const text = new TextDecoder(config.encoding).decode(primaryBuf);
+  const against = check.against ?? 'translated';
+  const source = publishedTotal ?? new TextDecoder(config.encoding).decode(primaryBuf);
+  const where = check.url ?? 'primary file';
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const expected = new RegExp(check.pattern).exec(text)?.[1];
+  const expected = new RegExp(check.pattern).exec(source)?.[1];
   if (expected === undefined)
-    throw new Error(`Source "${config.id}": record_count pattern matched no count in primary file`);
+    throw new Error(`Source "${config.id}": record_count pattern matched no count in ${where}`);
+  const actual = counts[against];
   if (actual !== Number(expected))
     throw new Error(
-      `Source "${config.id}": translated ${actual} records but the source publishes ${expected}`
+      `Source "${config.id}": ${against} ${actual} records but the source publishes ${expected}`
     );
 };
 
@@ -148,7 +156,9 @@ const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
 
 export async function translate(
   config: SourceConfig,
-  files: Map<string, Buffer>
+  files: Map<string, Buffer>,
+  // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
+  publishedTotal?: string
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   unmatchedLookups.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
@@ -160,7 +170,8 @@ export async function translate(
 
   // Before assertJoinHits and the translate loop, so joins are checked against the rows that will
   // actually be translated and stats.total counts them rather than the whole accumulated history.
-  const rows = keepLatestSnapshot(config, await parsePrimary(primaryBuf, config));
+  const parsedRows = await parsePrimary(primaryBuf, config);
+  const rows = keepLatestSnapshot(config, parsedRows);
   assertJoinHits(config, joinMaps, rows);
 
   const records = new Map<string, Aircraft>();
@@ -210,7 +221,13 @@ export async function translate(
   // unrecognized values are the evidence for it — throwing first would withhold them from the only
   // run that needed them.
   reportUnmatchedLookups(config.id);
-  if (failed === 0) assertRecordCount(config, primaryBuf, records.size);
+  if (failed === 0)
+    assertRecordCount(
+      config,
+      primaryBuf,
+      { parsed: parsedRows.length, translated: records.size },
+      publishedTotal
+    );
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }

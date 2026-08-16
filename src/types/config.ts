@@ -157,6 +157,17 @@ export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf' | 'ht
 // shift that would otherwise publish a short fleet silently).
 export interface RecordCountCheck {
   pattern: string;
+  // Endpoint publishing the total, for a register that states it somewhere other than in the file
+  // itself (data.gov.lt answers `?count()` over the same dataset). Fetched per run and matched
+  // instead of the primary. Its cost is one extra request; its value is that nothing else can
+  // detect a partially truncated response — a short page carries no marker distinguishing it from
+  // a complete one, and the writer's retain-ratio floor only catches a loss of more than half.
+  url?: string;
+  // Which count the published total describes. `translated` (the default) is the record set the
+  // artifact receives. `parsed` is every row the parser read, before `latest_snapshot_by` drops
+  // prior publications — required where the total counts the accumulated history rather than the
+  // current fleet, and the only count an accumulating register publishes about itself.
+  against?: 'parsed' | 'translated';
 }
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
