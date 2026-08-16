@@ -209,6 +209,15 @@ mapping:
     field: oro_sraigtas
     transform: trim_or_null
 
+  # "NĖRA" is Lithuanian for "none" — the register stating the aircraft has no base, not an
+  # aerodrome by that name. `bazes_adresas` (the base's street address) is dropped as PII, and
+  # `geometrija` is empty on all 17,571 published rows.
+  home_base:
+    field: baze
+    transform: trim_or_null
+    null_values:
+      - 'NĖRA'
+
   # The register publishes the party's type only, never a name or address.
   owner.name:
     constant: ~
@@ -266,10 +275,14 @@ mapping:
   cruise_speed_ktas:
     constant: ~
 
+  # TKA stamps 0 on 122 rows rather than leaving the cell blank, including hot-air balloons carrying
+  # four passengers, so 0 is an unmeasured mass and not a mass of zero.
   max_takeoff_weight_kg:
     field: mkm
-    transform: float_or_null
+    transform: positive_float_or_null
 
+  # 0 stays: this register is mostly gliders, balloons and single-seaters, which genuinely carry no
+  # passengers. Nulling it would discard the register's answer on a third of its live fleet.
   max_passengers:
     field: keleiviu_sk
     transform: int_or_null

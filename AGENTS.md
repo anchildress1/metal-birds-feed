@@ -87,6 +87,8 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - PDF cover/preface pages: `pdf.allowed_anchorless_pages` (default 0) bounds text-bearing pages yielding no `anchor_pattern` match. Beyond it the parse fails naming the pages (PDF sources can't use `record_count`); zero rows overall always fails. Declare cover pages explicitly — position-based tolerance silently forgives a drifted first page.
 - Mapping `lookup` values may be `null`, meaning "recognized, but the schema has no value for it" — distinct from an absent key, which is unrecognized. Enumerate every upstream code with **no `default`** so an added or renamed code fails the run. Reach for `default` only where an unmatched value is routine data rather than drift; it nulls the field and logs `translate_lookup_default` per row, so it is unusable at high volume.
 - A blank cell short-circuits to null before any `lookup` runs — a `transform` returning null bypasses it. Fail-loud enumeration does not cover blanks.
+- A register stating absence in words rather than by blanking the cell: `null_values` (raw cell values, matched verbatim before any transform or lookup, resolved like a blank). For a free-text column of proper nouns — TKA Lithuania's `baze`, where `NĖRA` means the aircraft has no base — `lookup: {NĖRA: null}` is not the alternative, since a lookup must enumerate every other value in the column.
+- A quantity a register zero-fills instead of blanking: `positive_float_or_null`. Only for values no aircraft can hold at zero (mass, span, speed) — never a count, where zero is the register's real answer and nulling it discards data.
 
 ## Architecture invariants
 

@@ -7,6 +7,7 @@ export const SCALAR_TRANSFORMS = [
   'lowercase',
   'int_or_null',
   'float_or_null',
+  'positive_float_or_null',
   'date_yyyymmdd_or_null',
   'date_yyyy_slash_or_null',
   'date_dd_slash_or_null',
@@ -83,6 +84,12 @@ export interface FieldMapping {
   // Without it, a source enumerating every upstream code would have to route its known-but-
   // unrepresentable codes through `default` and log a drift warning on each one.
   lookup?: Record<string, string | null>;
+  // Raw cell values the register uses to state absence rather than to name something ("NĖRA" in
+  // TKA Lithuania's home-base column). Matched verbatim against the cell before any transform or
+  // lookup runs, and resolved exactly like a blank cell. Distinct from `lookup: {X: null}`, which
+  // requires enumerating every other value in the column — unusable for free-text columns holding
+  // hundreds of proper nouns, where the sentinel is the only value that is not data.
+  null_values?: string[];
   default?: string | null;
 }
 

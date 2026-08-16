@@ -52,6 +52,7 @@ const make = (id: string, hex: string): Aircraft =>
     lien_status: null,
     lien_status_source_text: null,
     propeller: null,
+    home_base: null,
     interdiction_code: null,
   }) satisfies Aircraft;
 

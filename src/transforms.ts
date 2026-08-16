@@ -40,6 +40,16 @@ const floatOrNull = (value: string): string | null => {
   return Number.isFinite(n) ? String(n) : null;
 };
 
+// For a quantity no aircraft can legitimately hold at zero or below — mass, span, speed — where the
+// register fills the cell with 0 instead of leaving it blank. TKA Lithuania stamps 0 kg on 122 rows
+// including hot-air balloons that carry four passengers, so passing it through asserts a takeoff
+// mass the register never measured. Never reach for this on a count (seats, passengers, engines):
+// zero is a real answer there, and nulling it would discard the fact that a glider carries nobody.
+const positiveFloatOrNull = (value: string): string | null => {
+  const n = floatOrNull(value);
+  return n !== null && Number(n) > 0 ? n : null;
+};
+
 const validateAndFormatYMD = (y: string, m: string, d: string): string | null => {
   const date = new Date(`${y}-${m}-${d}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return null;
@@ -645,6 +655,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   lowercase,
   int_or_null: intOrNull,
   float_or_null: floatOrNull,
+  positive_float_or_null: positiveFloatOrNull,
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,

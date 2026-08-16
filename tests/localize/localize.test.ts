@@ -85,6 +85,7 @@ const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   lien_status: null,
   lien_status_source_text: null,
   propeller: null,
+  home_base: null,
   interdiction_code: null,
   ...overrides,
 });

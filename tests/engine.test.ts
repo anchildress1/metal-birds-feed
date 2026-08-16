@@ -3528,6 +3528,23 @@ describe('TKA Lithuania fixture translation', () => {
     expect([...r.values()].every((a) => /^LY [A-Z]{3}$/.test(a.registration))).toBe(true);
   });
 
+  // "NĖRA" is the register saying the aircraft has no base, not naming an aerodrome.
+  it('keeps a named home base and nulls the register-stated absence', () => {
+    const based = [...r.values()].find((a) => a.registration === 'LY BRR')!;
+    expect(based.home_base).toBe('BARYSIAI');
+    const unbased = [...r.values()].find((a) => a.registration === 'LY AXX')!;
+    expect(unbased.home_base).toBeNull();
+  });
+
+  // TKA stamps 0 rather than blanking the cell; passing it through asserts a mass it never measured.
+  it('nulls a zero takeoff mass but keeps a zero passenger count', () => {
+    const zeroMass = [...r.values()].find((a) => a.registration === 'LY JVD')!;
+    expect(zeroMass.max_takeoff_weight_kg).toBeNull();
+    const measured = [...r.values()].find((a) => a.registration === 'LY OCQ')!;
+    expect(measured.max_takeoff_weight_kg).toBe(638);
+    expect(measured.max_passengers).toBe(0);
+  });
+
   it('publishes no Mode S address', () => {
     expect([...r.values()].every((a) => a.icao_hex === null)).toBe(true);
   });

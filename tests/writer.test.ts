@@ -128,6 +128,7 @@ function makeAircraft(id: string, reg: string, hex: string | null = null): Aircr
     operator: { name: null, kind: null, state: null, country: null },
     legal_owner: { name: null, kind: null, state: null, country: null },
     propeller: null,
+    home_base: null,
     idera_authorised_party: null,
     certification_date: null,
     airworthiness_date: null,

@@ -700,6 +700,9 @@ function resolveScalar(row: Row, mapping: FieldMapping, source: string): string 
   if (!field) return mapping.default ?? null;
 
   const raw = row[field] ?? '';
+  // Before the transform, so a sentinel never reaches one that would pass it through as a value.
+  if (mapping.null_values?.includes(raw)) return mapping.default ?? null;
+
   const transformed = mapping.transform ? applyScalar(mapping.transform, raw) : raw;
   if (transformed === null) return mapping.default ?? null;
 
@@ -809,6 +812,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
       thrust_lbs: numField(m, row, 'engine.thrust_lbs', s),
     },
     propeller: scalarField(m, row, 'propeller', s),
+    home_base: scalarField(m, row, 'home_base', s),
     owner: partyFields(m, row, 'owner', s),
     operator: partyFields(m, row, 'operator', s),
     legal_owner: partyFields(m, row, 'legal_owner', s),
