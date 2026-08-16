@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, spyOn } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import {
@@ -65,7 +65,7 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
 });
 
 describe('toFeedRows', () => {
-  // Nine of fifteen registers publish no Mode S address. Dropping them here is what made
+  // Ten of sixteen registers publish no Mode S address. Dropping them here is what made
   // /feed/registration unable to reach ~60k of 418k records — the endpoint's whole purpose.
   it('keeps a record without an icao_hex, reachable by its mark', () => {
     const rows = toFeedRows([make('1', 'a1b2c3'), make('2', null)]);
@@ -81,7 +81,7 @@ describe('toFeedRows', () => {
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.registration_key).toBe('PHABC');
-    // preferWinner: the more recent record wins, exactly as it does on the hex path.
+    // The more recent record wins, exactly as it does on the hex path.
     expect(rows[0]?.registration).toBe('ph abc');
   });
 
@@ -142,6 +142,78 @@ describe('toFeedRows', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.registration_key).toBe('LYJVD');
     expect(rows[0]?.status).toBe('valid');
+  });
+
+  // The date is the only real signal, so it must beat arrival order in both directions.
+  it('collapses records sharing a key to the most recent known date', () => {
+    const older = make('1', null, {
+      registration: 'LY-AAA',
+      model: 'AN-2',
+      last_action_date: '2020-01-01',
+    });
+    const newer = make('2', null, {
+      registration: 'LY-AAA',
+      model: 'JAK-52',
+      last_action_date: '2026-01-01',
+    });
+    expect(toFeedRows([older, newer])[0]?.model).toBe('JAK-52');
+    expect(toFeedRows([newer, older])[0]?.model).toBe('JAK-52');
+  });
+
+  // source_id used to break this tie. It is per-row and TKA Lithuania reissues it every
+  // publication, so the served answer could flip with no upstream change; neither row is served now.
+  it('drops a mark two undatable records claim with conflicting data', () => {
+    const rows = toFeedRows([
+      make('1', null, { registration: 'LY-AXX', model: 'AN-2' }),
+      make('2', null, { registration: 'LY-AXX', model: 'JAK-52' }),
+    ]);
+    expect(rows).toEqual([]);
+  });
+
+  it('reports a dropped key rather than absorbing it', () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      toFeedRows([
+        make('1', null, { registration: 'LY-AXX', model: 'AN-2' }),
+        make('2', null, { registration: 'LY-AXX', model: 'JAK-52' }),
+      ]);
+      const line = logSpy.mock.calls.map((c) => String(c[0])).find((l) => l.includes('ambiguous'));
+      expect(line).toContain('event=feed_source_key_ambiguous');
+      expect(line).toContain('marks=1');
+      expect(line).toContain('LYAXX');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  // A register republishing a row verbatim is not a contradiction — there is nothing to choose
+  // between. Only source_id differs, and it is not part of the served row.
+  it('collapses duplicate rows that render identically', () => {
+    const rows = toFeedRows([
+      make('1', null, { registration: 'LY-AAA' }),
+      make('2', null, { registration: 'LY-AAA' }),
+    ]);
+    expect(rows).toHaveLength(1);
+  });
+
+  // Dropping the hex must not cost each aircraft its own tail-number lookup.
+  it('falls an unresolvable hex back to the marks its candidates hold', () => {
+    const rows = toFeedRows([
+      make('1', 'a1b2c3', { registration: 'LY-AAA', model: 'AN-2' }),
+      make('2', 'a1b2c3', { registration: 'LY-BBB', model: 'JAK-52' }),
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.icao_hex === null)).toBe(true);
+    expect(rows.map((r) => r.registration_key).sort()).toEqual(['LYAAA', 'LYBBB']);
+  });
+
+  // Both keys contradict themselves, so nothing is left to select the rows by.
+  it('drops candidates of an unresolvable hex that also share a mark', () => {
+    const rows = toFeedRows([
+      make('1', 'a1b2c3', { registration: 'LY-AAA', model: 'AN-2' }),
+      make('2', 'a1b2c3', { registration: 'LY-AAA', model: 'JAK-52' }),
+    ]);
+    expect(rows).toEqual([]);
   });
 
   it('maps nested owner/operator/engine and descriptive fields into flat columns', () => {
