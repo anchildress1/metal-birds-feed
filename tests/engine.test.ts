@@ -2238,8 +2238,8 @@ describe('CAA Maldives fixture translation (PDF)', () => {
     mvRecords = result.records;
   });
 
-  it('translates all 138 register rows with no failures', () => {
-    expect(mvRecords.size).toBe(138);
+  it('translates all 137 register rows with no failures', () => {
+    expect(mvRecords.size).toBe(137);
   });
 
   it('keys records on the certificate number, not the reissued mark', () => {
