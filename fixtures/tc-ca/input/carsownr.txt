@@ -8,5 +8,6 @@
 " FCAN","David Thompson","","","","","Nova Scotia","","","CANADA","","Individual","","I","","","","","N","FCAN"
 " FEXP","Lakehead Aviation Inc.","","","","","Ontario","","","CANADA","","Entity","","A","","","","","Y","FEXP"
 " FUTF","Hervé Côté","","","","","Quebec","","","CANADA","","Individual","","A","","","","","Y","FUTF"
-
-10 rows selected.
+" ABU","Renée Dubois","","","","","Ontario","","","CANADA","","Individual","","A","","","","","Y","ABU"
+" ABU","Paul Harrow","","","","","Alberta","","","CANADA","","Individual","","A","","","","","N","ABU"
+12 rows selected.

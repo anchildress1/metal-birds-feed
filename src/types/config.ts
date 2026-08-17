@@ -93,11 +93,31 @@ export interface FieldMapping {
   default?: string | null;
 }
 
+// Collapses a join file that emits one row per party into a single row per key. Distinct from the
+// primary's MergeDuplicatesConfig: this names raw upstream columns, not canonical paths, and runs
+// before translation, so the mapping's own lookups still convert whatever the merge produces.
+export interface JoinMergeConfig {
+  // Upstream columns whose distinct values are concatenated in file order (blanks skipped,
+  // duplicates collapsed). Every column the mapping reads from this join must appear here or in
+  // `set_on_merge`; the loader enforces that, so an unlisted one cannot silently take row one's
+  // value.
+  fields: string[];
+  // Joiner between concatenated values; defaults to ", ".
+  separator?: string;
+  // Upstream columns overwritten with a fixed value whenever a key actually merges — Transport
+  // Canada's owner type, which reads "Individual" per party and must become the register's
+  // co-owner vocabulary once several parties share a mark. Unconditional, unlike the primary's
+  // `set_on_merge`: a differing value here is the very thing that signals co-ownership.
+  set_on_merge?: Record<string, string>;
+}
+
 export interface JoinConfig {
   name: string;
   file: string;
   key: string;
   on: string;
+  // Absent means a repeated key whose rows are not byte-identical fails the run.
+  merge_duplicates?: JoinMergeConfig;
 }
 
 // Collapses rows that share a source_id but differ only in the listed canonical fields into one

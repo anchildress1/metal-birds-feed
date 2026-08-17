@@ -108,10 +108,27 @@ allowed_ragged_rows:
   carsownr: 1
 
 joins:
+  # carsownr carries one row per registered party, so a co-owned mark repeats with a different
+  # name, address and owner type each time — 2,818 of them, up to 12 parties on one mark. Merging
+  # keeps every party; picking the MAIL_RECIPIENT="Y" row instead would drop the rest. Province and
+  # country are concatenated too, since co-owners are not always in one place and the schema holds
+  # a single string. The address columns are deliberately unlisted: they are dropped as PII below,
+  # so the first party's street surviving in an unread column costs nothing.
   - name: ownr
     file: carsownr
     on: TRIMMED_MARK
     key: TRIMMED_MARK
+    merge_duplicates:
+      fields:
+        - FULL_NAME
+        - PROVINCE_OR_STATE_E
+        - COUNTRY_E
+      separator: ', '
+      # Each party's row states its own type ("Individual"), which stops being true of the mark once
+      # several parties share it. Stamped in TC's own vocabulary so the owner.kind lookup below
+      # still does the canonical translation.
+      set_on_merge:
+        TYPE_OF_OWNER_E: 'Co-owner'
 
 source_id: TRIMMED_MARK
 registration: TRIMMED_MARK
@@ -218,6 +235,8 @@ mapping:
     lookup:
       Individual: individual
       Entity: other
+      # Not a TC value — stamped by the join merge when a mark has several registered parties.
+      Co-owner: co-owner
     default: other
 
   owner.state:

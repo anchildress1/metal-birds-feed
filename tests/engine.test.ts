@@ -257,14 +257,25 @@ beforeAll(async () => {
 });
 
 describe('TC-CA fixture translation', () => {
-  it('translates all 10 fixture rows', () => {
-    expect(tcRecords.size).toBe(10);
+  it('translates all 11 fixture rows', () => {
+    expect(tcRecords.size).toBe(11);
   });
 
   it('skips the Oracle footer line as a soft skip, not a failure', () => {
     expect(tcStats.failed).toBe(0);
     expect(tcStats.skipped).toBe(1);
-    expect(tcStats.ok).toBe(10);
+    expect(tcStats.ok).toBe(11);
+  });
+
+  // carsownr carries one row per registered party. Both parties have to survive the join, and the
+  // owner type each row states about itself stops being true of the mark once they share it.
+  it('merges the co-owners of one mark instead of taking the first row', () => {
+    const r = tcRecords.get('ABU')!;
+    expect(r.owner.name).toBe('Renée Dubois, Paul Harrow');
+    expect(r.owner.kind).toBe('co-owner');
+    expect(r.owner.state).toBe('Ontario, Alberta');
+    // Both parties state CANADA; a merge must not repeat a value every row agrees on.
+    expect(r.owner.country).toBe('CANADA');
   });
 
   describe('AAC — vintage 3-char piston single, individual, valid', () => {
@@ -1015,6 +1026,77 @@ describe('engine — negative and edge cases', () => {
     const { records, stats } = await translate(DUPLICATE_JOIN_CONFIG, files);
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.manufacturer).toBe('Cessna');
+  });
+
+  describe('merge_duplicates on a join', () => {
+    const merging = (
+      merge: NonNullable<SourceConfig['joins'][number]['merge_duplicates']>
+    ): SourceConfig => ({
+      ...DUPLICATE_JOIN_CONFIG,
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID', merge_duplicates: merge }],
+      mapping: {
+        registration: { field: 'REG' },
+        manufacturer: { field: 'j.EXTRA', transform: 'trim_or_null' },
+        model: { field: 'j.KIND', transform: 'trim_or_null' },
+      },
+    });
+    const primary = (): [string, Buffer] => ['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')];
+
+    it('concatenates the listed columns in file order', async () => {
+      const files = new Map([
+        primary(),
+        ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,a\n', 'utf8')],
+      ]);
+      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna, Piper');
+    });
+
+    it('honours a custom separator', async () => {
+      const files = new Map([
+        primary(),
+        ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,a\n', 'utf8')],
+      ]);
+      const config = merging({ fields: ['EXTRA', 'KIND'], separator: ' Y ' });
+      const { records } = await translate(config, files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna Y Piper');
+    });
+
+    // A register that agrees with itself must not produce "CANADA, CANADA", and a party leaving a
+    // column blank must not punch a stray separator into the joined value.
+    it('collapses repeats and skips blanks', async () => {
+      const files = new Map([
+        primary(),
+        ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,,a\n1,Cessna,a\n', 'utf8')],
+      ]);
+      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna');
+    });
+
+    // Unconditional, unlike the primary's set_on_merge: the differing per-party value is exactly
+    // what says the key is shared, so there is nothing to protect from being overwritten.
+    it('stamps set_on_merge columns only when a key actually merged', async () => {
+      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
+      const merged = await translate(
+        config,
+        new Map([
+          primary(),
+          ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n1,Piper,solo\n', 'utf8')],
+        ])
+      );
+      expect(merged.records.get('1')?.model).toBe('shared');
+
+      const lone = await translate(
+        config,
+        new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n', 'utf8')]])
+      );
+      expect(lone.records.get('1')?.model).toBe('solo');
+    });
+
+    it('leaves a single-row key untouched', async () => {
+      const files = new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n', 'utf8')]]);
+      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna');
+    });
   });
 
   it('skips the join-hit floor when the primary has no rows', async () => {

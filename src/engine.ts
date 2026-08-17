@@ -1,5 +1,10 @@
 import { TextDecoder } from 'node:util';
-import type { SourceConfig, FieldMapping, MergeDuplicatesConfig } from './types/config.js';
+import type {
+  SourceConfig,
+  FieldMapping,
+  MergeDuplicatesConfig,
+  JoinConfig,
+} from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import {
   parseCSV,
@@ -570,6 +575,35 @@ function translateRow(
   }
 }
 
+// One key's rows, reduced to the single row the mapping reads. Byte-identical repeats collapse; a
+// real difference is a conflict unless the join declares how its parties merge.
+function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, group: Row[]): Row {
+  const first = group[0];
+  if (first === undefined || group.length === 1) return first ?? {};
+
+  const merge = join.merge_duplicates;
+  if (!merge) {
+    if (group.some((row) => !Bun.deepEquals(first, row)))
+      throw new Error(
+        `Source "${config.id}": join "${join.name}" has conflicting duplicate key "${key}"`
+      );
+    return first;
+  }
+
+  const separator = merge.separator ?? ', ';
+  const merged: Row = { ...first };
+  for (const field of merge.fields) {
+    const seen: string[] = [];
+    for (const row of group) {
+      const value = row[field] ?? '';
+      if (value !== '' && !seen.includes(value)) seen.push(value);
+    }
+    merged[field] = seen.join(separator);
+  }
+  for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
+  return merged;
+}
+
 async function buildJoinMaps(
   config: SourceConfig,
   files: Map<string, Buffer>
@@ -585,17 +619,17 @@ async function buildJoinMaps(
         columns: config.columns?.[join.file],
         allowed_ragged_rows: config.allowed_ragged_rows?.[join.file],
       });
-      const index = new Map<string, Row>();
+      const groups = new Map<string, Row[]>();
       for (const row of rows) {
         const key = row[join.key] ?? '';
         if (!key) continue;
-        const incumbent = index.get(key);
-        if (incumbent !== undefined && !Bun.deepEquals(incumbent, row)) {
-          throw new Error(
-            `Source "${config.id}": join "${join.name}" has conflicting duplicate key "${key}"`
-          );
-        }
-        index.set(key, row);
+        const group = groups.get(key);
+        if (group) group.push(row);
+        else groups.set(key, [row]);
+      }
+      const index = new Map<string, Row>();
+      for (const [key, group] of groups) {
+        index.set(key, resolveJoinGroup(config, join, key, group));
       }
       return [join.name, index] as const;
     })

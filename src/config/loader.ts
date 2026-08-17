@@ -202,6 +202,13 @@ const SourceConfigSchema = z
           file: z.string().min(1),
           key: z.string().min(1),
           on: z.string().min(1),
+          merge_duplicates: z
+            .strictObject({
+              fields: z.array(z.string().min(1)).min(1),
+              separator: z.string().min(1).optional(),
+              set_on_merge: z.record(z.string().min(1), z.string().min(1)).optional(),
+            })
+            .optional(),
         })
       )
       .default([]),
@@ -254,6 +261,26 @@ const SourceConfigSchema = z
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
     message: 'format "pdf" requires a pdf config block',
   })
+  // A merging join reduces each key's rows to one, taking row one's value for every column the
+  // merge does not name. That is fine for columns nothing reads, and silent data loss for a mapped
+  // one — the first party's province would stand in for all of them, with nothing to notice it.
+  .refine(
+    (c) =>
+      c.joins.every((j) => {
+        const merge = j.merge_duplicates;
+        if (!merge) return true;
+        const covered = new Set([...merge.fields, ...Object.keys(merge.set_on_merge ?? {})]);
+        const prefix = `${j.name}.`;
+        return Object.values(c.mapping)
+          .map((m) => m.field)
+          .filter((f): f is string => f !== undefined && f.startsWith(prefix))
+          .every((f) => covered.has(f.slice(prefix.length)));
+      }),
+    {
+      message:
+        "every mapped joins[].name-prefixed column must appear in that join's merge_duplicates fields or set_on_merge",
+    }
+  )
   // Row assembly is last-wins per name, so a duplicated declared column silently shadows the
   // earlier one at run time.
   .refine(
