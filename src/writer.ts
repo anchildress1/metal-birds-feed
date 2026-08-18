@@ -59,6 +59,25 @@ export interface R2Config {
   bucketName: string;
 }
 
+// An artifact header only proves the object is trustworthy when both conditions hold. schemaVersion
+// mismatched: a schema/DDL bump changed DB_SCHEMA_VERSION since this artifact was last written.
+// lastModified after the reference state's last_run: the object was touched more recently than the
+// last confirmed-complete run knows about — either a partially completed migration (write()
+// succeeded, writeFeedRows/writeState then failed) or an external replacement (rollback, manual
+// restore) that a hash match alone can't distinguish from the real thing. Shared by write()'s own
+// unchanged-skip below and pipeline.ts's cadence gate, so both trust the same ground truth.
+export function isArtifactCaughtUp(
+  header: { schemaVersion: number; lastModified: Date } | null,
+  referenceState: SourceState | null
+): boolean {
+  return (
+    header !== null &&
+    referenceState !== null &&
+    header.schemaVersion === DB_SCHEMA_VERSION &&
+    header.lastModified.getTime() <= new Date(referenceState.last_run).getTime()
+  );
+}
+
 export class R2ArtifactWriter {
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -124,10 +143,11 @@ export class R2ArtifactWriter {
     const artifactUnchanged = priorState?.content_hash === content_hash;
     const upstreamUnchanged = priorState?.upstream_hash === upstreamHash;
     // Short-circuited: only reads the artifact's header when the hash already matches, so an
-    // upstream change (the common case) still costs one PUT and nothing extra.
+    // upstream change (the common case) still costs one PUT and nothing extra. isArtifactCaughtUp
+    // (not just a schema-version match) is what catches an external replacement under the same
+    // schema version — a hash match alone can't tell that apart from the real, untouched artifact.
     const artifactCurrent =
-      artifactUnchanged &&
-      (await this.readArtifactHeader(source))?.schemaVersion === DB_SCHEMA_VERSION;
+      artifactUnchanged && isArtifactCaughtUp(await this.readArtifactHeader(source), priorState);
     if (artifactCurrent) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return {

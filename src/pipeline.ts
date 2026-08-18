@@ -6,9 +6,9 @@ import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
 import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
-import { MIN_RETAIN_RATIO, R2ArtifactWriter, type R2Config } from './writer.js';
+import { MIN_RETAIN_RATIO, R2ArtifactWriter, isArtifactCaughtUp, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
-import { hashRecords, DB_SCHEMA_VERSION } from './db.js';
+import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
 import {
@@ -29,24 +29,6 @@ const r2ConfigFromEnv = (): R2Config => ({
 function validateSourceId(sourceId: string): void {
   if (sourceId.includes('..') || sourceId.includes('/') || sourceId.includes('\\'))
     throw new Error(`Path traversal rejected: ${sourceId}`);
-}
-
-// A cadence skip is only safe when the artifact itself is caught up with state, not just present.
-// schemaVersion mismatched: a schema/DDL bump changed DB_SCHEMA_VERSION, but this cadence-gated
-// source never reached write() (which is what applies the bump) since its last successful run.
-// lastModified after last_run: the artifact was written more recently than state knows about — a
-// prior run's write() succeeded but writeFeedRows/writeState then failed, leaving the feed slice
-// and state stale relative to it. Either way, the run must proceed rather than trust the skip.
-function isArtifactCaughtUp(
-  header: { schemaVersion: number; lastModified: Date } | null,
-  state: SourceState | null
-): boolean {
-  return (
-    header !== null &&
-    state !== null &&
-    header.schemaVersion === DB_SCHEMA_VERSION &&
-    header.lastModified.getTime() <= new Date(state.last_run).getTime()
-  );
 }
 
 interface RunResult {
@@ -77,9 +59,10 @@ export async function run(sourceId: string): Promise<RunResult> {
     !dryRun &&
     shouldSkip(priorState, config.cadence_days, new Date()) &&
     (await writer.feedRowsExist(sourceId)) &&
-    // Checked last: it's the most expensive condition, and readArtifactHeader (see writer.ts)
-    // covers what a plain existence check used to (a missing artifact reads as "not caught up"
-    // here too) plus schema-version and freshness — see isArtifactCaughtUp above.
+    // Checked last: it's the most expensive condition. readArtifactHeader + isArtifactCaughtUp
+    // (writer.ts) cover what a plain existence check used to (a missing artifact reads as "not
+    // caught up" here too) plus schema-version and freshness — the same ground truth write()
+    // trusts for its own unchanged-skip, so a cadence skip and a mid-run skip can't disagree.
     isArtifactCaughtUp(await writer.readArtifactHeader(sourceId), priorState)
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });

@@ -231,7 +231,7 @@ describe('R2ArtifactWriter — write', () => {
     ]);
     // Simulates a state written before the salt existed: an unsalted hash of the same records.
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 3,
       content_hash: hashRecords(records),
@@ -260,7 +260,7 @@ describe('R2ArtifactWriter — write', () => {
 
     const first = await writer.write(records, 'faa', null, HASH_UP);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 1,
       content_hash: first.content_hash,
@@ -286,7 +286,7 @@ describe('R2ArtifactWriter — write', () => {
 
     const first = await writer.write(records, 'faa', null, HASH_UP);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 1,
       content_hash: first.content_hash,
@@ -294,6 +294,36 @@ describe('R2ArtifactWriter — write', () => {
     };
     mockSend.mockReset();
     mockSend.mockResolvedValueOnce(artifactHeaderResponse(DB_SCHEMA_VERSION - 1));
+    mockSend.mockResolvedValue({});
+
+    const second = await writer.write(records, 'faa', prior, HASH_UP);
+
+    expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
+    expect(second.content_hash).toBe(first.content_hash);
+  });
+
+  // A hash match and a current schema version still aren't enough: if the artifact object was
+  // externally replaced with something else under the same schema (rollback, manual restore), the
+  // replacement's own lastModified is newer than the last confirmed-complete run knows about — the
+  // same freshness signal pipeline.ts's cadence gate uses, applied here so write()'s own skip can't
+  // permanently bless a stale object once state catches up to it.
+  it('rewrites when the hash and schema version match but the artifact was modified after last_run', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
+
+    const first = await writer.write(records, 'faa', null, HASH_UP);
+    const prior: SourceState = {
+      last_run: '2026-01-01T00:00:00.000Z',
+      last_content_change: 'x',
+      record_count: 1,
+      content_hash: first.content_hash,
+      upstream_hash: HASH_UP,
+    };
+    mockSend.mockReset();
+    mockSend.mockResolvedValueOnce(
+      artifactHeaderResponse(DB_SCHEMA_VERSION, new Date('2026-06-01T00:00:00.000Z'))
+    );
     mockSend.mockResolvedValue({});
 
     const second = await writer.write(records, 'faa', prior, HASH_UP);
@@ -312,7 +342,7 @@ describe('R2ArtifactWriter — write', () => {
     const first = await writer.write(untranslated, 'faa', null, HASH_UP);
 
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 1,
       content_hash: first.content_hash,
@@ -343,7 +373,7 @@ describe('R2ArtifactWriter — write', () => {
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
     const first = await writer.write(records, 'faa', null, HASH_UP);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 1,
       content_hash: first.content_hash,
@@ -364,7 +394,7 @@ describe('R2ArtifactWriter — write', () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 1,
       content_hash: 'stale',
@@ -385,7 +415,7 @@ describe('R2ArtifactWriter — write', () => {
   it('refuses to write zero records when prior data exists (mass-delete guard)', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 300_000,
       content_hash: 'h',
@@ -406,7 +436,7 @@ describe('R2ArtifactWriter — write', () => {
   it('refuses a drop below half the prior record count (truncated-upstream guard)', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 100,
       content_hash: HASH64,
@@ -424,7 +454,7 @@ describe('R2ArtifactWriter — write', () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 4,
       content_hash: HASH64,
@@ -444,7 +474,7 @@ describe('R2ArtifactWriter — write', () => {
   it('rejects a shrink just below the 50% retain floor', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
-      last_run: 'x',
+      last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
       record_count: 5,
       content_hash: HASH64,
@@ -569,7 +599,7 @@ describe('R2ArtifactWriter — state', () => {
         transformToString: () =>
           Promise.resolve(
             JSON.stringify({
-              last_run: 'x',
+              last_run: '2026-06-01T00:00:00.000Z',
               last_content_change: 'x',
               record_count: 1,
               content_hash: HASH64,

@@ -6,6 +6,7 @@ import type { SourceConfig } from '../src/types/config.js';
 import type { Aircraft } from '../src/schema.js';
 import { hashFeedRows } from '../src/feed.js';
 import { DB_SCHEMA_VERSION } from '../src/db.js';
+import { isArtifactCaughtUp } from '../src/writer.js';
 
 const REAL_FETCH = globalThis.fetch;
 const setFetch = (fn: unknown): void => {
@@ -59,6 +60,9 @@ void mock.module('../src/writer.js', () => ({
   // pipeline.ts reads this to decide whether a run is trustworthy enough to prune the translation
   // cache; a mock omitting it fails the import, not the assertion.
   MIN_RETAIN_RATIO: 0.5,
+  // The real implementation, not a mock — it's pure logic pipeline.ts's cadence gate depends on,
+  // and exercising it for real is what the cadence-gate tests below actually verify.
+  isArtifactCaughtUp,
 }));
 
 const { main, publishFeed, publishFeedForDeploy, markFeedDeployed, resolveFeedOutputPath, run } =
