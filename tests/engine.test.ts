@@ -1490,6 +1490,39 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
+  // A null status is unknown, not evidence the record is live — it must not automatically outrank
+  // an explicitly cancelled duplicate the way two concretely-known, disagreeing statuses would.
+  it('does not let a null-status duplicate automatically outrank an explicitly cancelled one', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-status-null',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
+    };
+    // REG differs, so the two records genuinely disagree; STATUS is blank (-> null) on the second
+    // row. With no date signal and neither a strict superset of the other, this must fail as an
+    // ambiguous collision — not silently let the unknown-status row replace the cancelled one.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
+
   it('fails a duplicate source_id with no distinguishing signal', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-unmapped',

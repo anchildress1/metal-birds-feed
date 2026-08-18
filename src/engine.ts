@@ -281,10 +281,16 @@ function resolveRecency(
   candidate: Aircraft,
   incumbent: Aircraft
 ): { winner: 'candidate' | 'incumbent'; reason: RecencyReason } | null {
-  const candidateCancelled = candidate.status === 'cancelled';
-  const incumbentCancelled = incumbent.status === 'cancelled';
-  if (candidateCancelled !== incumbentCancelled) {
-    return { winner: incumbentCancelled ? 'candidate' : 'incumbent', reason: 'cancelled_status' };
+  // A null status is unknown, not evidence of being live — it must not automatically outrank (or
+  // be outranked by) a row that explicitly states cancelled. The shortcut only applies when both
+  // sides have a concrete status that actually disagrees about cancelled-ness; otherwise it falls
+  // through to date/superset, and ultimately to the ambiguous-collision failure below.
+  if (candidate.status !== null && incumbent.status !== null) {
+    const candidateCancelled = candidate.status === 'cancelled';
+    const incumbentCancelled = incumbent.status === 'cancelled';
+    if (candidateCancelled !== incumbentCancelled) {
+      return { winner: incumbentCancelled ? 'candidate' : 'incumbent', reason: 'cancelled_status' };
+    }
   }
 
   const candidateDate = latestKnownDate(candidate);
