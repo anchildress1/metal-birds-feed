@@ -1268,6 +1268,44 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.status).toBeNull();
   });
 
+  // A mapping-level default exists to absorb a genuinely unrecognized code (AU/FAA/NL/TC all
+  // enumerate many but not all status values) — it must not also catch a blank cell, which states
+  // nothing at all. A blank stays null regardless of the default; a stated-but-unmapped code still
+  // uses it.
+  it.each([
+    { label: 'blank cell', status: '', expected: null },
+    { label: 'unrecognized code', status: 'weird', expected: 'other' },
+  ])('resolves status with a mapping default: $label', async ({ status, expected }) => {
+    const config: SourceConfig = {
+      id: 'synthetic-status-default',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: {
+          field: 'STATUS',
+          transform: 'trim_or_null',
+          lookup: { cancelled: 'cancelled', valid: 'valid' },
+          default: 'other',
+        },
+      },
+    };
+    const files = new Map([['primary', Buffer.from(`ID,REG,STATUS\n1,N1,${status}\n`, 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.status).toBe(expected);
+  });
+
   it('replaces a cancelled duplicate with a live reissue', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-status',

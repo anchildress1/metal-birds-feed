@@ -808,6 +808,27 @@ function scalarField(mapping: FieldMap, row: Row, key: string, source: string): 
   return resolveScalar(row, fm, source);
 }
 
+// status is the schema's one field where null carries feed-exclusion meaning distinct from any
+// value a register could actually publish. A mapping's `default` exists to absorb a genuinely new
+// or unrecognized status code (AU/FAA/NL/TC each enumerate many but not all) — not to paper over a
+// blank cell as if the register had stated something. resolveScalar can't make that distinction
+// generically without risking every other default-bearing field's established behavior, so status
+// gets its own resolution here: a blank cell always stays null, and only a non-blank, unrecognized
+// code falls to the default. Every current status mapping uses `field` + optional `transform` +
+// `lookup` (never `compound_transform` or `null_values`), so those paths aren't reproduced.
+function resolveStatus(mapping: FieldMap, row: Row, source: string): string | null {
+  const fm = mapping['status'];
+  if (!fm) return null;
+  if (fm.constant !== undefined) return fm.constant;
+  const field = fm.field;
+  if (!field) return fm.default ?? null;
+  const raw = row[field] ?? '';
+  const transformed = fm.transform ? applyScalar(fm.transform, raw) : raw;
+  if (transformed === null || transformed === '') return null;
+  if (fm.lookup) return resolveLookup(transformed, fm.lookup, fm.default, field, source);
+  return transformed;
+}
+
 function arrField(mapping: FieldMap, row: Row, key: string, source: string): string[] {
   const fm = mapping[key];
   if (!fm) return [];
@@ -863,9 +884,10 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     registration: scalarField(m, row, 'registration', s),
     icao_hex: scalarField(m, row, 'icao_hex', s),
     icao_type_code: scalarField(m, row, 'icao_type_code', s),
-    // No ?? 'other' — status is the one nullable canonical field, so a blank/unresolved cell
-    // stays null rather than inventing a state the register never published.
-    status: scalarField(m, row, 'status', s),
+    // resolveStatus, not scalarField — status is the one nullable canonical field, and its own
+    // mapping-level `default` (AU/FAA/NL/TC use one for unrecognized codes) must not also catch a
+    // blank cell, which states nothing at all rather than an unrecognized-but-stated code.
+    status: resolveStatus(m, row, s),
     country: scalarField(m, row, 'country', s) ?? config.country,
     manufacturer: scalarField(m, row, 'manufacturer', s),
     model: scalarField(m, row, 'model', s),
