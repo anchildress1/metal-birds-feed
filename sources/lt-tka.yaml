@@ -59,12 +59,6 @@ mapping:
   # "Registruoti ženklai" is a mark held for a future registration with no aircraft behind it. TKA
   # still fills `tipas` with the intended model, so it must not map to `other` — that reaches the
   # served feed and answers a tail-number lookup with an aircraft that does not exist.
-  #
-  # `status` is the one non-nullable canonical enum, and a blank cell short-circuits to null before
-  # any lookup runs — so an unstated status would otherwise fail that single row and abort the whole
-  # refresh (translate aborts the write on any failed row). The blank fixtures never show today, but
-  # a 17,571-row register is one publication away from one. The explicit '' key handles it as `other`
-  # without a bare `default`, which would also silently swallow a genuinely new/renamed status code.
   status:
     field: statusas
     lookup:
@@ -72,7 +66,6 @@ mapping:
       'Laikinas registravimas': valid
       'Registravimas panaikintas': cancelled
       'Registruoti ženklai': reserved
-      '': other
 
   country:
     constant: LT
