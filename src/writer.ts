@@ -195,7 +195,7 @@ export class R2ArtifactWriter {
         S3_RETRY
       );
       const bytes = await res.Body?.transformToByteArray();
-      if (!bytes || bytes.byteLength !== 4 || !res.LastModified) return null;
+      if (bytes?.byteLength !== 4 || !res.LastModified) return null;
       const schemaVersion = new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, false);
       return { schemaVersion, lastModified: res.LastModified };
     } catch (err) {
