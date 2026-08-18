@@ -1092,48 +1092,34 @@ describe('engine — negative and edge cases', () => {
       expect(lone.records.get('1')?.model).toBe('solo');
     });
 
-    // A register that lists the same party twice (byte-identical across every merged field) is not
-    // co-ownership — the dedup must collapse those rows before deciding whether a real merge happened.
-    it('does not stamp set_on_merge for a repeated identical party', async () => {
+    // The set_on_merge stamp keys off distinctness scoped to merge.fields + set_on_merge targets,
+    // not the whole row: a repeated identical party (same EXTRA and KIND) is a duplicate, not
+    // co-ownership; a party differing only in the set_on_merge target itself (KIND) is still a real
+    // second party; and a difference confined to a column this join never maps (TC's
+    // STREET_NAME/MAIL_RECIPIENT/ACTIVE_FLAG, modeled here as UNMAPPED) must not manufacture one.
+    it.each([
+      {
+        label: 'repeated identical party',
+        csv: 'K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,solo\n',
+        expectedModel: 'solo',
+      },
+      {
+        label: 'rows share merge.fields but differ in the set_on_merge target',
+        csv: 'K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,co\n',
+        expectedModel: 'shared',
+      },
+      {
+        label: 'difference confined to an unmapped column',
+        csv: 'K,EXTRA,KIND,UNMAPPED\n1,Cessna,solo,A\n1,Cessna,solo,I\n',
+        expectedModel: 'solo',
+      },
+    ])('set_on_merge distinctness: $label', async ({ csv, expectedModel }) => {
       const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
       const { records } = await translate(
         config,
-        new Map([
-          primary(),
-          ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,solo\n', 'utf8')],
-        ])
+        new Map([primary(), ['jf', Buffer.from(csv, 'utf8')]])
       );
-      expect(records.get('1')?.model).toBe('solo');
-    });
-
-    // Identity for the stamp is the whole row, not just merge.fields — two rows sharing every
-    // merged-field value but differing in a set_on_merge target column (TC's TYPE_OF_OWNER_E, here
-    // KIND) are still two real parties, and that differing value is the signal a merge happened.
-    it('stamps set_on_merge when rows share merge.fields but differ elsewhere', async () => {
-      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
-      const { records } = await translate(
-        config,
-        new Map([
-          primary(),
-          ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,co\n', 'utf8')],
-        ])
-      );
-      expect(records.get('1')?.model).toBe('shared');
-    });
-
-    // Distinctness is scoped to merge.fields + set_on_merge targets, not the whole row — a column
-    // this join never maps (TC's STREET_NAME/MAIL_RECIPIENT/ACTIVE_FLAG) can carry a stale value on
-    // an otherwise-identical duplicate row without manufacturing a second party out of one owner.
-    it('does not stamp set_on_merge for a difference confined to an unmapped column', async () => {
-      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
-      const { records } = await translate(
-        config,
-        new Map([
-          primary(),
-          ['jf', Buffer.from('K,EXTRA,KIND,UNMAPPED\n1,Cessna,solo,A\n1,Cessna,solo,I\n', 'utf8')],
-        ])
-      );
-      expect(records.get('1')?.model).toBe('solo');
+      expect(records.get('1')?.model).toBe(expectedModel);
     });
 
     // Each field is its own deduplicated bag, not an index-parallel array — a party missing one
