@@ -8,7 +8,7 @@ import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
 import { MIN_RETAIN_RATIO, R2ArtifactWriter, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
-import { hashRecords } from './db.js';
+import { hashRecords, DB_SCHEMA_VERSION } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
 import {
@@ -64,7 +64,12 @@ export async function run(sourceId: string): Promise<RunResult> {
     // nothing were wrong. Checked last so it only costs a HEAD request when every cheaper
     // condition already says this run would otherwise be skipped.
     (await writer.artifactExists(sourceId)) &&
-    (await writer.feedRowsExist(sourceId))
+    (await writer.feedRowsExist(sourceId)) &&
+    // Same reasoning as the two checks above: content_hash's schema-version salt (writer.ts) only
+    // takes effect when write() actually runs, so a cadence-gated source could otherwise carry a
+    // stale-schema artifact for up to its full cadence window after a bump. Checked last — it's
+    // the most expensive of the three.
+    (await writer.artifactSchemaVersion(sourceId)) === DB_SCHEMA_VERSION
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
     return {

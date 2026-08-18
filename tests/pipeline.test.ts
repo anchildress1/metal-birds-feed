@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 import type { Aircraft } from '../src/schema.js';
 import { hashFeedRows } from '../src/feed.js';
+import { DB_SCHEMA_VERSION } from '../src/db.js';
 
 const REAL_FETCH = globalThis.fetch;
 const setFetch = (fn: unknown): void => {
@@ -20,6 +21,7 @@ const mockR2Constructor = mock();
 const mockReadState = mock();
 const mockWriteState = mock();
 const mockArtifactExists = mock();
+const mockArtifactSchemaVersion = mock();
 const mockFeedRowsExist = mock();
 const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
@@ -49,6 +51,7 @@ void mock.module('../src/writer.js', () => ({
     readState = mockReadState;
     writeState = mockWriteState;
     artifactExists = mockArtifactExists;
+    artifactSchemaVersion = mockArtifactSchemaVersion;
     feedRowsExist = mockFeedRowsExist;
     writeFeedRows = mockWriteFeedRows;
     readFeedRows = mockReadFeedRows;
@@ -156,6 +159,7 @@ beforeEach(() => {
   mockReadState.mockReset();
   mockWriteState.mockReset();
   mockArtifactExists.mockReset();
+  mockArtifactSchemaVersion.mockReset();
   mockFeedRowsExist.mockReset();
   mockWriteFeedRows.mockReset();
   mockReadFeedRows.mockReset();
@@ -184,6 +188,7 @@ beforeEach(() => {
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
   mockArtifactExists.mockResolvedValue(true);
+  mockArtifactSchemaVersion.mockResolvedValue(DB_SCHEMA_VERSION);
   mockFeedRowsExist.mockResolvedValue(true);
   mockWriteFeedRows.mockResolvedValue(undefined);
   mockReadFeedRows.mockResolvedValue([]);
@@ -378,6 +383,27 @@ describe('run', () => {
       content_hash: HASH64,
     });
     mockArtifactExists.mockResolvedValueOnce(false);
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+
+  // content_hash's DB_SCHEMA_VERSION salt (writer.ts) only takes effect once write() actually
+  // runs — a cadence-gated source honoring the skip on state alone could otherwise carry a
+  // stale-schema artifact for up to its full cadence window after a schema bump.
+  it('does not honor a cadence skip when the artifact carries a stale schema version', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+    mockArtifactSchemaVersion.mockResolvedValueOnce(DB_SCHEMA_VERSION - 1);
 
     const result = await run('faa');
 

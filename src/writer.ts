@@ -182,6 +182,38 @@ export class R2ArtifactWriter {
     }
   }
 
+  // Cadence-gated sources return from pipeline.ts's cadence check before write() ever runs, so
+  // content_hash's DB_SCHEMA_VERSION salt (see write() above) is never even computed for them — a
+  // schema bump could sit unapplied for up to the full cadence window otherwise. Rather than a
+  // parallel bookkeeping field in state (which could drift from what the artifact actually holds),
+  // this reads the artifact's own embedded version: PRAGMA user_version lives at a fixed byte
+  // offset in every SQLite file's header (60, big-endian uint32 — verified against bun:sqlite's
+  // own output), so a 4-byte range GET gives ground truth without downloading the artifact.
+  // Public: pipeline.ts's cadence gate needs this to decide whether a skip is still safe.
+  async artifactSchemaVersion(source: string): Promise<number | null> {
+    if (this.dryRun) return DB_SCHEMA_VERSION;
+    try {
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({
+              Bucket: this.bucket,
+              Key: `aircraft/${source}.sqlite`,
+              Range: 'bytes=60-63',
+            })
+          ),
+        S3_RETRY
+      );
+      const bytes = await res.Body?.transformToByteArray();
+      if (!bytes || bytes.byteLength !== 4) return null;
+      return new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, false);
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      log('warn', 'artifact_schema_version_unreadable', { source, msg: errorMessage(err) });
+      return null;
+    }
+  }
+
   // Cadence skips are only safe when the feed slice both exists and is usable. A HEAD would pass a
   // present-but-corrupt-JSON slice, which `readFeedRows` later treats as absent — so `publishFeed`
   // fails closed every run while nothing regenerates the slice until cadence expiry. Read+parse here

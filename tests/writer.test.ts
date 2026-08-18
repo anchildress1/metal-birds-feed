@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { FeedRow } from '../src/feed-row.js';
 import type { SourceState } from '../src/cadence.js';
-import { hashRecords } from '../src/db.js';
+import { hashRecords, DB_SCHEMA_VERSION } from '../src/db.js';
 
 const FEED_ROW: FeedRow = {
   icao_hex: 'a1b2c3',
@@ -694,6 +694,63 @@ describe('R2ArtifactWriter — artifactExists', () => {
     } finally {
       logSpy.mockRestore();
     }
+  });
+});
+
+describe('R2ArtifactWriter — artifactSchemaVersion', () => {
+  const bodyOf = (n: number): { transformToByteArray: () => Promise<Uint8Array> } => {
+    const bytes = new Uint8Array(4);
+    new DataView(bytes.buffer).setUint32(0, n, false);
+    return { transformToByteArray: () => Promise.resolve(bytes) };
+  };
+
+  it('reads the version from a range GET of the artifact header', async () => {
+    mockSend.mockResolvedValueOnce({ Body: bodyOf(12) });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.artifactSchemaVersion('faa')).toBe(12);
+    const call = mockSend.mock.calls[0]?.[0] as { input: { Range?: string } };
+    expect(call.input.Range).toBe('bytes=60-63');
+  });
+
+  it('short-circuits to DB_SCHEMA_VERSION in dry-run without a GET', async () => {
+    const writer = new R2ArtifactWriter(R2_CONFIG, true);
+    expect(await writer.artifactSchemaVersion('faa')).toBe(DB_SCHEMA_VERSION);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it('returns null when the artifact is absent', async () => {
+    mockSend.mockRejectedValueOnce(noSuchKey());
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await writer.artifactSchemaVersion('faa')).toBeNull();
+      // A real NoSuchKey is expected (unlike an unreadable-but-present artifact) and must not log.
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).not.toContain('artifact_schema_version_unreadable');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('returns null and logs on a non-absent read failure', async () => {
+    mockSend.mockRejectedValueOnce(s3Error('Access Denied', 403));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(await writer.artifactSchemaVersion('faa')).toBeNull();
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=artifact_schema_version_unreadable');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('returns null when the range read comes back short', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToByteArray: () => Promise.resolve(new Uint8Array([1, 2])) },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.artifactSchemaVersion('faa')).toBeNull();
   });
 });
 
