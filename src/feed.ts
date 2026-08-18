@@ -108,17 +108,27 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     if (!fallbackMarks.has(mark)) byMark.delete(mark);
   }
 
-  const ambiguousMarks: string[] = [];
+  const ambiguousMarks = new Set<string>();
   const markWinners = collapseGroups(byMark, (mark) => {
-    ambiguousMarks.push(mark);
+    ambiguousMarks.add(mark);
   });
-  reportWithinSourceAmbiguity(ambiguousHex, ambiguousMarks);
+  reportWithinSourceAmbiguity(ambiguousHex, [...ambiguousMarks]);
 
   return [
-    ...[...hexWinners].map(([hex, r]) => toFeedRow(r, hex)),
+    ...[...hexWinners].map(([hex, r]) => clearIfMarkAmbiguous(toFeedRow(r, hex), ambiguousMarks)),
     ...[...markWinners.values()].map((r) => toFeedRow(r, null)),
   ];
 };
+
+// A mark can be ambiguous within byMark without ever reaching the supersede step above — when the
+// fallback candidates sharing a hex winner's mark can't be resolved between themselves either,
+// collapseGroups drops that whole byMark group with no served row to carry the conflict forward.
+// The hex winner would otherwise be emitted with that mark uncontested, even though the register is
+// genuinely unsettled about who holds it. The hex path stays valid (the winner's own hex was never
+// in question); only the mark it can no longer vouch for is cleared — the same policy
+// resolveRegistrationAmbiguity applies across sources, applied here within one.
+const clearIfMarkAmbiguous = (row: FeedRow, ambiguousMarks: ReadonlySet<string>): FeedRow =>
+  ambiguousMarks.has(row.registration_key ?? '') ? { ...row, registration_key: null } : row;
 
 const collapseGroups = (
   groups: Map<string, Aircraft[]>,

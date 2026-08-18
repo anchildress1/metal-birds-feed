@@ -120,6 +120,21 @@ describe('toFeedRows', () => {
     expect(merged.some((r) => r.icao_hex === null && r.registration === 'LY-AAA')).toBe(false);
   });
 
+  // When the fallback candidates sharing a hex winner's mark can't be resolved between themselves
+  // either, collapseGroups drops the whole byMark group before it ever reaches mergeFeedRows — with
+  // no row left to carry the conflict forward, the hex winner would otherwise be served with that
+  // mark uncontested. The hex path is still valid; only the disputed mark must be cleared, in-source.
+  it("clears a hex winner's mark when its ambiguous-hex fallback candidates conflict with each other", () => {
+    const rows = toFeedRows([
+      make('1', 'a1b2c3', { registration: 'LY-AAA' }),
+      make('2', 'd4e5f6', { registration: 'LY-AAA', model: '172' }),
+      make('3', 'd4e5f6', { registration: 'LY-AAA', model: '182' }),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.icao_hex).toBe('a1b2c3');
+    expect(rows[0]?.registration_key).toBeNull();
+  });
+
   it('drops a hex-less record whose mark normalizes to nothing', () => {
     const rows = toFeedRows([make('1', null, { registration: '- -' })]);
     expect(rows).toEqual([]);
