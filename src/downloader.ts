@@ -67,6 +67,18 @@ const readWithRetry = async <T>(
   }
 };
 
+// Fetches a register's self-published record total (`record_count.url`). Kept out of `download`
+// because it is not part of the artifact: nothing parses it, and it must not land in the files map
+// where an entry alias could collide with it.
+export async function fetchPublishedTotal(
+  url: string,
+  headers?: Record<string, string>,
+  opts: RetryOptions = {}
+): Promise<string> {
+  log('info', 'record_count_fetch', { url });
+  return readWithRetry(url, { headers }, 'Record count fetch failed', (res) => res.text(), opts);
+}
+
 export async function download(
   config: DownloadConfig,
   opts: RetryOptions = {}

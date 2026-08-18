@@ -61,6 +61,7 @@ const FieldMappingSchema = z
     array_transform: z.enum(ARRAY_TRANSFORMS).optional(),
     compound_transform: z.enum(COMPOUND_TRANSFORMS).optional(),
     lookup: z.record(z.string(), z.string().nullable()).optional(),
+    null_values: z.array(z.string().min(1)).min(1).optional(),
     default: z.string().nullable().optional(),
   })
   // The mapping kinds are mutually exclusive; the engine resolves constant before field before
@@ -176,12 +177,15 @@ const SourceConfigSchema = z
           .refine(hasOneCaptureGroup, {
             message: 'record_count.pattern must have exactly one capture group',
           }),
+        url: z.url().optional(),
+        against: z.enum(['parsed', 'translated']).optional(),
       })
       .optional(),
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
     skip_rows: z.number().int().nonnegative().optional(),
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
     allowed_ragged_rows: z.record(z.string(), z.number().int().nonnegative()).optional(),
+    latest_snapshot_by: z.string().min(1).optional(),
     allowed_missing_source_id_rows: z
       .strictObject({
         max: z.number().int().nonnegative(),
@@ -198,6 +202,13 @@ const SourceConfigSchema = z
           file: z.string().min(1),
           key: z.string().min(1),
           on: z.string().min(1),
+          merge_duplicates: z
+            .strictObject({
+              fields: z.array(z.string().min(1)).min(1),
+              separator: z.string().min(1).optional(),
+              set_on_merge: z.record(z.string().min(1), z.string().min(1)).optional(),
+            })
+            .optional(),
         })
       )
       .default([]),
@@ -250,6 +261,26 @@ const SourceConfigSchema = z
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
     message: 'format "pdf" requires a pdf config block',
   })
+  // A merging join reduces each key's rows to one, taking row one's value for every column the
+  // merge does not name. That is fine for columns nothing reads, and silent data loss for a mapped
+  // one — the first party's province would stand in for all of them, with nothing to notice it.
+  .refine(
+    (c) =>
+      c.joins.every((j) => {
+        const merge = j.merge_duplicates;
+        if (!merge) return true;
+        const covered = new Set([...merge.fields, ...Object.keys(merge.set_on_merge ?? {})]);
+        const prefix = `${j.name}.`;
+        return Object.values(c.mapping)
+          .map((m) => m.field)
+          .filter((f): f is string => f?.startsWith(prefix) === true)
+          .every((f) => covered.has(f.slice(prefix.length)));
+      }),
+    {
+      message:
+        "every mapped joins[].name-prefixed column must appear in that join's merge_duplicates fields or set_on_merge",
+    }
+  )
   // Row assembly is last-wins per name, so a duplicated declared column silently shadows the
   // earlier one at run time.
   .refine(

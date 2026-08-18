@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { latestKnownDate } from './recency.js';
+import { registrationKey } from './registration.js';
 import { log } from './logger.js';
 
 // Consumer-facing per-plane slice: identity/airframe/engine/performance/ownership plus the
@@ -12,58 +13,130 @@ import { log } from './logger.js';
 // legal_owner, interdiction code, operational classes).
 export type { FeedRow };
 
-// Registries punctuate marks differently — FAA "N12345", TC "C-FABC", CASA "VH-XYZ" — and a caller
-// holding a tail number off a photo should not have to know which. Uppercase and strip everything
-// that is not alphanumeric, on both the stored key and the query, so the two meet in one form.
-export const registrationKey = (registration: string): string =>
-  registration.toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Re-exported so existing importers (and tests) keep reaching it from here.
+export { registrationKey };
 
-// Records sharing an icao_hex collapse to one winner deterministically so import order can't decide
-// it: a cancelled record never shadows a live one, then the most recent known date wins, then
-// source_id breaks the tie. Mirrors the engine's resolveRecency principle.
-const preferWinner = (a: Aircraft, b: Aircraft): Aircraft => {
-  const aCancelled = a.status === 'cancelled';
-  const bCancelled = b.status === 'cancelled';
-  if (aCancelled !== bCancelled) return aCancelled ? b : a;
-  const aDate = latestKnownDate(a) ?? '';
-  const bDate = latestKnownDate(b) ?? '';
-  if (aDate !== bDate) return aDate > bDate ? a : b;
-  return a.source_id <= b.source_id ? a : b;
+const groupInto = (map: Map<string, Aircraft[]>, key: string, record: Aircraft): void => {
+  const existing = map.get(key);
+  if (existing === undefined) map.set(key, [record]);
+  else existing.push(record);
+};
+
+// Records sharing a lookup key collapse to one winner: the most recent known date wins, and rows
+// that render an identical served row are interchangeable so a plain re-publish costs nothing.
+// A surviving tie returns null — the register contradicts itself about which aircraft holds the key
+// and neither row can be served.
+//
+// It resolves the candidates as a group rather than folding them pairwise, because a pairwise tie
+// has nowhere to record itself except by poisoning the key, which would then discard a later row
+// carrying a real recency signal.
+//
+// There is deliberately no final source_id tiebreak. It looked deterministic and was not: source_id
+// is per-row, and a register may reissue it on every publication (TKA Lithuania's vda_id does), so
+// which of two conflicting rows got served could flip with no upstream change — churning the feed
+// hash and the answer a lookup returns. Even where source_id is stable, ordering on it only makes
+// the coin flip repeatable; the feed's rule is that a wrong answer is worse than a miss.
+const resolveCandidates = (candidates: Aircraft[]): Aircraft | null => {
+  if (candidates.length === 1) return candidates[0] ?? null;
+  const dates = candidates.map((r) => latestKnownDate(r) ?? '');
+  // Seeded with '', which is also what an unknown date maps to — so the seed can never beat a real
+  // one, and an empty group returns no winner instead of throwing.
+  const newest = dates.reduce((max, d) => (d > max ? d : max), '');
+  const winners = candidates.filter((_, i) => dates[i] === newest);
+  const first = winners[0] ?? null;
+  if (winners.length === 1 || first === null) return first;
+  // Both sides are projected by the same function, so key order is fixed and JSON.stringify is a
+  // sound identity test here — unlike hashFeedRows, which compares across code paths.
+  const reference = JSON.stringify(toFeedRow(first, null));
+  return winners.every((r) => JSON.stringify(toFeedRow(r, null)) === reference) ? first : null;
 };
 
 // Per-source slice: one row per aircraft, collapsed on icao_hex where the register publishes one
-// and on the normalized mark where it does not. Nine of fifteen registers publish no Mode S
+// and on the normalized mark where it does not. Ten of sixteen registers publish no Mode S
 // address, so keying the whole slice on hex silently excluded them from the feed entirely.
 export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
-  const byHex = new Map<string, Aircraft>();
-  const byMark = new Map<string, Aircraft>();
+  const byHex = new Map<string, Aircraft[]>();
+  const byMark = new Map<string, Aircraft[]>();
   for (const r of records) {
     // Cancelled marks are excluded from the served feed, not from the artifact: the feed enriches
     // live traffic, so a deregistered mark is never asked about, and marks get reissued — keeping
     // them is what would make registration ambiguous as a lookup key. The per-source artifact still
     // carries the full history.
-    if (r.status === 'cancelled') continue;
+    //
+    // Reserved marks are excluded for the opposite reason: no airframe exists yet, so nothing can
+    // ever transmit one. Serving them is worse than a miss, because a register may fill the type
+    // column with the intended model and the row then reads as a real aircraft.
+    if (r.status === 'cancelled' || r.status === 'reserved') continue;
     if (r.icao_hex !== null) {
-      const incumbent = byHex.get(r.icao_hex);
-      byHex.set(r.icao_hex, incumbent === undefined ? r : preferWinner(incumbent, r));
+      groupInto(byHex, r.icao_hex, r);
       continue;
     }
     // Marks normalize to '' only if the register published punctuation alone. Such a row carries
     // neither lookup key, so it can never be selected — it is left out rather than stored unreachable.
     const mark = registrationKey(r.registration);
     if (mark === '') continue;
-    const incumbent = byMark.get(mark);
-    byMark.set(mark, incumbent === undefined ? r : preferWinner(incumbent, r));
+    groupInto(byMark, mark, r);
   }
+
+  // A hex no single aircraft can claim still leaves each candidate reachable by its own mark, so
+  // they fall back to the mark map rather than being dropped outright. Candidates that also share a
+  // mark are resolved — or dropped — there by the same rule.
+  const ambiguousHex: string[] = [];
+  const hexWinners = collapseGroups(byHex, (hex, candidates) => {
+    ambiguousHex.push(hex);
+    for (const r of candidates) {
+      const mark = registrationKey(r.registration);
+      if (mark !== '') groupInto(byMark, mark, r);
+    }
+  });
+
   // Within one register a mark identifies one aircraft, so a hex-less record sharing a mark with a
   // hex-bearing one is the same aircraft in a less complete row. The hex-bearing row supersedes it;
   // keeping both would manufacture an ambiguity out of a single airframe.
-  for (const r of byHex.values()) byMark.delete(registrationKey(r.registration));
-  const collapsed: [string | null, Aircraft][] = [
-    ...[...byHex.entries()].map(([hex, r]): [string | null, Aircraft] => [hex, r]),
-    ...[...byMark.values()].map((r): [string | null, Aircraft] => [null, r]),
+  for (const r of hexWinners.values()) byMark.delete(registrationKey(r.registration));
+
+  const ambiguousMarks: string[] = [];
+  const markWinners = collapseGroups(byMark, (mark) => {
+    ambiguousMarks.push(mark);
+  });
+  reportWithinSourceAmbiguity(ambiguousHex, ambiguousMarks);
+
+  return [
+    ...[...hexWinners].map(([hex, r]) => toFeedRow(r, hex)),
+    ...[...markWinners.values()].map((r) => toFeedRow(r, null)),
   ];
-  return collapsed.map(([icao_hex, r]) => ({
+};
+
+const collapseGroups = (
+  groups: Map<string, Aircraft[]>,
+  onAmbiguous: (key: string, candidates: Aircraft[]) => void
+): Map<string, Aircraft> => {
+  const winners = new Map<string, Aircraft>();
+  for (const [key, candidates] of groups) {
+    const winner = resolveCandidates(candidates);
+    if (winner === null) onAmbiguous(key, candidates);
+    else winners.set(key, winner);
+  }
+  return winners;
+};
+
+// A register contradicting itself about who holds a key is upstream data the feed cannot serve, so
+// it is reported rather than absorbed: the counts are what distinguish one stray row from a
+// publication that duplicated thousands of marks.
+const reportWithinSourceAmbiguity = (hexes: string[], marks: string[]): void => {
+  if (hexes.length === 0 && marks.length === 0) return;
+  log('warn', 'feed_source_key_ambiguous', {
+    hexes: hexes.length,
+    marks: marks.length,
+    sample: [...hexes, ...marks]
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 10)
+      .join(','),
+  });
+};
+
+const toFeedRow = (r: Aircraft, icao_hex: string | null): FeedRow =>
+  ({
     icao_hex,
     registration: r.registration,
     // Null, not '': a mark of pure punctuation normalizes to nothing, and no caller can send an
@@ -100,8 +173,7 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     cancellation_reason: r.cancellation_reason,
     airworthiness_class: r.airworthiness_class,
     source: r.source,
-  }));
-};
+  }) satisfies FeedRow;
 
 // Merge per-source slices into one row per icao_hex for the consolidated table. A live
 // (non-cancelled) incumbent is never overwritten; a cancelled incumbent is replaced by any later
@@ -311,7 +383,12 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // cadence yet could still carry a stale negative value; FEED_SLICE_VERSION doesn't bump for a
     // value-domain change, so it self-heals on the next refresh rather than failing every slice.
     // Versioned independently of db.ts; the numbers coinciding is chance.
-    db.run('PRAGMA user_version = 8');
+    // 9 removes reserved marks from the feed. Not a value-domain widening — `reserved` never
+    // reaches this table — but the row set changed: a mark that answered a lookup under version 8
+    // now returns nothing, and a consumer must not read that miss as a version-8 gap.
+    // FEED_SLICE_VERSION still does not move: no producer before this change could emit `reserved`,
+    // so no existing slice carries a reserved row for the merge to let through.
+    db.run('PRAGMA user_version = 9');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     // Unique rather than plain: NULLs never collide in a SQLite unique index, so hex-less rows and

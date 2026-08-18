@@ -28,31 +28,42 @@ primary: register
 delimiter: ','
 format: pdf
 
-# A standard row-per-aircraft table: each aircraft is one y-row, each field is an x-band.
-# `column_pos` are the value-band x-centers (paired by index with `columns`), ordered left-of-page
-# (lowest x) to right; records are anchored on the 8Q-XXX nationality mark. Re-derived 2026-07-13
-# after the register dropped its prior 90°-rotated layout — same field order, opposite axis.
+# A 90°-rotated table: each aircraft is one x-column, each field a y-band. `column_pos` are the
+# value-band y-centers (paired by index with `columns`), ordered top-of-page (highest y) down;
+# records are anchored on the 8Q-XXX nationality mark. The register alternates between this layout
+# and an unrotated one — it was rotated before 2026-07-13, unrotated until 2026-08-17, and is
+# rotated again now. The field order is identical either way, so a flip only moves the axis and the
+# band centers; re-derive both from the live PDF rather than reviving an older block, since the
+# centers shift too. The repeated row-label column needs no handling here: it sits a half-slot
+# outside the record range, which is exactly what the parser's outer-spread reach drops.
 # See PdfConfig in src/types/config.ts for the extraction model.
 pdf:
-  field_axis: x
+  field_axis: y
   anchor_pattern: '^8Q-[A-Z]{3}$'
   column_pos:
-    - 789.7 # status
-    - 754.5 # date_revision
-    - 725.3 # date_issue
-    - 652.3 # idera
-    - 584.6 # mortgage
-    - 496.3 # other_specifics
-    - 408 # basis
-    - 319.7 # legal_owner
-    - 233.6 # owner (registered)
-    - 220.8 # year
-    - 198 # serial
-    - 170.1 # mtow
-    - 96.7 # mfg
-    - 74 # mark
-    - 47.4 # cert_no
-    - 33 # sn
+    - 746 # status
+    - 713.1 # date_revision
+    - 685.8 # date_issue
+    - 616.1 # idera
+    - 551.8 # mortgage
+    - 467.8 # other_specifics
+    # Empty on every record in this publication. The position still has to exist, or the next
+    # column's band becomes the nearest one and absorbs anything CAA starts printing here.
+    - 420 # basis
+    # Parsed but deliberately unmapped. CAA prints its own column header, "Operator of Aircraft",
+    # into this cell on 9 of 137 records and leaves it empty on the rest — a template artifact, not
+    # an operator. Naming the column is what keeps that string out of `basis`, whose band is its
+    # nearest neighbour; mapping it to operator.name would record the header as a party name.
+    - 383.8 # operator (unmapped)
+    - 299.8 # legal_owner
+    - 217.9 # owner (registered)
+    - 205.6 # year
+    - 183 # serial
+    - 156.9 # mtow
+    - 87.6 # mfg
+    - 66.2 # mark
+    - 40.6 # cert_no
+    - 28.9 # sn
 
 columns:
   register:
@@ -63,6 +74,7 @@ columns:
     - mortgage
     - other_specifics
     - basis
+    - operator
     - legal_owner
     - owner
     - year

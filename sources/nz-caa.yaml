@@ -13,7 +13,11 @@ download:
   # instead of the file. Priming the site root first yields the cookies that let the real request
   # through.
   prime_url: https://www.aviation.govt.nz/
-  url: https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website-.csv
+  # The asset filename lost its trailing dash on 2026-08-17 and 404'd until this was updated.
+  # Not discovered from the register page: priming clears the challenge for /assets/ but not for
+  # the HTML page, which still answers 200 with a 212-byte Incapsula stub, so discover_pattern has
+  # nothing to match. A rolled filename shows up as a hard 404, which fails the run loudly.
+  url: https://www.aviation.govt.nz/assets/aircraft/aircraft-register/Aircraft-Register-for-website.csv
   format: file
   entries:
     register: register.csv

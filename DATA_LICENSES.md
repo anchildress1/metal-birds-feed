@@ -16,183 +16,183 @@ Single record of source for agency correspondence and source-use posture: every 
 | Agency | Country | Email | Sent | Reply | Status |
 | --- | --- | --- | --- | --- | --- |
 | ACAA | Afghanistan | none | n/a | none | excluded: sanctions |
-| AAC (ACAA) | Albania | info@aac.gov.al | 2026-05-10 | pending | sent |
-| ANAC Algeria | Algeria | contact@anac.dz | 2026-05-11 | pending | sent |
+| AAC (ACAA) | Albania | n/a | 2026-05-10 | pending | sent |
+| ANAC Algeria | Algeria | n/a | 2026-05-11 | pending | sent |
 | n/a | Andorra | none | n/a | none | excluded: no register |
-| ANAC Angola | Angola | sec.anac.ao@gmail.com | 2026-05-11 | pending | sent |
-| ANAC | Argentina | registro@anac.gob.ar | 2026-05-05 | pending | sent |
-| CAC / GDCA | Armenia | info@aviation.am | 2026-05-10 | pending | sent |
+| ANAC Angola | Angola | n/a | 2026-05-11 | pending | sent |
+| ANAC | Argentina | n/a | 2026-05-05 | pending | sent |
+| CAC / GDCA | Armenia | n/a | 2026-05-10 | pending | sent |
 | DCA Aruba | Aruba | none | n/a | none | excluded: commercial |
 | CASA | Australia | none | n/a | open | live |
 | Austro Control | Austria | register@austrocontrol.at | 2026-05-05 | denied | excluded: denied |
-| BCAA | Bahamas | atl@caabahamas.com | 2026-05-05 | pending | sent |
-| CAA Bahrain | Bahrain | aerolicensing@mtt.gov.bh | 2026-05-11 | pending | sent: leans excluded |
-| CAAB Bangladesh | Bangladesh | mahmud.pr@caab.gov.bd | 2026-05-11 | pending | sent |
+| BCAA | Bahamas | n/a | 2026-05-05 | pending | sent |
+| CAA Bahrain | Bahrain | n/a | 2026-05-11 | pending | sent: leans excluded |
+| CAAB Bangladesh | Bangladesh | n/a | 2026-05-11 | pending | sent |
 | Aviation Dept of Min. Transport | Belarus | none | n/a | none | excluded: sanctions |
-| BCAA / DGTA | Belgium | bcaa.registration@mobilit.fgov.be | 2026-05-05 | pending | sent |
-| BDCA | Belize | director@civilaviation.gov.bz | 2026-05-05 | pending | sent |
-| ANAC Bénin | Benin | secretariatanacbenin@gmail.com | 2026-05-11 | pending | sent |
-| BCAA Bhutan | Bhutan | airworthiness@bcaa.gov.bt | 2026-05-11 | pending | sent |
-| DGAC Bolivia | Bolivia | dgacbol@dgac.gob.bo | 2026-05-10 | pending | sent |
-| BHDCA | Bosnia & Herzegovina | bhdca@bhdca.gov.ba | 2026-05-10 | pending | sent |
-| CAAB | Botswana | caab@caab.co.bw | 2026-05-05 | pending | sent |
+| BCAA / DGTA | Belgium | n/a | 2026-05-05 | pending | sent |
+| BDCA | Belize | n/a | 2026-05-05 | pending | sent |
+| ANAC Bénin | Benin | n/a | 2026-05-11 | pending | sent |
+| BCAA Bhutan | Bhutan | n/a | 2026-05-11 | pending | sent |
+| DGAC Bolivia | Bolivia | n/a | 2026-05-10 | pending | sent |
+| BHDCA | Bosnia & Herzegovina | n/a | 2026-05-10 | pending | sent |
+| CAAB | Botswana | n/a | 2026-05-05 | pending | sent |
 | ANAC Brasil | Brazil | rab@anac.gov.br | 2026-05-05 | confirmed | live |
-| CAA Bulgaria | Bulgaria | AIRWORTHINESS@caa.bg | 2026-05-10 | pending | sent |
-| ANAC Burkina | Burkina Faso | info@anacburkina.org | 2026-05-11 | pending | sent |
-| AAC | Cabo Verde | info@aac.cv | 2026-05-10 | pending | sent: no bulk |
-| SSCA | Cambodia | admin-info@ssca.gov.kh | 2026-05-11 | pending | sent: leans excluded |
-| CCAA | Cameroon | contact@ccaa.aero | 2026-05-11 | pending | sent |
+| CAA Bulgaria | Bulgaria | n/a | 2026-05-10 | pending | sent |
+| ANAC Burkina | Burkina Faso | n/a | 2026-05-11 | pending | sent |
+| AAC | Cabo Verde | n/a | 2026-05-10 | pending | sent: no bulk |
+| SSCA | Cambodia | n/a | 2026-05-11 | pending | sent: leans excluded |
+| CCAA | Cameroon | n/a | 2026-05-11 | pending | sent |
 | Transport Canada | Canada | none | n/a | open | live |
 | CAA Cayman | Cayman Islands | none | n/a | none | excluded: commercial |
 | DGAC | Chile | registro.aeronaves@dgac.gob.cl | 2026-05-10 | confirmed 2026-07-22 | live: non-commercial (Ley 17.336), monthly xlsx via datos.gob.cl |
 | CAAC | China | none | n/a | none | excluded |
 | UAEAC | Colombia | atencionalciudadano@aerocivil.gov.co | 2026-05-10 | denied | excluded: denied |
-| Ministry of Transport | Cook Islands | mot.information@cookislands.gov.ck | 2026-05-11 | pending | sent |
-| DGAC Costa Rica | Costa Rica | ventanillaunica@dgac.go.cr | 2026-05-10 | pending | sent |
-| ANAC CI | Côte d'Ivoire | info@anac.ci | 2026-05-11 | pending | sent |
-| CCAA | Croatia | registar@ccaa.hr | 2026-05-10 | pending | sent |
+| Ministry of Transport | Cook Islands | n/a | 2026-05-11 | pending | sent |
+| DGAC Costa Rica | Costa Rica | n/a | 2026-05-10 | pending | sent |
+| ANAC CI | Côte d'Ivoire | n/a | 2026-05-11 | pending | sent |
+| CCAA | Croatia | n/a | 2026-05-10 | pending | sent |
 | IACC | Cuba | none | n/a | none | excluded: sanctions |
-| DCA | Cyprus | director@dca.mcw.gov.cy | 2026-05-05 | pending | sent |
-| CAA CR | Czech Republic | dousova@caa.cz | 2026-05-10 | pending | sent |
-| AAC RDC | Democratic Republic of the Congo | info@aacrdc.org | 2026-05-11 | pending | sent |
-| Trafikstyrelsen | Denmark | info@trafikstyrelsen.dk | 2026-05-05 | pending | sent: no bulk |
-| IDAC | Dominican Republic | info@idac.gov.do | 2026-05-10 | pending | sent: no bulk |
-| ECCAA (regional) | Eastern Caribbean (OECS) | contact@eccaa.aero | 2026-05-11 | pending | sent |
-| DGAC Ecuador | Ecuador | oswaldo.veloz@aviacioncivil.gob.ec | 2026-05-10 | pending | sent |
+| DCA | Cyprus | n/a | 2026-05-05 | pending | sent |
+| CAA CR | Czech Republic | n/a | 2026-05-10 | pending | sent |
+| AAC RDC | Democratic Republic of the Congo | n/a | 2026-05-11 | pending | sent |
+| Trafikstyrelsen | Denmark | n/a | 2026-05-05 | pending | sent: no bulk |
+| IDAC | Dominican Republic | n/a | 2026-05-10 | pending | sent: no bulk |
+| ECCAA (regional) | Eastern Caribbean (OECS) | n/a | 2026-05-11 | pending | sent |
+| DGAC Ecuador | Ecuador | n/a | 2026-05-10 | pending | sent |
 | ECAA | Egypt | none | n/a | none | excluded |
-| AAC El Salvador | El Salvador | jsalguero@aac.gob.sv | 2026-05-11 | pending | sent |
+| AAC El Salvador | El Salvador | n/a | 2026-05-11 | pending | sent |
 | n/a | Eritrea | none | n/a | none | excluded |
 | Transpordiamet | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed 2026-05-13 | live |
-| ESWACAA | Eswatini | info@eswacaa.co.sz | 2026-05-11 | pending | sent |
-| ECAA | Ethiopia | caa.airnav@ethionet.et | 2026-05-05 | pending | sent |
-| CAAF | Fiji | info@caaf.org.fj | 2026-05-05 | pending | sent |
+| ESWACAA | Eswatini | n/a | 2026-05-11 | pending | sent |
+| ECAA | Ethiopia | n/a | 2026-05-05 | pending | sent |
+| CAAF | Fiji | n/a | 2026-05-05 | pending | sent |
 | Traficom | Finland | kirjaamo@traficom.fi | n/a | confirmed | blocked: ids |
-| DGAC | France | immat@aviation-civile.gouv.fr | 2026-05-05 | pending | sent |
-| GCAA | Georgia | office@gcaa.ge | 2026-05-05 | pending | sent |
+| DGAC | France | n/a | 2026-05-05 | pending | sent |
+| GCAA | Georgia | n/a | 2026-05-05 | pending | sent |
 | LBA | Germany | none | n/a | none | excluded |
 | GCAA Ghana | Ghana | none | n/a | none | excluded |
-| HCAA | Greece | info@hcaa.gov.gr | 2026-05-10 | pending | sent |
-| DGAC | Guatemala | registro.aeronautico@dgac.gob.gt | 2026-05-10 | pending | sent: no bulk |
+| HCAA | Greece | n/a | 2026-05-10 | pending | sent |
+| DGAC | Guatemala | n/a | 2026-05-10 | pending | sent: no bulk |
 | 2-REG | Guernsey | none | n/a | none | excluded: commercial |
-| GCAA | Guyana | aisguyana@gcaa-gy.org | 2026-05-11 | pending | sent |
-| OFNAC | Haiti | division.ais@ofnac.gouv.ht | 2026-05-10 | pending | sent: no bulk |
-| AHAC | Honduras | secretariaadministrativa@ahac.gob.hn | 2026-05-10 | pending | sent |
+| GCAA | Guyana | n/a | 2026-05-11 | pending | sent |
+| OFNAC | Haiti | n/a | 2026-05-10 | pending | sent: no bulk |
+| AHAC | Honduras | n/a | 2026-05-10 | pending | sent |
 | CAD HK | Hong Kong | enquiry@cad.gov.hk | 2026-05-11 | not published | excluded: not published |
-| Közlekedési Hatóság | Hungary | lfhf@ekm.gov.hu | 2026-05-10 | pending | sent |
-| ICETRA | Iceland | samgongustofa@samgongustofa.is | 2026-05-05 | pending | sent: no bulk |
-| DGCA | India | rkanand.dgca@nic.in | 2026-05-05 | pending | sent |
-| DKPPU | Indonesia | produkaeronautika_dkuppu@dephub.go.id | 2026-05-05 | pending | sent |
+| Közlekedési Hatóság | Hungary | n/a | 2026-05-10 | pending | sent |
+| ICETRA | Iceland | n/a | 2026-05-05 | pending | sent: no bulk |
+| DGCA | India | n/a | 2026-05-05 | pending | sent |
+| DKPPU | Indonesia | n/a | 2026-05-05 | pending | sent |
 | CAO.IR | Iran | none | n/a | none | excluded: sanctions |
 | ICAA | Iraq | none | n/a | none | excluded: conflict |
-| IAA | Ireland | registration@iaa.ie | 2026-05-05 | pending | sent |
+| IAA | Ireland | n/a | 2026-05-05 | pending | sent |
 | IOM Registry | Isle of Man | none | n/a | none | excluded: commercial |
 | CAAI | Israel | none | n/a | none | excluded |
-| ENAC | Italy | registro.aeromobili@enac.gov.it | 2026-05-05 | pending | sent: no bulk |
-| JCAA | Jamaica | info@jcaa.gov.jm | 2026-05-05 | pending | sent |
+| ENAC | Italy | n/a | 2026-05-05 | pending | sent: no bulk |
+| JCAA | Jamaica | n/a | 2026-05-05 | pending | sent |
 | JCAB (MLIT 航空局) | Japan | none | n/a | none | excluded |
 | Jersey Registry | Jersey | none | n/a | none | excluded: commercial |
-| CARC | Jordan | info@carc.gov.jo | 2026-05-05 | pending | sent |
-| Aviation Administration of Kazakhstan | Kazakhstan | frontoffice@caa.gov.kz | 2026-05-11 | pending | sent |
+| CARC | Jordan | n/a | 2026-05-05 | pending | sent |
+| Aviation Administration of Kazakhstan | Kazakhstan | n/a | 2026-05-11 | pending | sent |
 | KCAA | Kenya | none | n/a | none | no bulk |
-| KOCA / MOLIT | Korea | lia0404@korea.kr | 2026-05-05 | pending | sent |
-| CAA Kosovo (AAC) | Kosovo | infocaa@caa-ks.org | 2026-05-11 | pending | sent |
-| DGCA Kuwait | Kuwait | president@dgca.gov.kw | 2026-05-11 | pending | sent |
-| CAA Kyrgyzstan | Kyrgyzstan | mail@caa.kg | 2026-05-10 | pending | sent |
-| DCAL | Laos | info@dcal.gov.la | 2026-05-11 | pending | sent |
+| KOCA / MOLIT | Korea | n/a | 2026-05-05 | pending | sent |
+| CAA Kosovo (AAC) | Kosovo | n/a | 2026-05-11 | pending | sent |
+| DGCA Kuwait | Kuwait | n/a | 2026-05-11 | pending | sent |
+| CAA Kyrgyzstan | Kyrgyzstan | n/a | 2026-05-10 | pending | sent |
+| DCAL | Laos | n/a | 2026-05-11 | pending | sent |
 | CAA Latvia | Latvia | ivo.tukris@caa.gov.lv | n/a | open | live |
-| CAA Lebanon (formerly DGCA) | Lebanon | info@caa.gov.lb | 2026-05-10 | pending | sent: dgca.gov.lb undeliverable |
-| LCAA | Liberia | liberiacaa@lcaa.gov.lr | 2026-05-11 | pending | sent |
+| CAA Lebanon (formerly DGCA) | Lebanon | n/a | 2026-05-10 | pending | sent: dgca.gov.lb undeliverable |
+| LCAA | Liberia | n/a | 2026-05-11 | pending | sent |
 | LCAA | Libya | none | n/a | none | excluded: sanctions |
 | n/a | Liechtenstein | none | n/a | confirmed | excluded |
-| TKA | Lithuania | joris.dumcius@tka.lt | 2026-05-10 | pending | sent |
-| DAC | Luxembourg | nav@av.etat.lu | 2026-05-10 | pending | sent |
-| AACM | Macao (SAR) | aacm@aacm.gov.mo | 2026-05-10 | pending | sent |
-| CAA Macedonia | Macedonia (North) | caa@gov.mk | 2026-05-10 | pending | sent |
-| ACM | Madagascar | acm@acm.mg | 2026-05-11 | pending | sent |
+| TKA | Lithuania | n/a | 2026-05-10 | none (auto-ack only) | live: open (CC BY 4.0 via data.gov.lt), no reply needed |
+| DAC | Luxembourg | n/a | 2026-05-10 | pending | sent |
+| AACM | Macao (SAR) | n/a | 2026-05-10 | pending | sent |
+| CAA Macedonia | Macedonia (North) | n/a | 2026-05-10 | pending | sent |
+| ACM | Madagascar | n/a | 2026-05-11 | pending | sent |
 | CAAM | Malaysia | none | n/a | none | not contacted |
 | CAA Maldives | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
-| CAD Malta | Malta | civil.aviation@transport.gov.mt | 2026-05-05 | pending | sent |
-| ANAC Mauritanie | Mauritania | anac@anac.mr | 2026-05-11 | pending | sent |
+| CAD Malta | Malta | n/a | 2026-05-05 | pending | sent |
+| ANAC Mauritanie | Mauritania | n/a | 2026-05-11 | pending | sent |
 | DCA Mauritius | Mauritius | civil-aviation@govmu.org | 2026-05-11 | denied | excluded: denied |
-| AFAC | Mexico | tramites@afac.gob.mx | 2026-05-05 | pending | sent: corrected from self-contradictory status |
+| AFAC | Mexico | n/a | 2026-05-05 | pending | sent: corrected from self-contradictory status |
 | n/a | Micronesia (FSM) | none | n/a | none | excluded: no register |
-| CAA Moldova | Moldova | info@caa.gov.md | 2026-05-10 | pending | sent |
+| CAA Moldova | Moldova | n/a | 2026-05-10 | pending | sent |
 | n/a | Monaco | none | n/a | none | excluded |
-| MCAA | Mongolia | info@mcaa.gov.mn | 2026-05-10 | pending | sent |
-| ACG | Montenegro | acv@caa.me | 2026-05-10 | pending | sent |
-| DGAC Morocco | Morocco | DCCsiteweb@transport.gov.ma | 2026-05-11 | pending | sent |
-| IACM | Mozambique | info@iacm.gov.mz | 2026-05-10 | pending | sent: no bulk |
+| MCAA | Mongolia | n/a | 2026-05-10 | pending | sent |
+| ACG | Montenegro | n/a | 2026-05-10 | pending | sent |
+| DGAC Morocco | Morocco | n/a | 2026-05-11 | pending | sent |
+| IACM | Mozambique | n/a | 2026-05-10 | pending | sent: no bulk |
 | DCA Myanmar | Myanmar | none | n/a | none | excluded: sanctions |
 | n/a | Nauru | none | n/a | none | excluded: no register |
-| CAAN | Nepal | dgca@caanepal.gov.np | 2026-05-11 | pending | sent |
+| CAAN | Nepal | n/a | 2026-05-11 | pending | sent |
 | ILT | Netherlands | none | n/a | open | live |
 | CAA NZ | New Zealand | info@caa.govt.nz | 2026-05-05 | none (30-day fallback elapsed 2026-06-04) | live: private-use via CC.2 fallback; see personal-use caveat below |
-| INAC | Nicaragua | info@inac.gob.ni | 2026-05-10 | pending | sent |
+| INAC | Nicaragua | n/a | 2026-05-10 | pending | sent |
 | ANAC Niger | Niger | none | n/a | none | excluded: sanctions |
-| NCAA | Nigeria | info@ncaa.gov.ng | 2026-05-11 | pending | sent |
+| NCAA | Nigeria | n/a | 2026-05-11 | pending | sent |
 | n/a | Niue | none | n/a | none | excluded |
 | GACA DPRK | North Korea | none | n/a | none | excluded: sanctions |
-| Luftfartstilsynet | Norway | postmottak@caa.no | 2026-05-05 | pending | live: not specified, treated as private-use |
-| CAA Oman | Oman | customerservice@caa.gov.om | 2026-05-11 | pending | cleared: no dataset |
-| PASO (regional) | Pacific Island states (PASO) | info@paso.aero | 2026-05-11 | pending | sent |
-| PCAA | Pakistan | umair.sufyan@caapakistan.com.pk | 2026-05-05 | pending | sent |
+| Luftfartstilsynet | Norway | n/a | 2026-05-05 | pending | live: not specified, treated as private-use |
+| CAA Oman | Oman | n/a | 2026-05-11 | pending | cleared: no dataset |
+| PASO (regional) | Pacific Island states (PASO) | n/a | 2026-05-11 | pending | sent |
+| PCAA | Pakistan | n/a | 2026-05-05 | pending | sent |
 | Bureau of Aviation Palau | Palau | none | n/a | none | excluded: no register |
-| AAC Panama | Panama | Rafael.barcenas@aeronautica.gob.pa | 2026-05-10 | pending | sent |
-| CASA PNG | Papua New Guinea | info@casapng.gov.pg | 2026-05-05 | pending | sent |
-| DINAC | Paraguay | sec_gral@dinac.gov.py | 2026-05-10 | pending | sent |
-| DGAC Peru | Peru | pmarin@mtc.gob.pe | 2026-05-10 | pending | sent |
-| CAAP | Philippines | awociddiv@caap.gov.ph | 2026-05-11 | pending | sent |
-| ULC | Poland | kancelaria@ulc.gov.pl | 2026-05-10 | pending | sent |
+| AAC Panama | Panama | n/a | 2026-05-10 | pending | sent |
+| CASA PNG | Papua New Guinea | n/a | 2026-05-05 | pending | sent |
+| DINAC | Paraguay | n/a | 2026-05-10 | pending | sent |
+| DGAC Peru | Peru | n/a | 2026-05-10 | pending | sent |
+| CAAP | Philippines | n/a | 2026-05-11 | pending | sent |
+| ULC | Poland | n/a | 2026-05-10 | pending | sent |
 | ANAC Portugal | Portugal | none | n/a | none | not contacted |
-| QCAA | Qatar | pr@caa.gov.qa | 2026-05-11 | pending | sent |
+| QCAA | Qatar | n/a | 2026-05-11 | pending | sent |
 | AACR | Romania | none | n/a | none | no bulk |
 | Rosaviatsia | Russia | none | n/a | none | excluded: sanctions |
 | RCAA | Rwanda | none | n/a | none | excluded |
 | n/a (Ministry of Works, Transport and Infrastructure) | Samoa | none | n/a | none | excluded: no register |
-| INAC | São Tomé and Príncipe | inac@cstome.net | 2026-05-11 | pending | sent |
-| GACA | Saudi Arabia | 1929@gaca.gov.sa | 2026-05-11 | pending | sent |
-| ANACIM | Senegal | anacim@anacim.sn | 2026-05-11 | pending | sent |
-| CAD Serbia | Serbia | dgca@cad.gov.rs | 2026-05-10 | pending | sent |
-| SCAA | Seychelles | secretariat@scaa.sc | 2026-05-05 | pending | sent |
-| SLCAA | Sierra Leone | info@slcaa.gov.sl | 2026-05-11 | pending | sent |
+| INAC | São Tomé and Príncipe | n/a | 2026-05-11 | pending | sent |
+| GACA | Saudi Arabia | n/a | 2026-05-11 | pending | sent |
+| ANACIM | Senegal | n/a | 2026-05-11 | pending | sent |
+| CAD Serbia | Serbia | n/a | 2026-05-10 | pending | sent |
+| SCAA | Seychelles | n/a | 2026-05-05 | pending | sent |
+| SLCAA | Sierra Leone | n/a | 2026-05-11 | pending | sent |
 | CAAS | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed 2026-05-12 | live |
-| Dopravný úrad | Slovakia | register.lietadiel@nsat.sk | 2026-05-10 | pending | sent |
-| CAA Slovenia | Slovenia | info@caa.si | 2026-05-10 | pending | sent |
-| SACAA | South Africa | clientcare@caa.co.za | 2026-05-11 | pending | sent: leans excluded |
-| SSCAA | South Sudan | support@sscaa.gov.ss | 2026-05-11 | pending | sent |
-| AESA | Spain | rmac.aesa@seguridadaerea.es | 2026-05-05 | pending | live: open via public reuse licence (RD 1495/2011 / Ley 37/2007), no reply needed |
-| CAASL | Sri Lanka | daw@caa.lk | 2026-05-05 | pending | sent |
+| Dopravný úrad | Slovakia | n/a | 2026-05-10 | pending | sent |
+| CAA Slovenia | Slovenia | n/a | 2026-05-10 | pending | sent |
+| SACAA | South Africa | n/a | 2026-05-11 | pending | sent: leans excluded |
+| SSCAA | South Sudan | n/a | 2026-05-11 | pending | sent |
+| AESA | Spain | n/a | 2026-05-05 | pending | live: open via public reuse licence (RD 1495/2011 / Ley 37/2007), no reply needed |
+| CAASL | Sri Lanka | n/a | 2026-05-05 | pending | sent |
 | CAA Sudan | Sudan | none | n/a | none | excluded: conflict |
-| CASAS | Suriname | casasinfo@casas.sr | 2026-05-05 | pending | sent |
+| CASAS | Suriname | n/a | 2026-05-05 | pending | sent |
 | Transportstyrelsen | Sweden | none | n/a | denied | excluded: denied |
 | FOCA / BAZL | Switzerland | aircraftregistry@bazl.admin.ch | 2026-05-05 | confirmed | live |
 | SyCAA | Syria | none | n/a | none | excluded: sanctions |
 | CAA Taiwan | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
-| Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | info@caa.tj | 2026-05-11 | pending | sent |
-| TCAA | Tanzania | tcaa@tcaa.go.tz | 2026-05-05 | pending | sent |
+| Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | n/a | 2026-05-11 | pending | sent |
+| TCAA | Tanzania | n/a | 2026-05-05 | pending | sent |
 | CAAT | Thailand | registration@caat.or.th | 2026-05-10 | confirmed 2026-05-21 | cleared; blocked: cloudflare (datacenter-IP managed challenge) |
 | ANATL | Timor-Leste | none | n/a | none | excluded: no register |
-| ANAC Togo | Togo | anac@anac-togo.tg | 2026-05-10 | pending | sent: no bulk |
+| ANAC Togo | Togo | n/a | 2026-05-10 | pending | sent: no bulk |
 | n/a | Tonga | none | n/a | none | excluded: no register |
-| TTCAA | Trinidad & Tobago | ttcaa@caa.gov.tt | 2026-05-05 | pending | sent |
-| DGAC Tunisia | Tunisia | nidhal.souilmi@transport.state.tn | 2026-05-11 | pending | sent |
+| TTCAA | Trinidad & Tobago | n/a | 2026-05-05 | pending | sent |
+| DGAC Tunisia | Tunisia | n/a | 2026-05-11 | pending | sent |
 | SHGM | Türkiye | none | n/a | denied | excluded: denied |
-| State Service for Civil Aviation | Turkmenistan | info-office@caa.gov.tm | 2026-05-11 | pending | sent |
+| State Service for Civil Aviation | Turkmenistan | n/a | 2026-05-11 | pending | sent |
 | TCI CAA | Turks & Caicos | none | n/a | none | excluded: commercial |
 | n/a | Tuvalu | none | n/a | none | excluded: no register |
-| UCAA | Uganda | aviation@caa.co.ug | 2026-05-11 | pending | sent |
-| SAAU | Ukraine | vdz@avia.gov.ua | 2026-05-10 | pending | sent |
-| GCAA | United Arab Emirates | customercare@gcaa.gov.ae | 2026-05-11 | pending | sent |
+| UCAA | Uganda | n/a | 2026-05-11 | pending | sent |
+| SAAU | Ukraine | n/a | 2026-05-10 | pending | sent |
+| GCAA | United Arab Emirates | n/a | 2026-05-11 | pending | sent |
 | UK CAA (G-INFO) | United Kingdom | none | n/a | none | excluded: restrictive |
 | FAA | United States | none | n/a | open | live |
-| DINACIA | Uruguay | dinacia@dinacia.gub.uy | 2026-05-10 | pending | sent |
-| UZCAA (via parent Ministry of Transport) | Uzbekistan | info@mintrans.uz | 2026-05-11 | pending | sent |
+| DINACIA | Uruguay | n/a | 2026-05-10 | pending | sent |
+| UZCAA (via parent Ministry of Transport) | Uzbekistan | n/a | 2026-05-11 | pending | sent |
 | n/a | Vatican | none | n/a | none | excluded: no register |
 | INAC | Venezuela | none | n/a | none | excluded: sanctions |
-| CAAV | Vietnam | dunguv@caa.gov.vn | 2026-05-11 | pending | sent |
+| CAAV | Vietnam | n/a | 2026-05-11 | pending | sent |
 | CAMA | Yemen | none | n/a | none | excluded: conflict |
-| ZCAA | Zambia | derrick.luembe@caa.co.zm | 2026-05-11 | pending | sent |
-| CAAZ | Zimbabwe | licencing@caaz.co.zw | 2026-05-11 | pending | sent |
+| ZCAA | Zambia | n/a | 2026-05-11 | pending | sent |
+| CAAZ | Zimbabwe | n/a | 2026-05-11 | pending | sent |
 <!-- prettier-ignore-end -->
 
 ## Required Notices
@@ -210,6 +210,7 @@ Single record of source for agency correspondence and source-use posture: every 
 - Luftfartstilsynet Norway: no license specified by the agency ("Ikke oppgitt"), treated as Private-use under CC.1; the posture must be stated rather than implied. Served verbatim (no-caa): "Source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement."
 - CAA Taiwan: redistribution permitted only for a non-commercial, source-available project and only under the Open Government Data License v1.0 (https://data.gov.tw/license), with a link back to the official register page (Nicholas Liaw, Flight Standards Division, reply 2026-05-15). CAA supplied the attribution wording and it was accepted verbatim in reply. Required citation, verbatim (tw-caa): "Source: Civil Aviation Administration, MOTC R.O.C. — caa.gov.tw. Licensed under the Open Government Data License, v1.0."
 - ANAC Brasil: open data requiring no prior authorization, but citation is a condition of use, not a courtesy — "proper citation of the source is mandatory" and the data "may be used freely, provided that the source is appropriately cited" (Brazilian Aeronautical Registry Technical Branch, reply 2026-05-12). No wording was prescribed, so the citation itself is what must survive. Required citation, verbatim (br-anac): "Source: Agência Nacional de Aviação Civil (ANAC), Brazil"
+- TKA Lithuania: published on the national open-data portal under CC BY 4.0 (`https://creativecommons.org/licenses/by/4.0/deed.lt`, recorded against the dataset on data.europa.eu), so attribution, licence identification, and indication of changes are licence conditions rather than courtesy. Cleared on the public licence — no agency reply is required, and none came (delivered to info@tka.lt 2026-05-10, auto-acknowledgement only). Required citation, verbatim (lt-tka): "Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under CC BY 4.0". Normalized into this project schema; changes were made and no endorsement is implied. Coverage cost: the register publishes no ICAO 24-bit address, so its rows answer tail-number lookups only and are unreachable from an ADS-B blip.
 - Public-domain, CC0, and open-government sources without a specific notice above are courtesy-credited in the README `## Attribution` block; this table records only their correspondence, storage/cache posture, and status.
 
 ## Update cadence

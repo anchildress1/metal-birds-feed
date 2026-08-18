@@ -1,5 +1,10 @@
 import { TextDecoder } from 'node:util';
-import type { SourceConfig, FieldMapping, MergeDuplicatesConfig } from './types/config.js';
+import type {
+  SourceConfig,
+  FieldMapping,
+  MergeDuplicatesConfig,
+  JoinConfig,
+} from './types/config.js';
 import { applyScalar, applyArray, applyCompound } from './transforms.js';
 import {
   parseCSV,
@@ -91,17 +96,25 @@ interface MissingSourceIdPolicy {
 // capture group. It's still matched against the decoded primary file — externally-fetched register
 // content — so ReDoS risk is bounded by review, not by sandboxing: keep these patterns simple
 // (bounded quantifiers, no nested unbounded repetition) and treat them as reviewed code at PR time.
-const assertRecordCount = (config: SourceConfig, primaryBuf: Buffer, actual: number): void => {
+const assertRecordCount = (
+  config: SourceConfig,
+  primaryBuf: Buffer,
+  counts: { parsed: number; translated: number },
+  publishedTotal?: string
+): void => {
   const check = config.record_count;
   if (!check) return;
-  const text = new TextDecoder(config.encoding).decode(primaryBuf);
+  const against = check.against ?? 'translated';
+  const source = publishedTotal ?? new TextDecoder(config.encoding).decode(primaryBuf);
+  const where = check.url ?? 'primary file';
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const expected = new RegExp(check.pattern).exec(text)?.[1];
+  const expected = new RegExp(check.pattern).exec(source)?.[1];
   if (expected === undefined)
-    throw new Error(`Source "${config.id}": record_count pattern matched no count in primary file`);
+    throw new Error(`Source "${config.id}": record_count pattern matched no count in ${where}`);
+  const actual = counts[against];
   if (actual !== Number(expected))
     throw new Error(
-      `Source "${config.id}": translated ${actual} records but the source publishes ${expected}`
+      `Source "${config.id}": ${against} ${actual} records but the source publishes ${expected}`
     );
 };
 
@@ -117,9 +130,40 @@ const reportUnmatchedLookups = (source: string): void => {
   unmatchedLookups.delete(source);
 };
 
+// Keeps only the newest publication for a register whose feed accumulates snapshots instead of
+// replacing them. Throws rather than returning nothing when the column holds no value anywhere: an
+// upstream rename would otherwise drop every row, and a source that translates zero records is a
+// far quieter failure than one that refuses to run.
+const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
+  const column = config.latest_snapshot_by;
+  if (column === undefined || rows.length === 0) return rows;
+  let latest = '';
+  for (const row of rows) {
+    const value = row[column] ?? '';
+    if (value > latest) latest = value;
+  }
+  if (latest === '')
+    throw new Error(
+      `Source "${config.id}": latest_snapshot_by column "${column}" is empty on all ${rows.length} rows — renamed upstream?`
+    );
+  const kept = rows.filter((row) => (row[column] ?? '') === latest);
+  // Dropping the bulk of the file is the normal case here, so say so: the count is what shows the
+  // filter caught a real publication boundary rather than silently keeping one stray row.
+  log('info', 'translate_snapshot_filtered', {
+    source: config.id,
+    column,
+    snapshot: latest,
+    kept: kept.length,
+    dropped: rows.length - kept.length,
+  });
+  return kept;
+};
+
 export async function translate(
   config: SourceConfig,
-  files: Map<string, Buffer>
+  files: Map<string, Buffer>,
+  // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
+  publishedTotal?: string
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   unmatchedLookups.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
@@ -129,7 +173,10 @@ export async function translate(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
-  const rows = await parsePrimary(primaryBuf, config);
+  // Before assertJoinHits and the translate loop, so joins are checked against the rows that will
+  // actually be translated and stats.total counts them rather than the whole accumulated history.
+  const parsedRows = await parsePrimary(primaryBuf, config);
+  const rows = keepLatestSnapshot(config, parsedRows);
   assertJoinHits(config, joinMaps, rows);
 
   const records = new Map<string, Aircraft>();
@@ -179,7 +226,13 @@ export async function translate(
   // unrecognized values are the evidence for it — throwing first would withhold them from the only
   // run that needed them.
   reportUnmatchedLookups(config.id);
-  if (failed === 0) assertRecordCount(config, primaryBuf, records.size);
+  if (failed === 0)
+    assertRecordCount(
+      config,
+      primaryBuf,
+      { parsed: parsedRows.length, translated: records.size },
+      publishedTotal
+    );
   log('info', 'translate_complete', { source: config.id, ...stats });
   return { records, stats };
 }
@@ -522,6 +575,35 @@ function translateRow(
   }
 }
 
+// One key's rows, reduced to the single row the mapping reads. Byte-identical repeats collapse; a
+// real difference is a conflict unless the join declares how its parties merge.
+function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, group: Row[]): Row {
+  const first = group[0];
+  if (first === undefined || group.length === 1) return first ?? {};
+
+  const merge = join.merge_duplicates;
+  if (!merge) {
+    if (group.some((row) => !Bun.deepEquals(first, row)))
+      throw new Error(
+        `Source "${config.id}": join "${join.name}" has conflicting duplicate key "${key}"`
+      );
+    return first;
+  }
+
+  const separator = merge.separator ?? ', ';
+  const merged: Row = { ...first };
+  for (const field of merge.fields) {
+    const seen: string[] = [];
+    for (const row of group) {
+      const value = row[field] ?? '';
+      if (value !== '' && !seen.includes(value)) seen.push(value);
+    }
+    merged[field] = seen.join(separator);
+  }
+  for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
+  return merged;
+}
+
 async function buildJoinMaps(
   config: SourceConfig,
   files: Map<string, Buffer>
@@ -537,17 +619,17 @@ async function buildJoinMaps(
         columns: config.columns?.[join.file],
         allowed_ragged_rows: config.allowed_ragged_rows?.[join.file],
       });
-      const index = new Map<string, Row>();
+      const groups = new Map<string, Row[]>();
       for (const row of rows) {
         const key = row[join.key] ?? '';
         if (!key) continue;
-        const incumbent = index.get(key);
-        if (incumbent !== undefined && !Bun.deepEquals(incumbent, row)) {
-          throw new Error(
-            `Source "${config.id}": join "${join.name}" has conflicting duplicate key "${key}"`
-          );
-        }
-        index.set(key, row);
+        const group = groups.get(key);
+        if (group) group.push(row);
+        else groups.set(key, [row]);
+      }
+      const index = new Map<string, Row>();
+      for (const [key, group] of groups) {
+        index.set(key, resolveJoinGroup(config, join, key, group));
       }
       return [join.name, index] as const;
     })
@@ -669,6 +751,9 @@ function resolveScalar(row: Row, mapping: FieldMapping, source: string): string 
   if (!field) return mapping.default ?? null;
 
   const raw = row[field] ?? '';
+  // Before the transform, so a sentinel never reaches one that would pass it through as a value.
+  if (mapping.null_values?.includes(raw)) return mapping.default ?? null;
+
   const transformed = mapping.transform ? applyScalar(mapping.transform, raw) : raw;
   if (transformed === null) return mapping.default ?? null;
 
@@ -777,6 +862,8 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
       horsepower: numField(m, row, 'engine.horsepower', s),
       thrust_lbs: numField(m, row, 'engine.thrust_lbs', s),
     },
+    propeller: scalarField(m, row, 'propeller', s),
+    home_base: scalarField(m, row, 'home_base', s),
     owner: partyFields(m, row, 'owner', s),
     operator: partyFields(m, row, 'operator', s),
     legal_owner: partyFields(m, row, 'legal_owner', s),

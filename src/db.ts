@@ -72,6 +72,8 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   legal_owner_kind: r.legal_owner.kind,
   legal_owner_state: r.legal_owner.state,
   legal_owner_country: r.legal_owner.country,
+  propeller: r.propeller,
+  home_base: r.home_base,
   idera_authorised_party: r.idera_authorised_party,
   certification_date: r.certification_date,
   airworthiness_date: r.airworthiness_date,
@@ -131,6 +133,8 @@ const DDL = `CREATE TABLE aircraft (
   legal_owner_kind TEXT,
   legal_owner_state TEXT,
   legal_owner_country TEXT,
+  propeller TEXT,
+  home_base TEXT,
   idera_authorised_party TEXT,
   certification_date TEXT,
   airworthiness_date TEXT,
@@ -170,7 +174,13 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // engine_thrust_lbs, year_manufactured, cruise_speed_ktas, max_takeoff_weight_kg, seats,
     // max_passengers, min_crew — so a row carrying a negative value in any of them now fails
     // translation instead of reaching the artifact; a version-8-or-later consumer may rely on that.
-    db.run('PRAGMA user_version = 8');
+    // 9 adds the propeller column — registers publish it as one undifferentiated free-text string,
+    // so it is not a maker/model pair and the service does not compose it.
+    // 10 widens the `status` value domain with `reserved`, for a mark held against a future
+    // registration with no airframe behind it; a version-9-or-earlier consumer would read it as an
+    // aircraft in some unnamed state rather than as no aircraft at all.
+    // 11 adds the home_base column for the aerodrome a register names as the aircraft's base.
+    db.run('PRAGMA user_version = 11');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

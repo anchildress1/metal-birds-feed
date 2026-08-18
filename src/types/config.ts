@@ -7,12 +7,14 @@ export const SCALAR_TRANSFORMS = [
   'lowercase',
   'int_or_null',
   'float_or_null',
+  'positive_float_or_null',
   'date_yyyymmdd_or_null',
   'date_yyyy_slash_or_null',
   'date_dd_slash_or_null',
   'date_ddmmyyyy_or_null',
   'date_dmmmyy_or_null',
   'iso_date_only_or_null',
+  'iso_year_or_null',
   'first_line_or_null',
   'collapse_ws_or_null',
   'mv_idera_party',
@@ -82,7 +84,31 @@ export interface FieldMapping {
   // Without it, a source enumerating every upstream code would have to route its known-but-
   // unrepresentable codes through `default` and log a drift warning on each one.
   lookup?: Record<string, string | null>;
+  // Raw cell values the register uses to state absence rather than to name something ("NĖRA" in
+  // TKA Lithuania's home-base column). Matched verbatim against the cell before any transform or
+  // lookup runs, and resolved exactly like a blank cell. Distinct from `lookup: {X: null}`, which
+  // requires enumerating every other value in the column — unusable for free-text columns holding
+  // hundreds of proper nouns, where the sentinel is the only value that is not data.
+  null_values?: string[];
   default?: string | null;
+}
+
+// Collapses a join file that emits one row per party into a single row per key. Distinct from the
+// primary's MergeDuplicatesConfig: this names raw upstream columns, not canonical paths, and runs
+// before translation, so the mapping's own lookups still convert whatever the merge produces.
+export interface JoinMergeConfig {
+  // Upstream columns whose distinct values are concatenated in file order (blanks skipped,
+  // duplicates collapsed). Every column the mapping reads from this join must appear here or in
+  // `set_on_merge`; the loader enforces that, so an unlisted one cannot silently take row one's
+  // value.
+  fields: string[];
+  // Joiner between concatenated values; defaults to ", ".
+  separator?: string;
+  // Upstream columns overwritten with a fixed value whenever a key actually merges — Transport
+  // Canada's owner type, which reads "Individual" per party and must become the register's
+  // co-owner vocabulary once several parties share a mark. Unconditional, unlike the primary's
+  // `set_on_merge`: a differing value here is the very thing that signals co-ownership.
+  set_on_merge?: Record<string, string>;
 }
 
 export interface JoinConfig {
@@ -90,6 +116,8 @@ export interface JoinConfig {
   file: string;
   key: string;
   on: string;
+  // Absent means a repeated key whose rows are not byte-identical fails the run.
+  merge_duplicates?: JoinMergeConfig;
 }
 
 // Collapses rows that share a source_id but differ only in the listed canonical fields into one
@@ -149,6 +177,17 @@ export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf' | 'ht
 // shift that would otherwise publish a short fleet silently).
 export interface RecordCountCheck {
   pattern: string;
+  // Endpoint publishing the total, for a register that states it somewhere other than in the file
+  // itself (data.gov.lt answers `?count()` over the same dataset). Fetched per run and matched
+  // instead of the primary. Its cost is one extra request; its value is that nothing else can
+  // detect a partially truncated response — a short page carries no marker distinguishing it from
+  // a complete one, and the writer's retain-ratio floor only catches a loss of more than half.
+  url?: string;
+  // Which count the published total describes. `translated` (the default) is the record set the
+  // artifact receives. `parsed` is every row the parser read, before `latest_snapshot_by` drops
+  // prior publications — required where the total counts the accumulated history rather than the
+  // current fleet, and the only count an accumulating register publishes about itself.
+  against?: 'parsed' | 'translated';
 }
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
@@ -194,6 +233,13 @@ export interface SourceConfig {
   // fields and a long row silently drops cells. Defaults to 0 for every unlisted file.
   allowed_ragged_rows?: Record<string, number>;
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
+  // Column naming the publication a row belongs to, for registers published as an accumulating
+  // history rather than a current snapshot: every row not in the newest publication is dropped
+  // before translation. Values compare as strings, so the format must sort lexicographically
+  // (ISO-8601 dates do). Without it such a register serves stale rows — an aircraft deregistered in
+  // the newest publication still has an active row in an older one, and the feed drops the
+  // cancelled row and keeps the stale active one, answering a lookup with a wrong record.
+  latest_snapshot_by?: string;
   joins: JoinConfig[];
   source_id: string;
   source_id_transform?: ScalarTransformName;

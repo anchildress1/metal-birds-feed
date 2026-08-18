@@ -3,7 +3,7 @@ import { readdirSync } from 'node:fs';
 import { rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
-import { download } from './downloader.js';
+import { download, fetchPublishedTotal } from './downloader.js';
 import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
 import { MIN_RETAIN_RATIO, R2ArtifactWriter, type R2Config } from './writer.js';
@@ -76,7 +76,15 @@ export async function run(sourceId: string): Promise<RunResult> {
   }
 
   const files = await download(config.download);
-  const { records, stats } = await translate(config, files);
+  const countUrl = config.record_count?.url;
+  // After the register itself, so the two responses bracket as little publishing time as possible:
+  // a publication landing between them reports a total the download predates, which fails the run.
+  // Rerunning clears it, and that is the right trade against absorbing a truncated download.
+  const publishedTotal =
+    countUrl === undefined
+      ? undefined
+      : await fetchPublishedTotal(countUrl, config.download.headers);
+  const { records, stats } = await translate(config, files, publishedTotal);
 
   log('info', 'translate_summary', { source: sourceId, ...stats });
   if (stats.failed > 0) {

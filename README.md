@@ -218,6 +218,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `cl-dgac` | DGAC | Chile | ✅ Live |
 | `ee-tram` | Transpordiamet | Estonia | ✅ Live |
 | `lv-caa` | CAA Latvia | Latvia | ✅ Live |
+| `lt-tka` | TKA | Lithuania | ✅ Live |
 | `mv-caa` | CAA Maldives | Maldives | ✅ Live |
 | `nl-ilt` | ILT | Netherlands | ✅ Live |
 | `nz-caa` | CAA NZ | New Zealand | ✅ Live |
@@ -250,6 +251,7 @@ Required upstream notices, kept short:
 - New Zealand: source data from the Civil Aviation Authority of New Zealand — [aviation.govt.nz](https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/); the CAA is acknowledged as the source as its terms require, treated as Private-use and normalized into this project schema without implying endorsement.
 - **CAA Taiwan** (`tw-caa`): Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=4499&lang=1). Licensed under the Open Government Data License, v1.0. Wording supplied by CAA and used verbatim; redistribution is permitted only for a non-commercial, source-available project.
 - **ANAC Brazil** (`br-anac`): Source: Agência Nacional de Aviação Civil (ANAC), Brazil — [sistemas.anac.gov.br](https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/). Open data requiring no prior authorization, but proper citation of the source is mandatory.
+- **TKA Lithuania** (`lt-tka`): Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); retrieved from [data.gov.lt](https://data.gov.lt). Attribution, licence identification, and indication of changes are licence conditions; changes were made by normalization into this project schema, without implying endorsement.
 
 Additional source credits — each line is the exact string `attributionFor()` serves with those rows. Registers whose own terms mandate particular wording are credited in the required-notice list above instead; that wording is recorded in [DATA_LICENSES.md](DATA_LICENSES.md) and is what the service returns.
 

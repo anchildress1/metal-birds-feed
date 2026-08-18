@@ -18,6 +18,12 @@ export const AircraftStatusSchema = z.enum([
   'expired',
   'cancelled',
   'restricted',
+  // A mark held against a future registration, with no airframe behind it yet. Distinct from every
+  // other value here, which describe an aircraft's standing: this one says there is no aircraft.
+  // It needs its own value because `other` reaches the served feed, and TKA Lithuania fills a
+  // reserved row's type column with the intended model — so `other` answered a tail-number lookup
+  // with a plausible aircraft that does not exist. `toFeedRows` excludes it for that reason.
+  'reserved',
   'other',
 ]);
 
@@ -148,6 +154,19 @@ export const AircraftSchema = z.object({
   operational_classes: z.array(z.string()),
   operational_classes_source_text: z.array(z.string()),
   engine: EngineSchema,
+  // One undifferentiated string, not a maker/model pair like `engine`: registers publish the
+  // propeller as free text with no consistent boundary — TKA Lithuania alone emits "Woodcomp SR 200"
+  // (no separator), "Neuform, CR3-V-R2H" (maker, model), "HARTZELL PROPELLER INC.,
+  // HC-C2YR-IBFP/F7497-2, CH42724B" (maker, model, serial), and makers whose own names contain the comma
+  // (AB "Sportinė aviacija", LAK P4-90). Any split rule would invent a structure the register does
+  // not state. Never a translation candidate, for the same reason as idera_authorised_party: it is
+  // part numbers and proper nouns, which a translator mangles rather than renders.
+  propeller: z.string().nullable(),
+  // Aerodrome the aircraft is based at, verbatim as the register names it. Never a translation
+  // candidate: these are place names ("Vilniaus oro uostas"), which a translator renames rather
+  // than renders. A register's explicit "no base" maps to null at the source config — the schema
+  // cannot distinguish that from unknown, and a consumer could not act on the difference anyway.
+  home_base: z.string().nullable(),
   owner: OwnerSchema,
   operator: OperatorSchema,
   legal_owner: LegalOwnerSchema,

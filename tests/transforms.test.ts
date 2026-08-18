@@ -45,6 +45,22 @@ describe('applyScalar', () => {
       expect(applyScalar('float_or_null', '1,800')).toBeNull());
   });
 
+  describe('positive_float_or_null', () => {
+    it('parses a positive value', () =>
+      expect(applyScalar('positive_float_or_null', '472')).toBe('472'));
+    it('preserves decimals', () =>
+      expect(applyScalar('positive_float_or_null', '3.14')).toBe('3.14'));
+    it('returns null for empty', () =>
+      expect(applyScalar('positive_float_or_null', '')).toBeNull());
+    it('returns null for non-numeric', () =>
+      expect(applyScalar('positive_float_or_null', 'N/A')).toBeNull());
+    // The whole point: registers stamp 0 where they mean "not recorded".
+    it('returns null for zero', () =>
+      expect(applyScalar('positive_float_or_null', '0')).toBeNull());
+    it('returns null for a negative value', () =>
+      expect(applyScalar('positive_float_or_null', '-1')).toBeNull());
+  });
+
   describe('date_yyyymmdd_or_null', () => {
     it('formats valid date', () =>
       expect(applyScalar('date_yyyymmdd_or_null', '19790620')).toBe('1979-06-20'));

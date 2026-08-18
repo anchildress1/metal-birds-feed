@@ -40,6 +40,16 @@ const floatOrNull = (value: string): string | null => {
   return Number.isFinite(n) ? String(n) : null;
 };
 
+// For a quantity no aircraft can legitimately hold at zero or below — mass, span, speed — where the
+// register fills the cell with 0 instead of leaving it blank. TKA Lithuania stamps 0 kg on 122 rows
+// including hot-air balloons that carry four passengers, so passing it through asserts a takeoff
+// mass the register never measured. Never reach for this on a count (seats, passengers, engines):
+// zero is a real answer there, and nulling it would discard the fact that a glider carries nobody.
+const positiveFloatOrNull = (value: string): string | null => {
+  const n = floatOrNull(value);
+  return n !== null && Number(n) > 0 ? n : null;
+};
+
 const validateAndFormatYMD = (y: string, m: string, d: string): string | null => {
   const date = new Date(`${y}-${m}-${d}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return null;
@@ -93,6 +103,12 @@ const isoDateOnlyOrNull = (value: string): string | null => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return null;
   return validateAndFormatYMD(head.slice(0, 4), head.slice(5, 7), head.slice(8, 10));
 };
+
+// Year out of a plain ISO date, for registers publishing a full manufacture date where the
+// canonical schema keeps only year_manufactured. Validates the whole date first so a malformed
+// value yields null rather than four plausible leading digits.
+const isoYearOrNull = (value: string): string | null =>
+  isoDateOnlyOrNull(value)?.slice(0, 4) ?? null;
 
 const MONTH_ABBR: Record<string, string> = {
   jan: '01',
@@ -639,12 +655,14 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   lowercase,
   int_or_null: intOrNull,
   float_or_null: floatOrNull,
+  positive_float_or_null: positiveFloatOrNull,
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,
   date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
   date_dmmmyy_or_null: dateDmmmyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
+  iso_year_or_null: isoYearOrNull,
   first_line_or_null: firstLineOrNull,
   collapse_ws_or_null: collapseWsOrNull,
   mv_idera_party: mvIderaParty,

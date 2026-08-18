@@ -13,6 +13,7 @@ const setFetch = (fn: unknown): void => {
 
 const mockLoadSourceConfig = mock();
 const mockDownload = mock();
+const mockFetchPublishedTotal = mock();
 const mockTranslate = mock();
 const mockR2Write = mock();
 const mockR2Constructor = mock();
@@ -28,7 +29,10 @@ const mockLog = mock();
 const mockLocalizeRecords = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
-void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
+void mock.module('../src/downloader.js', () => ({
+  download: mockDownload,
+  fetchPublishedTotal: mockFetchPublishedTotal,
+}));
 void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
 void mock.module('../src/localize/localize.js', () => ({ localizeRecords: mockLocalizeRecords }));
 void mock.module('../src/logger.js', () => ({
@@ -129,6 +133,8 @@ const aircraft = (overrides: Partial<Aircraft> = {}): Aircraft => ({
   cancellation_reason_source_text: null,
   lien_status: null,
   lien_status_source_text: null,
+  propeller: null,
+  home_base: null,
   interdiction_code: null,
   ...overrides,
 });
@@ -143,6 +149,7 @@ beforeEach(() => {
 
   mockLoadSourceConfig.mockReset();
   mockDownload.mockReset();
+  mockFetchPublishedTotal.mockReset();
   mockTranslate.mockReset();
   mockR2Write.mockReset();
   mockR2Constructor.mockReset();
@@ -201,6 +208,30 @@ describe('run', () => {
 
     expect(mockR2Constructor).toHaveBeenCalledTimes(1);
     expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null, expect.any(String));
+  });
+
+  // The engine reads files, never the network, so the count body has to arrive as an argument.
+  it('fetches the published total and hands it to the engine when a source declares one', async () => {
+    mockLoadSourceConfig.mockReturnValue({
+      ...CONFIG,
+      record_count: { pattern: '(\\d+)', url: 'https://example.test/count', against: 'parsed' },
+    });
+    mockFetchPublishedTotal.mockResolvedValue('17571');
+
+    await run('faa');
+
+    expect(mockFetchPublishedTotal).toHaveBeenCalledWith(
+      'https://example.test/count',
+      CONFIG.download.headers
+    );
+    expect(mockTranslate).toHaveBeenCalledWith(expect.anything(), expect.any(Map), '17571');
+  });
+
+  it('skips the count fetch for a source that declares no endpoint', async () => {
+    await run('faa');
+
+    expect(mockFetchPublishedTotal).not.toHaveBeenCalled();
+    expect(mockTranslate).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
   });
 
   it('aborts write when any row fails translation', async () => {

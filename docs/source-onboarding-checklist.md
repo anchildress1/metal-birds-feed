@@ -26,6 +26,7 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22)  | Live — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
 | Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                 | Live — `html` parser path                                                                                                     |
 | CAA Latvia                 | CC0-1.0                                                                      | Live                                                                                                                          |
+| TKA Lithuania              | CC BY 4.0 (data.gov.lt)                                                      | Live — `csv` data API; `latest_snapshot_by` keeps the newest publication; no ICAO hex                                         |
 | CAA Maldives               | Open + attribution + error-disclaimer (written)                              | Live                                                                                                                          |
 | ILT (Netherlands)          | CC-0                                                                         | Live                                                                                                                          |
 | CAA NZ (New Zealand)       | Private-use ("personal use" + attribution), CC.2 fallback elapsed 2026-06-04 | Live — `csv`; 100% ICAO 24-bit coverage                                                                                       |
@@ -110,7 +111,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | DCAL Laos                                 | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | CAA Lebanon (formerly DGCA)               | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | LCAA Liberia                              | 2026-05-11 | 2026-06-10 | pending | Yes      |
-| TKA Lithuania                             | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | DAC Luxembourg                            | 2026-05-10 | 2026-06-09 | pending | No       |
 | AACM Macao (SAR)                          | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | CAA Macedonia (North)                     | 2026-05-10 | 2026-06-09 | pending | Yes      |

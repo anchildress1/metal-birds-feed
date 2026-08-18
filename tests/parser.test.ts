@@ -748,14 +748,15 @@ describe('parseJson', () => {
 
 const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
 const mvBuf = (): Buffer => readFileSync(MV_PDF);
-// Mirrors sources/mv-caa.yaml: standard row-per-aircraft grid, fields on x, records anchored on
-// the 8Q mark along y.
+// Mirrors sources/mv-caa.yaml: 90°-rotated grid, fields on y, records anchored on the 8Q mark
+// along x. Keep both in step — the register alternates layouts, and this harness is what proves
+// the parser still separates the bands after a flip.
 const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
-  field_axis: 'x',
+  field_axis: 'y',
   anchor_pattern: '^8Q-[A-Z]{3}$',
   column_pos: [
-    789.7, 754.5, 725.3, 652.3, 584.6, 496.3, 408, 319.7, 233.6, 220.8, 198, 170.1, 96.7, 74, 47.4,
-    33,
+    746, 713.1, 685.8, 616.1, 551.8, 467.8, 420, 383.8, 299.8, 217.9, 205.6, 183, 156.9, 87.6, 66.2,
+    40.6, 28.9,
   ],
   columns: [
     'status',
@@ -765,6 +766,7 @@ const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
     'mortgage',
     'other_specifics',
     'basis',
+    'operator',
     'legal_owner',
     'owner',
     'year',
@@ -782,7 +784,7 @@ const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
 describe('parsePdf', () => {
   it('reconstructs one row per anchor across all pages', async () => {
     const rows = await parsePdf(mvBuf(), mvOpts());
-    expect(rows).toHaveLength(138);
+    expect(rows).toHaveLength(137);
     expect(rows.every((r) => /^8Q-[A-Z]{3}$/.test(r.mark ?? ''))).toBe(true);
     expect(rows.every((r) => /^CR-/.test(r.cert_no ?? ''))).toBe(true);
   });

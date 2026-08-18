@@ -1,0 +1,298 @@
+id: lt-tka
+label: TKA Lithuania Civil Aircraft Register
+country: LT
+language: lt
+encoding: utf8
+trim_all: true
+# Five publications in the eleven months to 2026-03-09. Polling weekly costs one 6 MB fetch and
+# content_hash gates the PUT.
+cadence_days: 7
+
+download:
+  url: https://get.data.gov.lt/datasets/gov/tka/registras/Irasas/:format/csv
+  format: file
+  entries:
+    register: register.csv
+
+primary: register
+delimiter: ','
+format: csv
+
+# data.gov.lt retains every prior publication in the same table, so the download is an accumulating
+# history: a mark deregistered in the newest one still has an active row in an older one.
+latest_snapshot_by: duomenu_sviezumas
+
+# Spinta pages its responses and closes every one with a `_page.next` cursor whether or not more
+# rows follow — a truncated download is byte-for-byte indistinguishable from a complete one, and
+# nothing else would catch it: the file publishes no total of its own, and the writer's retain-ratio
+# floor only fires past a 50% loss. Counted against the parsed rows because `count()` covers the
+# accumulated history, which is what the download contains before latest_snapshot_by runs.
+record_count:
+  url: https://get.data.gov.lt/datasets/gov/tka/registras/Irasas/:format/json?count()
+  pattern: '"count\(\)":\s*(\d+)'
+  against: parsed
+
+# Not registracijos_nr: TKA loads duplicate rows for a mark, with conflicting airframe data and
+# identical registration dates that recency cannot resolve. LY AXX has been duplicated in all five
+# published snapshots, and the register is capable of far worse — its 2025-06-10 publication carried
+# 2,749 duplicated marks, 2,501 of them conflicting, against 2,841 distinct marks. Keying on the mark
+# fails the run on one row today and on thousands if that recurs. vda_id is unique per row but is
+# reissued each publication, so this register offers no stable per-aircraft key and the artifact is a
+# snapshot rather than a tracked history.
+source_id: vda_id
+registration: registracijos_nr
+
+mapping:
+  # Published as "LY XXX"; registration_key strips the space.
+  registration:
+    field: registracijos_nr
+    transform: trim_or_null
+    default: ''
+
+  # No Mode S address anywhere in the register — these rows are reachable by mark only.
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # "Registruoti ženklai" is a mark held for a future registration with no aircraft behind it. TKA
+  # still fills `tipas` with the intended model, so it must not map to `other` — that reaches the
+  # served feed and answers a tail-number lookup with an aircraft that does not exist.
+  status:
+    field: statusas
+    lookup:
+      'Registruotas': valid
+      'Laikinas registravimas': valid
+      'Registravimas panaikintas': cancelled
+      'Registruoti ženklai': reserved
+
+  country:
+    constant: LT
+
+  # The register publishes a type designation ("AN-2", "Chaser S") and no maker column.
+  manufacturer:
+    constant: ~
+
+  model:
+    field: tipas
+    transform: trim_or_null
+
+  serial_number:
+    constant: ~
+
+  year_manufactured:
+    field: pagaminimas
+    transform: iso_year_or_null
+
+  # MKO is the Lithuanian light-aircraft class, a mass band rather than a structure, so the bare
+  # forms map to `other` and only the parenthesised ones state an airframe.
+  airframe_type:
+    field: rusis
+    lookup:
+      'Lėktuvas': fixed-wing
+      'Lėktuvas (ultralengvasis)': fixed-wing
+      'Hidroplanas': fixed-wing
+      'MKO (lėktuvas)': fixed-wing
+      'MKO lėktuvas': fixed-wing
+      'Sklandytuvas / Sailplane': glider
+      'Motosklandytuvas': glider
+      'MKO/UL (motosklandytuvas)': glider
+      'Oro balionas': balloon
+      'Dirižablis': blimp
+      'Sraigtasparnis': rotorcraft
+      'MKO (sraigtasparnis)': rotorcraft
+      'Malūnsparnis': gyroplane
+      'Motoskraidyklė': weight-shift
+      'Ultralengvasis': other
+      'MKO': other
+      'MKO/UL': other
+
+  # Only Hidroplanas states a water airframe; the rest say nothing about environment.
+  operating_environment:
+    field: rusis
+    lookup:
+      'Hidroplanas': sea
+      'Lėktuvas': ~
+      'Lėktuvas (ultralengvasis)': ~
+      'MKO (lėktuvas)': ~
+      'MKO lėktuvas': ~
+      'Sklandytuvas / Sailplane': ~
+      'Motosklandytuvas': ~
+      'MKO/UL (motosklandytuvas)': ~
+      'Oro balionas': ~
+      'Dirižablis': ~
+      'Sraigtasparnis': ~
+      'MKO (sraigtasparnis)': ~
+      'Malūnsparnis': ~
+      'Motoskraidyklė': ~
+      'Ultralengvasis': ~
+      'MKO': ~
+      'MKO/UL': ~
+
+  # Bilingual, Lithuanian/English either side of a slash, with inconsistent spacing and one
+  # Lithuanian-only value. Enumerated rather than translated: the English half is already present,
+  # so a Gemini pass would reword curated labels for no gain.
+  category:
+    field: kategorija
+    lookup:
+      'Didelis lėktuvas/Large Aeroplane': standard
+      'Nedidelis lėktuvas/Small Aeroplane': standard
+      'Labai lengvas lėktuvas/Very Light Aeroplane': standard
+      'Sklandytuvas /Glider': standard
+      'Motosklandytuvas /Motor Glider': standard
+      'Karšto oro balionas /Hot Air Balloon': standard
+      'Nedidelis sraigtasparnis/Small Rotorcraft': standard
+      'Didelis sraigtasparnis/Large Rotorcraft': standard
+      'Apribotasis orlaivis / Restricted Aircraft': restricted
+      'Eksperimentinis-ultralengvasis orlaivis/Experimental-Ultralight Aircraft': experimental
+      'Eksperimentinis-karinis orlaivis/Experimental-Military Aircraft': experimental
+      'Eksperimentinis-mėgėjiškas orlaivis/Experimental-Amateur Aircraft': experimental
+      'Eksperimentinis-mėgėjiškas lėktuvas/Experimental-Amateur Airplain': experimental
+      'Eksperimentinis-istorinis orlaivis/Experimental-Historic Aircraft': experimental
+      'Eksperimentinis-bandomasis orlaivis/Experimental-Research Aircraft': experimental
+      'Eksperimentinis-karšto oro balionas/Experimental-Hot Air Balloon': experimental
+      'Eksperimentinis sraigtasparnis': experimental
+      'Eksperimentinė - motoskraidyklė - Experimental - Hang Glider': experimental
+      'Eksperimentinis - mėgėjiška motoskraidyklė/Experimental - Amateur Hang Glider': experimental
+      'Eksperimentinis -mėgėjiškas motosklandytuvas/Experimental-Amateur Motor Glider': experimental
+      'Eksperimentinis-bandomasis motosklandytuvas/Experimental-Research Powered Glider': experimental
+      'Eksperimentinis bandomasis sklandytuvas / Experimental Research Glider': experimental
+      'Eksperimentinis - istorinis sklandytuvas / Experimental - Historic Glider': experimental
+      'Eksperimentinis - istorinis sklandytuvas / Experimental Historic Glider': experimental
+
+  # Only the amateur-built categories state a build basis. The rest are usually type-certificated but
+  # the register never says so, so they stay null rather than asserting a certification basis.
+  build_certification:
+    field: kategorija
+    lookup:
+      'Eksperimentinis-mėgėjiškas orlaivis/Experimental-Amateur Aircraft': not-type-certificated
+      'Eksperimentinis-mėgėjiškas lėktuvas/Experimental-Amateur Airplain': not-type-certificated
+      'Eksperimentinis - mėgėjiška motoskraidyklė/Experimental - Amateur Hang Glider': not-type-certificated
+      'Eksperimentinis -mėgėjiškas motosklandytuvas/Experimental-Amateur Motor Glider': not-type-certificated
+      'Didelis lėktuvas/Large Aeroplane': ~
+      'Nedidelis lėktuvas/Small Aeroplane': ~
+      'Labai lengvas lėktuvas/Very Light Aeroplane': ~
+      'Sklandytuvas /Glider': ~
+      'Motosklandytuvas /Motor Glider': ~
+      'Karšto oro balionas /Hot Air Balloon': ~
+      'Nedidelis sraigtasparnis/Small Rotorcraft': ~
+      'Didelis sraigtasparnis/Large Rotorcraft': ~
+      'Apribotasis orlaivis / Restricted Aircraft': ~
+      'Eksperimentinis-ultralengvasis orlaivis/Experimental-Ultralight Aircraft': ~
+      'Eksperimentinis-karinis orlaivis/Experimental-Military Aircraft': ~
+      'Eksperimentinis-istorinis orlaivis/Experimental-Historic Aircraft': ~
+      'Eksperimentinis-bandomasis orlaivis/Experimental-Research Aircraft': ~
+      'Eksperimentinis-karšto oro balionas/Experimental-Hot Air Balloon': ~
+      'Eksperimentinis sraigtasparnis': ~
+      'Eksperimentinė - motoskraidyklė - Experimental - Hang Glider': ~
+      'Eksperimentinis-bandomasis motosklandytuvas/Experimental-Research Powered Glider': ~
+      'Eksperimentinis bandomasis sklandytuvas / Experimental Research Glider': ~
+      'Eksperimentinis - istorinis sklandytuvas / Experimental - Historic Glider': ~
+      'Eksperimentinis - istorinis sklandytuvas / Experimental Historic Glider': ~
+
+  airworthiness_class:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  propeller:
+    field: oro_sraigtas
+    transform: trim_or_null
+
+  # "NĖRA" is Lithuanian for "none" — the register stating the aircraft has no base, not an
+  # aerodrome by that name. `bazes_adresas` (the base's street address) is dropped as PII, and
+  # `geometrija` is empty on all 17,571 published rows.
+  home_base:
+    field: baze
+    transform: trim_or_null
+    null_values:
+      - 'NĖRA'
+
+  # The register publishes the party's type only, never a name or address.
+  owner.name:
+    constant: ~
+
+  # "Galimai fizinis asmuo" is TKA's own unverified read of the party. The enum carries no confidence
+  # axis, so it maps to the kind the register states rather than nulling the one fact it gives.
+  owner.kind:
+    field: savininko_tipas
+    lookup:
+      'Fizinis asmuo': individual
+      'Galimai fizinis asmuo': individual
+      'Juridinis asmuo': corporation
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    field: naudotojo_tipas
+    lookup:
+      'Fizinis asmuo': individual
+      'Galimai fizinis asmuo': individual
+      'Juridinis asmuo': corporation
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: pirma_registracija
+    transform: iso_date_only_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  # Validity of the airworthiness certificate (techninės priežiūros / tinkamumo skraidyti pažymėjimas).
+  expiration_date:
+    field: tsppp_galiojimas
+    transform: iso_date_only_or_null
+
+  last_action_date:
+    field: paskutine_registracija
+    transform: iso_date_only_or_null
+
+  cruise_speed_ktas:
+    constant: ~
+
+  # TKA stamps 0 on 122 rows rather than leaving the cell blank, including hot-air balloons carrying
+  # four passengers, so 0 is an unmeasured mass and not a mass of zero.
+  max_takeoff_weight_kg:
+    field: mkm
+    transform: positive_float_or_null
+
+  # 0 stays: this register is mostly gliders, balloons and single-seaters, which genuinely carry no
+  # passengers. Nulling it would discard the register's answer on a third of its live fleet.
+  max_passengers:
+    field: keleiviu_sk
+    transform: int_or_null

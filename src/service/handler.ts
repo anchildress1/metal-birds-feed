@@ -3,6 +3,7 @@
 // server injects a SQLite-backed RunQuery and the rate-limit CheckLimit; the decisions live here.
 
 import type { FeedRow } from '../feed-row.js';
+import { registrationKey, REGISTRATION_KEY_RE } from '../registration.js';
 import { attributionFor } from './attributions.js';
 
 // Re-exported so the service + tests import the row shape from one place; the query is SELECT *, so
@@ -27,8 +28,6 @@ export type FeedResponseRow = Omit<FeedRow, 'icao_hex' | 'registration_key'> & {
 
 const HEX_RE = /^[0-9a-f]{6}$/;
 const MAX_HEXES = 500;
-// Same shape a registration normalizes to in feed.ts: letters and digits only, nothing else.
-const REGISTRATION_KEY_RE = /^[A-Z0-9]{2,10}$/;
 
 export type RunQuery = (sql: string, params: string[]) => Promise<FeedRow[]>;
 export type CheckLimit = () => Promise<boolean>;
@@ -93,15 +92,13 @@ export const buildSelect = (count: number): string =>
 export const buildRegistrationSelect = (count: number): string =>
   `SELECT * FROM feed WHERE registration_key IN (${Array.from({ length: count }, () => '?').join(', ')})`;
 
-// Normalizes exactly as feed.ts does when building the key, so a caller may send "C-FABC",
+// Normalizes through the same function that builds the key, so a caller may send "C-FABC",
 // "c fabc", or "CFABC" and reach the same row. Rejects the whole request on a value that cannot be
 // a mark, matching parseHexes: a caller sending garbage should learn, not get a quietly-partial map.
 export const parseRegistrations = (body: unknown): string[] => {
   const raw = (body as { registrations?: unknown } | null)?.registrations;
   if (!Array.isArray(raw)) throw new HttpError(400, 'registrations must be an array');
-  const normalized = raw.map((r) =>
-    typeof r === 'string' ? r.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''
-  );
+  const normalized = raw.map((r) => (typeof r === 'string' ? registrationKey(r) : ''));
   const deduped = [...new Set(normalized)];
   if (deduped.length > MAX_HEXES)
     throw new HttpError(400, `too many registrations (max ${MAX_HEXES})`);

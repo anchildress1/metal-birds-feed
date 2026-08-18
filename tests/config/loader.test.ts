@@ -286,6 +286,34 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  // A merging join silently takes row one's value for any column it does not name, so a mapped
+  // column left off the list would quietly report the first party's data for all of them.
+  it("rejects a mapped join column missing from that join's merge_duplicates", () => {
+    const tmp = tmpConfig('_test_join_merge_uncovered.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, side: s.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: side\n    key: K\n    on: K\n    merge_duplicates:\n      fields: [NAME]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  owner.name: { field: 'side.NAME' }\n  owner.state: { field: 'side.PROV' }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/merge_duplicates fields or set_on_merge/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts a mapped join column covered by set_on_merge', () => {
+    const tmp = tmpConfig('_test_join_merge_covered.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, side: s.txt }\nprimary: primary\ndelimiter: ','\njoins:\n  - name: side\n    file: side\n    key: K\n    on: K\n    merge_duplicates:\n      fields: [NAME]\n      set_on_merge:\n        PROV: shared\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  owner.name: { field: 'side.NAME' }\n  owner.state: { field: 'side.PROV' }\n`
+    );
+    try {
+      expect(loadSourceConfig(tmp).joins[0]?.merge_duplicates?.fields).toEqual(['NAME']);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects a columns key that does not match primary or a joins[].file value', () => {
     const tmp = tmpConfig('_test_bad_columns_key.yaml');
     writeFileSync(

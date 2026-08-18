@@ -257,14 +257,25 @@ beforeAll(async () => {
 });
 
 describe('TC-CA fixture translation', () => {
-  it('translates all 10 fixture rows', () => {
-    expect(tcRecords.size).toBe(10);
+  it('translates all 11 fixture rows', () => {
+    expect(tcRecords.size).toBe(11);
   });
 
   it('skips the Oracle footer line as a soft skip, not a failure', () => {
     expect(tcStats.failed).toBe(0);
     expect(tcStats.skipped).toBe(1);
-    expect(tcStats.ok).toBe(10);
+    expect(tcStats.ok).toBe(11);
+  });
+
+  // carsownr carries one row per registered party. Both parties have to survive the join, and the
+  // owner type each row states about itself stops being true of the mark once they share it.
+  it('merges the co-owners of one mark instead of taking the first row', () => {
+    const r = tcRecords.get('ABU')!;
+    expect(r.owner.name).toBe('Renée Dubois, Paul Harrow');
+    expect(r.owner.kind).toBe('co-owner');
+    expect(r.owner.state).toBe('Ontario, Alberta');
+    // Both parties state CANADA; a merge must not repeat a value every row agrees on.
+    expect(r.owner.country).toBe('CANADA');
   });
 
   describe('AAC — vintage 3-char piston single, individual, valid', () => {
@@ -1015,6 +1026,77 @@ describe('engine — negative and edge cases', () => {
     const { records, stats } = await translate(DUPLICATE_JOIN_CONFIG, files);
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.manufacturer).toBe('Cessna');
+  });
+
+  describe('merge_duplicates on a join', () => {
+    const merging = (
+      merge: NonNullable<SourceConfig['joins'][number]['merge_duplicates']>
+    ): SourceConfig => ({
+      ...DUPLICATE_JOIN_CONFIG,
+      joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID', merge_duplicates: merge }],
+      mapping: {
+        registration: { field: 'REG' },
+        manufacturer: { field: 'j.EXTRA', transform: 'trim_or_null' },
+        model: { field: 'j.KIND', transform: 'trim_or_null' },
+      },
+    });
+    const primary = (): [string, Buffer] => ['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')];
+
+    it('concatenates the listed columns in file order', async () => {
+      const files = new Map([
+        primary(),
+        ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,a\n', 'utf8')],
+      ]);
+      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna, Piper');
+    });
+
+    it('honours a custom separator', async () => {
+      const files = new Map([
+        primary(),
+        ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,a\n', 'utf8')],
+      ]);
+      const config = merging({ fields: ['EXTRA', 'KIND'], separator: ' Y ' });
+      const { records } = await translate(config, files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna Y Piper');
+    });
+
+    // A register that agrees with itself must not produce "CANADA, CANADA", and a party leaving a
+    // column blank must not punch a stray separator into the joined value.
+    it('collapses repeats and skips blanks', async () => {
+      const files = new Map([
+        primary(),
+        ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,,a\n1,Cessna,a\n', 'utf8')],
+      ]);
+      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna');
+    });
+
+    // Unconditional, unlike the primary's set_on_merge: the differing per-party value is exactly
+    // what says the key is shared, so there is nothing to protect from being overwritten.
+    it('stamps set_on_merge columns only when a key actually merged', async () => {
+      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
+      const merged = await translate(
+        config,
+        new Map([
+          primary(),
+          ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n1,Piper,solo\n', 'utf8')],
+        ])
+      );
+      expect(merged.records.get('1')?.model).toBe('shared');
+
+      const lone = await translate(
+        config,
+        new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n', 'utf8')]])
+      );
+      expect(lone.records.get('1')?.model).toBe('solo');
+    });
+
+    it('leaves a single-row key untouched', async () => {
+      const files = new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n', 'utf8')]]);
+      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      expect(records.get('1')?.manufacturer).toBe('Cessna');
+    });
   });
 
   it('skips the join-hit floor when the primary has no rows', async () => {
@@ -2238,8 +2320,8 @@ describe('CAA Maldives fixture translation (PDF)', () => {
     mvRecords = result.records;
   });
 
-  it('translates all 138 register rows with no failures', () => {
-    expect(mvRecords.size).toBe(138);
+  it('translates all 137 register rows with no failures', () => {
+    expect(mvRecords.size).toBe(137);
   });
 
   it('keys records on the certificate number, not the reissued mark', () => {
@@ -2544,6 +2626,33 @@ describe('record_count guard (ee-tram)', () => {
       new Map([['register', eeTable(2, ['ES - AAA', 'NOT-A-MARK'])]])
     );
     expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0, duplicateSkipped: 0 });
+  });
+});
+
+// lt-tka counts against the parsed rows, not the translated records: its published total covers
+// the accumulated history that latest_snapshot_by then filters down to one publication.
+describe('record_count against a separately published total (lt-tka)', () => {
+  const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
+  const register = (): Buffer =>
+    readFileSync(resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv'));
+  const files = (): Map<string, Buffer> => new Map([['register', register()]]);
+
+  it('counts the parsed rows, not the smaller translated set', async () => {
+    const { records, stats } = await translate(config, files(), '{"_data":[{"count()":13}]}');
+    expect(stats.total).toBe(11);
+    expect(records.size).toBe(11);
+  });
+
+  it('fails loudly when the download is short of the published total', async () => {
+    await expect(translate(config, files(), '{"_data":[{"count()":14}]}')).rejects.toThrow(
+      /parsed 13 records but the source publishes 14/
+    );
+  });
+
+  it('names the endpoint when the published total cannot be found there', async () => {
+    await expect(translate(config, files(), '{"_data":[]}')).rejects.toThrow(
+      /pattern matched no count in https:\/\/get\.data\.gov\.lt/
+    );
   });
 });
 
@@ -3415,5 +3524,173 @@ describe('unmatched lookup reporting', () => {
     } finally {
       logSpy.mockRestore();
     }
+  });
+});
+
+describe('latest_snapshot_by', () => {
+  const config: SourceConfig = {
+    id: 'synthetic-snapshot',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    latest_snapshot_by: 'PUB',
+    mapping: {
+      registration: { field: 'REG' },
+      status: { field: 'ST', lookup: { A: 'valid', C: 'cancelled' } },
+      country: { constant: 'US' },
+    },
+  };
+  const parse = async (rows: string[], cfg: SourceConfig = config) =>
+    translate(cfg, new Map([['f', Buffer.from(rows.join('\n'))]]));
+
+  // The reason this exists: an accumulating register keeps a row per publication, so the same mark
+  // appears cancelled in the newest and active in an older one. Keeping both serves the stale row.
+  it('keeps only the newest publication, so a superseded row cannot survive', async () => {
+    const { records, stats } = await parse([
+      'ID,REG,ST,PUB',
+      '1,N1,A,2025-04-29',
+      '2,N1,C,2026-03-09',
+      '3,N2,A,2026-03-09',
+    ]);
+    expect(stats.total).toBe(2);
+    expect([...records.values()].map((r) => r.registration).sort()).toEqual(['N1', 'N2']);
+    expect(records.get('2')?.status).toBe('cancelled');
+    expect(records.get('1')).toBeUndefined();
+  });
+
+  it('leaves rows untouched when no snapshot column is declared', async () => {
+    const { stats } = await parse(['ID,REG,ST,PUB', '1,N1,A,2025-04-29', '2,N2,A,2026-03-09'], {
+      ...config,
+      latest_snapshot_by: undefined,
+    });
+    expect(stats.total).toBe(2);
+  });
+
+  // An upstream rename would otherwise drop every row and translate zero records — a far quieter
+  // failure than refusing to run.
+  it('throws when the column holds no value on any row', async () => {
+    await expect(parse(['ID,REG,ST,PUB', '1,N1,A,', '2,N2,A,'])).rejects.toThrow(
+      /latest_snapshot_by column "PUB" is empty on all 2 rows/
+    );
+  });
+
+  it('reports what it dropped', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await parse(['ID,REG,ST,PUB', '1,N1,A,2025-04-29', '2,N2,A,2026-03-09']);
+      const line = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .find((l) => l.includes('translate_snapshot_filtered'));
+      expect(line).toContain('snapshot=2026-03-09');
+      expect(line).toContain('kept=1');
+      expect(line).toContain('dropped=1');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
+
+describe('TKA Lithuania fixture translation', () => {
+  let r: Map<string, Aircraft>;
+  let s: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
+    const buf = readFileSync(
+      resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv')
+    );
+    // Real shape of the `?count()` endpoint, carrying the fixture's own row count. The guard is
+    // against the parsed rows, so this is all 13 — both publications, before the snapshot filter.
+    const published = readFileSync(
+      resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'count.json'),
+      'utf8'
+    );
+    const out = await translate(config, new Map([['register', buf]]), published);
+    r = out.records;
+    s = out.stats;
+  });
+
+  // data.gov.lt keeps every prior publication in the same table; only the newest may be translated.
+  it('drops the superseded publications', () => {
+    expect(s.total).toBe(11);
+    expect(s.ok).toBe(11);
+    expect(s.failed).toBe(0);
+    expect([...r.values()].some((a) => a.registration === 'LY SAO')).toBe(false);
+  });
+
+  it('keeps both rows of a mark duplicated inside one publication', () => {
+    expect([...r.values()].filter((a) => a.registration === 'LY AXX')).toHaveLength(2);
+  });
+
+  // TKA fills `tipas` on a reserved row with the intended model, so `other` would have served this
+  // mark as a real aircraft. It stays in the artifact; toFeedRows is what keeps it off the feed.
+  it('maps a reserved mark to reserved, not other', () => {
+    const reserved = [...r.values()].find((a) => a.registration === 'LY JVD')!;
+    expect(reserved.status).toBe('reserved');
+    expect(reserved.model).toBe('JAK-42');
+  });
+
+  it('reads the mark verbatim, space and all', () => {
+    expect([...r.values()].every((a) => /^LY [A-Z]{3}$/.test(a.registration))).toBe(true);
+  });
+
+  // "NĖRA" is the register saying the aircraft has no base, not naming an aerodrome.
+  it('keeps a named home base and nulls the register-stated absence', () => {
+    const based = [...r.values()].find((a) => a.registration === 'LY BRR')!;
+    expect(based.home_base).toBe('BARYSIAI');
+    const unbased = [...r.values()].find((a) => a.registration === 'LY AXX')!;
+    expect(unbased.home_base).toBeNull();
+  });
+
+  // TKA stamps 0 rather than blanking the cell; passing it through asserts a mass it never measured.
+  it('nulls a zero takeoff mass but keeps a zero passenger count', () => {
+    const zeroMass = [...r.values()].find((a) => a.registration === 'LY JVD')!;
+    expect(zeroMass.max_takeoff_weight_kg).toBeNull();
+    const measured = [...r.values()].find((a) => a.registration === 'LY OCQ')!;
+    expect(measured.max_takeoff_weight_kg).toBe(638);
+    expect(measured.max_passengers).toBe(0);
+  });
+
+  it('publishes no Mode S address', () => {
+    expect([...r.values()].every((a) => a.icao_hex === null)).toBe(true);
+  });
+
+  it('carries no owner or operator name, only the party kind', () => {
+    expect([...r.values()].every((a) => a.owner.name === null && a.operator.name === null)).toBe(
+      true
+    );
+    expect([...r.values()].some((a) => a.owner.kind !== null)).toBe(true);
+  });
+
+  it('maps airframe kinds, including the seaplane environment', () => {
+    const seaplane = [...r.values()].find((a) => a.registration === 'LY YYL')!;
+    expect(seaplane.airframe_type).toBe('fixed-wing');
+    expect(seaplane.operating_environment).toBe('sea');
+    expect([...r.values()].find((a) => a.registration === 'LY GSC')!.airframe_type).toBe('glider');
+    expect([...r.values()].find((a) => a.registration === 'LY OCQ')!.airframe_type).toBe('balloon');
+    expect([...r.values()].find((a) => a.registration === 'LY KKE')!.airframe_type).toBe(
+      'gyroplane'
+    );
+  });
+
+  it('keeps the propeller string verbatim rather than splitting it', () => {
+    const withProp = [...r.values()].find((a) => a.propeller !== null)!;
+    expect(withProp.propeller).toContain(',');
+  });
+
+  it('takes the year out of the full manufacture date', () => {
+    expect([...r.values()].some((a) => a.year_manufactured !== null)).toBe(true);
+    expect(
+      [...r.values()].every((a) => a.year_manufactured === null || a.year_manufactured > 1900)
+    ).toBe(true);
   });
 });
