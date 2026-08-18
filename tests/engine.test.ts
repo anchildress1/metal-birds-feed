@@ -1121,6 +1121,21 @@ describe('engine — negative and edge cases', () => {
       expect(records.get('1')?.model).toBe('shared');
     });
 
+    // Distinctness is scoped to merge.fields + set_on_merge targets, not the whole row — a column
+    // this join never maps (TC's STREET_NAME/MAIL_RECIPIENT/ACTIVE_FLAG) can carry a stale value on
+    // an otherwise-identical duplicate row without manufacturing a second party out of one owner.
+    it('does not stamp set_on_merge for a difference confined to an unmapped column', async () => {
+      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
+      const { records } = await translate(
+        config,
+        new Map([
+          primary(),
+          ['jf', Buffer.from('K,EXTRA,KIND,UNMAPPED\n1,Cessna,solo,A\n1,Cessna,solo,I\n', 'utf8')],
+        ])
+      );
+      expect(records.get('1')?.model).toBe('solo');
+    });
+
     // Each field is its own deduplicated bag, not an index-parallel array — a party missing one
     // field must not punch a blank placeholder into another field's position.
     it('drops a blank independently per field rather than aligning by party position', async () => {

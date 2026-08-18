@@ -575,15 +575,16 @@ function translateRow(
   }
 }
 
-// The whole-row identity the no-merge branch below already uses for "byte-identical" — reused for
-// merge_duplicates' own duplicate-vs-real-party distinction, so a row differing only in a
-// set_on_merge target column (TC's TYPE_OF_OWNER_E) still counts as a second party.
-function countDistinctRows(group: Row[]): number {
-  const distinct: Row[] = [];
-  for (const row of group) {
-    if (!distinct.some((r) => Bun.deepEquals(r, row))) distinct.push(row);
-  }
-  return distinct.length;
+// Distinctness scoped to the columns the merge actually reads — merge.fields plus any set_on_merge
+// target — not the whole row. A register carries columns this join never maps (TC's STREET_NAME,
+// MAIL_RECIPIENT, ACTIVE_FLAG); a stale value in one of those must not turn one real owner's
+// duplicated row into a manufactured second party, the same tolerance the mapping's own comment
+// documents for unread address columns. A row differing only in a set_on_merge target column (TC's
+// TYPE_OF_OWNER_E) still counts as a second party, since that column is read, just not concatenated.
+function countDistinctRows(group: Row[], relevantColumns: string[]): number {
+  const signature = (row: Row): string =>
+    JSON.stringify(relevantColumns.map((column) => row[column] ?? ''));
+  return new Set(group.map(signature)).size;
 }
 
 // One key's rows, reduced to the single row the mapping reads. Byte-identical repeats collapse; a
@@ -616,7 +617,8 @@ function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, g
   }
   // A key only "merged" when the group held more than one genuinely distinct party — byte-identical
   // repeats (e.g. a register listing the same party twice) are not co-ownership.
-  if (countDistinctRows(group) > 1)
+  const relevantColumns = [...merge.fields, ...Object.keys(merge.set_on_merge ?? {})];
+  if (countDistinctRows(group, relevantColumns) > 1)
     for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
   return merged;
 }
