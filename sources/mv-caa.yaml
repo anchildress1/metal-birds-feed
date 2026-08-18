@@ -238,7 +238,7 @@ mapping:
 
   max_takeoff_weight_kg:
     field: mtow
-    transform: float_or_null
+    transform: positive_float_or_null
 
   seats:
     constant: ~
