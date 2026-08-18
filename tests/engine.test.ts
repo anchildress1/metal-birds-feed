@@ -1092,6 +1092,32 @@ describe('engine — negative and edge cases', () => {
       expect(lone.records.get('1')?.model).toBe('solo');
     });
 
+    // A register that lists the same party twice (byte-identical across every merged field) is not
+    // co-ownership — the dedup must collapse those rows before deciding whether a real merge happened.
+    it('does not stamp set_on_merge for a repeated identical party', async () => {
+      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
+      const { records } = await translate(
+        config,
+        new Map([
+          primary(),
+          ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,solo\n', 'utf8')],
+        ])
+      );
+      expect(records.get('1')?.model).toBe('solo');
+    });
+
+    // Each field is its own deduplicated bag, not an index-parallel array — a party missing one
+    // field must not punch a blank placeholder into another field's position.
+    it('drops a blank independently per field rather than aligning by party position', async () => {
+      const config = merging({ fields: ['EXTRA', 'KIND'] });
+      const { records } = await translate(
+        config,
+        new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,\n', 'utf8')]])
+      );
+      expect(records.get('1')?.manufacturer).toBe('Cessna, Piper');
+      expect(records.get('1')?.model).toBe('a');
+    });
+
     it('leaves a single-row key untouched', async () => {
       const files = new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n', 'utf8')]]);
       const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);

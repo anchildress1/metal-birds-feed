@@ -590,6 +590,9 @@ function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, g
     return first;
   }
 
+  // Each merged field is a deduplicated, blank-skipping bag of values, not an index-parallel array —
+  // a party missing one field would otherwise desync that field's position against the others, and
+  // the schema holds each as a single string with no positional contract for a reader to rely on.
   const separator = merge.separator ?? ', ';
   const merged: Row = { ...first };
   for (const field of merge.fields) {
@@ -600,7 +603,14 @@ function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, g
     }
     merged[field] = seen.join(separator);
   }
-  for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
+  // A key only "merged" when the group held more than one genuinely distinct party — byte-identical
+  // repeats across every merged field (e.g. a register listing the same party twice) are not
+  // co-ownership, so the stamp must key off the same signal, not just group.length.
+  const signatures = new Set(
+    group.map((row) => JSON.stringify(merge.fields.map((field) => row[field] ?? '')))
+  );
+  if (signatures.size > 1)
+    for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
   return merged;
 }
 
