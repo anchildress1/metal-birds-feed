@@ -7,6 +7,7 @@ WORKDIR /app
 
 COPY src/service ./src/service
 COPY src/feed-row.ts ./src/feed-row.ts
+COPY src/registration.ts ./src/registration.ts
 COPY feed.sqlite ./feed.sqlite
 
 ENV PORT=8080 MBF_FEED_DB_PATH=/app/feed.sqlite
