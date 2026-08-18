@@ -5,7 +5,6 @@ import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 import type { Aircraft } from '../src/schema.js';
 import { hashFeedRows } from '../src/feed.js';
-import { DB_SCHEMA_VERSION } from '../src/db.js';
 
 const REAL_FETCH = globalThis.fetch;
 const setFetch = (fn: unknown): void => {
@@ -463,15 +462,8 @@ describe('run', () => {
 
     expect(mockReadState).toHaveBeenCalledTimes(1);
     expect(mockWriteState).toHaveBeenCalledTimes(1);
-    const [, state] = mockWriteState.mock.calls[0] as [
-      string,
-      { content_hash: string; producer_version: number },
-    ];
+    const [, state] = mockWriteState.mock.calls[0] as [string, { content_hash: string }];
     expect(state.content_hash).toBe('h0');
-    // Stamped from db.ts's DB_SCHEMA_VERSION so a future schema bump invalidates this state on
-    // read (SourceStateSchema requires an exact literal match), forcing a rewrite instead of
-    // waiting on unrelated upstream data to change the content hash.
-    expect(state.producer_version).toBe(DB_SCHEMA_VERSION);
   });
 
   it.each(['../etc/passwd', 'faa/../secret', 'dir/faa'])(

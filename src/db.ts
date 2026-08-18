@@ -2,13 +2,13 @@ import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import type { Aircraft, Engine, Owner } from './schema.js';
 
-// The producer shape marker written into PRAGMA user_version, and mirrored into
-// cadence.ts's SourceStateSchema.producer_version. R2ArtifactWriter gates the artifact PUT purely
-// on content_hash (the translated record set), so a schema/DDL-only change that happens not to
-// alter any currently-processed row's serialized value (e.g. loosening a NOT NULL constraint a row
-// never actually hit) would otherwise never reach R2 until unrelated upstream data changes. Mirroring
-// this constant into the required state field makes every prior state fail validation on a bump —
-// self-healing to absent, which forces exactly one rewrite per source on the next run.
+// The producer shape marker written into PRAGMA user_version, and salted into the artifact's
+// content_hash below (writer.ts) so a schema/DDL-only change that happens not to alter any
+// currently-processed row's serialized value — e.g. loosening a NOT NULL constraint no source's
+// current data ever hit — still busts the write-skip gate, instead of never reaching R2 until
+// unrelated upstream data changes. Salting the hash rather than versioning the state envelope
+// keeps record_count/upstream_hash intact through the migration run, so the retain-ratio guard and
+// staleness tracking keep working off the real prior values instead of an invalidated null state.
 export const DB_SCHEMA_VERSION = 12;
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
@@ -18,9 +18,14 @@ const bySourceId = (a: Aircraft, b: Aircraft): number => {
 };
 
 // Content fingerprint over the sorted records, independent of SQLite's byte layout (which is not
-// guaranteed stable run to run). Drives skip-if-unchanged.
-export const hashRecords = (records: Map<string, Aircraft>): string => {
+// guaranteed stable run to run). Drives skip-if-unchanged. `salt` is optional and unused by the
+// upstream_hash caller (pipeline.ts) — that hash must track only what the register itself
+// published, never our own schema version, or a schema bump would misreport an unchanged register
+// as having published something new and reset its staleness clock. writer.ts is the one caller
+// that salts, with DB_SCHEMA_VERSION, for the artifact's own content_hash.
+export const hashRecords = (records: Map<string, Aircraft>, salt = ''): string => {
   const hash = createHash('sha256');
+  if (salt !== '') hash.update(`${salt}\0`);
   for (const record of [...records.values()].sort(bySourceId)) {
     hash.update(`${record.source_id}\0${JSON.stringify(record)}\n`);
   }

@@ -1,22 +1,21 @@
 import { z } from 'zod';
-import { DB_SCHEMA_VERSION } from './db.js';
 
 export const SourceStateSchema = z.object({
   last_run: z.string(),
   last_content_change: z.string(),
   record_count: z.number().int().nonnegative(),
-  // sha256 hex of the written artifact's record set; gates skip-if-unchanged.
+  // sha256 hex of the written artifact's record set, salted with db.ts's DB_SCHEMA_VERSION; gates
+  // skip-if-unchanged. The salt means a schema/DDL-only bump forces a mismatch here even when no
+  // row's serialized value actually changed (e.g. loosening a NOT NULL constraint no source's
+  // current data ever exercised) — otherwise that migration would never reach R2 until unrelated
+  // upstream data changed. Salting the hash, not the schema, is deliberate: it forces exactly the
+  // artifact rewrite without invalidating this whole object, so record_count/upstream_hash stay
+  // available to the retain-ratio guard and staleness tracking through the migration run.
   content_hash: z.string().regex(/^[0-9a-f]{64}$/),
-  // sha256 hex of the same records *before* localization. Drives last_content_change, and so
-  // staleness: translation catching up must not read as the register publishing something new.
+  // sha256 hex of the same records *before* localization, unsalted. Drives last_content_change,
+  // and so staleness: translation catching up — or an internal schema bump — must not read as the
+  // register publishing something new.
   upstream_hash: z.string().regex(/^[0-9a-f]{64}$/),
-  // Mirrors db.ts's DB_SCHEMA_VERSION. content_hash alone only busts the write-skip gate when a
-  // schema change happens to alter some row's serialized value; a DDL-only change a source's
-  // current data never actually exercises (e.g. loosening a NOT NULL constraint) would otherwise
-  // never reach R2 until unrelated upstream data changed. A required literal means any version
-  // bump — this one included — makes every prior state fail validation, self-healing to absent
-  // and forcing exactly one rewrite per source on its next run.
-  producer_version: z.literal(DB_SCHEMA_VERSION),
 });
 export type SourceState = z.infer<typeof SourceStateSchema>;
 

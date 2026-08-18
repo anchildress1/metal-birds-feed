@@ -368,4 +368,15 @@ describe('hashRecords', () => {
     changed.set('00001', make('00001', 'a4e294', 'N1-CHANGED'));
     expect(hashRecords(changed)).not.toBe(hashRecords(records));
   });
+
+  // writer.ts salts with DB_SCHEMA_VERSION so a schema/DDL-only bump forces this hash to mismatch
+  // any prior stored value, even when no row's serialized content actually changed — see db.ts.
+  it('changes when the salt changes, same records', () => {
+    expect(hashRecords(records, '12')).not.toBe(hashRecords(records, '13'));
+    expect(hashRecords(records, '12')).not.toBe(hashRecords(records));
+  });
+
+  it('defaults to no salt', () => {
+    expect(hashRecords(records)).toBe(hashRecords(records, ''));
+  });
 });

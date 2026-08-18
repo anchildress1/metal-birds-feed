@@ -8,7 +8,7 @@ import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
 import { MIN_RETAIN_RATIO, R2ArtifactWriter, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
-import { hashRecords, DB_SCHEMA_VERSION } from './db.js';
+import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
 import {
@@ -133,7 +133,6 @@ export async function run(sourceId: string): Promise<RunResult> {
       record_count: writeStats.record_count,
       content_hash: writeStats.content_hash,
       upstream_hash: writeStats.upstream_hash,
-      producer_version: DB_SCHEMA_VERSION,
     };
     await writer.writeState(sourceId, newState);
   }

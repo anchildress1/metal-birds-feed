@@ -9,7 +9,7 @@ import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { FeedSliceSchema, serializeFeedSlice } from './feed.js';
-import { buildSqlite, hashRecords } from './db.js';
+import { buildSqlite, hashRecords, DB_SCHEMA_VERSION } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
@@ -97,7 +97,9 @@ export class R2ArtifactWriter {
     priorState: SourceState | null,
     upstreamHash: string
   ): Promise<WriteStats> {
-    const content_hash = hashRecords(records);
+    // Salted with DB_SCHEMA_VERSION so a schema/DDL-only bump forces a mismatch against any prior
+    // stored hash even when no row's serialized value actually changed — see db.ts.
+    const content_hash = hashRecords(records, String(DB_SCHEMA_VERSION));
 
     // Zero records is upstream data loss for an aircraft registry, never a legitimate dataset —
     // refuse rather than publish an empty artifact. Unconditional (not gated on prior
@@ -119,10 +121,12 @@ export class R2ArtifactWriter {
     }
 
     // No prior state (fresh source, or state that failed validation and self-healed to absent)
-    // matches neither hash, so the artifact is rewritten — which is also how a schema migration
-    // lands. The skip additionally requires the artifact to actually exist: state and artifact are
-    // separate objects, and an externally deleted artifact (lifecycle rule, manual cleanup) would
-    // otherwise 404 for consumers indefinitely while every run reports unchanged.
+    // matches neither hash, so the artifact is rewritten. A schema migration lands the same way,
+    // via the salt above changing content_hash — deliberately not via state invalidation, which
+    // would also wipe record_count/upstream_hash and disable the retain-ratio guard and staleness
+    // tracking for that run. The skip additionally requires the artifact to actually exist: state
+    // and artifact are separate objects, and an externally deleted artifact (lifecycle rule, manual
+    // cleanup) would otherwise 404 for consumers indefinitely while every run reports unchanged.
     const artifactUnchanged = priorState?.content_hash === content_hash;
     const upstreamUnchanged = priorState?.upstream_hash === upstreamHash;
     if (artifactUnchanged && (await this.artifactExists(source))) {

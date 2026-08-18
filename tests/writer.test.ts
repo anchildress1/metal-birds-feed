@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { FeedRow } from '../src/feed-row.js';
 import type { SourceState } from '../src/cadence.js';
-import { DB_SCHEMA_VERSION } from '../src/db.js';
+import { hashRecords } from '../src/db.js';
 
 const FEED_ROW: FeedRow = {
   icao_hex: 'a1b2c3',
@@ -204,6 +204,41 @@ describe('R2ArtifactWriter — write', () => {
     expect(row.registration).toBe('N12345');
   });
 
+  // A prior content_hash computed without the current DB_SCHEMA_VERSION salt (as every state
+  // written before a schema/DDL bump would be) must not match the freshly salted one — forcing
+  // exactly one rewrite — while record_count/upstream_hash on that same prior state stay fully
+  // usable, so the retain-ratio guard and upstream-change detection are not disabled by the bump.
+  it('forces a rewrite on a schema-version salt mismatch, preserving the retain-ratio guard', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const records = new Map([
+      ['00001', makeAircraft('00001', 'N1', 'a4e294')],
+      ['00002', makeAircraft('00002', 'N2', 'b4e294')],
+    ]);
+    // Simulates a state written before the salt existed: an unsalted hash of the same records.
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 3,
+      content_hash: hashRecords(records),
+      upstream_hash: HASH_UP,
+    };
+
+    const result = await writer.write(records, 'faa', prior, HASH_UP);
+
+    expect(result.content_hash).not.toBe(prior.content_hash);
+    expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
+
+    // The retain-ratio guard still fires off the preserved record_count, even though this run's
+    // content_hash already differs from prior for an unrelated reason (the salt).
+    mockSend.mockReset();
+    mockSend.mockResolvedValue({});
+    const truncated = new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]);
+    await expect(writer.write(truncated, 'faa', prior, HASH_UP)).rejects.toThrow(
+      /suspected truncated/i
+    );
+  });
+
   it('skips the PUT when the content hash matches prior state (unchanged)', async () => {
     mockSend.mockResolvedValue({});
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -216,7 +251,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockReset();
     mockSend.mockResolvedValue({});
@@ -242,7 +276,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockReset();
     mockSend.mockResolvedValue({});
@@ -274,7 +307,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockReset();
     mockSend.mockImplementation((cmd: { _kind: string }) =>
@@ -296,7 +328,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: 'stale',
       upstream_hash: 'c'.repeat(64),
-      producer_version: DB_SCHEMA_VERSION,
     };
 
     const stats = await writer.write(
@@ -318,7 +349,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 300_000,
       content_hash: 'h',
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     await expect(writer.write(new Map(), 'faa', prior, HASH_UP)).rejects.toThrow(
       /Refusing to write 0 records/
@@ -340,7 +370,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 100,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     // 1 record vs prior 100 = 99% drop → suspected truncation.
     await expect(
@@ -359,7 +388,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 4,
       content_hash: HASH64,
       upstream_hash: 'c'.repeat(64),
-      producer_version: DB_SCHEMA_VERSION,
     };
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1')],
@@ -380,7 +408,6 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 5,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1')],
@@ -442,7 +469,6 @@ describe('R2ArtifactWriter — state', () => {
       record_count: 5,
       content_hash: 'abc',
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
 
     await writer.writeState('faa', state);
@@ -460,7 +486,6 @@ describe('R2ArtifactWriter — state', () => {
       record_count: 9,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockResolvedValueOnce(stateResponse(state));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -528,7 +553,6 @@ describe('R2ArtifactWriter — state', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
-      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend
       .mockRejectedValueOnce(s3Error('internal', 500))
