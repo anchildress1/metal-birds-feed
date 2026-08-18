@@ -3657,6 +3657,22 @@ describe('TKA Lithuania fixture translation', () => {
     expect([...r.values()].filter((a) => a.registration === 'LY AXX')).toHaveLength(2);
   });
 
+  // `status` is the one non-nullable canonical field, and a blank cell short-circuits to null before
+  // any lookup runs — without the explicit '' key, this single row would fail translation and abort
+  // the whole refresh (translate aborts the write on any failed row).
+  it('maps a blank statusas to other instead of failing the row', async () => {
+    const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
+    const header =
+      '_type,_id,_revision,_page.next,vda_id,duomenu_sviezumas,registracijos_nr,statusas,kategorija,rusis,tipas,savininko_tipas,naudotojo_tipas,pagaminimas,pirma_registracija,paskutine_registracija,tsppp_galiojimas,baze,bazes_adresas,geometrija,keleiviu_sk,mkm,oro_sraigtas';
+    const row =
+      'datasets/gov/tka/registras/Irasas,id1,rev1,,vda1,2026-01-01,LY ZZZ,,,,SKRAIDYKLE,,,,,,,,,,0,0,';
+    const buf = Buffer.from(`${header}\n${row}\n`, 'utf8');
+    const published = JSON.stringify({ _data: [{ 'count()': 1 }] });
+    const { records, stats } = await translate(config, new Map([['register', buf]]), published);
+    expect(stats.failed).toBe(0);
+    expect(records.get('vda1')?.status).toBe('other');
+  });
+
   // TKA fills `tipas` on a reserved row with the intended model, so `other` would have served this
   // mark as a real aircraft. It stays in the artifact; toFeedRows is what keeps it off the feed.
   it('maps a reserved mark to reserved, not other', () => {
