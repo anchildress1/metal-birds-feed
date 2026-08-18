@@ -857,7 +857,9 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     registration: scalarField(m, row, 'registration', s),
     icao_hex: scalarField(m, row, 'icao_hex', s),
     icao_type_code: scalarField(m, row, 'icao_type_code', s),
-    status: scalarField(m, row, 'status', s) ?? 'other',
+    // No ?? 'other' — status is the one nullable canonical field, so a blank/unresolved cell
+    // stays null rather than inventing a state the register never published.
+    status: scalarField(m, row, 'status', s),
     country: scalarField(m, row, 'country', s) ?? config.country,
     manufacturer: scalarField(m, row, 'manufacturer', s),
     model: scalarField(m, row, 'model', s),

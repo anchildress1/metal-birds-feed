@@ -104,7 +104,8 @@ mapping:
 
   # Current-fleet register: every listed aircraft is "Valid". No default — an unexpected status
   # (upstream change or a parser mis-snap) fails the run loudly instead of silently becoming "other".
-  # An empty cell still resolves to null and the engine's own "other" fallback applies.
+  # An empty cell resolves to null (status is nullable) and is excluded from the served feed, same
+  # as cancelled/reserved — never silently coerced to "other".
   status:
     field: status
     transform: trim

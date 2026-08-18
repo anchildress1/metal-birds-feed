@@ -120,6 +120,18 @@ const populatedRow = (): Record<string, unknown> =>
     .get('1367606') as Record<string, unknown>;
 
 describe('buildSqlite', () => {
+  // status is the schema's one nullable canonical field — the column must actually accept NULL,
+  // not just the Zod schema, or a genuinely unstated status fails the STRICT-table insert.
+  it('stores a null status', () => {
+    const db = Database.deserialize(
+      buildSqlite(new Map([['1', { ...make('1', 'a1b2c3', 'N1'), status: null }]]))
+    );
+    const row = db.query('SELECT status FROM aircraft WHERE source_id = ?').get('1') as {
+      status: string | null;
+    };
+    expect(row.status).toBeNull();
+  });
+
   it('supports point lookups by hex, registration, and source_id', () => {
     const db = Database.deserialize(buildSqlite(records));
 
@@ -248,7 +260,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(11);
+    expect(version.user_version).toBe(12);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -317,7 +329,7 @@ describe('buildSqlite', () => {
       'interdiction_code',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(11);
+    expect(version.user_version).toBe(12);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -337,7 +349,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(11);
+    expect(version.user_version).toBe(12);
   });
 });
 

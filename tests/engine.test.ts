@@ -1239,6 +1239,35 @@ describe('engine — negative and edge cases', () => {
     expect(records.size).toBe(0);
   });
 
+  // status is the schema's one nullable canonical field: a blank cell with no lookup default must
+  // stay null, not silently default to 'other' — coercing an unstated status to a concrete value
+  // would invent data the register never published.
+  it('leaves status null for a blank cell with no lookup default', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-blank-status',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG,STATUS\n1,N1,\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.status).toBeNull();
+  });
+
   it('replaces a cancelled duplicate with a live reissue', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-status',

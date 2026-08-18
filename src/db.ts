@@ -101,7 +101,7 @@ const DDL = `CREATE TABLE aircraft (
   registration TEXT NOT NULL,
   icao_hex TEXT,
   icao_type_code TEXT,
-  status TEXT NOT NULL,
+  status TEXT,
   country TEXT NOT NULL,
   manufacturer TEXT,
   model TEXT,
@@ -180,7 +180,10 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // registration with no airframe behind it; a version-9-or-earlier consumer would read it as an
     // aircraft in some unnamed state rather than as no aircraft at all.
     // 11 adds the home_base column for the aerodrome a register names as the aircraft's base.
-    db.run('PRAGMA user_version = 11');
+    // 12 makes status nullable, dropping the engine's blanket `?? 'other'` fallback for a blank or
+    // unresolved cell; a version-11-or-earlier consumer would read every row as carrying a concrete
+    // status and must not assume that here.
+    db.run('PRAGMA user_version = 12');
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

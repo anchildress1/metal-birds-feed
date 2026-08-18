@@ -163,6 +163,14 @@ describe('toFeedRows', () => {
     expect(rows).toEqual([]);
   });
 
+  // A null status means the register stated nothing — the real state could be cancelled or reserved
+  // as easily as anything else, so serving it would be inventing data. Excluded the same way,
+  // whether or not the register publishes a hex.
+  it('excludes a null-status record whether or not the register publishes a hex', () => {
+    expect(toFeedRows([make('1', null, { status: null })])).toEqual([]);
+    expect(toFeedRows([make('2', 'a1b2c3', { status: null })])).toEqual([]);
+  });
+
   // A reserved mark has no airframe behind it, so nothing can transmit it — and registers publish
   // the intended model against the row, which would read as a real aircraft if it were served.
   it('excludes reserved marks whether or not the register publishes a hex', () => {
@@ -503,7 +511,7 @@ describe('buildFeedDb', () => {
     // leaving the feed advertising a shape version that predated the values it was serving.
     const db = Database.deserialize(buildFeedDb([]));
     try {
-      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 9 });
+      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 10 });
     } finally {
       db.close();
     }

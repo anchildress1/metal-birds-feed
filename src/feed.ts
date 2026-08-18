@@ -66,7 +66,12 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
     // Reserved marks are excluded for the opposite reason: no airframe exists yet, so nothing can
     // ever transmit one. Serving them is worse than a miss, because a register may fill the type
     // column with the intended model and the row then reads as a real aircraft.
-    if (r.status === 'cancelled' || r.status === 'reserved') continue;
+    //
+    // A null status is excluded the same way: the register stated nothing, and the real state could
+    // be cancelled or reserved as easily as anything else — serving it as if it were a known state
+    // would be inventing data. Null beats a plausible guess. The per-source artifact still keeps
+    // these rows; this is a feed-scope filter, same as cancelled and reserved.
+    if (r.status === 'cancelled' || r.status === 'reserved' || r.status === null) continue;
     if (r.icao_hex !== null) {
       groupInto(byHex, r.icao_hex, r);
       continue;
@@ -158,8 +163,12 @@ const reportWithinSourceAmbiguity = (hexes: string[], marks: string[]): void => 
   });
 };
 
-const toFeedRow = (r: Aircraft, icao_hex: string | null): FeedRow =>
-  ({
+// toFeedRows filters a null status out before any row reaches byHex/byMark, so reaching this
+// function with one is a producer bug, not upstream data — the same class of guarantee
+// assertUniqueKeys enforces below, and it lets FeedRow keep status as a plain non-nullable string.
+const toFeedRow = (r: Aircraft, icao_hex: string | null): FeedRow => {
+  if (r.status === null) throw new Error('toFeedRow received a null-status record');
+  return {
     icao_hex,
     registration: r.registration,
     // Null, not '': a mark of pure punctuation normalizes to nothing, and no caller can send an
@@ -196,7 +205,8 @@ const toFeedRow = (r: Aircraft, icao_hex: string | null): FeedRow =>
     cancellation_reason: r.cancellation_reason,
     airworthiness_class: r.airworthiness_class,
     source: r.source,
-  }) satisfies FeedRow;
+  } satisfies FeedRow;
+};
 
 // Merge per-source slices into one row per icao_hex for the consolidated table. A live
 // (non-cancelled) incumbent is never overwritten; a cancelled incumbent is replaced by any later
@@ -411,7 +421,13 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // now returns nothing, and a consumer must not read that miss as a version-8 gap.
     // FEED_SLICE_VERSION still does not move: no producer before this change could emit `reserved`,
     // so no existing slice carries a reserved row for the merge to let through.
-    db.run('PRAGMA user_version = 9');
+    // 10 mirrors db.ts's status nullability: a null status is now excluded from the feed the same
+    // way reserved is, changing the row set the identical way — a mark that answered under version 9
+    // (served as 'other') can now return nothing, and a consumer must not read that as a version-9
+    // gap. FEED_SLICE_VERSION still does not move, for the same reason as v9: no producer before this
+    // change could emit a null status into a slice, since toFeedRows only ever received an
+    // already-validated, then-non-nullable Aircraft record.
+    db.run('PRAGMA user_version = 10');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     // Unique rather than plain: NULLs never collide in a SQLite unique index, so hex-less rows and
