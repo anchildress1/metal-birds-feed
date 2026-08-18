@@ -39,7 +39,9 @@ const groupInto = (map: Map<string, Aircraft[]>, key: string, record: Aircraft):
 const resolveCandidates = (candidates: Aircraft[]): Aircraft | null => {
   if (candidates.length === 1) return candidates[0] ?? null;
   const dates = candidates.map((r) => latestKnownDate(r) ?? '');
-  const newest = dates.reduce((max, d) => (d > max ? d : max));
+  // Seeded with '', which is also what an unknown date maps to — so the seed can never beat a real
+  // one, and an empty group returns no winner instead of throwing.
+  const newest = dates.reduce((max, d) => (d > max ? d : max), '');
   const winners = candidates.filter((_, i) => dates[i] === newest);
   const first = winners[0] ?? null;
   if (winners.length === 1 || first === null) return first;

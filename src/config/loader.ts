@@ -273,7 +273,7 @@ const SourceConfigSchema = z
         const prefix = `${j.name}.`;
         return Object.values(c.mapping)
           .map((m) => m.field)
-          .filter((f): f is string => f !== undefined && f.startsWith(prefix))
+          .filter((f): f is string => f?.startsWith(prefix) === true)
           .every((f) => covered.has(f.slice(prefix.length)));
       }),
     {
