@@ -31,6 +31,24 @@ function validateSourceId(sourceId: string): void {
     throw new Error(`Path traversal rejected: ${sourceId}`);
 }
 
+// A cadence skip is only safe when the artifact itself is caught up with state, not just present.
+// schemaVersion mismatched: a schema/DDL bump changed DB_SCHEMA_VERSION, but this cadence-gated
+// source never reached write() (which is what applies the bump) since its last successful run.
+// lastModified after last_run: the artifact was written more recently than state knows about — a
+// prior run's write() succeeded but writeFeedRows/writeState then failed, leaving the feed slice
+// and state stale relative to it. Either way, the run must proceed rather than trust the skip.
+function isArtifactCaughtUp(
+  header: { schemaVersion: number; lastModified: Date } | null,
+  state: SourceState | null
+): boolean {
+  return (
+    header !== null &&
+    state !== null &&
+    header.schemaVersion === DB_SCHEMA_VERSION &&
+    header.lastModified.getTime() <= new Date(state.last_run).getTime()
+  );
+}
+
 interface RunResult {
   source: string;
   skipped: boolean;
@@ -58,18 +76,11 @@ export async function run(sourceId: string): Promise<RunResult> {
     hasCurrentArtifactState &&
     !dryRun &&
     shouldSkip(priorState, config.cadence_days, new Date()) &&
-    // write()'s self-heal path (see writer.ts) only runs when write() is actually called —
-    // honoring a cadence skip on state alone would leave an externally deleted artifact 404ing
-    // for consumers for up to the full cadence window, silently reporting "cadence_skip" as if
-    // nothing were wrong. Checked last so it only costs a HEAD request when every cheaper
-    // condition already says this run would otherwise be skipped.
-    (await writer.artifactExists(sourceId)) &&
     (await writer.feedRowsExist(sourceId)) &&
-    // Same reasoning as the two checks above: content_hash's schema-version salt (writer.ts) only
-    // takes effect when write() actually runs, so a cadence-gated source could otherwise carry a
-    // stale-schema artifact for up to its full cadence window after a bump. Checked last — it's
-    // the most expensive of the three.
-    (await writer.artifactSchemaVersion(sourceId)) === DB_SCHEMA_VERSION
+    // Checked last: it's the most expensive condition, and readArtifactHeader (see writer.ts)
+    // covers what a plain existence check used to (a missing artifact reads as "not caught up"
+    // here too) plus schema-version and freshness — see isArtifactCaughtUp above.
+    isArtifactCaughtUp(await writer.readArtifactHeader(sourceId), priorState)
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
     return {

@@ -84,6 +84,20 @@ const s3Error = (message: string, httpStatusCode: number): Error =>
 
 const noSuchKey = (): Error => new NoSuchKey({ message: 'x', $metadata: {} });
 
+// write()'s own "unchanged" skip now reads the artifact's header (readArtifactHeader) instead of
+// a plain HEAD, so any test expecting that skip must mock a matching, current-version response.
+const artifactHeaderResponse = (
+  version: number = DB_SCHEMA_VERSION,
+  lastModified: Date = new Date('2026-01-01T00:00:00.000Z')
+): { Body: { transformToByteArray: () => Promise<Uint8Array> }; LastModified: Date } => {
+  const bytes = new Uint8Array(4);
+  new DataView(bytes.buffer).setUint32(0, version, false);
+  return {
+    Body: { transformToByteArray: () => Promise.resolve(bytes) },
+    LastModified: lastModified,
+  };
+};
+
 const R2_CONFIG = {
   accountId: 'test-account',
   accessKeyId: 'access-key',
@@ -253,12 +267,39 @@ describe('R2ArtifactWriter — write', () => {
       upstream_hash: HASH_UP,
     };
     mockSend.mockReset();
+    mockSend.mockResolvedValueOnce(artifactHeaderResponse());
     mockSend.mockResolvedValue({});
 
     const second = await writer.write(records, 'faa', prior, HASH_UP);
 
     expect(second.changed).toBe(false);
     expect(putCalls()).toHaveLength(0);
+  });
+
+  // A hash match alone is not enough: if the artifact object itself was externally replaced with
+  // an older-schema one (manual restore, rollback), the hash comparison can't see that — only the
+  // artifact's own embedded version can. Complements the state-side salt mismatch test above.
+  it('rewrites when the hash matches but the artifact carries an older schema version', async () => {
+    mockSend.mockResolvedValue({});
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
+
+    const first = await writer.write(records, 'faa', null, HASH_UP);
+    const prior: SourceState = {
+      last_run: 'x',
+      last_content_change: 'x',
+      record_count: 1,
+      content_hash: first.content_hash,
+      upstream_hash: HASH_UP,
+    };
+    mockSend.mockReset();
+    mockSend.mockResolvedValueOnce(artifactHeaderResponse(DB_SCHEMA_VERSION - 1));
+    mockSend.mockResolvedValue({});
+
+    const second = await writer.write(records, 'faa', prior, HASH_UP);
+
+    expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
+    expect(second.content_hash).toBe(first.content_hash);
   });
 
   // Change detection must track the register, not our own enrichment. A translation landing on an
@@ -667,54 +708,21 @@ describe('R2ArtifactWriter — translation cache', () => {
   });
 });
 
-describe('R2ArtifactWriter — artifactExists', () => {
-  it('returns true when HEAD resolves', async () => {
-    mockSend.mockResolvedValueOnce({});
+describe('R2ArtifactWriter — readArtifactHeader', () => {
+  it('reads the version and lastModified from a range GET of the artifact header', async () => {
+    const lastModified = new Date('2026-08-01T12:00:00.000Z');
+    mockSend.mockResolvedValueOnce(artifactHeaderResponse(12, lastModified));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.artifactExists('faa')).toBe(true);
-  });
-
-  it('short-circuits to true in dry-run without a HEAD', async () => {
-    const writer = new R2ArtifactWriter(R2_CONFIG, true);
-    expect(await writer.artifactExists('faa')).toBe(true);
-    expect(mockSend).not.toHaveBeenCalled();
-  });
-
-  it('returns false and logs the underlying error when HEAD fails', async () => {
-    mockSend.mockRejectedValueOnce(s3Error('Access Denied', 403));
-    const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      expect(await writer.artifactExists('faa')).toBe(false);
-      // A 404 and an R2 outage both land here — without the message an operator can't tell them
-      // apart, and a transport failure reads as a benign missing artifact.
-      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
-      expect(logged).toContain('event=artifact_missing_on_hash_match');
-      expect(logged).toContain('Access Denied');
-    } finally {
-      logSpy.mockRestore();
-    }
-  });
-});
-
-describe('R2ArtifactWriter — artifactSchemaVersion', () => {
-  const bodyOf = (n: number): { transformToByteArray: () => Promise<Uint8Array> } => {
-    const bytes = new Uint8Array(4);
-    new DataView(bytes.buffer).setUint32(0, n, false);
-    return { transformToByteArray: () => Promise.resolve(bytes) };
-  };
-
-  it('reads the version from a range GET of the artifact header', async () => {
-    mockSend.mockResolvedValueOnce({ Body: bodyOf(12) });
-    const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.artifactSchemaVersion('faa')).toBe(12);
+    const header = await writer.readArtifactHeader('faa');
+    expect(header).toEqual({ schemaVersion: 12, lastModified });
     const call = mockSend.mock.calls[0]?.[0] as { input: { Range?: string } };
     expect(call.input.Range).toBe('bytes=60-63');
   });
 
-  it('short-circuits to DB_SCHEMA_VERSION in dry-run without a GET', async () => {
+  it('short-circuits to the current version in dry-run without a GET', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, true);
-    expect(await writer.artifactSchemaVersion('faa')).toBe(DB_SCHEMA_VERSION);
+    const header = await writer.readArtifactHeader('faa');
+    expect(header?.schemaVersion).toBe(DB_SCHEMA_VERSION);
     expect(mockSend).not.toHaveBeenCalled();
   });
 
@@ -723,10 +731,10 @@ describe('R2ArtifactWriter — artifactSchemaVersion', () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      expect(await writer.artifactSchemaVersion('faa')).toBeNull();
+      expect(await writer.readArtifactHeader('faa')).toBeNull();
       // A real NoSuchKey is expected (unlike an unreadable-but-present artifact) and must not log.
       const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
-      expect(logged).not.toContain('artifact_schema_version_unreadable');
+      expect(logged).not.toContain('artifact_header_unreadable');
     } finally {
       logSpy.mockRestore();
     }
@@ -737,9 +745,12 @@ describe('R2ArtifactWriter — artifactSchemaVersion', () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      expect(await writer.artifactSchemaVersion('faa')).toBeNull();
+      expect(await writer.readArtifactHeader('faa')).toBeNull();
+      // A 404 and an R2 outage are indistinguishable by outcome here — the message is the only
+      // thing telling an operator which one they are triaging.
       const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
-      expect(logged).toContain('event=artifact_schema_version_unreadable');
+      expect(logged).toContain('event=artifact_header_unreadable');
+      expect(logged).toContain('Access Denied');
     } finally {
       logSpy.mockRestore();
     }
@@ -748,9 +759,18 @@ describe('R2ArtifactWriter — artifactSchemaVersion', () => {
   it('returns null when the range read comes back short', async () => {
     mockSend.mockResolvedValueOnce({
       Body: { transformToByteArray: () => Promise.resolve(new Uint8Array([1, 2])) },
+      LastModified: new Date(),
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.artifactSchemaVersion('faa')).toBeNull();
+    expect(await writer.readArtifactHeader('faa')).toBeNull();
+  });
+
+  it('returns null when the response carries no LastModified', async () => {
+    mockSend.mockResolvedValueOnce({
+      Body: { transformToByteArray: () => Promise.resolve(new Uint8Array([0, 0, 0, 12])) },
+    });
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readArtifactHeader('faa')).toBeNull();
   });
 });
 

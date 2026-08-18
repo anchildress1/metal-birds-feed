@@ -20,8 +20,7 @@ const mockR2Write = mock();
 const mockR2Constructor = mock();
 const mockReadState = mock();
 const mockWriteState = mock();
-const mockArtifactExists = mock();
-const mockArtifactSchemaVersion = mock();
+const mockReadArtifactHeader = mock();
 const mockFeedRowsExist = mock();
 const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
@@ -50,8 +49,7 @@ void mock.module('../src/writer.js', () => ({
     write = mockR2Write;
     readState = mockReadState;
     writeState = mockWriteState;
-    artifactExists = mockArtifactExists;
-    artifactSchemaVersion = mockArtifactSchemaVersion;
+    readArtifactHeader = mockReadArtifactHeader;
     feedRowsExist = mockFeedRowsExist;
     writeFeedRows = mockWriteFeedRows;
     readFeedRows = mockReadFeedRows;
@@ -158,8 +156,7 @@ beforeEach(() => {
   mockR2Constructor.mockReset();
   mockReadState.mockReset();
   mockWriteState.mockReset();
-  mockArtifactExists.mockReset();
-  mockArtifactSchemaVersion.mockReset();
+  mockReadArtifactHeader.mockReset();
   mockFeedRowsExist.mockReset();
   mockWriteFeedRows.mockReset();
   mockReadFeedRows.mockReset();
@@ -187,8 +184,10 @@ beforeEach(() => {
   });
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
-  mockArtifactExists.mockResolvedValue(true);
-  mockArtifactSchemaVersion.mockResolvedValue(DB_SCHEMA_VERSION);
+  mockReadArtifactHeader.mockResolvedValue({
+    schemaVersion: DB_SCHEMA_VERSION,
+    lastModified: new Date(0),
+  });
   mockFeedRowsExist.mockResolvedValue(true);
   mockWriteFeedRows.mockResolvedValue(undefined);
   mockReadFeedRows.mockResolvedValue([]);
@@ -382,7 +381,7 @@ describe('run', () => {
       last_content_change: recentTimestamp,
       content_hash: HASH64,
     });
-    mockArtifactExists.mockResolvedValueOnce(false);
+    mockReadArtifactHeader.mockResolvedValueOnce(null);
 
     const result = await run('faa');
 
@@ -403,7 +402,35 @@ describe('run', () => {
       last_content_change: recentTimestamp,
       content_hash: HASH64,
     });
-    mockArtifactSchemaVersion.mockResolvedValueOnce(DB_SCHEMA_VERSION - 1);
+    mockReadArtifactHeader.mockResolvedValueOnce({
+      schemaVersion: DB_SCHEMA_VERSION - 1,
+      lastModified: new Date(0),
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+
+  // A prior run's write() can succeed (artifact now current) while writeFeedRows/writeState then
+  // fail (e.g. a transient R2 outage) — state's last_run stays stale, but the artifact's
+  // lastModified is newer than it. Trusting schema version alone would read that as fully caught
+  // up and skip retrying the stale feed slice for up to the full cadence window.
+  it('does not honor a cadence skip when the artifact was modified after the last recorded run', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+    mockReadArtifactHeader.mockResolvedValueOnce({
+      schemaVersion: DB_SCHEMA_VERSION,
+      lastModified: new Date(),
+    });
 
     const result = await run('faa');
 

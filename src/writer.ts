@@ -1,10 +1,4 @@
-import {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-  HeadObjectCommand,
-  NoSuchKey,
-} from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, NoSuchKey } from '@aws-sdk/client-s3';
 import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
@@ -129,7 +123,12 @@ export class R2ArtifactWriter {
     // cleanup) would otherwise 404 for consumers indefinitely while every run reports unchanged.
     const artifactUnchanged = priorState?.content_hash === content_hash;
     const upstreamUnchanged = priorState?.upstream_hash === upstreamHash;
-    if (artifactUnchanged && (await this.artifactExists(source))) {
+    // Short-circuited: only reads the artifact's header when the hash already matches, so an
+    // upstream change (the common case) still costs one PUT and nothing extra.
+    const artifactCurrent =
+      artifactUnchanged &&
+      (await this.readArtifactHeader(source))?.schemaVersion === DB_SCHEMA_VERSION;
+    if (artifactCurrent) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return {
         changed: false,
@@ -158,40 +157,31 @@ export class R2ArtifactWriter {
     };
   }
 
-  // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.
-  // HEAD 404s surface as generic errors (not NoSuchKey, which is GET-only), so any non-transient
-  // failure reads as "absent" — the false-negative cost is one redundant PUT, never a lost one.
-  // Public: pipeline.ts's cadence gate also needs this, to avoid honoring a cadence skip for a
-  // source whose artifact was deleted independently of its state (see pipeline.ts's run()).
-  async artifactExists(source: string): Promise<boolean> {
-    if (this.dryRun) return true;
-    try {
-      await retry(
-        () =>
-          this.client.send(
-            new HeadObjectCommand({ Bucket: this.bucket, Key: `aircraft/${source}.sqlite` })
-          ),
-        S3_RETRY
-      );
-      return true;
-    } catch (err) {
-      // Carry the error: a 404 and an R2 outage are indistinguishable by outcome here, so the
-      // message is the only thing telling an operator which one they are triaging.
-      log('warn', 'artifact_missing_on_hash_match', { source, msg: errorMessage(err) });
-      return false;
-    }
-  }
-
-  // Cadence-gated sources return from pipeline.ts's cadence check before write() ever runs, so
-  // content_hash's DB_SCHEMA_VERSION salt (see write() above) is never even computed for them — a
-  // schema bump could sit unapplied for up to the full cadence window otherwise. Rather than a
-  // parallel bookkeeping field in state (which could drift from what the artifact actually holds),
-  // this reads the artifact's own embedded version: PRAGMA user_version lives at a fixed byte
-  // offset in every SQLite file's header (60, big-endian uint32 — verified against bun:sqlite's
-  // own output), so a 4-byte range GET gives ground truth without downloading the artifact.
-  // Public: pipeline.ts's cadence gate needs this to decide whether a skip is still safe.
-  async artifactSchemaVersion(source: string): Promise<number | null> {
-    if (this.dryRun) return DB_SCHEMA_VERSION;
+  // One range-read stands in for three separate checks that all need the same object: does the
+  // artifact exist, was it written under the current schema, and has it been touched since the
+  // last confirmed-complete run. In dry-run there is nothing on the remote to verify, so callers
+  // trust it stands as current.
+  //
+  // Existence + schema version: PRAGMA user_version lives at a fixed byte offset in every SQLite
+  // file's header (60, big-endian uint32 — verified against bun:sqlite's own output), so a 4-byte
+  // range GET reads it, and a missing key or short/unreadable response both mean "not current"
+  // (a 404 and an R2 outage are indistinguishable by outcome here — the false-negative cost is one
+  // redundant retry, never a lost self-heal). This is what makes an externally deleted artifact
+  // (lifecycle rule, manual cleanup) 404 for consumers instead of write() reporting "unchanged"
+  // forever on a hash match alone.
+  //
+  // Freshness: lastModified from the same response. A cadence-gated source returns from
+  // pipeline.ts's cadence check before write() ever runs, so a schema bump landing there — or any
+  // write() call whose downstream writeFeedRows/writeState then fails — can leave the artifact
+  // ahead of state's last_run. Comparing the two catches a partially completed run and keeps it
+  // eligible for retry instead of reading the stale slice as fully caught up.
+  //
+  // Public: pipeline.ts's cadence gate needs this directly, and write() below reuses it instead of
+  // a separate existence check.
+  async readArtifactHeader(
+    source: string
+  ): Promise<{ schemaVersion: number; lastModified: Date } | null> {
+    if (this.dryRun) return { schemaVersion: DB_SCHEMA_VERSION, lastModified: new Date(0) };
     try {
       const res = await retry(
         () =>
@@ -205,11 +195,12 @@ export class R2ArtifactWriter {
         S3_RETRY
       );
       const bytes = await res.Body?.transformToByteArray();
-      if (!bytes || bytes.byteLength !== 4) return null;
-      return new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, false);
+      if (!bytes || bytes.byteLength !== 4 || !res.LastModified) return null;
+      const schemaVersion = new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, false);
+      return { schemaVersion, lastModified: res.LastModified };
     } catch (err) {
       if (err instanceof NoSuchKey) return null;
-      log('warn', 'artifact_schema_version_unreadable', { source, msg: errorMessage(err) });
+      log('warn', 'artifact_header_unreadable', { source, msg: errorMessage(err) });
       return null;
     }
   }
