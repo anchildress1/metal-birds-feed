@@ -82,18 +82,31 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   // they fall back to the mark map rather than being dropped outright. Candidates that also share a
   // mark are resolved — or dropped — there by the same rule.
   const ambiguousHex: string[] = [];
+  // Marks that received a fallback candidate name an uncertain aircraft, not a confirmed duplicate of
+  // whatever hex winner happens to share the mark — tracked so the supersede step below never treats
+  // one as the other.
+  const fallbackMarks = new Set<string>();
   const hexWinners = collapseGroups(byHex, (hex, candidates) => {
     ambiguousHex.push(hex);
     for (const r of candidates) {
       const mark = registrationKey(r.registration);
-      if (mark !== '') groupInto(byMark, mark, r);
+      if (mark !== '') {
+        groupInto(byMark, mark, r);
+        fallbackMarks.add(mark);
+      }
     }
   });
 
   // Within one register a mark identifies one aircraft, so a hex-less record sharing a mark with a
   // hex-bearing one is the same aircraft in a less complete row. The hex-bearing row supersedes it;
-  // keeping both would manufacture an ambiguity out of a single airframe.
-  for (const r of hexWinners.values()) byMark.delete(registrationKey(r.registration));
+  // keeping both would manufacture an ambiguity out of a single airframe. A mark that also holds a
+  // hex-ambiguous fallback candidate is left alone instead: that candidate may be a different
+  // aircraft entirely, and resolveCandidates (or, failing that, the cross-source registration-key
+  // pass) is what settles a genuine claim — not a same-source hex winner deleting it unseen.
+  for (const r of hexWinners.values()) {
+    const mark = registrationKey(r.registration);
+    if (!fallbackMarks.has(mark)) byMark.delete(mark);
+  }
 
   const ambiguousMarks: string[] = [];
   const markWinners = collapseGroups(byMark, (mark) => {

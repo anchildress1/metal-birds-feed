@@ -98,6 +98,28 @@ describe('toFeedRows', () => {
     expect(rows[0]?.registration_key).toBe('PHABC');
   });
 
+  // A mark shared between a hex winner and a candidate demoted by an *unrelated* hex collision is a
+  // real ambiguity, not a duplicate of the winner — deleting the demoted candidate outright would let
+  // an unrelated collision elsewhere silently hand the mark to the winner uncontested.
+  it('does not let a same-mark hex winner delete a candidate demoted by an unrelated hex collision', () => {
+    const rows = toFeedRows([
+      make('1', 'a1b2c3', { registration: 'LY-AAA' }),
+      make('2', 'd4e5f6', { registration: 'LY-AAA' }),
+      make('3', 'd4e5f6', { registration: 'LY-CCC' }),
+    ]);
+    const hexWinner = rows.find((r) => r.icao_hex === 'a1b2c3');
+    expect(hexWinner?.registration_key).toBe('LYAAA');
+    // Record 2 must still be reachable by mark — the unrelated hex collision on record 3 must not
+    // erase it, and the two rows sharing "LYAAA" are exactly what the merge-level ambiguity pass
+    // (resolveRegistrationAmbiguity) exists to resolve, not something toFeedRows should hide.
+    expect(rows.filter((r) => r.registration_key === 'LYAAA')).toHaveLength(2);
+
+    const merged = mergeFeedRows([rows]);
+    const survivor = merged.find((r) => r.icao_hex === 'a1b2c3');
+    expect(survivor?.registration_key).toBeNull();
+    expect(merged.some((r) => r.icao_hex === null && r.registration === 'LY-AAA')).toBe(false);
+  });
+
   it('drops a hex-less record whose mark normalizes to nothing', () => {
     const rows = toFeedRows([make('1', null, { registration: '- -' })]);
     expect(rows).toEqual([]);
