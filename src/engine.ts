@@ -575,6 +575,17 @@ function translateRow(
   }
 }
 
+// The whole-row identity the no-merge branch below already uses for "byte-identical" — reused for
+// merge_duplicates' own duplicate-vs-real-party distinction, so a row differing only in a
+// set_on_merge target column (TC's TYPE_OF_OWNER_E) still counts as a second party.
+function countDistinctRows(group: Row[]): number {
+  const distinct: Row[] = [];
+  for (const row of group) {
+    if (!distinct.some((r) => Bun.deepEquals(r, row))) distinct.push(row);
+  }
+  return distinct.length;
+}
+
 // One key's rows, reduced to the single row the mapping reads. Byte-identical repeats collapse; a
 // real difference is a conflict unless the join declares how its parties merge.
 function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, group: Row[]): Row {
@@ -604,12 +615,8 @@ function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, g
     merged[field] = seen.join(separator);
   }
   // A key only "merged" when the group held more than one genuinely distinct party — byte-identical
-  // repeats across every merged field (e.g. a register listing the same party twice) are not
-  // co-ownership, so the stamp must key off the same signal, not just group.length.
-  const signatures = new Set(
-    group.map((row) => JSON.stringify(merge.fields.map((field) => row[field] ?? '')))
-  );
-  if (signatures.size > 1)
+  // repeats (e.g. a register listing the same party twice) are not co-ownership.
+  if (countDistinctRows(group) > 1)
     for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
   return merged;
 }

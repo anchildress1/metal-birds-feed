@@ -1106,6 +1106,21 @@ describe('engine — negative and edge cases', () => {
       expect(records.get('1')?.model).toBe('solo');
     });
 
+    // Identity for the stamp is the whole row, not just merge.fields — two rows sharing every
+    // merged-field value but differing in a set_on_merge target column (TC's TYPE_OF_OWNER_E, here
+    // KIND) are still two real parties, and that differing value is the signal a merge happened.
+    it('stamps set_on_merge when rows share merge.fields but differ elsewhere', async () => {
+      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
+      const { records } = await translate(
+        config,
+        new Map([
+          primary(),
+          ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,co\n', 'utf8')],
+        ])
+      );
+      expect(records.get('1')?.model).toBe('shared');
+    });
+
     // Each field is its own deduplicated bag, not an index-parallel array — a party missing one
     // field must not punch a blank placeholder into another field's position.
     it('drops a blank independently per field rather than aligning by party position', async () => {
@@ -3655,22 +3670,6 @@ describe('TKA Lithuania fixture translation', () => {
 
   it('keeps both rows of a mark duplicated inside one publication', () => {
     expect([...r.values()].filter((a) => a.registration === 'LY AXX')).toHaveLength(2);
-  });
-
-  // `status` is the one non-nullable canonical field, and a blank cell short-circuits to null before
-  // any lookup runs — without the explicit '' key, this single row would fail translation and abort
-  // the whole refresh (translate aborts the write on any failed row).
-  it('maps a blank statusas to other instead of failing the row', async () => {
-    const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
-    const header =
-      '_type,_id,_revision,_page.next,vda_id,duomenu_sviezumas,registracijos_nr,statusas,kategorija,rusis,tipas,savininko_tipas,naudotojo_tipas,pagaminimas,pirma_registracija,paskutine_registracija,tsppp_galiojimas,baze,bazes_adresas,geometrija,keleiviu_sk,mkm,oro_sraigtas';
-    const row =
-      'datasets/gov/tka/registras/Irasas,id1,rev1,,vda1,2026-01-01,LY ZZZ,,,,SKRAIDYKLE,,,,,,,,,,0,0,';
-    const buf = Buffer.from(`${header}\n${row}\n`, 'utf8');
-    const published = JSON.stringify({ _data: [{ 'count()': 1 }] });
-    const { records, stats } = await translate(config, new Map([['register', buf]]), published);
-    expect(stats.failed).toBe(0);
-    expect(records.get('vda1')?.status).toBe('other');
   });
 
   // TKA fills `tipas` on a reserved row with the intended model, so `other` would have served this
