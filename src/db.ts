@@ -2,6 +2,15 @@ import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import type { Aircraft, Engine, Owner } from './schema.js';
 
+// The producer shape marker written into PRAGMA user_version, and mirrored into
+// cadence.ts's SourceStateSchema.producer_version. R2ArtifactWriter gates the artifact PUT purely
+// on content_hash (the translated record set), so a schema/DDL-only change that happens not to
+// alter any currently-processed row's serialized value (e.g. loosening a NOT NULL constraint a row
+// never actually hit) would otherwise never reach R2 until unrelated upstream data changes. Mirroring
+// this constant into the required state field makes every prior state fail validation on a bump —
+// self-healing to absent, which forces exactly one rewrite per source on the next run.
+export const DB_SCHEMA_VERSION = 12;
+
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
   if (a.source_id > b.source_id) return 1;
@@ -183,7 +192,7 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // 12 makes status nullable, dropping the engine's blanket `?? 'other'` fallback for a blank or
     // unresolved cell; a version-11-or-earlier consumer would read every row as carrying a concrete
     // status and must not assume that here.
-    db.run('PRAGMA user_version = 12');
+    db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

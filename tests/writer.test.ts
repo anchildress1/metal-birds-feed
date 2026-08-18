@@ -3,6 +3,7 @@ import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { FeedRow } from '../src/feed-row.js';
 import type { SourceState } from '../src/cadence.js';
+import { DB_SCHEMA_VERSION } from '../src/db.js';
 
 const FEED_ROW: FeedRow = {
   icao_hex: 'a1b2c3',
@@ -215,6 +216,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockReset();
     mockSend.mockResolvedValue({});
@@ -240,6 +242,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockReset();
     mockSend.mockResolvedValue({});
@@ -271,6 +274,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockReset();
     mockSend.mockImplementation((cmd: { _kind: string }) =>
@@ -292,6 +296,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 1,
       content_hash: 'stale',
       upstream_hash: 'c'.repeat(64),
+      producer_version: DB_SCHEMA_VERSION,
     };
 
     const stats = await writer.write(
@@ -313,6 +318,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 300_000,
       content_hash: 'h',
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     await expect(writer.write(new Map(), 'faa', prior, HASH_UP)).rejects.toThrow(
       /Refusing to write 0 records/
@@ -334,6 +340,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 100,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     // 1 record vs prior 100 = 99% drop → suspected truncation.
     await expect(
@@ -352,6 +359,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 4,
       content_hash: HASH64,
       upstream_hash: 'c'.repeat(64),
+      producer_version: DB_SCHEMA_VERSION,
     };
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1')],
@@ -372,6 +380,7 @@ describe('R2ArtifactWriter — write', () => {
       record_count: 5,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1')],
@@ -433,6 +442,7 @@ describe('R2ArtifactWriter — state', () => {
       record_count: 5,
       content_hash: 'abc',
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
 
     await writer.writeState('faa', state);
@@ -450,6 +460,7 @@ describe('R2ArtifactWriter — state', () => {
       record_count: 9,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend.mockResolvedValueOnce(stateResponse(state));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -517,6 +528,7 @@ describe('R2ArtifactWriter — state', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     mockSend
       .mockRejectedValueOnce(s3Error('internal', 500))

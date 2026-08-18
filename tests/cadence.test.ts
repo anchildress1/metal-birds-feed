@@ -7,6 +7,7 @@ import {
   STALENESS_MULTIPLIER,
 } from '../src/cadence.js';
 import type { SourceState } from '../src/cadence.js';
+import { DB_SCHEMA_VERSION } from '../src/db.js';
 
 const HASH64 = 'a'.repeat(64);
 const HASH_UP = 'b'.repeat(64);
@@ -21,6 +22,7 @@ const makeState = (lastRunDaysAgo: number, lastChangeDaysAgo: number): SourceSta
     record_count: 1000,
     content_hash: HASH64,
     upstream_hash: HASH_UP,
+    producer_version: DB_SCHEMA_VERSION,
   };
 };
 
@@ -47,6 +49,7 @@ describe('shouldSkip', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     expect(shouldSkip(state, 30, now)).toBe(false);
   });
@@ -58,6 +61,7 @@ describe('shouldSkip', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     expect(shouldSkip(state, 30, new Date())).toBe(false);
   });
@@ -74,6 +78,7 @@ describe('shouldSkip', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     expect(shouldSkip(state, 30, new Date())).toBe(true);
   });
@@ -104,6 +109,7 @@ describe('isOverdue', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     expect(isOverdue(state, cadence, now)).toBe(false);
   });
@@ -117,6 +123,7 @@ describe('isOverdue', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     expect(isOverdue(state, 30, new Date())).toBe(true);
   });
@@ -128,6 +135,7 @@ describe('isOverdue', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     expect(isOverdue(state, 30, new Date())).toBe(false);
   });
@@ -169,6 +177,7 @@ describe('buildStalenessEntry', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     const entry = buildStalenessEntry('faa', 30, state, new Date());
     expect(entry.days_since_change).toBe(-1);
@@ -234,6 +243,7 @@ describe('buildSummaryMarkdown', () => {
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
+      producer_version: DB_SCHEMA_VERSION,
     };
     const entries = [buildStalenessEntry('faa', 30, state, now)];
     const md = buildSummaryMarkdown(entries);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DB_SCHEMA_VERSION } from './db.js';
 
 export const SourceStateSchema = z.object({
   last_run: z.string(),
@@ -9,6 +10,13 @@ export const SourceStateSchema = z.object({
   // sha256 hex of the same records *before* localization. Drives last_content_change, and so
   // staleness: translation catching up must not read as the register publishing something new.
   upstream_hash: z.string().regex(/^[0-9a-f]{64}$/),
+  // Mirrors db.ts's DB_SCHEMA_VERSION. content_hash alone only busts the write-skip gate when a
+  // schema change happens to alter some row's serialized value; a DDL-only change a source's
+  // current data never actually exercises (e.g. loosening a NOT NULL constraint) would otherwise
+  // never reach R2 until unrelated upstream data changed. A required literal means any version
+  // bump — this one included — makes every prior state fail validation, self-healing to absent
+  // and forcing exactly one rewrite per source on its next run.
+  producer_version: z.literal(DB_SCHEMA_VERSION),
 });
 export type SourceState = z.infer<typeof SourceStateSchema>;
 
