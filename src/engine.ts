@@ -281,10 +281,16 @@ function resolveRecency(
   candidate: Aircraft,
   incumbent: Aircraft
 ): { winner: 'candidate' | 'incumbent'; reason: RecencyReason } | null {
-  const candidateCancelled = candidate.status === 'cancelled';
-  const incumbentCancelled = incumbent.status === 'cancelled';
-  if (candidateCancelled !== incumbentCancelled) {
-    return { winner: incumbentCancelled ? 'candidate' : 'incumbent', reason: 'cancelled_status' };
+  // A null status is unknown, not evidence of being live — it must not automatically outrank (or
+  // be outranked by) a row that explicitly states cancelled. The shortcut only applies when both
+  // sides have a concrete status that actually disagrees about cancelled-ness; otherwise it falls
+  // through to date/superset, and ultimately to the ambiguous-collision failure below.
+  if (candidate.status !== null && incumbent.status !== null) {
+    const candidateCancelled = candidate.status === 'cancelled';
+    const incumbentCancelled = incumbent.status === 'cancelled';
+    if (candidateCancelled !== incumbentCancelled) {
+      return { winner: incumbentCancelled ? 'candidate' : 'incumbent', reason: 'cancelled_status' };
+    }
   }
 
   const candidateDate = latestKnownDate(candidate);
@@ -575,6 +581,18 @@ function translateRow(
   }
 }
 
+// Distinctness scoped to the columns the merge actually reads — merge.fields plus any set_on_merge
+// target — not the whole row. A register carries columns this join never maps (TC's STREET_NAME,
+// MAIL_RECIPIENT, ACTIVE_FLAG); a stale value in one of those must not turn one real owner's
+// duplicated row into a manufactured second party, the same tolerance the mapping's own comment
+// documents for unread address columns. A row differing only in a set_on_merge target column (TC's
+// TYPE_OF_OWNER_E) still counts as a second party, since that column is read, just not concatenated.
+function countDistinctRows(group: Row[], relevantColumns: string[]): number {
+  const signature = (row: Row): string =>
+    JSON.stringify(relevantColumns.map((column) => row[column] ?? ''));
+  return new Set(group.map(signature)).size;
+}
+
 // One key's rows, reduced to the single row the mapping reads. Byte-identical repeats collapse; a
 // real difference is a conflict unless the join declares how its parties merge.
 function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, group: Row[]): Row {
@@ -590,6 +608,9 @@ function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, g
     return first;
   }
 
+  // Each merged field is a deduplicated, blank-skipping bag of values, not an index-parallel array —
+  // a party missing one field would otherwise desync that field's position against the others, and
+  // the schema holds each as a single string with no positional contract for a reader to rely on.
   const separator = merge.separator ?? ', ';
   const merged: Row = { ...first };
   for (const field of merge.fields) {
@@ -600,7 +621,11 @@ function resolveJoinGroup(config: SourceConfig, join: JoinConfig, key: string, g
     }
     merged[field] = seen.join(separator);
   }
-  for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
+  // A key only "merged" when the group held more than one genuinely distinct party — byte-identical
+  // repeats (e.g. a register listing the same party twice) are not co-ownership.
+  const relevantColumns = [...merge.fields, ...Object.keys(merge.set_on_merge ?? {})];
+  if (countDistinctRows(group, relevantColumns) > 1)
+    for (const [field, value] of Object.entries(merge.set_on_merge ?? {})) merged[field] = value;
   return merged;
 }
 
@@ -783,6 +808,27 @@ function scalarField(mapping: FieldMap, row: Row, key: string, source: string): 
   return resolveScalar(row, fm, source);
 }
 
+// status is the schema's one field where null carries feed-exclusion meaning distinct from any
+// value a register could actually publish. A mapping's `default` exists to absorb a genuinely new
+// or unrecognized status code (AU/FAA/NL/TC each enumerate many but not all) — not to paper over a
+// blank cell as if the register had stated something. resolveScalar can't make that distinction
+// generically without risking every other default-bearing field's established behavior, so status
+// gets its own resolution here: a blank cell always stays null, and only a non-blank, unrecognized
+// code falls to the default. Every current status mapping uses `field` + optional `transform` +
+// `lookup` (never `compound_transform` or `null_values`), so those paths aren't reproduced.
+function resolveStatus(mapping: FieldMap, row: Row, source: string): string | null {
+  const fm = mapping['status'];
+  if (!fm) return null;
+  if (fm.constant !== undefined) return fm.constant;
+  const field = fm.field;
+  if (!field) return fm.default ?? null;
+  const raw = row[field] ?? '';
+  const transformed = fm.transform ? applyScalar(fm.transform, raw) : raw;
+  if (transformed === null || transformed === '') return null;
+  if (fm.lookup) return resolveLookup(transformed, fm.lookup, fm.default, field, source);
+  return transformed;
+}
+
 function arrField(mapping: FieldMap, row: Row, key: string, source: string): string[] {
   const fm = mapping[key];
   if (!fm) return [];
@@ -838,7 +884,10 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     registration: scalarField(m, row, 'registration', s),
     icao_hex: scalarField(m, row, 'icao_hex', s),
     icao_type_code: scalarField(m, row, 'icao_type_code', s),
-    status: scalarField(m, row, 'status', s) ?? 'other',
+    // resolveStatus, not scalarField — status is the one nullable canonical field, and its own
+    // mapping-level `default` (AU/FAA/NL/TC use one for unrecognized codes) must not also catch a
+    // blank cell, which states nothing at all rather than an unrecognized-but-stated code.
+    status: resolveStatus(m, row, s),
     country: scalarField(m, row, 'country', s) ?? config.country,
     manufacturer: scalarField(m, row, 'manufacturer', s),
     model: scalarField(m, row, 'model', s),

@@ -6,7 +6,7 @@ import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
 import { translate } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
-import { MIN_RETAIN_RATIO, R2ArtifactWriter, type R2Config } from './writer.js';
+import { MIN_RETAIN_RATIO, R2ArtifactWriter, isArtifactCaughtUp, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
 import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
@@ -58,13 +58,12 @@ export async function run(sourceId: string): Promise<RunResult> {
     hasCurrentArtifactState &&
     !dryRun &&
     shouldSkip(priorState, config.cadence_days, new Date()) &&
-    // write()'s self-heal path (see writer.ts) only runs when write() is actually called —
-    // honoring a cadence skip on state alone would leave an externally deleted artifact 404ing
-    // for consumers for up to the full cadence window, silently reporting "cadence_skip" as if
-    // nothing were wrong. Checked last so it only costs a HEAD request when every cheaper
-    // condition already says this run would otherwise be skipped.
-    (await writer.artifactExists(sourceId)) &&
-    (await writer.feedRowsExist(sourceId))
+    (await writer.feedRowsExist(sourceId)) &&
+    // Checked last: it's the most expensive condition. readArtifactHeader + isArtifactCaughtUp
+    // (writer.ts) cover what a plain existence check used to (a missing artifact reads as "not
+    // caught up" here too) plus schema-version and freshness — the same ground truth write()
+    // trusts for its own unchanged-skip, so a cadence skip and a mid-run skip can't disagree.
+    isArtifactCaughtUp(await writer.readArtifactHeader(sourceId), priorState)
   ) {
     log('info', 'cadence_skip', { source: sourceId, cadence_days: config.cadence_days });
     return {

@@ -18,8 +18,8 @@ export type { FeedRow };
 // caller keyed by something else and the hex is new information; on /feed it stays the map key and
 // is absent from the value, exactly as before.
 export type FeedResponseRow = Omit<FeedRow, 'icao_hex' | 'registration_key'> & {
-  // Present only on /feed/registration, and null there for the nine registers that publish no
-  // Mode S address — the caller learns the hex is unavailable rather than that the field is missing.
+  // Present only on /feed/registration, and null there for the ten of sixteen registers that publish
+  // no Mode S address — the caller learns the hex is unavailable rather than that the field is missing.
   icao_hex?: string | null;
   type: string | null;
   engine: string | null;

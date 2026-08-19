@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 import type { Aircraft } from '../src/schema.js';
 import { hashFeedRows } from '../src/feed.js';
+import { DB_SCHEMA_VERSION } from '../src/db.js';
+import { isArtifactCaughtUp } from '../src/writer.js';
 
 const REAL_FETCH = globalThis.fetch;
 const setFetch = (fn: unknown): void => {
@@ -19,7 +21,7 @@ const mockR2Write = mock();
 const mockR2Constructor = mock();
 const mockReadState = mock();
 const mockWriteState = mock();
-const mockArtifactExists = mock();
+const mockReadArtifactHeader = mock();
 const mockFeedRowsExist = mock();
 const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
@@ -48,7 +50,7 @@ void mock.module('../src/writer.js', () => ({
     write = mockR2Write;
     readState = mockReadState;
     writeState = mockWriteState;
-    artifactExists = mockArtifactExists;
+    readArtifactHeader = mockReadArtifactHeader;
     feedRowsExist = mockFeedRowsExist;
     writeFeedRows = mockWriteFeedRows;
     readFeedRows = mockReadFeedRows;
@@ -58,6 +60,9 @@ void mock.module('../src/writer.js', () => ({
   // pipeline.ts reads this to decide whether a run is trustworthy enough to prune the translation
   // cache; a mock omitting it fails the import, not the assertion.
   MIN_RETAIN_RATIO: 0.5,
+  // The real implementation, not a mock — it's pure logic pipeline.ts's cadence gate depends on,
+  // and exercising it for real is what the cadence-gate tests below actually verify.
+  isArtifactCaughtUp,
 }));
 
 const { main, publishFeed, publishFeedForDeploy, markFeedDeployed, resolveFeedOutputPath, run } =
@@ -155,7 +160,7 @@ beforeEach(() => {
   mockR2Constructor.mockReset();
   mockReadState.mockReset();
   mockWriteState.mockReset();
-  mockArtifactExists.mockReset();
+  mockReadArtifactHeader.mockReset();
   mockFeedRowsExist.mockReset();
   mockWriteFeedRows.mockReset();
   mockReadFeedRows.mockReset();
@@ -183,7 +188,10 @@ beforeEach(() => {
   });
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
-  mockArtifactExists.mockResolvedValue(true);
+  mockReadArtifactHeader.mockResolvedValue({
+    schemaVersion: DB_SCHEMA_VERSION,
+    lastModified: new Date(0),
+  });
   mockFeedRowsExist.mockResolvedValue(true);
   mockWriteFeedRows.mockResolvedValue(undefined);
   mockReadFeedRows.mockResolvedValue([]);
@@ -377,7 +385,56 @@ describe('run', () => {
       last_content_change: recentTimestamp,
       content_hash: HASH64,
     });
-    mockArtifactExists.mockResolvedValueOnce(false);
+    mockReadArtifactHeader.mockResolvedValueOnce(null);
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+
+  // content_hash's DB_SCHEMA_VERSION salt (writer.ts) only takes effect once write() actually
+  // runs — a cadence-gated source honoring the skip on state alone could otherwise carry a
+  // stale-schema artifact for up to its full cadence window after a schema bump.
+  it('does not honor a cadence skip when the artifact carries a stale schema version', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+    mockReadArtifactHeader.mockResolvedValueOnce({
+      schemaVersion: DB_SCHEMA_VERSION - 1,
+      lastModified: new Date(0),
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+
+  // A prior run's write() can succeed (artifact now current) while writeFeedRows/writeState then
+  // fail (e.g. a transient R2 outage) — state's last_run stays stale, but the artifact's
+  // lastModified is newer than it. Trusting schema version alone would read that as fully caught
+  // up and skip retrying the stale feed slice for up to the full cadence window.
+  it('does not honor a cadence skip when the artifact was modified after the last recorded run', async () => {
+    process.env['DRY_RUN'] = 'false';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+    mockReadArtifactHeader.mockResolvedValueOnce({
+      schemaVersion: DB_SCHEMA_VERSION,
+      lastModified: new Date(),
+    });
 
     const result = await run('faa');
 

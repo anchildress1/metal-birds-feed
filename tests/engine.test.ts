@@ -1092,6 +1092,48 @@ describe('engine — negative and edge cases', () => {
       expect(lone.records.get('1')?.model).toBe('solo');
     });
 
+    // The set_on_merge stamp keys off distinctness scoped to merge.fields + set_on_merge targets,
+    // not the whole row: a repeated identical party (same EXTRA and KIND) is a duplicate, not
+    // co-ownership; a party differing only in the set_on_merge target itself (KIND) is still a real
+    // second party; and a difference confined to a column this join never maps (TC's
+    // STREET_NAME/MAIL_RECIPIENT/ACTIVE_FLAG, modeled here as UNMAPPED) must not manufacture one.
+    it.each([
+      {
+        label: 'repeated identical party',
+        csv: 'K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,solo\n',
+        expectedModel: 'solo',
+      },
+      {
+        label: 'rows share merge.fields but differ in the set_on_merge target',
+        csv: 'K,EXTRA,KIND\n1,Cessna,solo\n1,Cessna,co\n',
+        expectedModel: 'shared',
+      },
+      {
+        label: 'difference confined to an unmapped column',
+        csv: 'K,EXTRA,KIND,UNMAPPED\n1,Cessna,solo,A\n1,Cessna,solo,I\n',
+        expectedModel: 'solo',
+      },
+    ])('set_on_merge distinctness: $label', async ({ csv, expectedModel }) => {
+      const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
+      const { records } = await translate(
+        config,
+        new Map([primary(), ['jf', Buffer.from(csv, 'utf8')]])
+      );
+      expect(records.get('1')?.model).toBe(expectedModel);
+    });
+
+    // Each field is its own deduplicated bag, not an index-parallel array — a party missing one
+    // field must not punch a blank placeholder into another field's position.
+    it('drops a blank independently per field rather than aligning by party position', async () => {
+      const config = merging({ fields: ['EXTRA', 'KIND'] });
+      const { records } = await translate(
+        config,
+        new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,\n', 'utf8')]])
+      );
+      expect(records.get('1')?.manufacturer).toBe('Cessna, Piper');
+      expect(records.get('1')?.model).toBe('a');
+    });
+
     it('leaves a single-row key untouched', async () => {
       const files = new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n', 'utf8')]]);
       const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
@@ -1195,6 +1237,73 @@ describe('engine — negative and edge cases', () => {
     const { records, stats } = await translate(config, files);
     expect(stats.failed).toBe(1);
     expect(records.size).toBe(0);
+  });
+
+  // status is the schema's one nullable canonical field: a blank cell with no lookup default must
+  // stay null, not silently default to 'other' — coercing an unstated status to a concrete value
+  // would invent data the register never published.
+  it('leaves status null for a blank cell with no lookup default', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-blank-status',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG,STATUS\n1,N1,\n', 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.status).toBeNull();
+  });
+
+  // A mapping-level default exists to absorb a genuinely unrecognized code (AU/FAA/NL/TC all
+  // enumerate many but not all status values) — it must not also catch a blank cell, which states
+  // nothing at all. A blank stays null regardless of the default; a stated-but-unmapped code still
+  // uses it.
+  it.each([
+    { label: 'blank cell', status: '', expected: null },
+    { label: 'unrecognized code', status: 'weird', expected: 'other' },
+  ])('resolves status with a mapping default: $label', async ({ status, expected }) => {
+    const config: SourceConfig = {
+      id: 'synthetic-status-default',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: {
+          field: 'STATUS',
+          transform: 'trim_or_null',
+          lookup: { cancelled: 'cancelled', valid: 'valid' },
+          default: 'other',
+        },
+      },
+    };
+    const files = new Map([['primary', Buffer.from(`ID,REG,STATUS\n1,N1,${status}\n`, 'utf8')]]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.status).toBe(expected);
   });
 
   it('replaces a cancelled duplicate with a live reissue', async () => {
@@ -1416,6 +1525,39 @@ describe('engine — negative and edge cases', () => {
     expect(stats.failed).toBe(0);
     expect(stats.skipped).toBe(1);
     expect(records.size).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
+
+  // A null status is unknown, not evidence the record is live — it must not automatically outrank
+  // an explicitly cancelled duplicate the way two concretely-known, disagreeing statuses would.
+  it('does not let a null-status duplicate automatically outrank an explicitly cancelled one', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-status-null',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
+    };
+    // REG differs, so the two records genuinely disagree; STATUS is blank (-> null) on the second
+    // row. With no date signal and neither a strict superset of the other, this must fail as an
+    // ambiguous collision — not silently let the unknown-status row replace the cancelled one.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,\n', 'utf8')],
+    ]);
+    const { records, stats } = await translate(config, files);
+    expect(stats.failed).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
   });
 

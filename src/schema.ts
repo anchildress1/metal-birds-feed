@@ -135,7 +135,11 @@ export const AircraftSchema = z.object({
     .regex(/^[0-9a-f]{6}$/, 'icao_hex must be 6 lowercase hex characters')
     .nullable(),
   icao_type_code: z.string().nullable(),
-  status: AircraftStatusSchema,
+  // Nullable, unlike every other value here: a blank cell genuinely means the register did not
+  // state a status, and that could be cancelled or reserved as easily as anything else — coercing
+  // it to a concrete value would be inventing data. toFeedRows excludes null the same way it
+  // excludes cancelled and reserved, so an unstated status is never served as a plausible aircraft.
+  status: AircraftStatusSchema.nullable(),
   country: z.string(),
   manufacturer: z.string().nullable(),
   model: z.string().nullable(),

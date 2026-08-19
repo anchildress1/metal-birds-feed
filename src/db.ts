@@ -2,6 +2,15 @@ import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import type { Aircraft, Engine, Owner } from './schema.js';
 
+// The producer shape marker written into PRAGMA user_version, and salted into the artifact's
+// content_hash below (writer.ts) so a schema/DDL-only change that happens not to alter any
+// currently-processed row's serialized value — e.g. loosening a NOT NULL constraint no source's
+// current data ever hit — still busts the write-skip gate, instead of never reaching R2 until
+// unrelated upstream data changes. Salting the hash rather than versioning the state envelope
+// keeps record_count/upstream_hash intact through the migration run, so the retain-ratio guard and
+// staleness tracking keep working off the real prior values instead of an invalidated null state.
+export const DB_SCHEMA_VERSION = 12;
+
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
   if (a.source_id > b.source_id) return 1;
@@ -9,9 +18,14 @@ const bySourceId = (a: Aircraft, b: Aircraft): number => {
 };
 
 // Content fingerprint over the sorted records, independent of SQLite's byte layout (which is not
-// guaranteed stable run to run). Drives skip-if-unchanged.
-export const hashRecords = (records: Map<string, Aircraft>): string => {
+// guaranteed stable run to run). Drives skip-if-unchanged. `salt` is optional and unused by the
+// upstream_hash caller (pipeline.ts) — that hash must track only what the register itself
+// published, never our own schema version, or a schema bump would misreport an unchanged register
+// as having published something new and reset its staleness clock. writer.ts is the one caller
+// that salts, with DB_SCHEMA_VERSION, for the artifact's own content_hash.
+export const hashRecords = (records: Map<string, Aircraft>, salt = ''): string => {
   const hash = createHash('sha256');
+  if (salt !== '') hash.update(`${salt}\0`);
   for (const record of [...records.values()].sort(bySourceId)) {
     hash.update(`${record.source_id}\0${JSON.stringify(record)}\n`);
   }
@@ -101,7 +115,7 @@ const DDL = `CREATE TABLE aircraft (
   registration TEXT NOT NULL,
   icao_hex TEXT,
   icao_type_code TEXT,
-  status TEXT NOT NULL,
+  status TEXT,
   country TEXT NOT NULL,
   manufacturer TEXT,
   model TEXT,
@@ -180,7 +194,10 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // registration with no airframe behind it; a version-9-or-earlier consumer would read it as an
     // aircraft in some unnamed state rather than as no aircraft at all.
     // 11 adds the home_base column for the aerodrome a register names as the aircraft's base.
-    db.run('PRAGMA user_version = 11');
+    // 12 makes status nullable, dropping the engine's blanket `?? 'other'` fallback for a blank or
+    // unresolved cell; a version-11-or-earlier consumer would read every row as carrying a concrete
+    // status and must not assume that here.
+    db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 

@@ -1,15 +1,9 @@
-import {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-  HeadObjectCommand,
-  NoSuchKey,
-} from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand, NoSuchKey } from '@aws-sdk/client-s3';
 import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { FeedSliceSchema, serializeFeedSlice } from './feed.js';
-import { buildSqlite, hashRecords } from './db.js';
+import { buildSqlite, hashRecords, DB_SCHEMA_VERSION } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
@@ -65,6 +59,25 @@ export interface R2Config {
   bucketName: string;
 }
 
+// An artifact header only proves the object is trustworthy when both conditions hold. schemaVersion
+// mismatched: a schema/DDL bump changed DB_SCHEMA_VERSION since this artifact was last written.
+// lastModified after the reference state's last_run: the object was touched more recently than the
+// last confirmed-complete run knows about — either a partially completed migration (write()
+// succeeded, writeFeedRows/writeState then failed) or an external replacement (rollback, manual
+// restore) that a hash match alone can't distinguish from the real thing. Shared by write()'s own
+// unchanged-skip below and pipeline.ts's cadence gate, so both trust the same ground truth.
+export function isArtifactCaughtUp(
+  header: { schemaVersion: number; lastModified: Date } | null,
+  referenceState: SourceState | null
+): boolean {
+  return (
+    header !== null &&
+    referenceState !== null &&
+    header.schemaVersion === DB_SCHEMA_VERSION &&
+    header.lastModified.getTime() <= new Date(referenceState.last_run).getTime()
+  );
+}
+
 export class R2ArtifactWriter {
   private readonly client: S3Client;
   private readonly bucket: string;
@@ -97,7 +110,9 @@ export class R2ArtifactWriter {
     priorState: SourceState | null,
     upstreamHash: string
   ): Promise<WriteStats> {
-    const content_hash = hashRecords(records);
+    // Salted with DB_SCHEMA_VERSION so a schema/DDL-only bump forces a mismatch against any prior
+    // stored hash even when no row's serialized value actually changed — see db.ts.
+    const content_hash = hashRecords(records, String(DB_SCHEMA_VERSION));
 
     // Zero records is upstream data loss for an aircraft registry, never a legitimate dataset —
     // refuse rather than publish an empty artifact. Unconditional (not gated on prior
@@ -119,13 +134,21 @@ export class R2ArtifactWriter {
     }
 
     // No prior state (fresh source, or state that failed validation and self-healed to absent)
-    // matches neither hash, so the artifact is rewritten — which is also how a schema migration
-    // lands. The skip additionally requires the artifact to actually exist: state and artifact are
-    // separate objects, and an externally deleted artifact (lifecycle rule, manual cleanup) would
-    // otherwise 404 for consumers indefinitely while every run reports unchanged.
+    // matches neither hash, so the artifact is rewritten. A schema migration lands the same way,
+    // via the salt above changing content_hash — deliberately not via state invalidation, which
+    // would also wipe record_count/upstream_hash and disable the retain-ratio guard and staleness
+    // tracking for that run. The skip additionally requires the artifact to actually exist: state
+    // and artifact are separate objects, and an externally deleted artifact (lifecycle rule, manual
+    // cleanup) would otherwise 404 for consumers indefinitely while every run reports unchanged.
     const artifactUnchanged = priorState?.content_hash === content_hash;
     const upstreamUnchanged = priorState?.upstream_hash === upstreamHash;
-    if (artifactUnchanged && (await this.artifactExists(source))) {
+    // Short-circuited: only reads the artifact's header when the hash already matches, so an
+    // upstream change (the common case) still costs one PUT and nothing extra. isArtifactCaughtUp
+    // (not just a schema-version match) is what catches an external replacement under the same
+    // schema version — a hash match alone can't tell that apart from the real, untouched artifact.
+    const artifactCurrent =
+      artifactUnchanged && isArtifactCaughtUp(await this.readArtifactHeader(source), priorState);
+    if (artifactCurrent) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return {
         changed: false,
@@ -154,27 +177,51 @@ export class R2ArtifactWriter {
     };
   }
 
-  // In dry-run there is nothing on the remote to verify, so the skip stands on the hash alone.
-  // HEAD 404s surface as generic errors (not NoSuchKey, which is GET-only), so any non-transient
-  // failure reads as "absent" — the false-negative cost is one redundant PUT, never a lost one.
-  // Public: pipeline.ts's cadence gate also needs this, to avoid honoring a cadence skip for a
-  // source whose artifact was deleted independently of its state (see pipeline.ts's run()).
-  async artifactExists(source: string): Promise<boolean> {
-    if (this.dryRun) return true;
+  // One range-read stands in for three separate checks that all need the same object: does the
+  // artifact exist, was it written under the current schema, and has it been touched since the
+  // last confirmed-complete run. In dry-run there is nothing on the remote to verify, so callers
+  // trust it stands as current.
+  //
+  // Existence + schema version: PRAGMA user_version lives at a fixed byte offset in every SQLite
+  // file's header (60, big-endian uint32 — verified against bun:sqlite's own output), so a 4-byte
+  // range GET reads it, and a missing key or short/unreadable response both mean "not current"
+  // (a 404 and an R2 outage are indistinguishable by outcome here — the false-negative cost is one
+  // redundant retry, never a lost self-heal). This is what makes an externally deleted artifact
+  // (lifecycle rule, manual cleanup) 404 for consumers instead of write() reporting "unchanged"
+  // forever on a hash match alone.
+  //
+  // Freshness: lastModified from the same response. A cadence-gated source returns from
+  // pipeline.ts's cadence check before write() ever runs, so a schema bump landing there — or any
+  // write() call whose downstream writeFeedRows/writeState then fails — can leave the artifact
+  // ahead of state's last_run. Comparing the two catches a partially completed run and keeps it
+  // eligible for retry instead of reading the stale slice as fully caught up.
+  //
+  // Public: pipeline.ts's cadence gate needs this directly, and write() below reuses it instead of
+  // a separate existence check.
+  async readArtifactHeader(
+    source: string
+  ): Promise<{ schemaVersion: number; lastModified: Date } | null> {
+    if (this.dryRun) return { schemaVersion: DB_SCHEMA_VERSION, lastModified: new Date(0) };
     try {
-      await retry(
+      const res = await retry(
         () =>
           this.client.send(
-            new HeadObjectCommand({ Bucket: this.bucket, Key: `aircraft/${source}.sqlite` })
+            new GetObjectCommand({
+              Bucket: this.bucket,
+              Key: `aircraft/${source}.sqlite`,
+              Range: 'bytes=60-63',
+            })
           ),
         S3_RETRY
       );
-      return true;
+      const bytes = await res.Body?.transformToByteArray();
+      if (bytes?.byteLength !== 4 || !res.LastModified) return null;
+      const schemaVersion = new DataView(bytes.buffer, bytes.byteOffset, 4).getUint32(0, false);
+      return { schemaVersion, lastModified: res.LastModified };
     } catch (err) {
-      // Carry the error: a 404 and an R2 outage are indistinguishable by outcome here, so the
-      // message is the only thing telling an operator which one they are triaging.
-      log('warn', 'artifact_missing_on_hash_match', { source, msg: errorMessage(err) });
-      return false;
+      if (err instanceof NoSuchKey) return null;
+      log('warn', 'artifact_header_unreadable', { source, msg: errorMessage(err) });
+      return null;
     }
   }
 

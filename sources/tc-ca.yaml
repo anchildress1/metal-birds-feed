@@ -114,6 +114,9 @@ joins:
   # country are concatenated too, since co-owners are not always in one place and the schema holds
   # a single string. The address columns are deliberately unlisted: they are dropped as PII below,
   # so the first party's street surviving in an unread column costs nothing.
+  # owner.name/state/country are each their own deduplicated, blank-skipping bag of values — not
+  # index-parallel arrays. A party leaving PROVINCE_OR_STATE_E blank drops out of that field's list
+  # independently of FULL_NAME, so name[i] is not guaranteed to be that party's state[i].
   - name: ownr
     file: carsownr
     on: TRIMMED_MARK
