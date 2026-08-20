@@ -82,6 +82,28 @@ describe('Makefile deploy contract', () => {
     expect(await readFile(join(workspace, 'feed.sqlite'), 'utf8')).toBe('fresh');
   });
 
+  it('still reports success when the Artifact Registry cleanup policy cannot be set', async () => {
+    const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
+    const bun = await executable(
+      'fake-bun',
+      '#!/bin/sh\necho publish >> "$TEST_LOG"\nprintf fresh > feed.sqlite\n'
+    );
+    await executable(
+      'gcloud',
+      '#!/bin/sh\necho "gcloud $1 $2 $3" >> "$TEST_LOG"\ncase "$1 $2" in\n  "artifacts repositories") exit 9 ;;\nesac\n'
+    );
+
+    const result = runDeploy(bun, bunx);
+
+    expect(result.exitCode).toBe(0);
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'publish\ngcloud run deploy test-service\ngcloud artifacts repositories set-cleanup-policies\n'
+    );
+    expect(result.stderr.toString('utf8')).toContain(
+      'warning: could not set the Artifact Registry cleanup policy'
+    );
+  });
+
   it('does not deploy when publication fails', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable('fake-bun', '#!/bin/sh\necho publish >> "$TEST_LOG"\nexit 42\n');

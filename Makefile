@@ -123,6 +123,10 @@ build-feed: ## Refresh every source, then assemble feed.sqlite
 # risk even though rollback here means re-running `make deploy`, not repointing traffic at an old
 # image — Cloud Run itself keeps unlimited revision history for free; only the backing images cost
 # storage. Google's cleanup job runs on its own schedule (roughly daily), not synchronously here.
+# The cleanup call is best-effort: it requires roles/artifactregistry.repoAdmin (or broader) on
+# the deploying identity, which the Cloud Run deploy itself does not need, so a deploy already
+# shipped by `gcloud run deploy` above must not be reported as failed just because the identity
+# running it lacks that separate grant. A failure here warns on stderr and moves on.
 deploy-only:
 	@set -eu; \
 		if [ -f "$(ENV_FILE)" ]; then \
@@ -134,7 +138,8 @@ deploy-only:
 		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --service-account "$(RUN_SA)@$$GCP_PROJECT_ID.iam.gserviceaccount.com" --set-secrets FEED_TOKEN=$(FEED_SECRET):latest --quiet; \
 		cleanup_policy=$$(mktemp); \
 		printf '%s' '[{"name":"delete-stale-artifacts","action":{"type":"Delete"},"condition":{"tagState":"any","olderThan":"90d"}},{"name":"keep-recent-artifacts","action":{"type":"Keep"},"mostRecentVersions":{"keepCount":5}}]' > "$$cleanup_policy"; \
-		gcloud artifacts repositories set-cleanup-policies $(RUN_ARTIFACT_REPO) --project "$$GCP_PROJECT_ID" --location=$(REGION) --policy="$$cleanup_policy" --no-dry-run --quiet; \
+		gcloud artifacts repositories set-cleanup-policies $(RUN_ARTIFACT_REPO) --project "$$GCP_PROJECT_ID" --location=$(REGION) --policy="$$cleanup_policy" --no-dry-run --quiet \
+			|| echo "warning: could not set the Artifact Registry cleanup policy on $(RUN_ARTIFACT_REPO) (deploy already succeeded; grant roles/artifactregistry.repoAdmin to prune old images)" >&2; \
 		rm -f "$$cleanup_policy"
 
 # Build immediately before deploying so Cloud Run can never receive an ambient stale database.
