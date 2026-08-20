@@ -60,10 +60,32 @@ describe('Makefile deploy contract', () => {
     if (workspace) await rm(workspace, { force: true, recursive: true });
   });
 
-  // Logs "$1 $2 $3" only — enough to tell the Cloud Run deploy call apart from the Artifact
-  // Registry cleanup call without capturing the non-deterministic mktemp path in later args.
+  // Logs "$1 $2 $3" to tell the Cloud Run deploy call apart from the Artifact Registry cleanup
+  // call, then — for the cleanup call only — validates the exact flags and policy content the
+  // recipe is supposed to send, so a regression that sends the wrong repo, project, location, or
+  // a malformed policy fails this fake rather than silently reporting success.
   const fakeGcloud = () =>
-    executable('gcloud', '#!/bin/sh\necho "gcloud $1 $2 $3" >> "$TEST_LOG"\n');
+    executable(
+      'gcloud',
+      `#!/bin/sh
+echo "gcloud $1 $2 $3" >> "$TEST_LOG"
+if [ "$1 $2 $3" = "artifacts repositories set-cleanup-policies" ]; then
+  fail() { echo "gcloud cleanup validation failed: $1" >> "$TEST_LOG"; exit 1; }
+  [ "$4" = "cloud-run-source-deploy" ] || fail "repo=$4"
+  [ "$5" = "--project" ] && [ "$6" = "project" ] || fail "project flag"
+  [ "$7" = "--location=test-region" ] || fail "location=$7"
+  case "$8" in
+    --policy=*) policy_file=$\{8#--policy=} ;;
+    *) fail "policy flag" ;;
+  esac
+  [ -f "$policy_file" ] || fail "policy file missing"
+  grep -q '"keepCount":5}' "$policy_file" || fail "keepCount"
+  grep -q '"olderThan":"90d"' "$policy_file" || fail "olderThan"
+  grep -q '"tagState":"any"' "$policy_file" || fail "tagState"
+  [ "$9" = "--no-dry-run" ] || fail "no-dry-run flag"
+fi
+`
+    );
 
   it('publishes a fresh database, deploys it, then prunes stale Artifact Registry images', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
