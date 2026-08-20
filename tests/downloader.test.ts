@@ -605,6 +605,45 @@ describe('download — discover_url + discover_pattern', () => {
       'https://www.caa.gov.mv/attachments/JSGDRnn0oWF2YGUW76GJHgF4sedj9baDF3tfyw3P.pdf'
     );
   });
+
+  // Regression: CAAS silently renamed the monthly XLSX from the hyphenated
+  // "Aircraft-Register-as-at-*.xlsx" to the underscored "Aircraft_Register_as_of_*.xlsx", which
+  // broke discovery in production. The page also links unrelated Isomer-hosted PDFs/images, so
+  // the pattern must resolve only the register link regardless of which separator CAAS is using.
+  it.each([
+    [
+      'underscore (current)',
+      'https://isomer-user-content.by.gov.sg/175/fbaa65b7-5aa5-4471-94cc-75379bfe1adb/Aircraft_Register_as_of_Aug_2026.xlsx',
+    ],
+    [
+      'hyphen (legacy)',
+      'https://isomer-user-content.by.gov.sg/175/abc12345-0000-0000-0000-000000000000/Aircraft-Register-as-at-Jan2026.xlsx',
+    ],
+  ])(
+    "resolves sg-caas's discover_pattern against a %s register filename",
+    async (_label, registerUrl) => {
+      const SG_CAAS_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'sg-caas.yaml');
+      const { download: sgDownload } = loadSourceConfig(SG_CAAS_CONFIG);
+
+      const REGISTRATION_PAGE_HTML = `
+      <html><body>
+        <img src="https://isomer-user-content.by.gov.sg/175/ad72bc08-fa80-426c-9a5f-e937a28b4f79/CAAS_Colour_Logo.png" />
+        <a href="https://isomer-user-content.by.gov.sg/175/11d6ec18-0c93-4c3a-bd69-771f2c0064c6/aw39.pdf">AW39</a>
+        <a href="${registerUrl}">Aircraft Register</a>
+        <a href="https://isomer-user-content.by.gov.sg/175/78f754fb-1b1b-44d2-8734-6ca92ef03641/sar-issue-2-revision-31.pdf">SAR</a>
+      </body></html>
+    `;
+
+      const fetchFn = mockFetchSequence([
+        { ok: true, status: 200, statusText: 'OK', body: REGISTRATION_PAGE_HTML },
+        { ok: true, status: 200, statusText: 'OK', body: Buffer.from('xlsx-bytes') },
+      ]);
+
+      await download(sgDownload);
+
+      expect(fetchFn.mock.calls[1]?.[0]).toBe(registerUrl);
+    }
+  );
 });
 
 describe('download — retry', () => {
