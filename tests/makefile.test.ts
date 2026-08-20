@@ -60,25 +60,32 @@ describe('Makefile deploy contract', () => {
     if (workspace) await rm(workspace, { force: true, recursive: true });
   });
 
-  it('publishes a fresh database before deploying it', async () => {
+  // Logs "$1 $2 $3" only — enough to tell the Cloud Run deploy call apart from the Artifact
+  // Registry cleanup call without capturing the non-deterministic mktemp path in later args.
+  const fakeGcloud = () =>
+    executable('gcloud', '#!/bin/sh\necho "gcloud $1 $2 $3" >> "$TEST_LOG"\n');
+
+  it('publishes a fresh database, deploys it, then prunes stale Artifact Registry images', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable(
       'fake-bun',
       '#!/bin/sh\necho publish >> "$TEST_LOG"\nprintf fresh > feed.sqlite\n'
     );
-    await executable('gcloud', '#!/bin/sh\necho gcloud >> "$TEST_LOG"\n');
+    await fakeGcloud();
 
     const result = runDeploy(bun, bunx);
 
     expect(result.exitCode).toBe(0);
-    expect(await readFile(logPath, 'utf8')).toBe('publish\ngcloud\n');
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'publish\ngcloud run deploy test-service\ngcloud artifacts repositories set-cleanup-policies\n'
+    );
     expect(await readFile(join(workspace, 'feed.sqlite'), 'utf8')).toBe('fresh');
   });
 
   it('does not deploy when publication fails', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable('fake-bun', '#!/bin/sh\necho publish >> "$TEST_LOG"\nexit 42\n');
-    await executable('gcloud', '#!/bin/sh\necho gcloud >> "$TEST_LOG"\n');
+    await fakeGcloud();
 
     const result = runDeploy(bun, bunx);
 
@@ -89,7 +96,7 @@ describe('Makefile deploy contract', () => {
   it('removes a stale database before publication', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable('fake-bun', '#!/bin/sh\necho publish >> "$TEST_LOG"\n');
-    await executable('gcloud', '#!/bin/sh\necho gcloud >> "$TEST_LOG"\n');
+    await fakeGcloud();
     await writeFile(join(workspace, 'feed.sqlite'), 'stale');
 
     const result = runDeploy(bun, bunx);
