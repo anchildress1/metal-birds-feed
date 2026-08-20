@@ -239,6 +239,9 @@ first-deploy dependencies without printing the feed token:
   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
     --role="roles/run.builder"
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+    --member="user:$(gcloud config get-value account)" \
+    --role="roles/artifactregistry.repoAdmin"
   gcloud iam service-accounts create metal-birds-feed-run \
     --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
   FEED_TOKEN=$(openssl rand -hex 16)
@@ -256,6 +259,10 @@ The deploy token is generated immediately before Secret Manager stores it; it is
 local token from Phase 6. If either resource existed before this attempt, stop; this is the
 first-deploy path, not an overwrite path. The block is fail-closed, not transactional. If this
 attempt created a resource before a later command failed, do not rerun the whole block.
+
+`roles/artifactregistry.repoAdmin` lets every later `make deploy` prune old container images from
+`cloud-run-source-deploy` (keep 5 newest, delete anything older than 90 days). Without it, deploy
+still succeeds and just warns on stderr, skipping pruning for that run — not a reason to stop.
 
 ### Recover an interrupted first deploy
 
@@ -340,19 +347,20 @@ server needs an assistant restart before its tools load.
 
 ## Failure routing
 
-| Message                                                 | Cause                                    | Action                                                                   |
-| ------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
-| `command not found: bun`                                | PATH not reloaded                        | New shell, re-run Phase 0                                                |
-| `.env not found`                                        | Phase 4 skipped                          | `cp .env.example .env`                                                   |
-| `MBF_R2_<KEY> missing from .env` (refresh)              | That line is blank                       | Quote the named key; user fills it                                       |
-| `MBF_R2_<KEY> is required` (assemble-feed / deploy)     | Same cause, different target's wording   | Quote the named key; user fills it                                       |
-| `Missing feed rows for: <sources>`                      | Only some sources pulled yet             | Expected after a single-source pull; offer the full refresh, never retry |
-| `Missing required environment variable: GEMINI_API_KEY` | Non-English source in scope              | Add the key, or set `REFRESH_SOURCE` to an `en` source                   |
-| `GEMINI_API_KEY rejected by Gemini`                     | Revoked / wrong project / billing off    | Setup bug, not transient — do not retry                                  |
-| `FEED_TOKEN must be set (at least 16 characters)`       | Unset or short                           | `export FEED_TOKEN=$(openssl rand -hex 16)`                              |
-| `MBF_FEED_DB_PATH must stay within the service root`    | Path escapes the sandbox                 | Use `./feed.sqlite`                                                      |
-| R2 `403` / `AccessDenied`                               | Token lacks write, or wrong bucket scope | Recreate as Object Read & Write on the correct bucket                    |
-| `gitleaks not found` on commit                          | Scanner absent                           | Install it; never bypass the hook                                        |
+| Message                                                       | Cause                                      | Action                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `command not found: bun`                                      | PATH not reloaded                          | New shell, re-run Phase 0                                                |
+| `.env not found`                                              | Phase 4 skipped                            | `cp .env.example .env`                                                   |
+| `MBF_R2_<KEY> missing from .env` (refresh)                    | That line is blank                         | Quote the named key; user fills it                                       |
+| `MBF_R2_<KEY> is required` (assemble-feed / deploy)           | Same cause, different target's wording     | Quote the named key; user fills it                                       |
+| `Missing feed rows for: <sources>`                            | Only some sources pulled yet               | Expected after a single-source pull; offer the full refresh, never retry |
+| `Missing required environment variable: GEMINI_API_KEY`       | Non-English source in scope                | Add the key, or set `REFRESH_SOURCE` to an `en` source                   |
+| `GEMINI_API_KEY rejected by Gemini`                           | Revoked / wrong project / billing off      | Setup bug, not transient — do not retry                                  |
+| `FEED_TOKEN must be set (at least 16 characters)`             | Unset or short                             | `export FEED_TOKEN=$(openssl rand -hex 16)`                              |
+| `MBF_FEED_DB_PATH must stay within the service root`          | Path escapes the sandbox                   | Use `./feed.sqlite`                                                      |
+| R2 `403` / `AccessDenied`                                     | Token lacks write, or wrong bucket scope   | Recreate as Object Read & Write on the correct bucket                    |
+| `gitleaks not found` on commit                                | Scanner absent                             | Install it; never bypass the hook                                        |
+| `warning: could not set the Artifact Registry cleanup policy` | Missing `roles/artifactregistry.repoAdmin` | Not fatal — deploy succeeded; re-run the Phase 7 grant command           |
 
 Two consecutive failures of the same command: stop, surface the exact stderr, and hand back. Do not
 improvise around the pipeline's own validation — every message above names its own fix.
