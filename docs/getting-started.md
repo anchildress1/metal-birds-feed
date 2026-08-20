@@ -397,6 +397,9 @@ and permission that the deploy recipe expects:
   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
     --role="roles/run.builder"
+  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+    --member="user:$(gcloud config get-value account)" \
+    --role="roles/artifactregistry.repoAdmin"
   gcloud iam service-accounts create metal-birds-feed-run \
     --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
   FEED_TOKEN=$(openssl rand -hex 16)
@@ -412,6 +415,11 @@ and permission that the deploy recipe expects:
 
 These are first-deploy commands. If the service account or secret existed before this attempt, stop
 rather than overwriting it; use the existing deployment's operator procedure instead.
+
+`roles/artifactregistry.repoAdmin` is what every deploy after this one uses to prune old container
+images from the `cloud-run-source-deploy` repo (keep 5 most recent, delete anything older than 90
+days). Without it, `make deploy` still succeeds — it just warns on stderr and skips pruning that
+run, so the repo keeps every image ever built until the grant is added.
 
 The block stops on the first failure but cannot roll back cloud resources already created. If this
 attempt created something before a later command failed, **do not rerun the whole block**.
@@ -486,18 +494,19 @@ territory.
 
 ## When Something Breaks 🔧
 
-| What you see                                            | What it means                                           | Fix                                                                                                                                                                                                     |
-| ------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command not found: bun`                                | Terminal hasn't picked up the new install               | Close and reopen your terminal                                                                                                                                                                          |
-| `command not found: make`                               | Build tools missing                                     | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                         |
-| `.env not found`                                        | Step 6 didn't happen                                    | `cp .env.example .env` and fill it in                                                                                                                                                                   |
-| `MBF_R2_ACCOUNT_ID missing from .env` (Step 7)          | That one line is blank                                  | Fill it in — the message names the exact key                                                                                                                                                            |
-| `MBF_R2_ACCOUNT_ID is required` (Step 8)                | Same thing — Step 8 words it differently                | Fill it in — the message names the exact key                                                                                                                                                            |
-| `Missing required environment variable: GEMINI_API_KEY` | A non-English source needs translation                  | Add the key, or set `REFRESH_SOURCE` to an English source                                                                                                                                               |
-| `FEED_TOKEN must be set (at least 16 characters)`       | Token missing or too short                              | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                             |
-| `gitleaks not found` when committing                    | Secret scanner isn't installed                          | `brew install gitleaks` — do not skip the hook                                                                                                                                                          |
-| Refresh looks stuck                                     | You're pulling every configured registry at once        | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A steady-state run is ~25s; a cold first pull is longer but not minutes-times-source-count |
-| An R2 `403` or `AccessDenied`                           | Token lacks write access or is scoped to another bucket | Recreate it with **Object Read & Write** on the right bucket                                                                                                                                            |
+| What you see                                                           | What it means                                               | Fix                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command not found: bun`                                               | Terminal hasn't picked up the new install                   | Close and reopen your terminal                                                                                                                                                                          |
+| `command not found: make`                                              | Build tools missing                                         | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                         |
+| `.env not found`                                                       | Step 6 didn't happen                                        | `cp .env.example .env` and fill it in                                                                                                                                                                   |
+| `MBF_R2_ACCOUNT_ID missing from .env` (Step 7)                         | That one line is blank                                      | Fill it in — the message names the exact key                                                                                                                                                            |
+| `MBF_R2_ACCOUNT_ID is required` (Step 8)                               | Same thing — Step 8 words it differently                    | Fill it in — the message names the exact key                                                                                                                                                            |
+| `Missing required environment variable: GEMINI_API_KEY`                | A non-English source needs translation                      | Add the key, or set `REFRESH_SOURCE` to an English source                                                                                                                                               |
+| `FEED_TOKEN must be set (at least 16 characters)`                      | Token missing or too short                                  | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                             |
+| `gitleaks not found` when committing                                   | Secret scanner isn't installed                              | `brew install gitleaks` — do not skip the hook                                                                                                                                                          |
+| `warning: could not set the Artifact Registry cleanup policy` (Step 9) | Deploying identity lacks `roles/artifactregistry.repoAdmin` | Deploy still succeeded; run the grant command from Step 9 to enable pruning                                                                                                                             |
+| Refresh looks stuck                                                    | You're pulling every configured registry at once            | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A steady-state run is ~25s; a cold first pull is longer but not minutes-times-source-count |
+| An R2 `403` or `AccessDenied`                                          | Token lacks write access or is scoped to another bucket     | Recreate it with **Object Read & Write** on the right bucket                                                                                                                                            |
 
 Still stuck? Open an issue with the command you ran and the last 20 lines of `logs/pipeline.log`.
 **Redact your keys first** — the log does not print them, but paste carefully anyway.

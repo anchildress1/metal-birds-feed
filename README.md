@@ -201,6 +201,14 @@ are granted by name — a fork owes its own per-source assessment before pulling
 
 `FEED_TOKEN` remains a Google Secret Manager binding on the Cloud Run service. The workflow never copies the token into GitHub.
 
+`GCP_SERVICE_ACCOUNT` also needs `roles/artifactregistry.repoAdmin` for the post-deploy Artifact Registry cleanup policy to take effect — without it, deploys still succeed but skip pruning old `cloud-run-source-deploy` images:
+
+```bash
+gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
+  --member="serviceAccount:$GCP_SERVICE_ACCOUNT" \
+  --role="roles/artifactregistry.repoAdmin"
+```
+
 ## Sources
 
 Sources active in the private operator pipeline, ordered alphabetically by country. ID is

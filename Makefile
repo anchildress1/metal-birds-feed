@@ -19,6 +19,9 @@ FEED_SECRET ?= feed-token
 # Dedicated runtime service account (not the default compute SA) — least privilege: it only reads
 # the FEED_TOKEN secret. Resolved to <name>@<project>.iam.gserviceaccount.com at deploy time.
 RUN_SA ?= metal-birds-feed-run
+# `gcloud run deploy --source` auto-creates this repo (fixed name, one per region) on first deploy
+# and pushes every build's image into it. Nothing else prunes it.
+RUN_ARTIFACT_REPO ?= cloud-run-source-deploy
 
 install: ## Install dependencies and git hooks
 	$(BUN) install --frozen-lockfile && $(BUNX) lefthook install
@@ -113,6 +116,17 @@ build-feed: ## Refresh every source, then assemble feed.sqlite
 # change-checked the DB) can deploy without a second build; `make deploy` chains both for operators.
 # FEED_TOKEN is bound from the Secret Manager secret ($(FEED_SECRET)) on every deploy — idempotent,
 # so the first deploy works too. Application auth owns the Authorization header.
+# Single instance, scale-to-zero: --min-instances=0 --max-instances=1. Every deploy also
+# (re)applies a cleanup policy on $(RUN_ARTIFACT_REPO) — setting the same policy twice is a no-op,
+# so this is safe on the first deploy too. Keep-most-recent always outranks the age-based delete
+# (Artifact Registry evaluates Keep before Delete), so the currently serving image is never at
+# risk even though rollback here means re-running `make deploy`, not repointing traffic at an old
+# image — Cloud Run itself keeps unlimited revision history for free; only the backing images cost
+# storage. Google's cleanup job runs on its own schedule (roughly daily), not synchronously here.
+# The cleanup call is best-effort: it requires roles/artifactregistry.repoAdmin (or broader) on
+# the deploying identity, which the Cloud Run deploy itself does not need, so a deploy already
+# shipped by `gcloud run deploy` above must not be reported as failed just because the identity
+# running it lacks that separate grant. A failure here warns on stderr and moves on.
 deploy-only:
 	@set -eu; \
 		if [ -f "$(ENV_FILE)" ]; then \
@@ -121,7 +135,12 @@ deploy-only:
 		fi; \
 		: $${GCP_PROJECT_ID:?GCP_PROJECT_ID is required}; \
 		test -s feed.sqlite; \
-		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --service-account "$(RUN_SA)@$$GCP_PROJECT_ID.iam.gserviceaccount.com" --set-secrets FEED_TOKEN=$(FEED_SECRET):latest --quiet
+		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --service-account "$(RUN_SA)@$$GCP_PROJECT_ID.iam.gserviceaccount.com" --set-secrets FEED_TOKEN=$(FEED_SECRET):latest --quiet; \
+		cleanup_policy=$$(mktemp); \
+		printf '%s' '[{"name":"delete-stale-artifacts","action":{"type":"Delete"},"condition":{"tagState":"any","olderThan":"90d"}},{"name":"keep-recent-artifacts","action":{"type":"Keep"},"mostRecentVersions":{"keepCount":5}}]' > "$$cleanup_policy"; \
+		gcloud artifacts repositories set-cleanup-policies $(RUN_ARTIFACT_REPO) --project "$$GCP_PROJECT_ID" --location=$(REGION) --policy="$$cleanup_policy" --no-dry-run --quiet \
+			|| echo "warning: could not set the Artifact Registry cleanup policy on $(RUN_ARTIFACT_REPO) (deploy already succeeded; grant roles/artifactregistry.repoAdmin to prune old images)" >&2; \
+		rm -f "$$cleanup_policy"
 
 # Build immediately before deploying so Cloud Run can never receive an ambient stale database.
 # assemble-feed, not build-feed: deploying rebuilds the DB from the slices already in R2 so an

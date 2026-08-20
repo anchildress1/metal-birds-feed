@@ -8,15 +8,17 @@ cadence_days: 30
 
 download:
   # discover_url + discover_pattern do the real work. The monthly XLSX lives on the Isomer CDN
-  # under a per-upload UUID path (…/175/<uuid>/Aircraft-Register-as-at-<Mon><Year>.xlsx) whose
-  # UUID and filename both roll every month, so it can never be pinned. The stable CAAS register
+  # under a per-upload UUID path (…/175/<uuid>/Aircraft[-_]Register-*<Mon>_<Year>.xlsx) whose
+  # UUID and filename both roll every month, so it can never be pinned. CAAS has silently swapped
+  # the filename's word separator before (hyphens on "Aircraft-Register-as-at-*" to underscores on
+  # "Aircraft_Register_as_of_*"), so the pattern matches either. The stable CAAS register
   # page lists exactly one such link; the pattern captures it. `url` is a schema-required fallback
   # only — never fetched while discover_* is set. The register page is CloudFront/S3 static content
   # (reachable from CI); the file host is a separate open CDN — neither is WAF-gated.
   url: https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/
   format: file
   discover_url: https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/
-  discover_pattern: 'href="(https://isomer-user-content\.by\.gov\.sg/[^"]+Aircraft-Register[^"]+\.xlsx)"'
+  discover_pattern: 'href="(https://isomer-user-content\.by\.gov\.sg/[^"]+Aircraft[-_]Register[^"]+\.xlsx)"'
   headers:
     User-Agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
   entries:

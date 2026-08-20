@@ -60,25 +60,76 @@ describe('Makefile deploy contract', () => {
     if (workspace) await rm(workspace, { force: true, recursive: true });
   });
 
-  it('publishes a fresh database before deploying it', async () => {
+  // Logs "$1 $2 $3" to tell the Cloud Run deploy call apart from the Artifact Registry cleanup
+  // call, then — for the cleanup call only — validates the exact flags and policy content the
+  // recipe is supposed to send, so a regression that sends the wrong repo, project, location, or
+  // a malformed policy fails this fake rather than silently reporting success.
+  const fakeGcloud = () =>
+    executable(
+      'gcloud',
+      `#!/bin/sh
+echo "gcloud $1 $2 $3" >> "$TEST_LOG"
+if [ "$1 $2 $3" = "artifacts repositories set-cleanup-policies" ]; then
+  fail() { echo "gcloud cleanup validation failed: $1" >> "$TEST_LOG"; exit 1; }
+  [ "$4" = "cloud-run-source-deploy" ] || fail "repo=$4"
+  [ "$5" = "--project" ] && [ "$6" = "project" ] || fail "project flag"
+  [ "$7" = "--location=test-region" ] || fail "location=$7"
+  case "$8" in
+    --policy=*) policy_file=$\{8#--policy=} ;;
+    *) fail "policy flag" ;;
+  esac
+  [ -f "$policy_file" ] || fail "policy file missing"
+  grep -q '"keepCount":5}' "$policy_file" || fail "keepCount"
+  grep -q '"olderThan":"90d"' "$policy_file" || fail "olderThan"
+  grep -q '"tagState":"any"' "$policy_file" || fail "tagState"
+  [ "$9" = "--no-dry-run" ] || fail "no-dry-run flag"
+fi
+`
+    );
+
+  it('publishes a fresh database, deploys it, then prunes stale Artifact Registry images', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable(
       'fake-bun',
       '#!/bin/sh\necho publish >> "$TEST_LOG"\nprintf fresh > feed.sqlite\n'
     );
-    await executable('gcloud', '#!/bin/sh\necho gcloud >> "$TEST_LOG"\n');
+    await fakeGcloud();
 
     const result = runDeploy(bun, bunx);
 
     expect(result.exitCode).toBe(0);
-    expect(await readFile(logPath, 'utf8')).toBe('publish\ngcloud\n');
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'publish\ngcloud run deploy test-service\ngcloud artifacts repositories set-cleanup-policies\n'
+    );
     expect(await readFile(join(workspace, 'feed.sqlite'), 'utf8')).toBe('fresh');
+  });
+
+  it('still reports success when the Artifact Registry cleanup policy cannot be set', async () => {
+    const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
+    const bun = await executable(
+      'fake-bun',
+      '#!/bin/sh\necho publish >> "$TEST_LOG"\nprintf fresh > feed.sqlite\n'
+    );
+    await executable(
+      'gcloud',
+      '#!/bin/sh\necho "gcloud $1 $2 $3" >> "$TEST_LOG"\ncase "$1 $2" in\n  "artifacts repositories") exit 9 ;;\nesac\n'
+    );
+
+    const result = runDeploy(bun, bunx);
+
+    expect(result.exitCode).toBe(0);
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'publish\ngcloud run deploy test-service\ngcloud artifacts repositories set-cleanup-policies\n'
+    );
+    expect(result.stderr.toString('utf8')).toContain(
+      'warning: could not set the Artifact Registry cleanup policy'
+    );
   });
 
   it('does not deploy when publication fails', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable('fake-bun', '#!/bin/sh\necho publish >> "$TEST_LOG"\nexit 42\n');
-    await executable('gcloud', '#!/bin/sh\necho gcloud >> "$TEST_LOG"\n');
+    await fakeGcloud();
 
     const result = runDeploy(bun, bunx);
 
@@ -89,7 +140,7 @@ describe('Makefile deploy contract', () => {
   it('removes a stale database before publication', async () => {
     const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
     const bun = await executable('fake-bun', '#!/bin/sh\necho publish >> "$TEST_LOG"\n');
-    await executable('gcloud', '#!/bin/sh\necho gcloud >> "$TEST_LOG"\n');
+    await fakeGcloud();
     await writeFile(join(workspace, 'feed.sqlite'), 'stale');
 
     const result = runDeploy(bun, bunx);
