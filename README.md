@@ -5,12 +5,7 @@
 
 [![CI](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/anchildress1/metal-birds-feed/actions/workflows/ci.yml) [![License: Polyform Shield + Supplemental Terms](https://img.shields.io/badge/license-Polyform%20Shield%20%2B%20Supplemental%20Terms-blue)](LICENSE)
 
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=alert_status)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=coverage)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed)
-<!-- prettier-ignore-start -->
-<!--START_SECTION:rai-badge-->
-![AI attribution](https://img.shields.io/badge/AI%20attribution-73%25%20since%202026--05-C03070?style=flat)
-<!--END_SECTION:rai-badge-->
-<!-- prettier-ignore-end -->
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=alert_status)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed) [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=anchildress1_metal-birds-feed&metric=coverage)](https://sonarcloud.io/project/overview?id=anchildress1_metal-birds-feed) <!-- prettier-ignore-start --><!--START_SECTION:rai-badge-->![AI attribution](https://img.shields.io/badge/AI%20attribution-73%25%20since%202026--05-C03070?style=flat)<!--END_SECTION:rai-badge--><!-- prettier-ignore-end -->
 
 </div>
 
