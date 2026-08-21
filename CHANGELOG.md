@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v1.0.0...v2.0.0) (2026-08-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* the per-source artifact's `status` column and the canonical `Aircraft` schema's `status` field are now nullable; a consumer built against user_version 11 or earlier must not assume every row carries a concrete status.
+
+### Features
+
+* non-developer onboarding — manual guide, AI-assisted guide, and a setup skill ([#120](https://github.com/anchildress1/metal-birds-feed/issues/120)) ([a3e4533](https://github.com/anchildress1/metal-birds-feed/commit/a3e4533e4c46397560e298521b1481021621a463))
+* onboard TKA Lithuania, and fix what reviewing and running it exposed ([#127](https://github.com/anchildress1/metal-birds-feed/issues/127)) ([e8006e0](https://github.com/anchildress1/metal-birds-feed/commit/e8006e0b1cc0f5ea3546f091d6e786f0c6c4baa9))
+
+
+### Bug Fixes
+
+* reject inherited JSON paths and array descent in dotted-path traversal ([#114](https://github.com/anchildress1/metal-birds-feed/issues/114)) ([1ef490d](https://github.com/anchildress1/metal-birds-feed/commit/1ef490d68b4888d05c8fcbc7755d0b44fc6a49c1))
+* repair sg-caas discovery and harden the Cloud Run deploy step ([#130](https://github.com/anchildress1/metal-birds-feed/issues/130)) ([7c1e675](https://github.com/anchildress1/metal-birds-feed/commit/7c1e6751816a62821f054d636e02ca50116ac9f4))
+* repair the deploy failure and the bugs review surfaced along the way ([#128](https://github.com/anchildress1/metal-birds-feed/issues/128)) ([0fe6f40](https://github.com/anchildress1/metal-birds-feed/commit/0fe6f4033e8b9faa06e9d93d2b9cc4b47df82aab))
+* repo-wide audit — silent-failure fixes, dead code, and CI hardening ([#123](https://github.com/anchildress1/metal-birds-feed/issues/123)) ([f1797d6](https://github.com/anchildress1/metal-birds-feed/commit/f1797d682ae8051175f044d7ee7f16e8508f90c7))
+
 ## [1.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v0.1.1...v1.0.0) (2026-08-09)
 
 
