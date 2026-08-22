@@ -1,0 +1,241 @@
+id: hr-ccaa
+label: CCAA Hrvatski registar civilnih zrakoplova
+country: HR
+language: hr
+encoding: utf8
+trim_all: true
+cadence_days: 30
+
+download:
+  # The register page links one PDF, but the link's /file/<hash> path is a per-upload CMS id that
+  # rolls every time CCAA republishes ("first day of the month" per the document's own footer) —
+  # confirmed by comparing two months' worth of page fetches. discover_url/discover_pattern re-read
+  # the page each run and follow whatever the current link is; `url` is the schema-required fallback,
+  # never actually fetched while discovery succeeds.
+  url: https://www.ccaa.hr/en/list-of-registered-aircraft-94674
+  format: file
+  discover_url: https://www.ccaa.hr/en/list-of-registered-aircraft-94674
+  discover_pattern: 'href="(https://www\.ccaa\.hr/file/[a-z0-9]+)"'
+  entries:
+    register: register.pdf
+
+primary: register
+delimiter: ','
+format: pdf
+
+# Landscape positioned table, one aircraft per y-row, each field a fixed x-band — same shape as
+# AESA Spain. Records anchor on the bare 3-letter mark (REG. OZNAKA); Croatia's table never repeats
+# the 9A- nationality prefix, so `hr_ccaa_registration` restores it. See PdfConfig in
+# src/types/config.ts for the extraction model.
+pdf:
+  field_axis: x
+  anchor_pattern: '^[A-Z]{3}$'
+  column_pos:
+    - 66 # mark
+    - 124 # seq (register sequence number — not unique across the doc; see allowed_missing note)
+    - 174 # manufacturer
+    - 311 # model
+    - 449 # serial
+    - 506 # owner
+    - 638 # address
+
+columns:
+  register:
+    - mark
+    - seq
+    - mfr
+    - model
+    - serial
+    - owner
+    - address
+
+# One known false-positive anchor in the whole 26-page document: a VLASNIK cell wraps onto its own
+# line reading exactly "PZO" (continuing "MORH Zapovjedništvo HRZ I" — a military unit name), which
+# also matches `anchor_pattern` and steals its own row bucket with no mark/mfr/model/serial — a
+# banner-row shape, not a real record. Bound to exactly this value so any other unexpected
+# empty-mark row still fails the run loudly instead of being silently absorbed.
+allowed_missing_source_id_rows:
+  max: 1
+  field: owner
+  pattern: '^PZO$'
+
+# The bare mark is the only column proven unique across the live document (0 collisions in ~400
+# rows); "REDNI BROJ U REGISTRU" (seq) looked like a better candidate — a permanent sequence number,
+# FAA-UNIQUE-ID-style — but two different aircraft in the same publication share a seq value, so it
+# fails as a key even within one snapshot and is left unmapped.
+source_id: mark
+source_id_transform: trim_or_null
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: hr_ccaa_registration
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # No per-row status column; the monthly publication IS the current active fleet (same reasoning
+  # as AESA's "Matrículas Activas").
+  status:
+    constant: valid
+
+  country:
+    constant: HR
+
+  manufacturer:
+    field: mfr
+    transform: collapse_ws_or_null
+
+  model:
+    field: model
+    transform: collapse_ws_or_null
+
+  serial_number:
+    field: serial
+    transform: collapse_ws_or_null
+    null_values:
+      - 'N/A'
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  # The register carries no certification/class column, but ~2.5% of rows name "amaterska gradnja"
+  # (amateur construction) as the manufacturer — the one explicit homebuilt signal it gives.
+  build_certification:
+    field: mfr
+    transform: hr_ccaa_build_certification
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # VLASNIK is the register's only party column (no separate operator/legal-owner field). Natural
+  # persons are already anonymized upstream as the literal string "Fizička osoba" — kept verbatim,
+  # same as any other owner name (a bare name is not the PII this project drops).
+  owner.name:
+    field: owner
+    transform: collapse_ws_or_null
+
+  owner.kind:
+    field: owner
+    transform: hr_ccaa_owner_kind
+
+  # ADRESA is street/postal/city — dropped as PII. Only its trailing comma segment survives, and
+  # only when that segment is a stated country (foreign owners, mostly Irish aircraft lessors); a
+  # domestic address's trailing segment is a Croatian postal code/city, which matches nothing below
+  # and nulls via `default` rather than being assumed as HR.
+  owner.state:
+    constant: ~
+
+  owner.country:
+    field: address
+    transform: last_comma_segment_or_null
+    lookup:
+      'Ireland': IE
+      'Irska': IE
+      'Republika Irska': IE
+      'Mađarska': HU
+      'Slovenija': SI
+      'Austria': AT
+      'Bermuda': BM
+      'Singapore': SG
+    default: ~
+
+  operator.name:
+    constant: ~
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

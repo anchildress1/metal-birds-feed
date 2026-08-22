@@ -2612,6 +2612,94 @@ describe('AESA Spain fixture translation (PDF)', () => {
   });
 });
 
+describe('CCAA Croatia fixture translation (PDF)', () => {
+  const HR_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hr-ccaa.yaml');
+  const HR_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hr-ccaa', 'input', 'register.pdf');
+  let hrRecords: Map<string, Aircraft>;
+  let hrStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(HR_CONFIG);
+    const result = await translate(config, new Map([['register', readFileSync(HR_PDF)]]));
+    hrRecords = result.records;
+    hrStats = result.stats;
+  });
+
+  // The fixture's two real pages carry 34 anchor matches: 33 real aircraft plus one known
+  // false-positive anchor (a VLASNIK cell that wraps onto its own line reading "PZO"), which
+  // `allowed_missing_source_id_rows` skips rather than publishes as a malformed record.
+  it('translates 33 real rows and skips the one known false-positive anchor', () => {
+    expect(hrStats).toEqual({ total: 34, ok: 33, failed: 0, skipped: 1, duplicateSkipped: 0 });
+    expect(hrRecords.size).toBe(33);
+  });
+
+  it('keys records on the bare mark, restores the 9A- prefix in registration', () => {
+    const r = hrRecords.get('BTI')!;
+    expect(r.source).toBe('hr-ccaa');
+    expect(r.source_id).toBe('BTI');
+    expect(r.registration).toBe('9A-BTI');
+    expect(r.country).toBe('HR');
+    expect(r.status).toBe('valid');
+  });
+
+  it('classifies a d.o.o. owner as llc and a d.d. owner as corporation', () => {
+    expect(hrRecords.get('BTI')!.owner.kind).toBe('llc');
+    expect(hrRecords.get('BKA')!.owner.kind).toBe('corporation');
+  });
+
+  it('classifies a MORH government owner and drops its street address (PII)', () => {
+    const r = hrRecords.get('DAZ')!;
+    expect(r.owner.name).toBe('MORH Zapovjedništvo HRZ I');
+    expect(r.owner.kind).toBe('government');
+    expect(r.owner.state).toBeNull();
+    expect(r.owner.country).toBeNull();
+    expect(JSON.stringify(r)).not.toContain('Maksimirska');
+  });
+
+  it('reads the trailing country component of a foreign lessor address, dropping the street', () => {
+    const ber = hrRecords.get('BER')!;
+    expect(ber.owner.name).toBe('ACS Aero 4 Delta Limited');
+    expect(ber.owner.kind).toBe('corporation');
+    expect(ber.owner.country).toBe('IE');
+    expect(ber.owner.state).toBeNull();
+
+    const atr = hrRecords.get('ATR')!;
+    expect(atr.owner.country).toBe('SG');
+  });
+
+  it('nulls owner.country for a domestic address instead of assuming the register country', () => {
+    const r = hrRecords.get('DAZ')!;
+    expect(r.owner.country).toBeNull();
+    expect(r.owner.country).not.toBe('HR');
+  });
+
+  it("keeps the register's own natural-person placeholder verbatim as owner.name", () => {
+    const r = hrRecords.get('BOS')!;
+    expect(r.owner.name).toBe('Fizička osoba');
+    expect(r.owner.kind).toBe('individual');
+  });
+
+  it('marks a homebuilt (amaterska gradnja) manufacturer as not-type-certificated', () => {
+    const r = hrRecords.get('DAW')!;
+    expect(r.manufacturer).toBe('amaterska gradnja');
+    expect(r.build_certification).toBe('not-type-certificated');
+  });
+
+  it('leaves build_certification null for a normal manufacturer', () =>
+    expect(hrRecords.get('BTI')!.build_certification).toBeNull());
+
+  it('publishes no operator or legal_owner data (the register has one party column only)', () => {
+    const nullParty = { name: null, kind: null, state: null, country: null };
+    for (const r of hrRecords.values()) {
+      expect(r.operator).toEqual(nullParty);
+      expect(r.legal_owner).toEqual(nullParty);
+    }
+  });
+
+  it('marks the current-publication register as valid', () =>
+    expect([...hrRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+});
+
 const EE_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram');
 const EE_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ee-tram.yaml');
 

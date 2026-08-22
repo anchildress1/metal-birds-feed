@@ -45,6 +45,8 @@ const NOTICES: Record<string, string> = {
   // conditional on OGDL v1.0 and on the register link accompanying the credit.
   'tw-caa':
     'Source: Civil Aviation Administration, MOTC R.O.C. — caa.gov.tw. Licensed under the Open Government Data License, v1.0. Register: https://www.caa.gov.tw/article.aspx?a=4499&lang=1; normalized into this project schema without implying endorsement.',
+  'hr-ccaa':
+    'Source data from the Croatian Civil Aviation Agency (CCAA) — https://www.ccaa.hr/en/list-of-registered-aircraft-94674; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
 };
 
 // A source slug with no mapped notice still gets a credit rather than an empty string — a displayed
