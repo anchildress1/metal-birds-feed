@@ -54,6 +54,9 @@ export const SCALAR_TRANSFORMS = [
   'no_owner_kind',
   'cl_registration',
   'last_comma_segment_or_null',
+  'hr_ccaa_registration',
+  'hr_ccaa_owner_kind',
+  'hr_ccaa_build_certification',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;

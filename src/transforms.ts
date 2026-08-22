@@ -319,6 +319,50 @@ const lastCommaSegmentOrNull = (value: string): string | null => {
   return segments.at(-1) ?? null;
 };
 
+// CCAA Croatia's REG. OZNAKA column prints the bare 3-letter mark with no nationality prefix;
+// restore the 9A- ICAO prefix (ABC -> 9A-ABC). Null if not exactly 3 letters, which fails the row
+// loudly rather than publishing a malformed registration.
+const hrCcaaRegistration = (value: string): string | null => {
+  const v = value.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(v) ? `9A-${v}` : null;
+};
+
+// Classifies the VLASNIK (owner) cell into the schema's owner-kind enum. Patterns are grounded in
+// what the live register actually prints (surveyed across all ~400 rows), not guessed: "Fizička
+// osoba" is the register's own stand-in for a natural person's name (already anonymized upstream,
+// so no real name is ever read here); "/" joins two named parties on one line (e.g. "Aeroklub Sinj
+// / Fizička osoba"); MORH/Vlada/Ministarstvo are Croatian government bodies; d.o.o. is Croatia's
+// LLC-equivalent company suffix, d.d. a joint-stock company, Ltd/Limited/GmbH the equivalent forms
+// seen on foreign (mostly Irish) aircraft-leasing owners. Anything else (aeroklubs, associations,
+// faculties) has no reliable single-word signal and stays `other` rather than a guess.
+const hrCcaaOwnerKind = (value: string): string | null => {
+  const v = value.replace(/\s+/g, ' ').trim();
+  if (!v) return null;
+  const lower = v.toLowerCase();
+  if (lower.includes('/')) return 'co-owner';
+  if (lower.includes('fizič')) return 'individual';
+  // "minist" (not the full "ministarstvo") because the register itself misspells it
+  // "Ministrastvo" on at least one row — matching the shorter common prefix catches both.
+  if (lower.includes('morh') || lower.includes('vlada') || lower.includes('minist'))
+    return 'government';
+  if (lower.includes('d.o.o')) return 'llc';
+  if (
+    lower.includes('d.d.') ||
+    lower.includes('ltd') ||
+    lower.includes('limited') ||
+    lower.includes('gmbh')
+  )
+    return 'corporation';
+  return 'other';
+};
+
+// The register has no build-certification or category column, but ~2.5% of rows name "amaterska
+// gradnja" ("amateur construction") as the manufacturer — the one explicit signal the register
+// gives for a homebuilt aircraft. Everything else stays null (not "type-certificated") rather than
+// assuming a positive the register never states.
+const hrCcaaBuildCertification = (value: string): string | null =>
+  value.toLowerCase().includes('amatersk') ? 'not-type-certificated' : null;
+
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
 // unpowered (glider). RPA is the register's own class for a remotely piloted aircraft and carries
 // no structural digit, so it maps to `uav` rather than being dropped — nulling it left nothing in
@@ -702,6 +746,9 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   no_owner_kind: noOwnerKind,
   cl_registration: clRegistration,
   last_comma_segment_or_null: lastCommaSegmentOrNull,
+  hr_ccaa_registration: hrCcaaRegistration,
+  hr_ccaa_owner_kind: hrCcaaOwnerKind,
+  hr_ccaa_build_certification: hrCcaaBuildCertification,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

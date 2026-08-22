@@ -1012,3 +1012,58 @@ describe('last_comma_segment_or_null', () => {
     expect(run(', ,')).toBeNull();
   });
 });
+
+describe('hr_ccaa_registration', () => {
+  it('restores the 9A- nationality prefix on a bare 3-letter mark', () =>
+    expect(applyScalar('hr_ccaa_registration', 'ABC')).toBe('9A-ABC'));
+  it('uppercases and trims before formatting', () =>
+    expect(applyScalar('hr_ccaa_registration', '  daz ')).toBe('9A-DAZ'));
+  it('returns null for a wrong-length mark', () =>
+    expect(applyScalar('hr_ccaa_registration', 'AB')).toBeNull());
+  it('returns null for a mark containing digits', () =>
+    expect(applyScalar('hr_ccaa_registration', 'A1C')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('hr_ccaa_registration', '')).toBeNull());
+});
+
+describe('hr_ccaa_owner_kind', () => {
+  const run = (v: string): string | null => applyScalar('hr_ccaa_owner_kind', v);
+
+  it("classifies the register's natural-person placeholder as individual", () =>
+    expect(run('Fizička osoba')).toBe('individual'));
+  it('classifies a "/"-joined pair of named parties as co-owner', () =>
+    expect(run('Aeroklub Sinj / Fizička osoba')).toBe('co-owner'));
+  it("classifies a d.o.o. suffix (Croatia's LLC-equivalent) as llc", () =>
+    expect(run('Trade Air d.o.o.')).toBe('llc'));
+  it('classifies a d.d. suffix (joint-stock company) as corporation', () =>
+    expect(run('Geodetski zavod d.d.')).toBe('corporation'));
+  it('classifies a Ltd/Limited/GmbH suffix as corporation', () => {
+    expect(run('ACS Aero 4 Delta Limited')).toBe('corporation');
+    expect(run('Some Leasing Ltd')).toBe('corporation');
+    expect(run('Beispiel GmbH')).toBe('corporation');
+  });
+  it('classifies a Croatian government body as government', () => {
+    expect(run('MORH Zapovjedništvo HRZ I')).toBe('government');
+    expect(run('Ministrastvo unutarnjih poslova RH')).toBe('government');
+  });
+  it('collapses wrapped whitespace before classifying', () =>
+    expect(run('Zračno pristanište Mali Lošinj\nd.o.o.')).toBe('llc'));
+  it('falls back to other for an association with no recognized legal-form signal', () =>
+    expect(run('Aeroklub "Osijek"')).toBe('other'));
+  it('returns null for blank input', () => expect(run('')).toBeNull());
+});
+
+describe('hr_ccaa_build_certification', () => {
+  it('marks a homebuilt manufacturer cell as not-type-certificated', () => {
+    expect(applyScalar('hr_ccaa_build_certification', 'amaterska gradnja')).toBe(
+      'not-type-certificated'
+    );
+    expect(applyScalar('hr_ccaa_build_certification', 'amaterski građen')).toBe(
+      'not-type-certificated'
+    );
+  });
+  it('returns null for a real manufacturer name', () =>
+    expect(applyScalar('hr_ccaa_build_certification', 'The Boeing Company')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('hr_ccaa_build_certification', '')).toBeNull());
+});
