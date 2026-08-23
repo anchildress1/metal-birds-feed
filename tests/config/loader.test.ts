@@ -500,17 +500,17 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  it('accepts pdf.before_first_anchor_reach', () => {
-    const tmp = tmpConfig('_test_pdf_before_first_anchor.yaml');
+  it('rejects pdf.before_first_anchor_reach without a pattern', () => {
+    const tmp = tmpConfig('_test_pdf_before_first_anchor_reach_without_pattern.yaml');
     writeFileSync(tmp, pdfYaml('  before_first_anchor_reach: 17\n'));
     try {
-      expect(loadSourceConfig(tmp).pdf?.before_first_anchor_reach).toBe(17);
+      expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
     } finally {
       unlinkSync(tmp);
     }
   });
 
-  it('accepts pdf.before_first_anchor_pattern with a reach', () => {
+  it('accepts pdf.before_first_anchor_reach set together with a pattern', () => {
     const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern.yaml');
     writeFileSync(
       tmp,
@@ -557,7 +557,7 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern_without_reach.yaml');
     writeFileSync(tmp, pdfYaml('  before_first_anchor_pattern: "^Slovenia$"\n'));
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/before_first_anchor_pattern requires/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
     } finally {
       unlinkSync(tmp);
     }
