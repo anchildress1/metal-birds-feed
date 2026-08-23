@@ -379,9 +379,19 @@ const parsePdfPage = (
 
   const anchorCoords = anchors.map((a) => axisCoord(a, recordAxis));
   const spread = outerSpread(anchorCoords);
-  const beforeFirstAnchorReach = Math.max(spread, options.before_first_anchor_reach ?? 0);
+  // A lone anchor has no adjacent gap to derive a bound from, so `spread` is Infinity and the
+  // whole page is captured for that one record — correct when before_first_anchor_reach is unset
+  // (matches legacy behavior), but `Math.max(Infinity, reach)` would silently discard a configured
+  // reach's bound entirely, disabling the allowlist gate exactly where a lone final-page record
+  // most needs it. Treat "no gap data" as a zero-width safe zone instead: nothing beyond the
+  // anchor's own line is trusted without a gate, and the configured reach still applies finitely.
+  const hasGap = Number.isFinite(spread);
+  const defaultLo = hasGap ? anchorCoords[0] - spread : anchorCoords[0];
+  const beforeFirstAnchorReach =
+    options.before_first_anchor_reach === undefined
+      ? spread
+      : Math.max(hasGap ? spread : 0, options.before_first_anchor_reach);
   const lo = anchorCoords[0] - beforeFirstAnchorReach;
-  const defaultLo = anchorCoords[0] - spread;
   // anchors is non-empty (guarded above), so first/last coords are defined.
   const hi = anchorCoords.at(-1)! + spread;
 

@@ -156,18 +156,20 @@ mapping:
 
   # ADRESA is street/postal/city — dropped as PII. Only its trailing comma segment survives, and
   # only when that segment is a stated country (foreign owners, mostly Irish aircraft lessors); a
-  # domestic address's trailing segment is a Croatian postal code/city, which matches nothing below
-  # and nulls via `default` rather than being assumed as HR. `default` (not fail-loud enumeration)
-  # is deliberate here, not an oversight: the trailing segment is a free-text wrap remainder, not a
-  # closed code set — the live document's segments include bare Croatian city names with no postal
-  # prefix (`Zagreb`, `Split`) and Irish postal-district fragments (`Dublin 15`, `D15`) that are
-  # neither a stated country nor distinguishable from one by any cheap rule, so enumerating and
-  # failing loud on the rest would break the run on routine data, not drift.
+  # domestic address's trailing segment is a Croatian postal code/city, which is never assumed as
+  # HR. `owner.state` stays null unconditionally — nothing in ADRESA is a non-PII state/province.
   owner.state:
     constant: ~
 
-  # The source-specific transform retains only an observed, stated final country segment. It avoids
-  # treating every ordinary Croatian city/postcode as a lookup-default warning.
+  # `hr_ccaa_owner_country` keeps a mapping-level `lookup`/`default` out of this field on purpose:
+  # the trailing segment is a free-text wrap remainder, not a closed code set — the live document's
+  # segments include bare Croatian city names with no postal prefix (`Zagreb`, `Split`) and Irish
+  # postal-district fragments (`Dublin 15`, `D15`) that are neither a stated country nor
+  # distinguishable from one by any cheap rule. A `default` would null every one of those silently
+  # AND log each as `translate_lookup_default` (~100 lines/run of pure noise); fail-loud enumeration
+  # would break the run on that same routine, non-drift data. The transform instead recognizes only
+  # the country spellings actually observed in the register and nulls everything else — same net
+  # output, no per-row log line either way.
   owner.country:
     field: address
     transform: hr_ccaa_owner_country
