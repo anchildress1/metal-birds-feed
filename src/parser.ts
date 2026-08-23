@@ -385,12 +385,15 @@ const parsePdfPage = (
   // reach's bound entirely, disabling the allowlist gate exactly where a lone final-page record
   // most needs it. Treat "no gap data" as a zero-width safe zone instead: nothing beyond the
   // anchor's own line is trusted without a gate, and the configured reach still applies finitely.
-  const hasGap = Number.isFinite(spread);
-  const defaultLo = hasGap ? anchorCoords[0] - spread : anchorCoords[0];
+  // Shared by defaultLo and beforeFirstAnchorReach below so the Infinity-guard lives in one place
+  // — computing it separately in each would let a future edit to just one of them silently
+  // reintroduce the Math.max(Infinity, reach) bug this whole block exists to avoid.
+  const safeSpread = Number.isFinite(spread) ? spread : 0;
+  const defaultLo = anchorCoords[0] - safeSpread;
   const beforeFirstAnchorReach =
     options.before_first_anchor_reach === undefined
       ? spread
-      : Math.max(hasGap ? spread : 0, options.before_first_anchor_reach);
+      : Math.max(safeSpread, options.before_first_anchor_reach);
   const lo = anchorCoords[0] - beforeFirstAnchorReach;
   // anchors is non-empty (guarded above), so first/last coords are defined.
   const hi = anchorCoords.at(-1)! + spread;
@@ -399,6 +402,11 @@ const parsePdfPage = (
   for (const it of page) {
     const rc = axisCoord(it, recordAxis);
     if (rc < lo || rc > hi) continue;
+    // Matched per raw PDF text item, not per assembled multi-line cell — correct as long as a
+    // source's PDF renders each line as one item (verified for CCAA Croatia across its full live
+    // document: no line in the gated zone is ever split into separate same-line items). A source
+    // whose renderer splits a multi-word alternative across items mid-line would need a pattern
+    // matching each fragment, not just the whole phrase.
     if (rc < defaultLo && beforeFirstAnchorRe && !beforeFirstAnchorRe.test(it.str.trim())) continue;
     const ri = nearestIndex(anchorCoords, rc);
     const fi = nearestIndex(options.column_pos, axisCoord(it, options.field_axis));
