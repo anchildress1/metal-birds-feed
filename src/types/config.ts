@@ -55,6 +55,7 @@ export const SCALAR_TRANSFORMS = [
   'cl_registration',
   'last_comma_segment_or_null',
   'hr_ccaa_registration',
+  'hr_ccaa_owner_country',
   'hr_ccaa_owner_kind',
   'hr_ccaa_build_certification',
 ] as const;
@@ -211,6 +212,12 @@ export interface PdfConfig {
   // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
   // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
   anchor_field?: string;
+  // Extra reach before the first sorted record coordinate. Declare only a measured value that
+  // retains a known final-row continuation without reaching the source's page footer.
+  before_first_anchor_reach?: number;
+  // Optional allowlist for text in the extra reach. Use when a nearby footer/disclaimer falls in
+  // the same coordinate band as the continuation.
+  before_first_anchor_pattern?: string;
 }
 
 export interface SourceConfig {

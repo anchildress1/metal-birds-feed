@@ -288,6 +288,12 @@ export interface ParsePdfOptions {
   // continuation line in an unrelated column, minting a phantom record that steals that line from
   // its real row. Restricting anchors to one column band closes that off at the source.
   anchor_column?: number;
+  // Extra reach before the first sorted anchor coordinate. Opt in only when a known final record
+  // wraps beyond the default half-gap, and bound it below the source's page footer.
+  before_first_anchor_reach?: number;
+  // Optional allowlist for items in the extra reach. It keeps a known final continuation without
+  // admitting nearby footer/disclaimer text that starts in the same coordinate band.
+  before_first_anchor_pattern?: string;
 }
 
 interface PdfItem {
@@ -314,19 +320,8 @@ const nearestIndex = (positions: number[], value: number): number => {
 };
 
 // Half the smallest gap between adjacent records. Used as the outer reach beyond the first/last
-// record so the repeated header-label column (a half-slot outside the record range) and the
-// page-footer text are dropped, while every real cell line (which clusters tighter than half a slot
-// around its record) is kept. A lone record on a page has no gap, so reach is unbounded.
-//
-// Known gap: this reach is derived from anchor-to-anchor spacing, not from how far a real wrap can
-// extend, so a page's bottom-most record can still lose a continuation line that falls beyond half
-// the page's *tightest* anchor gap (verified against CCAA Croatia's live register — a page whose
-// tightest gap happens to be small can drop the last few points of that one record's final field).
-// A column-position-aware rescue was tried and reverted: it also pulled in unrelated body text
-// (a page-footer disclaimer paragraph) that happened to start near a real column's x-position,
-// corrupting that record instead of completing it — worse than the loss it was meant to fix. No
-// generically safe fix is known; treat this as a narrow, accepted limitation of positioned-PDF
-// extraction rather than reach for another heuristic here.
+// record so repeated headers and page footers are dropped while real cells stay in their record
+// band. A lone record on a page has no gap, so reach is unbounded.
 const outerSpread = (sortedCoords: number[]): number => {
   if (sortedCoords.length < 2) return Infinity;
   let min = Infinity;
@@ -364,7 +359,12 @@ const buildPdfRow = (
 const toPdfItems = (raw: { str: string; x: number; y: number }[]): PdfItem[] =>
   raw.filter((i) => i.str.trim().length > 0).map((i) => ({ str: i.str, x: i.x, y: i.y }));
 
-const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegExp): Row[] => {
+const parsePdfPage = (
+  page: PdfItem[],
+  options: ParsePdfOptions,
+  anchorRe: RegExp,
+  beforeFirstAnchorRe: RegExp | undefined
+): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
   const anchors = page
     .filter((it) => anchorRe.test(it.str.trim()))
@@ -379,7 +379,9 @@ const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegEx
 
   const anchorCoords = anchors.map((a) => axisCoord(a, recordAxis));
   const spread = outerSpread(anchorCoords);
-  const lo = anchorCoords[0] - spread;
+  const beforeFirstAnchorReach = Math.max(spread, options.before_first_anchor_reach ?? 0);
+  const lo = anchorCoords[0] - beforeFirstAnchorReach;
+  const defaultLo = anchorCoords[0] - spread;
   // anchors is non-empty (guarded above), so first/last coords are defined.
   const hi = anchorCoords.at(-1)! + spread;
 
@@ -387,6 +389,7 @@ const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegEx
   for (const it of page) {
     const rc = axisCoord(it, recordAxis);
     if (rc < lo || rc > hi) continue;
+    if (rc < defaultLo && beforeFirstAnchorRe && !beforeFirstAnchorRe.test(it.str.trim())) continue;
     const ri = nearestIndex(anchorCoords, rc);
     const fi = nearestIndex(options.column_pos, axisCoord(it, options.field_axis));
     pushTo(buckets[ri], fi, it);
@@ -406,6 +409,11 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
+  // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const beforeFirstAnchorRe = options.before_first_anchor_pattern
+    ? new RegExp(options.before_first_anchor_pattern)
+    : undefined;
   const rows: Row[] = [];
   const anchorlessPages: number[] = [];
   for (const [i, pageItems] of items.entries()) {
@@ -419,7 +427,7 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
     // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
     // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
     if (page.length === 0) continue;
-    const pageRows = parsePdfPage(page, options, anchorRe);
+    const pageRows = parsePdfPage(page, options, anchorRe, beforeFirstAnchorRe);
     if (pageRows.length === 0) anchorlessPages.push(i + 1);
     else rows.push(...pageRows);
   }

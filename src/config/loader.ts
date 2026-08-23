@@ -165,6 +165,14 @@ const SourceConfigSchema = z
         }),
         allowed_anchorless_pages: z.number().int().nonnegative().optional(),
         anchor_field: z.string().min(1).optional(),
+        before_first_anchor_reach: z.number().nonnegative().optional(),
+        before_first_anchor_pattern: z
+          .string()
+          .min(1)
+          .refine(isValidRegex, {
+            message: 'pdf.before_first_anchor_pattern must be a valid regular expression',
+          })
+          .optional(),
       })
       .optional(),
     record_count: z
@@ -302,6 +310,14 @@ const SourceConfigSchema = z
       (c.columns?.[c.primary] ?? []).includes(c.pdf.anchor_field),
     {
       message: 'pdf.anchor_field must name a column in columns[primary]',
+    }
+  )
+  .refine(
+    (c) =>
+      c.pdf?.before_first_anchor_pattern === undefined ||
+      c.pdf.before_first_anchor_reach !== undefined,
+    {
+      message: 'pdf.before_first_anchor_pattern requires before_first_anchor_reach',
     }
   )
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's

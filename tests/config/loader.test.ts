@@ -500,6 +500,29 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  it('accepts pdf.before_first_anchor_reach', () => {
+    const tmp = tmpConfig('_test_pdf_before_first_anchor.yaml');
+    writeFileSync(tmp, pdfYaml('  before_first_anchor_reach: 17\n'));
+    try {
+      expect(loadSourceConfig(tmp).pdf?.before_first_anchor_reach).toBe(17);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('accepts pdf.before_first_anchor_pattern with a reach', () => {
+    const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern.yaml');
+    writeFileSync(
+      tmp,
+      pdfYaml('  before_first_anchor_reach: 17\n  before_first_anchor_pattern: "^Slovenia$"\n')
+    );
+    try {
+      expect(loadSourceConfig(tmp).pdf?.before_first_anchor_pattern).toBe('^Slovenia$');
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('defaults pdf.allowed_anchorless_pages to undefined when omitted', () => {
     const tmp = tmpConfig('_test_pdf_no_anchorless.yaml');
     writeFileSync(tmp, pdfYaml(''));
@@ -515,6 +538,26 @@ describe('loadSourceConfig', () => {
     writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: -1\n'));
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a negative pdf.before_first_anchor_reach', () => {
+    const tmp = tmpConfig('_test_pdf_neg_before_first_anchor.yaml');
+    writeFileSync(tmp, pdfYaml('  before_first_anchor_reach: -1\n'));
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects pdf.before_first_anchor_pattern without a reach', () => {
+    const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern_without_reach.yaml');
+    writeFileSync(tmp, pdfYaml('  before_first_anchor_pattern: "^Slovenia$"\n'));
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/before_first_anchor_pattern requires/i);
     } finally {
       unlinkSync(tmp);
     }

@@ -37,6 +37,10 @@ pdf:
   field_axis: x
   anchor_pattern: '^[A-Z]{3}$'
   anchor_field: mark
+  # The bottom-most row's address can wrap 16.08pt below its mark; 17pt keeps that country line
+  # while the 42.72pt page footer remains outside the parser's capture range.
+  before_first_anchor_reach: 17
+  before_first_anchor_pattern: '^(?:Ireland|Irska|Republika Irska|Mađarska|Slovenija|Slovenia|Austria|Bermuda|Singapore)$'
   column_pos:
     - 66 # mark
     - 124 # seq (register sequence number — not unique across the doc; see source_id note below)
@@ -162,22 +166,11 @@ mapping:
   owner.state:
     constant: ~
 
-  # The register mixes Croatian and English country names on different rows for the same country
-  # (Slovenija/Slovenia, Irska/Ireland) — both spellings are enumerated where observed.
+  # The source-specific transform retains only an observed, stated final country segment. It avoids
+  # treating every ordinary Croatian city/postcode as a lookup-default warning.
   owner.country:
     field: address
-    transform: last_comma_segment_or_null
-    lookup:
-      'Ireland': IE
-      'Irska': IE
-      'Republika Irska': IE
-      'Mađarska': HU
-      'Slovenija': SI
-      'Slovenia': SI
-      'Austria': AT
-      'Bermuda': BM
-      'Singapore': SG
-    default: ~
+    transform: hr_ccaa_owner_country
 
   operator.name:
     constant: ~

@@ -906,6 +906,37 @@ const pageAB = registerPage([
 ]);
 const pageC = registerPage([['8Q-CCC', 'Charlie Air']]);
 
+const finalContinuationPage: SynthItem[] = [
+  { str: 'AAA', x: 50, y: 500 },
+  { str: 'First owner', x: 100, y: 500 },
+  { str: 'BBB', x: 50, y: 480 },
+  { str: 'Second owner', x: 100, y: 480 },
+  { str: 'Slovenia', x: 100, y: 460 },
+  { str: 'Page 1 of 1', x: 100, y: 440 },
+];
+
+const finalContinuationOpts: ParsePdfOptions = {
+  field_axis: 'x',
+  anchor_pattern: '^[A-Z]{3}$',
+  anchor_column: 0,
+  before_first_anchor_reach: 20,
+  before_first_anchor_pattern: '^Slovenia$',
+  column_pos: [50, 100],
+  columns: ['mark', 'address'],
+  trim: true,
+};
+
+describe('parsePdf final record continuations', () => {
+  it('keeps one final wrapped line while excluding the page footer', async () => {
+    const rows = await parsePdf(buildPdf([finalContinuationPage]), finalContinuationOpts);
+
+    expect(rows).toEqual([
+      { mark: 'BBB', address: 'Second owner\nSlovenia' },
+      { mark: 'AAA', address: 'First owner' },
+    ]);
+  });
+});
+
 describe('parsePdf anchorless-page budget', () => {
   it('tolerates a leading cover page within allowed_anchorless_pages', async () => {
     const rows = await parsePdf(

@@ -2678,14 +2678,11 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
     expect(r.owner.country).not.toBe('HR');
   });
 
-  // Known limitation, not a regression: DER is the bottom-most record on its page, and its
-  // address's "Slovenia" line falls beyond parsePdf's outer reach for that page (see the
-  // `outerSpread` comment in src/parser.ts) — lost at extraction, before the mapping ever runs.
-  // Pinned here so a future parser fix is caught as a coverage gain, not silently unnoticed.
-  it('documents the known page-boundary wrap loss: a real foreign country goes missing, not wrong', () => {
+  it('keeps a final wrapped foreign country line without taking the page footer', () => {
     const r = hrRecords.get('DER')!;
     expect(r.owner.name).toBe('G&K avio servis d.o.o.');
-    expect(r.owner.country).toBeNull();
+    expect(r.owner.country).toBe('SI');
+    expect(JSON.stringify(r)).not.toContain('Stranica');
   });
 
   it("keeps the register's own natural-person placeholder verbatim as owner.name", () => {

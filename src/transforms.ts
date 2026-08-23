@@ -322,6 +322,26 @@ const lastCommaSegmentOrNull = (value: string): string | null => {
   return segments.at(-1) ?? null;
 };
 
+// The CCAA address column contains free-text street/city/postal data, but a few foreign owners
+// state their country as its final comma segment. Return only those observed country spellings;
+// every other trailing segment is dropped as PII rather than logged as a lookup-default warning.
+const HR_CCAA_COUNTRY_CODES: Record<string, string> = {
+  Ireland: 'IE',
+  Irska: 'IE',
+  'Republika Irska': 'IE',
+  Mađarska: 'HU',
+  Slovenija: 'SI',
+  Slovenia: 'SI',
+  Austria: 'AT',
+  Bermuda: 'BM',
+  Singapore: 'SG',
+};
+
+const hrCcaaOwnerCountry = (value: string): string | null => {
+  const country = lastCommaSegmentOrNull(value);
+  return country ? (HR_CCAA_COUNTRY_CODES[country] ?? null) : null;
+};
+
 // CCAA Croatia's REG. OZNAKA column prints the bare 3-letter mark with no nationality prefix;
 // restore the 9A- ICAO prefix (ABC -> 9A-ABC). Null if not exactly 3 letters, which fails the row
 // loudly rather than publishing a malformed registration.
@@ -749,6 +769,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   cl_registration: clRegistration,
   last_comma_segment_or_null: lastCommaSegmentOrNull,
   hr_ccaa_registration: hrCcaaRegistration,
+  hr_ccaa_owner_country: hrCcaaOwnerCountry,
   hr_ccaa_owner_kind: hrCcaaOwnerKind,
   hr_ccaa_build_certification: hrCcaaBuildCertification,
 };

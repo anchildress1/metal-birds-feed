@@ -54,6 +54,8 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       columns,
       anchor_pattern: pdf.anchor_pattern,
       allowed_anchorless_pages: pdf.allowed_anchorless_pages,
+      before_first_anchor_reach: pdf.before_first_anchor_reach,
+      before_first_anchor_pattern: pdf.before_first_anchor_pattern,
       // Loader validates anchor_field names a real column, so indexOf here is never -1.
       anchor_column: pdf.anchor_field ? columns.indexOf(pdf.anchor_field) : undefined,
       trim: config.trim_all,

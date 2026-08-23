@@ -1026,6 +1026,31 @@ describe('hr_ccaa_registration', () => {
     expect(applyScalar('hr_ccaa_registration', '')).toBeNull());
 });
 
+describe('hr_ccaa_owner_country', () => {
+  const run = (v: string): string | null => applyScalar('hr_ccaa_owner_country', v);
+
+  it.each([
+    ['Ireland', 'IE'],
+    ['Irska', 'IE'],
+    ['Republika Irska', 'IE'],
+    ['Mađarska', 'HU'],
+    ['Slovenija', 'SI'],
+    ['Slovenia', 'SI'],
+    ['Austria', 'AT'],
+    ['Bermuda', 'BM'],
+    ['Singapore', 'SG'],
+  ])('maps the stated country %s to %s', (country, expected) =>
+    expect(run(`1 Example Street, ${country}`)).toBe(expected)
+  );
+
+  it('normalizes a wrapped country name before mapping it', () =>
+    expect(run('1 Example Street, Republika\nIrska')).toBe('IE'));
+
+  it.each(['10 000 Zagreb', 'Dublin 15', ''])('drops a non-country address tail %p', (value) =>
+    expect(run(`1 Example Street, ${value}`)).toBeNull()
+  );
+});
+
 describe('hr_ccaa_owner_kind', () => {
   const run = (v: string): string | null => applyScalar('hr_ccaa_owner_kind', v);
 
