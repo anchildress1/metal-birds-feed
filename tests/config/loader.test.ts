@@ -533,19 +533,25 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  it('rejects a negative pdf.allowed_anchorless_pages', () => {
-    const tmp = tmpConfig('_test_pdf_neg_anchorless.yaml');
-    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: -1\n'));
-    try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  it('rejects a negative pdf.before_first_anchor_reach', () => {
-    const tmp = tmpConfig('_test_pdf_neg_before_first_anchor.yaml');
-    writeFileSync(tmp, pdfYaml('  before_first_anchor_reach: -1\n'));
+  it.each([
+    [
+      'a negative allowed_anchorless_pages',
+      '_test_pdf_neg_anchorless.yaml',
+      '  allowed_anchorless_pages: -1\n',
+    ],
+    [
+      'a negative before_first_anchor_reach',
+      '_test_pdf_neg_before_first_anchor.yaml',
+      '  before_first_anchor_reach: -1\n',
+    ],
+    [
+      'a non-integer allowed_anchorless_pages',
+      '_test_pdf_frac_anchorless.yaml',
+      '  allowed_anchorless_pages: 1.5\n',
+    ],
+  ])('rejects %s', (_description, filename, field) => {
+    const tmp = tmpConfig(filename);
+    writeFileSync(tmp, pdfYaml(field));
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
     } finally {
@@ -558,16 +564,6 @@ describe('loadSourceConfig', () => {
     writeFileSync(tmp, pdfYaml('  before_first_anchor_pattern: "^Slovenia$"\n'));
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  it('rejects a non-integer pdf.allowed_anchorless_pages', () => {
-    const tmp = tmpConfig('_test_pdf_frac_anchorless.yaml');
-    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: 1.5\n'));
-    try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
     } finally {
       unlinkSync(tmp);
     }
