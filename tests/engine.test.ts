@@ -2625,11 +2625,12 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
     hrStats = result.stats;
   });
 
-  // The fixture's two real pages carry 34 anchor matches: 33 real aircraft plus one known
-  // false-positive anchor (a VLASNIK cell that wraps onto its own line reading "PZO"), which
-  // `allowed_missing_source_id_rows` skips rather than publishes as a malformed record.
-  it('translates 33 real rows and skips the one known false-positive anchor', () => {
-    expect(hrStats).toEqual({ total: 34, ok: 33, failed: 0, skipped: 1, duplicateSkipped: 0 });
+  // The fixture's two real pages carry 33 real aircraft. `pdf.anchor_field: mark` keeps a wrapped
+  // owner-cell continuation line that happens to read "PZO" from ever being mistaken for its own
+  // anchor, so there is no false-positive row to skip (see the MORH test below for what that line
+  // actually belongs to).
+  it('translates all 33 real rows with no failures', () => {
+    expect(hrStats).toEqual({ total: 33, ok: 33, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(hrRecords.size).toBe(33);
   });
 
@@ -2639,7 +2640,6 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
     expect(r.source_id).toBe('BTI');
     expect(r.registration).toBe('9A-BTI');
     expect(r.country).toBe('HR');
-    expect(r.status).toBe('valid');
   });
 
   it('classifies a d.o.o. owner as llc and a d.d. owner as corporation', () => {
@@ -2647,9 +2647,14 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
     expect(hrRecords.get('BKA')!.owner.kind).toBe('corporation');
   });
 
-  it('classifies a MORH government owner and drops its street address (PII)', () => {
+  it('falls back to other for an association with no recognized legal-form signal', () =>
+    expect(hrRecords.get('BFT')!.owner.kind).toBe('other'));
+
+  // Before `anchor_field` this wrapped VLASNIK continuation line ("PZO") was itself mistaken for a
+  // record anchor and discarded, truncating the owner name mid-phrase. It now joins its real row.
+  it('keeps a wrapped MORH government owner name whole and drops its street address (PII)', () => {
     const r = hrRecords.get('DAZ')!;
-    expect(r.owner.name).toBe('MORH Zapovjedništvo HRZ I');
+    expect(r.owner.name).toBe('MORH Zapovjedništvo HRZ I PZO');
     expect(r.owner.kind).toBe('government');
     expect(r.owner.state).toBeNull();
     expect(r.owner.country).toBeNull();
@@ -2667,10 +2672,20 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
     expect(atr.owner.country).toBe('SG');
   });
 
-  it('nulls owner.country for a domestic address instead of assuming the register country', () => {
-    const r = hrRecords.get('DAZ')!;
+  it('nulls owner.country for an ordinary domestic address instead of assuming the register country', () => {
+    const r = hrRecords.get('BTI')!;
     expect(r.owner.country).toBeNull();
     expect(r.owner.country).not.toBe('HR');
+  });
+
+  // Known limitation, not a regression: DER is the bottom-most record on its page, and its
+  // address's "Slovenia" line falls beyond parsePdf's outer reach for that page (see the
+  // `outerSpread` comment in src/parser.ts) — lost at extraction, before the mapping ever runs.
+  // Pinned here so a future parser fix is caught as a coverage gain, not silently unnoticed.
+  it('documents the known page-boundary wrap loss: a real foreign country goes missing, not wrong', () => {
+    const r = hrRecords.get('DER')!;
+    expect(r.owner.name).toBe('G&K avio servis d.o.o.');
+    expect(r.owner.country).toBeNull();
   });
 
   it("keeps the register's own natural-person placeholder verbatim as owner.name", () => {

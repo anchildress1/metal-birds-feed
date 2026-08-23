@@ -47,12 +47,15 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
   if (config.format === 'pdf') {
     const pdf = config.pdf;
     if (!pdf) throw new Error(`Source "${config.id}" has format "pdf" but no pdf config`);
+    const columns = config.columns?.[config.primary] ?? [];
     return parsePdf(buf, {
       field_axis: pdf.field_axis,
       column_pos: pdf.column_pos,
-      columns: config.columns?.[config.primary] ?? [],
+      columns,
       anchor_pattern: pdf.anchor_pattern,
       allowed_anchorless_pages: pdf.allowed_anchorless_pages,
+      // Loader validates anchor_field names a real column, so indexOf here is never -1.
+      anchor_column: pdf.anchor_field ? columns.indexOf(pdf.anchor_field) : undefined,
       trim: config.trim_all,
     });
   }

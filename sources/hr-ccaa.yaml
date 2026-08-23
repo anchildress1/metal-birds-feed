@@ -27,12 +27,19 @@ format: pdf
 # AESA Spain. Records anchor on the bare 3-letter mark (REG. OZNAKA); Croatia's table never repeats
 # the 9A- nationality prefix, so `hr_ccaa_registration` restores it. See PdfConfig in
 # src/types/config.ts for the extraction model.
+#
+# `anchor_field: mark` restricts anchor matches to the mark column's x-band. Without it, a bare
+# `^[A-Z]{3}$` pattern also matches a wrapped continuation line in any other column that happens to
+# read as three capital letters — verified against the live document: a VLASNIK (owner) cell wraps
+# onto its own line reading exactly "PZO" (continuing "MORH Zapovjedništvo HRZ I", a military unit
+# name), which would otherwise mint a phantom record and steal that line from its real row.
 pdf:
   field_axis: x
   anchor_pattern: '^[A-Z]{3}$'
+  anchor_field: mark
   column_pos:
     - 66 # mark
-    - 124 # seq (register sequence number — not unique across the doc; see allowed_missing note)
+    - 124 # seq (register sequence number — not unique across the doc; see source_id note below)
     - 174 # manufacturer
     - 311 # model
     - 449 # serial
@@ -48,16 +55,6 @@ columns:
     - serial
     - owner
     - address
-
-# One known false-positive anchor in the whole 26-page document: a VLASNIK cell wraps onto its own
-# line reading exactly "PZO" (continuing "MORH Zapovjedništvo HRZ I" — a military unit name), which
-# also matches `anchor_pattern` and steals its own row bucket with no mark/mfr/model/serial — a
-# banner-row shape, not a real record. Bound to exactly this value so any other unexpected
-# empty-mark row still fails the run loudly instead of being silently absorbed.
-allowed_missing_source_id_rows:
-  max: 1
-  field: owner
-  pattern: '^PZO$'
 
 # The bare mark is the only column proven unique across the live document (0 collisions in ~400
 # rows); "REDNI BROJ U REGISTRU" (seq) looked like a better candidate — a permanent sequence number,
@@ -156,10 +153,17 @@ mapping:
   # ADRESA is street/postal/city — dropped as PII. Only its trailing comma segment survives, and
   # only when that segment is a stated country (foreign owners, mostly Irish aircraft lessors); a
   # domestic address's trailing segment is a Croatian postal code/city, which matches nothing below
-  # and nulls via `default` rather than being assumed as HR.
+  # and nulls via `default` rather than being assumed as HR. `default` (not fail-loud enumeration)
+  # is deliberate here, not an oversight: the trailing segment is a free-text wrap remainder, not a
+  # closed code set — the live document's segments include bare Croatian city names with no postal
+  # prefix (`Zagreb`, `Split`) and Irish postal-district fragments (`Dublin 15`, `D15`) that are
+  # neither a stated country nor distinguishable from one by any cheap rule, so enumerating and
+  # failing loud on the rest would break the run on routine data, not drift.
   owner.state:
     constant: ~
 
+  # The register mixes Croatian and English country names on different rows for the same country
+  # (Slovenija/Slovenia, Irska/Ireland) — both spellings are enumerated where observed.
   owner.country:
     field: address
     transform: last_comma_segment_or_null
@@ -169,6 +173,7 @@ mapping:
       'Republika Irska': IE
       'Mađarska': HU
       'Slovenija': SI
+      'Slovenia': SI
       'Austria': AT
       'Bermuda': BM
       'Singapore': SG

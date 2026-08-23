@@ -281,6 +281,13 @@ export interface ParsePdfOptions {
   trim: boolean;
   // Budget of text-bearing pages allowed to yield zero anchors (cover/preface pages). See PdfConfig.
   allowed_anchorless_pages?: number;
+  // Index into `column_pos`/`columns` an anchor match must snap nearest to. Unset (the default)
+  // treats any item on the page matching `anchor_pattern` as an anchor, wherever it falls — fine
+  // when the pattern can only occur in the mark column (AESA's `^EC-[A-Z0-9]{3}$`), but a short
+  // generic pattern (a bare 3-letter mark, with no source-specific prefix) can also match a wrapped
+  // continuation line in an unrelated column, minting a phantom record that steals that line from
+  // its real row. Restricting anchors to one column band closes that off at the source.
+  anchor_column?: number;
 }
 
 interface PdfItem {
@@ -310,6 +317,16 @@ const nearestIndex = (positions: number[], value: number): number => {
 // record so the repeated header-label column (a half-slot outside the record range) and the
 // page-footer text are dropped, while every real cell line (which clusters tighter than half a slot
 // around its record) is kept. A lone record on a page has no gap, so reach is unbounded.
+//
+// Known gap: this reach is derived from anchor-to-anchor spacing, not from how far a real wrap can
+// extend, so a page's bottom-most record can still lose a continuation line that falls beyond half
+// the page's *tightest* anchor gap (verified against CCAA Croatia's live register — a page whose
+// tightest gap happens to be small can drop the last few points of that one record's final field).
+// A column-position-aware rescue was tried and reverted: it also pulled in unrelated body text
+// (a page-footer disclaimer paragraph) that happened to start near a real column's x-position,
+// corrupting that record instead of completing it — worse than the loss it was meant to fix. No
+// generically safe fix is known; treat this as a narrow, accepted limitation of positioned-PDF
+// extraction rather than reach for another heuristic here.
 const outerSpread = (sortedCoords: number[]): number => {
   if (sortedCoords.length < 2) return Infinity;
   let min = Infinity;
@@ -351,6 +368,12 @@ const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegEx
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
   const anchors = page
     .filter((it) => anchorRe.test(it.str.trim()))
+    .filter(
+      (it) =>
+        options.anchor_column === undefined ||
+        nearestIndex(options.column_pos, axisCoord(it, options.field_axis)) ===
+          options.anchor_column
+    )
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   if (anchors.length === 0) return [];
 

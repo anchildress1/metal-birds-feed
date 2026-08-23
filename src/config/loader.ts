@@ -164,6 +164,7 @@ const SourceConfigSchema = z
           message: 'pdf.anchor_pattern must be a valid regular expression',
         }),
         allowed_anchorless_pages: z.number().int().nonnegative().optional(),
+        anchor_field: z.string().min(1).optional(),
       })
       .optional(),
     record_count: z
@@ -293,6 +294,14 @@ const SourceConfigSchema = z
     (c) => c.pdf === undefined || c.pdf.column_pos.length === (c.columns?.[c.primary]?.length ?? 0),
     {
       message: 'pdf.column_pos length must match columns[primary] length',
+    }
+  )
+  .refine(
+    (c) =>
+      c.pdf?.anchor_field === undefined ||
+      (c.columns?.[c.primary] ?? []).includes(c.pdf.anchor_field),
+    {
+      message: 'pdf.anchor_field must name a column in columns[primary]',
     }
   )
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's

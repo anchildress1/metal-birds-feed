@@ -1045,9 +1045,11 @@ describe('hr_ccaa_owner_kind', () => {
   it('classifies a Croatian government body as government', () => {
     expect(run('MORH Zapovjedništvo HRZ I')).toBe('government');
     expect(run('Ministrastvo unutarnjih poslova RH')).toBe('government');
+    expect(run('Vlada RH')).toBe('government');
   });
-  it('collapses wrapped whitespace before classifying', () =>
+  it('classifies a wrapped (newline-joined) owner cell by its still-intact suffix', () =>
     expect(run('Zračno pristanište Mali Lošinj\nd.o.o.')).toBe('llc'));
+  it('returns null for whitespace-only input', () => expect(run('   ')).toBeNull());
   it('falls back to other for an association with no recognized legal-form signal', () =>
     expect(run('Aeroklub "Osijek"')).toBe('other'));
   it('returns null for blank input', () => expect(run('')).toBeNull());

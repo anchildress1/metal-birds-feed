@@ -312,9 +312,12 @@ const clRegistration = (value: string): string | null => {
 // Everything ahead of it is street/suburb/postcode and stays dropped — this reads the one component
 // the PII rule permits rather than keeping the address to get at it.
 const lastCommaSegmentOrNull = (value: string): string | null => {
+  // Collapse internal whitespace (including the "\n" a wrapped positioned-PDF cell joins on)
+  // before splitting, so a multi-word segment that wraps mid-name ("Republika\nIrska") still
+  // matches a caller's `lookup` on its single-line form ("Republika Irska").
   const segments = value
     .split(',')
-    .map((s) => s.trim())
+    .map((s) => s.replace(/\s+/g, ' ').trim())
     .filter(Boolean);
   return segments.at(-1) ?? null;
 };
@@ -336,9 +339,8 @@ const hrCcaaRegistration = (value: string): string | null => {
 // seen on foreign (mostly Irish) aircraft-leasing owners. Anything else (aeroklubs, associations,
 // faculties) has no reliable single-word signal and stays `other` rather than a guess.
 const hrCcaaOwnerKind = (value: string): string | null => {
-  const v = value.replace(/\s+/g, ' ').trim();
-  if (!v) return null;
-  const lower = v.toLowerCase();
+  const lower = value.trim().toLowerCase();
+  if (!lower) return null;
   if (lower.includes('/')) return 'co-owner';
   if (lower.includes('fizič')) return 'individual';
   // "minist" (not the full "ministarstvo") because the register itself misspells it

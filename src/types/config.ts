@@ -207,6 +207,10 @@ export interface PdfConfig {
   // its anchors drops its whole fleet slice, and PDF sources cannot use record_count to catch it.
   // Defaults to 0 — declare cover pages explicitly rather than inferring them from position.
   allowed_anchorless_pages?: number;
+  // Column name (from columns[primary]) an anchor_pattern match must fall in to count as a record
+  // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
+  // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
+  anchor_field?: string;
 }
 
 export interface SourceConfig {
