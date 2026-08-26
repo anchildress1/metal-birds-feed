@@ -965,6 +965,32 @@ describe('parsePdf final record continuations', () => {
 
     expect(rows).toEqual([{ mark: 'AAA', address: 'Sole owner\nSlovenia' }]);
   });
+
+  // A single-anchor page has no adjacent-record gap to size a safe zone from, so before this fix
+  // defaultLo fell back to the anchor's exact coordinate — gating even the record's own same-row
+  // fields the instant they sat a fraction of a point below it, which real PDF baselines do (CCAA
+  // Croatia's own address column reaches 2.16pt below its mark on at least one live row).
+  it('does not gate an ordinary same-row field on a single-anchor page', async () => {
+    const singleAnchorJitterPage: SynthItem[] = [
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'Cessna 172', x: 100, y: 498 }, // 2pt same-row jitter, not a wrap continuation
+      { str: 'Page 1 of 1', x: 100, y: 475 }, // 25pt below — genuine footer noise
+    ];
+    const rows = await parsePdf(
+      buildPdf([singleAnchorJitterPage]),
+      synthOpts({
+        field_axis: 'x',
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        before_first_anchor_reach: 30,
+        before_first_anchor_pattern: '^Slovenia$',
+        column_pos: [50, 100],
+        columns: ['mark', 'model'],
+      })
+    );
+
+    expect(rows).toEqual([{ mark: 'AAA', model: 'Cessna 172' }]);
+  });
 });
 
 describe('parsePdf anchorless-page budget', () => {

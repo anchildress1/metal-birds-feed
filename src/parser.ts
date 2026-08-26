@@ -319,6 +319,16 @@ const nearestIndex = (positions: number[], value: number): number => {
   return best;
 };
 
+// Same-logical-row fields don't share one exact baseline — font metrics put them a fraction of a
+// point apart, and CCAA Croatia's own address column reaches 2.16pt below its mark on at least one
+// real row (measured across the full live document). A single-anchor page has no adjacent-record
+// gap to size a safe zone from (see beforeFirstAnchorReach below), so without a floor here that
+// page's own ordinary same-row fields — not just wrapped continuations — would be forced through
+// the allowlist gate and dropped whenever they land fractionally below the anchor's baseline. Set
+// well above the largest observed jitter and well below the smallest observed wrap-line offset
+// (14pt+) so it can never blur the two together.
+const SAME_ROW_TOLERANCE_PT = 5;
+
 // Half the smallest gap between adjacent records. Used as the outer reach beyond the first/last
 // record so repeated headers and page footers are dropped while real cells stay in their record
 // band. A lone record on a page has no gap, so reach is unbounded.
@@ -383,12 +393,12 @@ const parsePdfPage = (
   // whole page is captured for that one record — correct when before_first_anchor_reach is unset
   // (matches legacy behavior), but `Math.max(Infinity, reach)` would silently discard a configured
   // reach's bound entirely, disabling the allowlist gate exactly where a lone final-page record
-  // most needs it. Treat "no gap data" as a zero-width safe zone instead: nothing beyond the
-  // anchor's own line is trusted without a gate, and the configured reach still applies finitely.
+  // most needs it. Falls back to SAME_ROW_TOLERANCE_PT rather than 0: with no gap data, that's the
+  // only safe-zone width available, and 0 would gate the record's own same-row fields (see above).
   // Shared by defaultLo and beforeFirstAnchorReach below so the Infinity-guard lives in one place
   // — computing it separately in each would let a future edit to just one of them silently
   // reintroduce the Math.max(Infinity, reach) bug this whole block exists to avoid.
-  const safeSpread = Number.isFinite(spread) ? spread : 0;
+  const safeSpread = Number.isFinite(spread) ? spread : SAME_ROW_TOLERANCE_PT;
   const defaultLo = anchorCoords[0] - safeSpread;
   const beforeFirstAnchorReach =
     options.before_first_anchor_reach === undefined
