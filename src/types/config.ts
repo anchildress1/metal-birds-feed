@@ -54,6 +54,10 @@ export const SCALAR_TRANSFORMS = [
   'no_owner_kind',
   'cl_registration',
   'last_comma_segment_or_null',
+  'hr_ccaa_registration',
+  'hr_ccaa_owner_country',
+  'hr_ccaa_owner_kind',
+  'hr_ccaa_build_certification',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;
@@ -204,6 +208,16 @@ export interface PdfConfig {
   // its anchors drops its whole fleet slice, and PDF sources cannot use record_count to catch it.
   // Defaults to 0 — declare cover pages explicitly rather than inferring them from position.
   allowed_anchorless_pages?: number;
+  // Column name (from columns[primary]) an anchor_pattern match must fall in to count as a record
+  // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
+  // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
+  anchor_field?: string;
+  // Extra reach before the first sorted record coordinate. Declare only a measured value that
+  // retains a known final-row continuation without reaching the source's page footer.
+  before_first_anchor_reach?: number;
+  // Optional allowlist for text in the extra reach. Use when a nearby footer/disclaimer falls in
+  // the same coordinate band as the continuation.
+  before_first_anchor_pattern?: string;
 }
 
 export interface SourceConfig {

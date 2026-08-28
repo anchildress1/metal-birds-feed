@@ -24,6 +24,7 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | ANAC Brasil                | Open w/ attribution (CC BY-equiv)                                            | Live                                                                                                                          |
 | Transport Canada           | GC Open Data Licence Agreement (verbatim notices)                            | Live                                                                                                                          |
 | DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22)  | Live — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates` |
+| CCAA (Croatia)             | Not specified — treated as Private-use, CC.2 fallback elapsed 2026-06-09     | Live — `pdf` parser path; monthly `discover_url`; no ICAO hex                                                                 |
 | Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                 | Live — `html` parser path                                                                                                     |
 | CAA Latvia                 | CC0-1.0                                                                      | Live                                                                                                                          |
 | TKA Lithuania              | CC BY 4.0 (data.gov.lt)                                                      | Live — `csv` data API; `latest_snapshot_by` keeps the newest publication; no ICAO hex                                         |
@@ -76,7 +77,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | Ministry of Transport Cook Islands        | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | DGAC Costa Rica                           | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | ANAC CI Côte d'Ivoire                     | 2026-05-11 | 2026-06-10 | pending | Yes      |
-| CCAA Croatia                              | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | DCA Cyprus                                | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | CAA CR Czech Republic                     | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | AAC RDC DRC                               | 2026-05-11 | 2026-06-10 | pending | Yes      |

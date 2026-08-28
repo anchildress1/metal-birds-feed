@@ -2612,6 +2612,106 @@ describe('AESA Spain fixture translation (PDF)', () => {
   });
 });
 
+describe('CCAA Croatia fixture translation (PDF)', () => {
+  const HR_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hr-ccaa.yaml');
+  const HR_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hr-ccaa', 'input', 'register.pdf');
+  let hrRecords: Map<string, Aircraft>;
+  let hrStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(HR_CONFIG);
+    const result = await translate(config, new Map([['register', readFileSync(HR_PDF)]]));
+    hrRecords = result.records;
+    hrStats = result.stats;
+  });
+
+  // The fixture's two real pages carry 33 real aircraft. `pdf.anchor_field: mark` keeps a wrapped
+  // owner-cell continuation line that happens to read "PZO" from ever being mistaken for its own
+  // anchor, so there is no false-positive row to skip (see the MORH test below for what that line
+  // actually belongs to).
+  it('translates all 33 real rows with no failures', () => {
+    expect(hrStats).toEqual({ total: 33, ok: 33, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(hrRecords.size).toBe(33);
+  });
+
+  it('keys records on the bare mark, restores the 9A- prefix in registration', () => {
+    const r = hrRecords.get('BTI')!;
+    expect(r.source).toBe('hr-ccaa');
+    expect(r.source_id).toBe('BTI');
+    expect(r.registration).toBe('9A-BTI');
+    expect(r.country).toBe('HR');
+  });
+
+  it('classifies a d.o.o. owner as llc and a d.d. owner as corporation', () => {
+    expect(hrRecords.get('BTI')!.owner.kind).toBe('llc');
+    expect(hrRecords.get('BKA')!.owner.kind).toBe('corporation');
+  });
+
+  it('falls back to other for an association with no recognized legal-form signal', () =>
+    expect(hrRecords.get('BFT')!.owner.kind).toBe('other'));
+
+  // Before `anchor_field` this wrapped VLASNIK continuation line ("PZO") was itself mistaken for a
+  // record anchor and discarded, truncating the owner name mid-phrase. It now joins its real row.
+  it('keeps a wrapped MORH government owner name whole and drops its street address (PII)', () => {
+    const r = hrRecords.get('DAZ')!;
+    expect(r.owner.name).toBe('MORH Zapovjedništvo HRZ I PZO');
+    expect(r.owner.kind).toBe('government');
+    expect(r.owner.state).toBeNull();
+    expect(r.owner.country).toBeNull();
+    expect(JSON.stringify(r)).not.toContain('Maksimirska');
+  });
+
+  it('reads the trailing country component of a foreign lessor address, dropping the street', () => {
+    const ber = hrRecords.get('BER')!;
+    expect(ber.owner.name).toBe('ACS Aero 4 Delta Limited');
+    expect(ber.owner.kind).toBe('corporation');
+    expect(ber.owner.country).toBe('IE');
+    expect(ber.owner.state).toBeNull();
+
+    const atr = hrRecords.get('ATR')!;
+    expect(atr.owner.country).toBe('SG');
+  });
+
+  it('nulls owner.country for an ordinary domestic address instead of assuming the register country', () => {
+    const r = hrRecords.get('BTI')!;
+    expect(r.owner.country).toBeNull();
+    expect(r.owner.country).not.toBe('HR');
+  });
+
+  it('keeps a final wrapped foreign country line without taking the page footer', () => {
+    const r = hrRecords.get('DER')!;
+    expect(r.owner.name).toBe('G&K avio servis d.o.o.');
+    expect(r.owner.country).toBe('SI');
+    expect(JSON.stringify(r)).not.toContain('Stranica');
+  });
+
+  it("keeps the register's own natural-person placeholder verbatim as owner.name", () => {
+    const r = hrRecords.get('BOS')!;
+    expect(r.owner.name).toBe('Fizička osoba');
+    expect(r.owner.kind).toBe('individual');
+  });
+
+  it('marks a homebuilt (amaterska gradnja) manufacturer as not-type-certificated', () => {
+    const r = hrRecords.get('DAW')!;
+    expect(r.manufacturer).toBe('amaterska gradnja');
+    expect(r.build_certification).toBe('not-type-certificated');
+  });
+
+  it('leaves build_certification null for a normal manufacturer', () =>
+    expect(hrRecords.get('BTI')!.build_certification).toBeNull());
+
+  it('publishes no operator or legal_owner data (the register has one party column only)', () => {
+    const nullParty = { name: null, kind: null, state: null, country: null };
+    for (const r of hrRecords.values()) {
+      expect(r.operator).toEqual(nullParty);
+      expect(r.legal_owner).toEqual(nullParty);
+    }
+  });
+
+  it('marks the current-publication register as valid', () =>
+    expect([...hrRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+});
+
 const EE_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram');
 const EE_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ee-tram.yaml');
 

@@ -906,6 +906,93 @@ const pageAB = registerPage([
 ]);
 const pageC = registerPage([['8Q-CCC', 'Charlie Air']]);
 
+// Anchors at 500/480 give a default safe zone floor of 470 and (with reach 20) a widened floor of
+// 460. The footer sits at 465 — inside that widened band, not below it — so it reaches the
+// allowlist check itself rather than being excluded by the outer bound first; a removed or
+// always-true predicate would let it leak into BBB's address exactly as this test would then fail.
+const finalContinuationPage: SynthItem[] = [
+  { str: 'AAA', x: 50, y: 500 },
+  { str: 'First owner', x: 100, y: 500 },
+  { str: 'BBB', x: 50, y: 480 },
+  { str: 'Second owner', x: 100, y: 480 },
+  { str: 'Slovenia', x: 100, y: 460 },
+  { str: 'Page 1 of 1', x: 100, y: 465 },
+];
+
+const finalContinuationOpts: ParsePdfOptions = {
+  field_axis: 'x',
+  anchor_pattern: '^[A-Z]{3}$',
+  anchor_column: 0,
+  before_first_anchor_reach: 20,
+  before_first_anchor_pattern: '^Slovenia$',
+  column_pos: [50, 100],
+  columns: ['mark', 'address'],
+  trim: true,
+};
+
+describe('parsePdf final record continuations', () => {
+  it('keeps one final wrapped line while excluding the page footer', async () => {
+    const rows = await parsePdf(buildPdf([finalContinuationPage]), finalContinuationOpts);
+
+    expect(rows).toEqual([
+      { mark: 'BBB', address: 'Second owner\nSlovenia' },
+      { mark: 'AAA', address: 'First owner' },
+    ]);
+  });
+
+  // A lone anchor has no adjacent gap, so outerSpread returns Infinity for both the default safe
+  // zone and (pre-fix) the configured reach's Math.max — silently disabling the allowlist gate on
+  // exactly the page that most needs it (a final publication page down to one aircraft).
+  it('still applies the allowlist gate when the page has only one anchor', async () => {
+    const singleAnchorPage: SynthItem[] = [
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'Sole owner', x: 100, y: 500 },
+      { str: 'Slovenia', x: 100, y: 480 },
+      { str: 'Page 1 of 1', x: 100, y: 472 },
+    ];
+    const rows = await parsePdf(
+      buildPdf([singleAnchorPage]),
+      synthOpts({
+        field_axis: 'x',
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        before_first_anchor_reach: 30,
+        before_first_anchor_pattern: '^Slovenia$',
+        column_pos: [50, 100],
+        columns: ['mark', 'address'],
+      })
+    );
+
+    expect(rows).toEqual([{ mark: 'AAA', address: 'Sole owner\nSlovenia' }]);
+  });
+
+  // A single-anchor page has no adjacent-record gap to size a safe zone from, so before this fix
+  // defaultLo fell back to the anchor's exact coordinate — gating even the record's own same-row
+  // fields the instant they sat a fraction of a point below it, which real PDF baselines do (CCAA
+  // Croatia's own address column reaches 2.16pt below its mark on at least one live row).
+  it('does not gate an ordinary same-row field on a single-anchor page', async () => {
+    const singleAnchorJitterPage: SynthItem[] = [
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'Cessna 172', x: 100, y: 498 }, // 2pt same-row jitter, not a wrap continuation
+      { str: 'Page 1 of 1', x: 100, y: 475 }, // 25pt below — genuine footer noise
+    ];
+    const rows = await parsePdf(
+      buildPdf([singleAnchorJitterPage]),
+      synthOpts({
+        field_axis: 'x',
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        before_first_anchor_reach: 30,
+        before_first_anchor_pattern: '^Slovenia$',
+        column_pos: [50, 100],
+        columns: ['mark', 'model'],
+      })
+    );
+
+    expect(rows).toEqual([{ mark: 'AAA', model: 'Cessna 172' }]);
+  });
+});
+
 describe('parsePdf anchorless-page budget', () => {
   it('tolerates a leading cover page within allowed_anchorless_pages', async () => {
     const rows = await parsePdf(

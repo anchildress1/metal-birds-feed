@@ -281,6 +281,19 @@ export interface ParsePdfOptions {
   trim: boolean;
   // Budget of text-bearing pages allowed to yield zero anchors (cover/preface pages). See PdfConfig.
   allowed_anchorless_pages?: number;
+  // Index into `column_pos`/`columns` an anchor match must snap nearest to. Unset (the default)
+  // treats any item on the page matching `anchor_pattern` as an anchor, wherever it falls — fine
+  // when the pattern can only occur in the mark column (AESA's `^EC-[A-Z0-9]{3}$`), but a short
+  // generic pattern (a bare 3-letter mark, with no source-specific prefix) can also match a wrapped
+  // continuation line in an unrelated column, minting a phantom record that steals that line from
+  // its real row. Restricting anchors to one column band closes that off at the source.
+  anchor_column?: number;
+  // Extra reach before the first sorted anchor coordinate. Opt in only when a known final record
+  // wraps beyond the default half-gap, and bound it below the source's page footer.
+  before_first_anchor_reach?: number;
+  // Optional allowlist for items in the extra reach. It keeps a known final continuation without
+  // admitting nearby footer/disclaimer text that starts in the same coordinate band.
+  before_first_anchor_pattern?: string;
 }
 
 interface PdfItem {
@@ -306,10 +319,19 @@ const nearestIndex = (positions: number[], value: number): number => {
   return best;
 };
 
+// Same-logical-row fields don't share one exact baseline — font metrics put them a fraction of a
+// point apart, and CCAA Croatia's own address column reaches 2.16pt below its mark on at least one
+// real row (measured across the full live document). A single-anchor page has no adjacent-record
+// gap to size a safe zone from (see beforeFirstAnchorReach below), so without a floor here that
+// page's own ordinary same-row fields — not just wrapped continuations — would be forced through
+// the allowlist gate and dropped whenever they land fractionally below the anchor's baseline. Set
+// well above the largest observed jitter and well below the smallest observed wrap-line offset
+// (14pt+) so it can never blur the two together.
+const SAME_ROW_TOLERANCE_PT = 5;
+
 // Half the smallest gap between adjacent records. Used as the outer reach beyond the first/last
-// record so the repeated header-label column (a half-slot outside the record range) and the
-// page-footer text are dropped, while every real cell line (which clusters tighter than half a slot
-// around its record) is kept. A lone record on a page has no gap, so reach is unbounded.
+// record so repeated headers and page footers are dropped while real cells stay in their record
+// band. A lone record on a page has no gap, so reach is unbounded.
 const outerSpread = (sortedCoords: number[]): number => {
   if (sortedCoords.length < 2) return Infinity;
   let min = Infinity;
@@ -347,16 +369,42 @@ const buildPdfRow = (
 const toPdfItems = (raw: { str: string; x: number; y: number }[]): PdfItem[] =>
   raw.filter((i) => i.str.trim().length > 0).map((i) => ({ str: i.str, x: i.x, y: i.y }));
 
-const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegExp): Row[] => {
+const parsePdfPage = (
+  page: PdfItem[],
+  options: ParsePdfOptions,
+  anchorRe: RegExp,
+  beforeFirstAnchorRe: RegExp | undefined
+): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
   const anchors = page
     .filter((it) => anchorRe.test(it.str.trim()))
+    .filter(
+      (it) =>
+        options.anchor_column === undefined ||
+        nearestIndex(options.column_pos, axisCoord(it, options.field_axis)) ===
+          options.anchor_column
+    )
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   if (anchors.length === 0) return [];
 
   const anchorCoords = anchors.map((a) => axisCoord(a, recordAxis));
   const spread = outerSpread(anchorCoords);
-  const lo = anchorCoords[0] - spread;
+  // A lone anchor has no adjacent gap to derive a bound from, so `spread` is Infinity and the
+  // whole page is captured for that one record — correct when before_first_anchor_reach is unset
+  // (matches legacy behavior), but `Math.max(Infinity, reach)` would silently discard a configured
+  // reach's bound entirely, disabling the allowlist gate exactly where a lone final-page record
+  // most needs it. Falls back to SAME_ROW_TOLERANCE_PT rather than 0: with no gap data, that's the
+  // only safe-zone width available, and 0 would gate the record's own same-row fields (see above).
+  // Shared by defaultLo and beforeFirstAnchorReach below so the Infinity-guard lives in one place
+  // — computing it separately in each would let a future edit to just one of them silently
+  // reintroduce the Math.max(Infinity, reach) bug this whole block exists to avoid.
+  const safeSpread = Number.isFinite(spread) ? spread : SAME_ROW_TOLERANCE_PT;
+  const defaultLo = anchorCoords[0] - safeSpread;
+  const beforeFirstAnchorReach =
+    options.before_first_anchor_reach === undefined
+      ? spread
+      : Math.max(safeSpread, options.before_first_anchor_reach);
+  const lo = anchorCoords[0] - beforeFirstAnchorReach;
   // anchors is non-empty (guarded above), so first/last coords are defined.
   const hi = anchorCoords.at(-1)! + spread;
 
@@ -364,6 +412,12 @@ const parsePdfPage = (page: PdfItem[], options: ParsePdfOptions, anchorRe: RegEx
   for (const it of page) {
     const rc = axisCoord(it, recordAxis);
     if (rc < lo || rc > hi) continue;
+    // Matched per raw PDF text item, not per assembled multi-line cell — correct as long as a
+    // source's PDF renders each line as one item (verified for CCAA Croatia across its full live
+    // document: no line in the gated zone is ever split into separate same-line items). A source
+    // whose renderer splits a multi-word alternative across items mid-line would need a pattern
+    // matching each fragment, not just the whole phrase.
+    if (rc < defaultLo && beforeFirstAnchorRe && !beforeFirstAnchorRe.test(it.str.trim())) continue;
     const ri = nearestIndex(anchorCoords, rc);
     const fi = nearestIndex(options.column_pos, axisCoord(it, options.field_axis));
     pushTo(buckets[ri], fi, it);
@@ -383,6 +437,11 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
+  // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const beforeFirstAnchorRe = options.before_first_anchor_pattern
+    ? new RegExp(options.before_first_anchor_pattern)
+    : undefined;
   const rows: Row[] = [];
   const anchorlessPages: number[] = [];
   for (const [i, pageItems] of items.entries()) {
@@ -396,7 +455,7 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
     // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
     // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
     if (page.length === 0) continue;
-    const pageRows = parsePdfPage(page, options, anchorRe);
+    const pageRows = parsePdfPage(page, options, anchorRe, beforeFirstAnchorRe);
     if (pageRows.length === 0) anchorlessPages.push(i + 1);
     else rows.push(...pageRows);
   }

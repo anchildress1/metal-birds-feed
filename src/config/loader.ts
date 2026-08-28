@@ -164,6 +164,15 @@ const SourceConfigSchema = z
           message: 'pdf.anchor_pattern must be a valid regular expression',
         }),
         allowed_anchorless_pages: z.number().int().nonnegative().optional(),
+        anchor_field: z.string().min(1).optional(),
+        before_first_anchor_reach: z.number().nonnegative().optional(),
+        before_first_anchor_pattern: z
+          .string()
+          .min(1)
+          .refine(isValidRegex, {
+            message: 'pdf.before_first_anchor_pattern must be a valid regular expression',
+          })
+          .optional(),
       })
       .optional(),
     record_count: z
@@ -293,6 +302,27 @@ const SourceConfigSchema = z
     (c) => c.pdf === undefined || c.pdf.column_pos.length === (c.columns?.[c.primary]?.length ?? 0),
     {
       message: 'pdf.column_pos length must match columns[primary] length',
+    }
+  )
+  .refine(
+    (c) =>
+      c.pdf?.anchor_field === undefined ||
+      (c.columns?.[c.primary] ?? []).includes(c.pdf.anchor_field),
+    {
+      message: 'pdf.anchor_field must name a column in columns[primary]',
+    }
+  )
+  // Required together, not just pattern-requires-reach: a reach with no pattern admits whatever
+  // text falls in the widened zone unconditionally — the exact failure mode a column-position-only
+  // rescue hit in review (an unrelated page-footer paragraph got pulled into the last record). The
+  // pattern is what makes the widened zone safe, so a reach without one is never a valid config.
+  .refine(
+    (c) =>
+      (c.pdf?.before_first_anchor_reach === undefined) ===
+      (c.pdf?.before_first_anchor_pattern === undefined),
+    {
+      message:
+        'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
     }
   )
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's

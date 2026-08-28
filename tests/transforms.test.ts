@@ -1012,3 +1012,85 @@ describe('last_comma_segment_or_null', () => {
     expect(run(', ,')).toBeNull();
   });
 });
+
+describe('hr_ccaa_registration', () => {
+  it('restores the 9A- nationality prefix on a bare 3-letter mark', () =>
+    expect(applyScalar('hr_ccaa_registration', 'ABC')).toBe('9A-ABC'));
+  it('uppercases and trims before formatting', () =>
+    expect(applyScalar('hr_ccaa_registration', '  daz ')).toBe('9A-DAZ'));
+  it('returns null for a wrong-length mark', () =>
+    expect(applyScalar('hr_ccaa_registration', 'AB')).toBeNull());
+  it('returns null for a mark containing digits', () =>
+    expect(applyScalar('hr_ccaa_registration', 'A1C')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('hr_ccaa_registration', '')).toBeNull());
+});
+
+describe('hr_ccaa_owner_country', () => {
+  const run = (v: string): string | null => applyScalar('hr_ccaa_owner_country', v);
+
+  it.each([
+    ['Ireland', 'IE'],
+    ['Irska', 'IE'],
+    ['Republika Irska', 'IE'],
+    ['Mađarska', 'HU'],
+    ['Slovenija', 'SI'],
+    ['Slovenia', 'SI'],
+    ['Austria', 'AT'],
+    ['Bermuda', 'BM'],
+    ['Singapore', 'SG'],
+  ])('maps the stated country %s to %s', (country, expected) =>
+    expect(run(`1 Example Street, ${country}`)).toBe(expected)
+  );
+
+  it('normalizes a wrapped country name before mapping it', () =>
+    expect(run('1 Example Street, Republika\nIrska')).toBe('IE'));
+
+  it.each(['10 000 Zagreb', 'Dublin 15', ''])('drops a non-country address tail %p', (value) =>
+    expect(run(`1 Example Street, ${value}`)).toBeNull()
+  );
+});
+
+describe('hr_ccaa_owner_kind', () => {
+  const run = (v: string): string | null => applyScalar('hr_ccaa_owner_kind', v);
+
+  it("classifies the register's natural-person placeholder as individual", () =>
+    expect(run('Fizička osoba')).toBe('individual'));
+  it('classifies a "/"-joined pair of named parties as co-owner', () =>
+    expect(run('Aeroklub Sinj / Fizička osoba')).toBe('co-owner'));
+  it("classifies a d.o.o. suffix (Croatia's LLC-equivalent) as llc", () =>
+    expect(run('Trade Air d.o.o.')).toBe('llc'));
+  it('classifies a d.d. suffix (joint-stock company) as corporation', () =>
+    expect(run('Geodetski zavod d.d.')).toBe('corporation'));
+  it('classifies a Ltd/Limited/GmbH suffix as corporation', () => {
+    expect(run('ACS Aero 4 Delta Limited')).toBe('corporation');
+    expect(run('Some Leasing Ltd')).toBe('corporation');
+    expect(run('Beispiel GmbH')).toBe('corporation');
+  });
+  it('classifies a Croatian government body as government', () => {
+    expect(run('MORH Zapovjedništvo HRZ I')).toBe('government');
+    expect(run('Ministrastvo unutarnjih poslova RH')).toBe('government');
+    expect(run('Vlada RH')).toBe('government');
+  });
+  it('classifies a wrapped (newline-joined) owner cell by its still-intact suffix', () =>
+    expect(run('Zračno pristanište Mali Lošinj\nd.o.o.')).toBe('llc'));
+  it('returns null for whitespace-only input', () => expect(run('   ')).toBeNull());
+  it('falls back to other for an association with no recognized legal-form signal', () =>
+    expect(run('Aeroklub "Osijek"')).toBe('other'));
+  it('returns null for blank input', () => expect(run('')).toBeNull());
+});
+
+describe('hr_ccaa_build_certification', () => {
+  it('marks a homebuilt manufacturer cell as not-type-certificated', () => {
+    expect(applyScalar('hr_ccaa_build_certification', 'amaterska gradnja')).toBe(
+      'not-type-certificated'
+    );
+    expect(applyScalar('hr_ccaa_build_certification', 'amaterski građen')).toBe(
+      'not-type-certificated'
+    );
+  });
+  it('returns null for a real manufacturer name', () =>
+    expect(applyScalar('hr_ccaa_build_certification', 'The Boeing Company')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('hr_ccaa_build_certification', '')).toBeNull());
+});
