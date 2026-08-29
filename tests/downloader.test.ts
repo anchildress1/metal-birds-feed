@@ -516,12 +516,31 @@ describe('download — discover_url + discover_pattern', () => {
     expect(fetchFn).toHaveBeenCalledTimes(4);
   });
 
-  it('throws a no-match error when the pattern does not match the index page', async () => {
-    mockFetchSequence([
-      { ok: true, status: 200, statusText: 'OK', body: '<html><body>nothing here</body></html>' },
+  it('throws a no-match error when the pattern never matches across every retry', async () => {
+    const fetchFn = mockFetchSequence(
+      Array.from({ length: 4 }, () => ({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        body: '<html><body>nothing here</body></html>',
+      }))
+    );
+
+    await expect(download(DISCOVER_CONFIG, FAST_RETRY)).rejects.toThrow(/found no match/i);
+    expect(fetchFn).toHaveBeenCalledTimes(4);
+  });
+
+  it('retries a no-match discovery response and succeeds once the page reflows a match', async () => {
+    const fetchFn = mockFetchSequence([
+      { ok: true, status: 200, statusText: 'OK', body: '<html><body>bot-challenge</body></html>' },
+      { ok: true, status: 200, statusText: 'OK', body: INDEX_HTML },
+      { ok: true, status: 200, statusText: 'OK', body: Buffer.from('ods-bytes') },
     ]);
 
-    await expect(download(DISCOVER_CONFIG)).rejects.toThrow(/found no match/i);
+    const files = await download(DISCOVER_CONFIG, FAST_RETRY);
+
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(files.get('register')!.toString('utf8')).toBe('ods-bytes');
   });
 
   it('throws a no-capture error when the pattern matches but has no capture group', async () => {
