@@ -193,32 +193,39 @@ const resolveDownloadUrl = async (
   opts: RetryOptions,
   cookie?: string
 ): Promise<string> => {
-  if (!config.discover_url || !config.discover_pattern) return config.url;
-  log('info', 'discover_start', { discover_url: config.discover_url });
-  const html = await readWithRetry(
-    config.discover_url,
+  const discoverUrl = config.discover_url;
+  const discoverPattern = config.discover_pattern;
+  if (!discoverUrl || !discoverPattern) return config.url;
+  log('info', 'discover_start', { discover_url: discoverUrl });
+  // Matching happens inside the retry, not after it resolves: a 200 with a bot-challenge page,
+  // a CDN edge serving a stale variant, or a fragment that hasn't hydrated yet is retryable the
+  // same as a dropped connection is — only a matched-but-uncaptured pattern (a real config bug)
+  // stays terminal, since retrying a missing capture group burns attempts for nothing.
+  const resolved = await readWithRetry<string>(
+    discoverUrl,
     {
-      headers: withCookie(config.headers, cookie, config.discover_url, config.prime_url),
+      headers: withCookie(config.headers, cookie, discoverUrl, config.prime_url),
     },
     'Discovery fetch failed',
-    (res) => res.text(),
+    async (res) => {
+      const html = await res.text();
+      // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
+      // Loader validates it as a syntactically valid regex before reaching this point.
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+      const match = new RegExp(discoverPattern).exec(html);
+      if (!match) {
+        throw new Error(`Discovery pattern found no match on ${discoverUrl}`);
+      }
+      const captured = match[1];
+      if (!captured) {
+        throw new TerminalError(
+          `Discovery pattern matched on ${discoverUrl} but captured no URL (pattern needs a capture group)`
+        );
+      }
+      return new URL(captured, discoverUrl).toString();
+    },
     opts
   );
-  // Pattern source is `sources/<id>.yaml`, a repo-controlled config — not runtime input.
-  // Loader validates it as a syntactically valid regex before reaching this point.
-  // Distinguish no-match (wrong pattern) from matched-but-no-capture (missing group).
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const match = new RegExp(config.discover_pattern).exec(html);
-  if (!match) {
-    throw new Error(`Discovery pattern found no match on ${config.discover_url}`);
-  }
-  const captured = match[1];
-  if (!captured) {
-    throw new Error(
-      `Discovery pattern matched on ${config.discover_url} but captured no URL (pattern needs a capture group)`
-    );
-  }
-  const resolved = new URL(captured, config.discover_url).toString();
   log('info', 'discover_complete', { resolved });
   return resolved;
 };
