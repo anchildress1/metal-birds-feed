@@ -169,7 +169,7 @@ export async function translate(
   files: Map<string, Buffer>,
   // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
   publishedTotal?: string
-): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
+): Promise<{ records: Map<string, Aircraft>; stats: EngineStats; retryable: boolean }> {
   unmatchedLookups.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
   const missingSourceIdPolicy = buildMissingSourceIdPolicy(config);
@@ -188,6 +188,11 @@ export async function translate(
   // Raw merged row per source_id, used to detect a byte-identical re-publish.
   const seenRows = new Map<string, Row>();
   let failed = 0;
+  // A subset of `failed`: collisions resolveRecency couldn't call, which fresh data from a later
+  // publish can resolve on its own (see the RowOutcome comment above). Tracked separately so the
+  // caller can retry only when EVERY failure this run is this class, never a mix that includes a
+  // deterministic one.
+  let ambiguousDuplicateFailed = 0;
   // Tracked apart from duplicate skips: only missing-id skips count against the missing-id budget.
   let missingIdSkipped = 0;
   let duplicateSkipped = 0;
@@ -209,8 +214,10 @@ export async function translate(
     if (outcome.status === 'skipped') {
       if (outcome.reason === 'missing_id') missingIdSkipped++;
       else duplicateSkipped++;
-    } else if (outcome.status === 'failed') failed++;
-    else {
+    } else if (outcome.status === 'failed') {
+      failed++;
+      if (outcome.reason === 'ambiguous_duplicate') ambiguousDuplicateFailed++;
+    } else {
       records.set(outcome.id, outcome.record);
       seenRows.set(outcome.id, outcome.row);
     }
@@ -239,13 +246,20 @@ export async function translate(
       publishedTotal
     );
   log('info', 'translate_complete', { source: config.id, ...stats });
-  return { records, stats };
+  // Retryable only when every failure this run is the ambiguous-duplicate class — a mix with even
+  // one deterministic failure means retrying would burn a fresh download for nothing.
+  return { records, stats, retryable: failed > 0 && failed === ambiguousDuplicateFailed };
 }
 
 type RowOutcome =
   | { status: 'ok'; id: string; record: Aircraft; row: Row }
   | { status: 'skipped'; reason: 'missing_id' | 'duplicate' }
-  | { status: 'failed' };
+  // 'ambiguous_duplicate' is a fresh-data problem, not a config bug: a same-status/same-date
+  // collision with neither row a strict superset can resolve differently on a later publish (ANAC
+  // has republished a corrected file within the same day after this exact failure). 'invalid' is a
+  // schema-validation failure on a merged row — deterministic on the same bytes, re-fetching won't
+  // change it. The caller uses this split to decide whether a fresh download is worth retrying.
+  | { status: 'failed'; reason: 'invalid' | 'ambiguous_duplicate' };
 
 type RecencyReason = 'cancelled_status' | 'newer_date' | 'strict_superset';
 
@@ -483,7 +497,7 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
         ...logCtx,
         msg: revalidated.error.issues.map((e) => e.message).join('; '),
       });
-      return { status: 'failed' };
+      return { status: 'failed', reason: 'invalid' };
     }
     log('warn', 'translate_duplicate_id_merged', { ...logCtx, fields: merged.fields });
     return { status: 'ok', id: rawId, record: revalidated.data, row };
@@ -501,7 +515,7 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
       reason:
         'no safe distinguishing signal (same status/date, neither record is a strict superset)',
     });
-    return { status: 'failed' };
+    return { status: 'failed', reason: 'ambiguous_duplicate' };
   }
   if (resolution.winner === 'incumbent') {
     log('warn', 'translate_duplicate_id_stale', { ...logCtx, reason: resolution.reason });
@@ -537,7 +551,7 @@ function translateRow(
       row: i + 2,
       reason: 'missing source_id',
     });
-    return { status: 'failed' };
+    return { status: 'failed', reason: 'invalid' };
   }
 
   // Byte-identical re-publish (e.g. ANAC's RAB ships some marks twice) — skip.
@@ -561,7 +575,7 @@ function translateRow(
         source_id: rawId,
         msg: parsed.error.issues.map((e) => e.message).join('; '),
       });
-      return { status: 'failed' };
+      return { status: 'failed', reason: 'invalid' };
     }
 
     const incumbent = priorRow && records.get(rawId);
@@ -582,7 +596,7 @@ function translateRow(
       source_id: rawId,
       msg: errorMessage(err),
     });
-    return { status: 'failed' };
+    return { status: 'failed', reason: 'invalid' };
   }
 }
 

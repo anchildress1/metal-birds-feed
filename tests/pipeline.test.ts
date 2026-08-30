@@ -242,7 +242,7 @@ describe('run', () => {
     expect(mockTranslate).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
   });
 
-  it('aborts write when any row fails translation', async () => {
+  it('aborts write when any row fails translation, without retrying', async () => {
     mockTranslate.mockResolvedValueOnce({
       records: new Map(),
       stats: { total: 10, ok: 9, failed: 1 },
@@ -251,6 +251,60 @@ describe('run', () => {
     await expect(run('faa')).rejects.toThrow(/aborting write/i);
 
     expect(mockR2Write).not.toHaveBeenCalled();
+    // A missing `retryable` (as an older/stub engine mock would return) must read as non-retryable,
+    // the same as `retryable: false` — never default to retrying.
+    expect(mockTranslate).toHaveBeenCalledTimes(1);
+  });
+
+  // engine.ts marks a failure retryable only when every failed row is an ambiguous-duplicate
+  // collision — a fresh-data problem a later download can resolve on its own, not a config bug.
+  it('retries a fully ambiguous-duplicate translation failure with a fresh download', async () => {
+    const finalRecords = new Map([['1', aircraft()]]);
+    mockTranslate
+      .mockResolvedValueOnce({
+        records: new Map(),
+        stats: { total: 10, ok: 9, failed: 1 },
+        retryable: true,
+      })
+      .mockResolvedValueOnce({
+        records: finalRecords,
+        stats: { total: 10, ok: 10, failed: 0 },
+      });
+
+    await run('faa', { baseDelayMs: 0, sleep: async () => {} });
+
+    expect(mockDownload).toHaveBeenCalledTimes(2);
+    expect(mockTranslate).toHaveBeenCalledTimes(2);
+    expect(mockR2Write).toHaveBeenCalledWith(finalRecords, 'faa', null, expect.any(String));
+  });
+
+  it('still fails loudly once a retryable translation failure exhausts every attempt', async () => {
+    mockTranslate.mockResolvedValue({
+      records: new Map(),
+      stats: { total: 10, ok: 9, failed: 1 },
+      retryable: true,
+    });
+
+    await expect(run('faa', { baseDelayMs: 0, sleep: async () => {} })).rejects.toThrow(
+      /aborting write/i
+    );
+
+    expect(mockTranslate).toHaveBeenCalledTimes(3);
+    expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('does not retry a translation failure that mixes an ambiguous duplicate with another cause', async () => {
+    mockTranslate.mockResolvedValue({
+      records: new Map(),
+      stats: { total: 10, ok: 8, failed: 2 },
+      retryable: false,
+    });
+
+    await expect(run('faa', { baseDelayMs: 0, sleep: async () => {} })).rejects.toThrow(
+      /aborting write/i
+    );
+
+    expect(mockTranslate).toHaveBeenCalledTimes(1);
   });
 
   // The two maps must differ structurally: toHaveBeenCalledWith is deep equality, so
