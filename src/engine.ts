@@ -93,7 +93,7 @@ interface MissingSourceIdPolicy {
   pattern: RegExp;
 }
 
-// Asserts the translated record count matches a total the source publishes about itself (e.g. a
+// Asserts the mapped record count matches a total the source publishes about itself (e.g. a
 // "Kokku ... /total" cell), failing the run loudly on mismatch so a dropped/added row or a
 // preamble-count shift can't silently publish a wrong-size fleet. The pattern source is repo-
 // controlled source YAML (justifies the non-literal-regexp suppression below, since it isn't
@@ -104,12 +104,12 @@ interface MissingSourceIdPolicy {
 const assertRecordCount = (
   config: SourceConfig,
   primaryBuf: Buffer,
-  counts: { parsed: number; translated: number },
+  counts: { parsed: number; mapped: number },
   publishedTotal?: string
 ): void => {
   const check = config.record_count;
   if (!check) return;
-  const against = check.against ?? 'translated';
+  const against = check.against ?? 'mapped';
   const source = publishedTotal ?? new TextDecoder(config.encoding).decode(primaryBuf);
   const where = check.url ?? 'primary file';
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
@@ -130,14 +130,14 @@ const reportUnmatchedLookups = (source: string): void => {
   if (forSource === undefined) return;
   for (const [key, rows] of [...forSource].sort((a, b) => b[1] - a[1])) {
     const [field, value] = key.split('\u0000');
-    log('warn', 'translate_lookup_default', { source, field, value, rows });
+    log('warn', 'map_lookup_default', { source, field, value, rows });
   }
   unmatchedLookups.delete(source);
 };
 
 // Keeps only the newest publication for a register whose feed accumulates snapshots instead of
 // replacing them. Throws rather than returning nothing when the column holds no value anywhere: an
-// upstream rename would otherwise drop every row, and a source that translates zero records is a
+// upstream rename would otherwise drop every row, and a source that maps zero records is a
 // far quieter failure than one that refuses to run.
 const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
   const column = config.latest_snapshot_by;
@@ -154,7 +154,7 @@ const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
   const kept = rows.filter((row) => (row[column] ?? '') === latest);
   // Dropping the bulk of the file is the normal case here, so say so: the count is what shows the
   // filter caught a real publication boundary rather than silently keeping one stray row.
-  log('info', 'translate_snapshot_filtered', {
+  log('info', 'map_snapshot_filtered', {
     source: config.id,
     column,
     snapshot: latest,
@@ -164,7 +164,7 @@ const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
   return kept;
 };
 
-export async function translate(
+export async function mapRows(
   config: SourceConfig,
   files: Map<string, Buffer>,
   // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
@@ -178,8 +178,8 @@ export async function translate(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
 
-  // Before assertJoinHits and the translate loop, so joins are checked against the rows that will
-  // actually be translated and stats.total counts them rather than the whole accumulated history.
+  // Before assertJoinHits and the mapping loop, so joins are checked against the rows that will
+  // actually be mapped and stats.total counts them rather than the whole accumulated history.
   const parsedRows = await parsePrimary(primaryBuf, config);
   const rows = keepLatestSnapshot(config, parsedRows);
   assertJoinHits(config, joinMaps, rows);
@@ -201,7 +201,7 @@ export async function translate(
     field: config.source_id,
     transform: config.source_id_transform ?? 'trim_or_null',
   };
-  const ctx: TranslateRowContext = {
+  const ctx: MapRowContext = {
     config,
     joinMaps,
     missingSourceIdPolicy,
@@ -210,7 +210,7 @@ export async function translate(
     sourceIdMapping,
   };
   for (let i = 0; i < rows.length; i++) {
-    const outcome = translateRow(rows[i], i, missingIdSkipped, ctx);
+    const outcome = mapRow(rows[i], i, missingIdSkipped, ctx);
     if (outcome.status === 'skipped') {
       if (outcome.reason === 'missing_id') missingIdSkipped++;
       else duplicateSkipped++;
@@ -233,7 +233,7 @@ export async function translate(
   };
   // Runs before the "complete" log and only when there are no row-level failures: pipeline.ts's
   // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
-  // logging translate_complete before a guard that can still throw would misreport the run as done.
+  // logging map_complete before a guard that can still throw would misreport the run as done.
   // Flushed before the count guard, not after: a record-count mismatch is upstream drift, and the
   // unrecognized values are the evidence for it — throwing first would withhold them from the only
   // run that needed them.
@@ -242,10 +242,10 @@ export async function translate(
     assertRecordCount(
       config,
       primaryBuf,
-      { parsed: parsedRows.length, translated: records.size },
+      { parsed: parsedRows.length, mapped: records.size },
       publishedTotal
     );
-  log('info', 'translate_complete', { source: config.id, ...stats });
+  log('info', 'map_complete', { source: config.id, ...stats });
   // Retryable only when every failure this run is the ambiguous-duplicate class — a mix with even
   // one deterministic failure means retrying would burn a fresh download for nothing.
   return { records, stats, retryable: failed > 0 && failed === ambiguousDuplicateFailed };
@@ -448,13 +448,13 @@ const tryMergeDuplicate = (
   return { record: mergeDuplicateRecord(incumbent, candidate, policy), fields: [...diff] };
 };
 
-interface TranslateRowContext {
+interface MapRowContext {
   config: SourceConfig;
   joinMaps: Map<string, Map<string, Row>>;
   missingSourceIdPolicy: MissingSourceIdPolicy | null;
   seenRows: Map<string, Row>;
   records: Map<string, Aircraft>;
-  // config.source_id/source_id_transform never change across rows — built once per translate()
+  // config.source_id/source_id_transform never change across rows — built once per mapRows()
   // call instead of allocating an identical FieldMapping object on every row.
   sourceIdMapping: FieldMapping;
 }
@@ -480,7 +480,7 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
   // record. The raw-row exact-dup check upstream missed this; check the mapped record too before
   // falling to recency resolution, which would otherwise fail on a collision that isn't one.
   if (Bun.deepEquals(candidate, incumbent)) {
-    log('warn', 'translate_skip', {
+    log('warn', 'map_skip', {
       ...logCtx,
       reason:
         'exact duplicate row (canonical record identical; raw fields differ outside the schema)',
@@ -493,13 +493,13 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
   if (merged) {
     const revalidated = AircraftSchema.safeParse(merged.record);
     if (!revalidated.success) {
-      log('error', 'translate_invalid', {
+      log('error', 'map_invalid', {
         ...logCtx,
         msg: revalidated.error.issues.map((e) => e.message).join('; '),
       });
       return { status: 'failed', reason: 'invalid' };
     }
-    log('warn', 'translate_duplicate_id_merged', { ...logCtx, fields: merged.fields });
+    log('warn', 'map_duplicate_id_merged', { ...logCtx, fields: merged.fields });
     return { status: 'ok', id: rawId, record: revalidated.data, row };
   }
 
@@ -510,7 +510,7 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
   // assumption is wrong and last-wins would silently drop upstream data.
   const resolution = resolveRecency(candidate, incumbent);
   if (!resolution) {
-    log('error', 'translate_duplicate_id', {
+    log('error', 'map_duplicate_id', {
       ...logCtx,
       reason:
         'no safe distinguishing signal (same status/date, neither record is a strict superset)',
@@ -518,35 +518,30 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
     return { status: 'failed', reason: 'ambiguous_duplicate' };
   }
   if (resolution.winner === 'incumbent') {
-    log('warn', 'translate_duplicate_id_stale', { ...logCtx, reason: resolution.reason });
+    log('warn', 'map_duplicate_id_stale', { ...logCtx, reason: resolution.reason });
     return { status: 'skipped', reason: 'duplicate' };
   }
-  log('warn', 'translate_duplicate_id_replaced', { ...logCtx, reason: resolution.reason });
+  log('warn', 'map_duplicate_id_replaced', { ...logCtx, reason: resolution.reason });
   return { status: 'ok', id: rawId, record: candidate, row };
 }
 
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
 // owns the counters and the insert. `missingIdSkipped` is the running missing-id skip count, used
 // only for the missing-id bound — duplicate skips are counted separately so they can't consume it.
-function translateRow(
-  row: Row,
-  i: number,
-  missingIdSkipped: number,
-  ctx: TranslateRowContext
-): RowOutcome {
+function mapRow(row: Row, i: number, missingIdSkipped: number, ctx: MapRowContext): RowOutcome {
   const { config, joinMaps, missingSourceIdPolicy, seenRows, records, sourceIdMapping } = ctx;
   const merged = mergeJoins(row, config, joinMaps);
   const rawId = resolveScalar(merged, sourceIdMapping, config.id);
   if (!rawId) {
     if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, missingIdSkipped)) {
-      log('warn', 'translate_skip', {
+      log('warn', 'map_skip', {
         source: config.id,
         row: i + 2,
         reason: 'allowed missing source_id',
       });
       return { status: 'skipped', reason: 'missing_id' };
     }
-    log('error', 'translate_invalid', {
+    log('error', 'map_invalid', {
       source: config.id,
       row: i + 2,
       reason: 'missing source_id',
@@ -557,7 +552,7 @@ function translateRow(
   // Byte-identical re-publish (e.g. ANAC's RAB ships some marks twice) — skip.
   const priorRow = seenRows.get(rawId);
   if (priorRow && Bun.deepEquals(priorRow, merged)) {
-    log('warn', 'translate_skip', {
+    log('warn', 'map_skip', {
       source: config.id,
       row: i + 2,
       source_id: rawId,
@@ -569,7 +564,7 @@ function translateRow(
   try {
     const parsed = AircraftSchema.safeParse(buildRecord(config, merged, rawId));
     if (!parsed.success) {
-      log('error', 'translate_invalid', {
+      log('error', 'map_invalid', {
         source: config.id,
         row: i + 2,
         source_id: rawId,
@@ -590,7 +585,7 @@ function translateRow(
       });
     return { status: 'ok', id: rawId, record: parsed.data, row: merged };
   } catch (err) {
-    log('error', 'translate_error', {
+    log('error', 'map_error', {
       source: config.id,
       row: i + 2,
       source_id: rawId,
@@ -745,8 +740,8 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // Counted per distinct (field, value) for the run, not logged per row. An unrecognized code is a
 // property of the register, so one row and 300,000 rows carry the same information — and at FAA's
 // volume the per-row form emitted tens of thousands of identical lines, burying the errors someone
-// actually needed to read. The count is reported once, with the total, in translate_complete.
-// Partitioned by source rather than one flat map: translate() is async, so two sources running
+// actually needed to read. The count is reported once, with the total, in map_complete.
+// Partitioned by source rather than one flat map: mapRows() is async, so two sources running
 // concurrently would otherwise clear each other's counts and report each other's values.
 const unmatchedLookups = new Map<string, Map<string, number>>();
 

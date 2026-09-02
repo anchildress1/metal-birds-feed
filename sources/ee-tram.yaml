@@ -23,7 +23,7 @@ primary: register
 delimiter: ','
 format: html
 
-# The page publishes its own fleet total ("Kokku õhusõidukeid /total"). Assert the translated record
+# The page publishes its own fleet total ("Kokku õhusõidukeid /total"). Assert the mapped record
 # count matches it so a dropped/added row, or a shift in the preamble-row count that `skip_rows`
 # discards, fails the run loudly instead of silently publishing a short fleet.
 record_count:

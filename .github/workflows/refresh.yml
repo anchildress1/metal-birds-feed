@@ -10,7 +10,7 @@ on:
         required: false
         default: ''
       dry_run:
-        description: 'Dry run — translate and diff but do not write to R2'
+        description: 'Dry run — map and diff, no R2 write and no Gemini pass'
         required: false
         default: 'false'
         type: choice

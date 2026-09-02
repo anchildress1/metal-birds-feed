@@ -101,7 +101,7 @@ jobs:
 
       # Assembly is the step that fails closed when a source has no slice at the current
       # FEED_SLICE_VERSION. publishFeed names the sources but prescribes a local `make refresh`,
-      # which is not the recovery from inside a release run — this translates it. Scoped to the
+      # which is not the recovery from inside a release run — this explains it. Scoped to the
       # assemble step's own outcome so a failed version check does not print refresh instructions.
       - name: Explain the assembly failure
         if: ${{ failure() && steps.feed.outcome == 'failure' }}

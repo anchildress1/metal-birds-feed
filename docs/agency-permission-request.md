@@ -22,7 +22,7 @@ Generic template for contacting any national civil aviation agency to request pe
 
 Dear {AGENCY_NAME},
 
-I am writing on behalf of _metal-birds-feed_ ({REPO_URL}), a source-available, non-commercial data project I operate. The project translates publicly available national aircraft registers from various countries into a single common format. The normalized data is held in private operator storage; metal-birds-feed itself has no public API, public download, public query surface, or user-facing display. The data is intended only for non-commercial applications I operate.
+I am writing on behalf of _metal-birds-feed_ ({REPO_URL}), a source-available, non-commercial data project I operate. The project normalizes publicly available national aircraft registers from various countries into a single common format. The normalized data is held in private operator storage; metal-birds-feed itself has no public API, public download, public query surface, or user-facing display. The data is intended only for non-commercial applications I operate.
 
 I would like to include the {COUNTRY} civil aircraft register — which {AGENCY_SHORT} publishes at {REGISTER_URL} — as one of the project's data sources. The information I would normalize and store privately is identical in content to what is already publicly displayed on your register page, except that street addresses and other unnecessary personal-address fields are not retained.
 

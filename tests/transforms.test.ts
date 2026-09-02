@@ -206,17 +206,17 @@ describe('applyScalar', () => {
       expect(applyScalar('es_aesa_class_en', 'ULM - AVION')).toBe('ultralight airplane'));
     it('renders the AFI prefix as "amateur-built"', () =>
       expect(applyScalar('es_aesa_class_en', 'AFI - AVION')).toBe('amateur-built airplane'));
-    it('translates HELICOPTERO (VTOL)', () =>
+    it('renders HELICOPTERO (VTOL)', () =>
       expect(applyScalar('es_aesa_class_en', 'HELICOPTERO (VTOL)')).toBe('helicopter (VTOL)'));
-    it('translates GLOBO to balloon', () =>
+    it('renders GLOBO as balloon', () =>
       expect(applyScalar('es_aesa_class_en', 'GLOBO')).toBe('balloon'));
-    it('translates AUTOGIRO to gyroplane', () =>
+    it('renders AUTOGIRO as gyroplane', () =>
       expect(applyScalar('es_aesa_class_en', 'AUTOGIRO')).toBe('gyroplane'));
     it('combines an ULM prefix with AUTOGIRO', () =>
       expect(applyScalar('es_aesa_class_en', 'ULM - AUTOGIRO')).toBe('ultralight gyroplane'));
     it('renders AFI - PENDULAR as amateur-built weight-shift', () =>
       expect(applyScalar('es_aesa_class_en', 'AFI - PENDULAR')).toBe('amateur-built weight-shift'));
-    it('translates the wrapped PLANEADOR/MOTOPLANEADOR cell', () =>
+    it('renders the wrapped PLANEADOR/MOTOPLANEADOR cell', () =>
       expect(applyScalar('es_aesa_class_en', 'PLANEADOR/MOTOPL\nANEADOR')).toBe(
         'glider / motor-glider'
       ));

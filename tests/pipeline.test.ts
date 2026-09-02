@@ -16,7 +16,7 @@ const setFetch = (fn: unknown): void => {
 const mockLoadSourceConfig = mock();
 const mockDownload = mock();
 const mockFetchPublishedTotal = mock();
-const mockTranslate = mock();
+const mockMapRows = mock();
 const mockR2Write = mock();
 const mockR2Constructor = mock();
 const mockReadState = mock();
@@ -35,7 +35,7 @@ void mock.module('../src/downloader.js', () => ({
   download: mockDownload,
   fetchPublishedTotal: mockFetchPublishedTotal,
 }));
-void mock.module('../src/engine.js', () => ({ translate: mockTranslate }));
+void mock.module('../src/engine.js', () => ({ mapRows: mockMapRows }));
 void mock.module('../src/localize/localize.js', () => ({ localizeRecords: mockLocalizeRecords }));
 void mock.module('../src/logger.js', () => ({
   log: mockLog,
@@ -155,7 +155,7 @@ beforeEach(() => {
   mockLoadSourceConfig.mockReset();
   mockDownload.mockReset();
   mockFetchPublishedTotal.mockReset();
-  mockTranslate.mockReset();
+  mockMapRows.mockReset();
   mockR2Write.mockReset();
   mockR2Constructor.mockReset();
   mockReadState.mockReset();
@@ -171,7 +171,7 @@ beforeEach(() => {
 
   mockLoadSourceConfig.mockReturnValue(CONFIG);
   mockDownload.mockResolvedValue(new Map([['master', Buffer.from('')]]));
-  mockTranslate.mockResolvedValue({
+  mockMapRows.mockResolvedValue({
     records: new Map(),
     stats: { total: 1, ok: 1, failed: 0 },
   });
@@ -212,7 +212,7 @@ afterEach(() => {
 });
 
 describe('run', () => {
-  it('writes translated records when every row succeeds', async () => {
+  it('writes mapped records when every row succeeds', async () => {
     await run('faa');
 
     expect(mockR2Constructor).toHaveBeenCalledTimes(1);
@@ -233,18 +233,18 @@ describe('run', () => {
       'https://example.test/count',
       CONFIG.download.headers
     );
-    expect(mockTranslate).toHaveBeenCalledWith(expect.anything(), expect.any(Map), '17571');
+    expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), '17571');
   });
 
   it('skips the count fetch for a source that declares no endpoint', async () => {
     await run('faa');
 
     expect(mockFetchPublishedTotal).not.toHaveBeenCalled();
-    expect(mockTranslate).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
+    expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
   });
 
-  it('aborts write when any row fails translation, without retrying', async () => {
-    mockTranslate.mockResolvedValueOnce({
+  it('aborts write when any row fails mapping, without retrying', async () => {
+    mockMapRows.mockResolvedValueOnce({
       records: new Map(),
       stats: { total: 10, ok: 9, failed: 1 },
     });
@@ -254,14 +254,14 @@ describe('run', () => {
     expect(mockR2Write).not.toHaveBeenCalled();
     // A missing `retryable` (as an older/stub engine mock would return) must read as non-retryable,
     // the same as `retryable: false` — never default to retrying.
-    expect(mockTranslate).toHaveBeenCalledTimes(1);
+    expect(mockMapRows).toHaveBeenCalledTimes(1);
   });
 
   // engine.ts marks a failure retryable only when every failed row is an ambiguous-duplicate
   // collision — a fresh-data problem a later download can resolve on its own, not a config bug.
-  it('retries a fully ambiguous-duplicate translation failure with a fresh download', async () => {
+  it('retries a fully ambiguous-duplicate mapping failure with a fresh download', async () => {
     const finalRecords = new Map([['1', aircraft()]]);
-    mockTranslate
+    mockMapRows
       .mockResolvedValueOnce({
         records: new Map(),
         stats: { total: 10, ok: 9, failed: 1 },
@@ -275,12 +275,12 @@ describe('run', () => {
     await run('faa', { baseDelayMs: 0, sleep: async () => {} });
 
     expect(mockDownload).toHaveBeenCalledTimes(2);
-    expect(mockTranslate).toHaveBeenCalledTimes(2);
+    expect(mockMapRows).toHaveBeenCalledTimes(2);
     expect(mockR2Write).toHaveBeenCalledWith(finalRecords, 'faa', null, expect.any(String));
   });
 
-  it('still fails loudly once a retryable translation failure exhausts every attempt', async () => {
-    mockTranslate.mockResolvedValue({
+  it('still fails loudly once a retryable mapping failure exhausts every attempt', async () => {
+    mockMapRows.mockResolvedValue({
       records: new Map(),
       stats: { total: 10, ok: 9, failed: 1 },
       retryable: true,
@@ -290,12 +290,12 @@ describe('run', () => {
       /aborting write/i
     );
 
-    expect(mockTranslate).toHaveBeenCalledTimes(3);
+    expect(mockMapRows).toHaveBeenCalledTimes(3);
     expect(mockR2Write).not.toHaveBeenCalled();
   });
 
-  it('does not retry a translation failure that mixes an ambiguous duplicate with another cause', async () => {
-    mockTranslate.mockResolvedValue({
+  it('does not retry a mapping failure that mixes an ambiguous duplicate with another cause', async () => {
+    mockMapRows.mockResolvedValue({
       records: new Map(),
       stats: { total: 10, ok: 8, failed: 2 },
       retryable: false,
@@ -305,7 +305,7 @@ describe('run', () => {
       /aborting write/i
     );
 
-    expect(mockTranslate).toHaveBeenCalledTimes(1);
+    expect(mockMapRows).toHaveBeenCalledTimes(1);
   });
 
   // The two maps must differ structurally: toHaveBeenCalledWith is deep equality, so
@@ -336,10 +336,10 @@ describe('run', () => {
 
   it('writes localizeRecords output, not the pre-localization records, to both durable outputs', async () => {
     process.env['DRY_RUN'] = 'false';
-    const translated = new Map([['1', aircraft({ cancellation_reason: 'AERONAVE EXPORTADA' })]]);
+    const mapped = new Map([['1', aircraft({ cancellation_reason: 'AERONAVE EXPORTADA' })]]);
     const localized = new Map([['1', aircraft({ cancellation_reason: 'AIRCRAFT EXPORTED' })]]);
-    mockTranslate.mockResolvedValueOnce({
-      records: translated,
+    mockMapRows.mockResolvedValueOnce({
+      records: mapped,
       stats: { total: 1, ok: 1, failed: 0 },
     });
     mockLocalizeRecords.mockResolvedValueOnce({
@@ -350,7 +350,7 @@ describe('run', () => {
     await run('faa');
 
     expect(mockLocalizeRecords).toHaveBeenCalledWith(
-      translated,
+      mapped,
       'faa',
       'en',
       expect.anything(),

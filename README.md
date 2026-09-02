@@ -9,7 +9,7 @@
 
 </div>
 
-Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
+Maps national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
 serves fast tail-number and ICAO hex lookups from a private [feed service](#feed-service) on
 Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
@@ -26,18 +26,18 @@ Sources with `cadence_days` skip early until due; sources without it run every d
 Each runner:
 
 1. Downloads the source's full bulk export (registries don't publish deltas)
-2. Translates every row into the canonical `Aircraft` schema via the source's YAML mapping
+2. Maps every row into the canonical `Aircraft` schema via the source's YAML mapping
 3. Computes a content hash over the full record set and compares it to the prior run's hash in `_state`
 4. Rebuilds the per-source SQLite artifact and PUTs it whole — only when that hash changed
 
 ### What's full vs skipped
 
-| Step      | Pass type      | Notes                                                                                   |
-| --------- | -------------- | --------------------------------------------------------------------------------------- |
-| Download  | Full           | All sources ship full snapshots; no `If-Modified-Since` semantics                       |
-| Translate | Full           | All rows re-parsed and transformed every run (~10s for FAA's 312k records)              |
-| Hash      | Full O(n)      | One `sha256` over the sorted record set, compared to the prior run's hash in `_state`   |
-| R2 write  | All-or-nothing | The whole SQLite artifact is PUT when the hash changed; skipped entirely when unchanged |
+| Step     | Pass type      | Notes                                                                                   |
+| -------- | -------------- | --------------------------------------------------------------------------------------- |
+| Download | Full           | All sources ship full snapshots; no `If-Modified-Since` semantics                       |
+| Map      | Full           | All rows re-parsed and transformed every run (~10s for FAA's 312k records)              |
+| Hash     | Full O(n)      | One `sha256` over the sorted record set, compared to the prior run's hash in `_state`   |
+| R2 write | All-or-nothing | The whole SQLite artifact is PUT when the hash changed; skipped entirely when unchanged |
 
 The write is wholesale, not incremental — no per-record diffing, no manifest, no DELETEs.
 Registries don't expose deltas, and R2 ops are the expensive part, so an unchanged refresh
@@ -63,7 +63,7 @@ cleanly inside it and don't need a local bootstrap.
 
 ## Initial Load (Bootstrap)
 
-The first FAA load translates ~315k records and PUTs the whole artifact, which exceeds the
+The first FAA load maps ~315k records and PUTs the whole artifact, which exceeds the
 refresh job's 30-minute `timeout-minutes`. Run it once locally; cadence runs handle diffs
 forever after.
 
@@ -303,7 +303,7 @@ Correspondence, posture, and storage terms for every source are tracked in [DATA
    - `docs/source-onboarding-checklist.md` `✅ Done` row — keeps the triage snapshot from losing a shipped source.
 5. New scalar, array, or compound transforms require updates in **two places** simultaneously or the loader rejects the config: the name array in `src/types/config.ts` and the handler map in `src/transforms.ts`. `src/config/loader.ts` validates off those same arrays, so it needs no edit.
 
-The translation engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path; hr-ccaa added the `hr_ccaa_registration` / `hr_ccaa_owner_kind` / `hr_ccaa_build_certification` / `hr_ccaa_owner_country` transforms, the `pdf.anchor_field` option (constrains an anchor match to one declared column, closing off a false-positive anchor a short generic mark pattern can otherwise match elsewhere on the page), and the `pdf.before_first_anchor_reach` / `pdf.before_first_anchor_pattern` pair (lets a page's bottom-most record keep a continuation line beyond the default footer-exclusion bound, gated by a content allowlist), reusing the existing positioned-coordinate `pdf` parser path).
+The mapping engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path; hr-ccaa added the `hr_ccaa_registration` / `hr_ccaa_owner_kind` / `hr_ccaa_build_certification` / `hr_ccaa_owner_country` transforms, the `pdf.anchor_field` option (constrains an anchor match to one declared column, closing off a false-positive anchor a short generic mark pattern can otherwise match elsewhere on the page), and the `pdf.before_first_anchor_reach` / `pdf.before_first_anchor_pattern` pair (lets a page's bottom-most record keep a continuation line beyond the default footer-exclusion bound, gated by a content allowlist), reusing the existing positioned-coordinate `pdf` parser path).
 
 ## Author
 

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { translate } from '../src/engine.js';
+import { mapRows } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { SourceConfig } from '../src/types/config.js';
@@ -44,12 +44,12 @@ beforeAll(async () => {
     ['acftref', fixtureBuffer('ACFTREF.txt')],
     ['engine', fixtureBuffer('ENGINE.txt')],
   ]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   records = result.records;
 });
 
-describe('FAA fixture translation', () => {
-  it('translates all 10 fixture rows', () => {
+describe('FAA fixture mapping', () => {
+  it('maps all 10 fixture rows', () => {
     expect(records.size).toBe(10);
   });
 
@@ -243,7 +243,7 @@ const tcFixtureBuffer = (filename: string): Buffer =>
   readFileSync(resolve(TC_FIXTURES, 'input', filename));
 
 let tcRecords: Map<string, Aircraft>;
-let tcStats: Awaited<ReturnType<typeof translate>>['stats'];
+let tcStats: Awaited<ReturnType<typeof mapRows>>['stats'];
 
 beforeAll(async () => {
   const config = loadSourceConfig(TC_CONFIG_PATH);
@@ -251,13 +251,13 @@ beforeAll(async () => {
     ['carscurr', tcFixtureBuffer('carscurr.txt')],
     ['carsownr', tcFixtureBuffer('carsownr.txt')],
   ]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   tcRecords = result.records;
   tcStats = result.stats;
 });
 
-describe('TC-CA fixture translation', () => {
-  it('translates all 11 fixture rows', () => {
+describe('TC-CA fixture mapping', () => {
+  it('maps all 11 fixture rows', () => {
     expect(tcRecords.size).toBe(11);
   });
 
@@ -410,13 +410,13 @@ let casaStats: EngineStats;
 beforeAll(async () => {
   const config = loadSourceConfig(CASA_CONFIG_PATH);
   const files = new Map([['acrftreg', casaFixtureBuffer('acrftreg.csv')]]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   casaRecords = result.records;
   casaStats = result.stats;
 });
 
-describe('CASA fixture translation', () => {
-  it('translates all 11 fixture rows with no failures', () => {
+describe('CASA fixture mapping', () => {
+  it('maps all 11 fixture rows with no failures', () => {
     expect(casaStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(casaRecords.size).toBe(11);
   });
@@ -589,13 +589,13 @@ let lvStats: EngineStats;
 beforeAll(async () => {
   const config = loadSourceConfig(LV_CONFIG_PATH);
   const files = new Map([['output', lvFixtureBuffer('output.csv')]]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   lvRecords = result.records;
   lvStats = result.stats;
 });
 
-describe('CAA Latvia fixture translation', () => {
-  it('translates all 10 fixture rows with no failures', () => {
+describe('CAA Latvia fixture mapping', () => {
+  it('maps all 10 fixture rows with no failures', () => {
     expect(lvStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(lvRecords.size).toBe(10);
   });
@@ -732,7 +732,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    const { stats } = await translate(config, files);
+    const { stats } = await mapRows(config, files);
     expect(stats.failed).toBeGreaterThan(0);
   });
 
@@ -750,7 +750,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    const { records: r } = await translate(config, files);
+    const { records: r } = await mapRows(config, files);
     expect(r.get('00001001')?.status).toBe('other');
   });
 
@@ -768,7 +768,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    const { stats } = await translate(config, files);
+    const { stats } = await mapRows(config, files);
     expect(stats.skipped).toBe(0);
     expect(stats.failed).toBe(1);
     expect(records.size).toBe(10); // original records unaffected
@@ -782,7 +782,7 @@ describe('engine — negative and edge cases', () => {
       ['carscurr', Buffer.from(munged, 'latin1')],
       ['carsownr', tcFixtureBuffer('carsownr.txt')],
     ]);
-    const { stats } = await translate(config, files);
+    const { stats } = await mapRows(config, files);
     expect(stats.skipped).toBe(1);
     expect(stats.failed).toBe(1);
   });
@@ -796,7 +796,7 @@ describe('engine — negative and edge cases', () => {
       ['carscurr', Buffer.from(`${text}11 rows selected.${','.repeat(46)}\n`, 'latin1')],
       ['carsownr', tcFixtureBuffer('carsownr.txt')],
     ]);
-    const { stats } = await translate(config, files);
+    const { stats } = await mapRows(config, files);
     expect(stats.skipped).toBe(1);
     expect(stats.failed).toBe(1);
   });
@@ -815,7 +815,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    const { stats } = await translate(modConfig, files);
+    const { stats } = await mapRows(modConfig, files);
     expect(stats.failed).toBeGreaterThan(0);
   });
 
@@ -830,7 +830,7 @@ describe('engine — negative and edge cases', () => {
       ['carscurr', buf],
       ['carsownr', tcFixtureBuffer('carsownr.txt')],
     ]);
-    const { records: r } = await translate(config, files);
+    const { records: r } = await mapRows(config, files);
     // AAC mangled to Spaceship still uses MARK="AAC" so its source_id resolves.
     // Compound returns null → airframe_type is null in canonical output.
     expect(r.get('AAC')?.airframe_type).toBeNull();
@@ -850,7 +850,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    const { records: r } = await translate(modConfig, files);
+    const { records: r } = await mapRows(modConfig, files);
     expect(r.get('00001001')?.operational_classes).toEqual(['V']);
   });
 
@@ -860,7 +860,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    await expect(translate(config, files)).rejects.toThrow(
+    await expect(mapRows(config, files)).rejects.toThrow(
       'Primary file "master" not found in downloaded files'
     );
   });
@@ -868,7 +868,7 @@ describe('engine — negative and edge cases', () => {
   it('throws when a join file is absent from the files map', async () => {
     const config = loadSourceConfig(CONFIG_PATH);
     await expect(
-      translate(config, new Map([['master', fixtureBuffer('MASTER.txt')]]))
+      mapRows(config, new Map([['master', fixtureBuffer('MASTER.txt')]]))
     ).rejects.toThrow('Join file');
   });
 
@@ -883,7 +883,7 @@ describe('engine — negative and edge cases', () => {
       ['acftref', fixtureBuffer('ACFTREF.txt')],
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
-    const { records: r, stats } = await translate(modConfig, files);
+    const { records: r, stats } = await mapRows(modConfig, files);
     expect(stats.failed).toBe(0);
     expect(r.get('00001001')?.year_manufactured).toBeNull();
   });
@@ -906,7 +906,7 @@ describe('engine — negative and edge cases', () => {
       ['carscurr', tcFixtureBuffer('carscurr.txt')],
       ['carsownr', tcFixtureBuffer('carsownr.txt')],
     ]);
-    const { records: r } = await translate(modConfig, files);
+    const { records: r } = await mapRows(modConfig, files);
     // AAC: Aeroplane + 1 engine → tc_airframe → 'fixed-wing-single-engine' → lookup → 'fixed-wing'
     expect(r.get('AAC')?.airframe_type).toBe('fixed-wing');
   });
@@ -936,14 +936,14 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([['primary', Buffer.from('ID,REG,KIND\n1,N1,valueOf\n', 'utf8')]]);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      const { records: r, stats } = await translate(config, files);
+      const { records: r, stats } = await mapRows(config, files);
       expect(stats.failed).toBe(0);
       expect(r.get('1')?.owner.kind).toBeNull();
       // An unrecognized value silently absorbed by a declared default must still be visible in
       // the run log — otherwise a source drifting to a new/unmapped code blends into "other"
       // with zero signal, the one gap this engine's other bounded-skip mechanisms don't have.
       const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
-      expect(logged).toContain('event=translate_lookup_default');
+      expect(logged).toContain('event=map_lookup_default');
       expect(logged).toContain('value=valueOf');
     } finally {
       logSpy.mockRestore();
@@ -973,7 +973,7 @@ describe('engine — negative and edge cases', () => {
       ['primary', Buffer.from('ID,REG\n1,N1\n2,N2\n', 'utf8')],
       ['jf', Buffer.from('K,EXTRA\n999,foo\n', 'utf8')],
     ]);
-    await expect(translate(config, files)).rejects.toThrow(/join "j" matched 0 of 2 rows/i);
+    await expect(mapRows(config, files)).rejects.toThrow(/join "j" matched 0 of 2 rows/i);
   });
 
   it('accepts a join with partial hits (occasional misses are legal)', async () => {
@@ -1000,7 +1000,7 @@ describe('engine — negative and edge cases', () => {
       ['primary', Buffer.from('ID,REG\n1,N1\n2,N2\n', 'utf8')],
       ['jf', Buffer.from('K,EXTRA\n1,Cessna\n', 'utf8')],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.manufacturer).toBe('Cessna');
     expect(records.get('2')?.manufacturer).toBeNull();
@@ -1012,7 +1012,7 @@ describe('engine — negative and edge cases', () => {
       ['jf', Buffer.from('K,EXTRA\n1,Cessna\n1,Piper\n', 'utf8')],
     ]);
 
-    await expect(translate(DUPLICATE_JOIN_CONFIG, files)).rejects.toThrow(
+    await expect(mapRows(DUPLICATE_JOIN_CONFIG, files)).rejects.toThrow(
       'Source "synthetic-join-duplicate": join "j" has conflicting duplicate key "1"'
     );
   });
@@ -1023,7 +1023,7 @@ describe('engine — negative and edge cases', () => {
       ['jf', Buffer.from('K,EXTRA\n1,Cessna\n1,Cessna\n', 'utf8')],
     ]);
 
-    const { records, stats } = await translate(DUPLICATE_JOIN_CONFIG, files);
+    const { records, stats } = await mapRows(DUPLICATE_JOIN_CONFIG, files);
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.manufacturer).toBe('Cessna');
   });
@@ -1047,7 +1047,7 @@ describe('engine — negative and edge cases', () => {
         primary(),
         ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,a\n', 'utf8')],
       ]);
-      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      const { records } = await mapRows(merging({ fields: ['EXTRA', 'KIND'] }), files);
       expect(records.get('1')?.manufacturer).toBe('Cessna, Piper');
     });
 
@@ -1057,7 +1057,7 @@ describe('engine — negative and edge cases', () => {
         ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,a\n', 'utf8')],
       ]);
       const config = merging({ fields: ['EXTRA', 'KIND'], separator: ' Y ' });
-      const { records } = await translate(config, files);
+      const { records } = await mapRows(config, files);
       expect(records.get('1')?.manufacturer).toBe('Cessna Y Piper');
     });
 
@@ -1068,7 +1068,7 @@ describe('engine — negative and edge cases', () => {
         primary(),
         ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,,a\n1,Cessna,a\n', 'utf8')],
       ]);
-      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      const { records } = await mapRows(merging({ fields: ['EXTRA', 'KIND'] }), files);
       expect(records.get('1')?.manufacturer).toBe('Cessna');
     });
 
@@ -1076,7 +1076,7 @@ describe('engine — negative and edge cases', () => {
     // what says the key is shared, so there is nothing to protect from being overwritten.
     it('stamps set_on_merge columns only when a key actually merged', async () => {
       const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
-      const merged = await translate(
+      const merged = await mapRows(
         config,
         new Map([
           primary(),
@@ -1085,7 +1085,7 @@ describe('engine — negative and edge cases', () => {
       );
       expect(merged.records.get('1')?.model).toBe('shared');
 
-      const lone = await translate(
+      const lone = await mapRows(
         config,
         new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,solo\n', 'utf8')]])
       );
@@ -1115,7 +1115,7 @@ describe('engine — negative and edge cases', () => {
       },
     ])('set_on_merge distinctness: $label', async ({ csv, expectedModel }) => {
       const config = merging({ fields: ['EXTRA'], set_on_merge: { KIND: 'shared' } });
-      const { records } = await translate(
+      const { records } = await mapRows(
         config,
         new Map([primary(), ['jf', Buffer.from(csv, 'utf8')]])
       );
@@ -1126,7 +1126,7 @@ describe('engine — negative and edge cases', () => {
     // field must not punch a blank placeholder into another field's position.
     it('drops a blank independently per field rather than aligning by party position', async () => {
       const config = merging({ fields: ['EXTRA', 'KIND'] });
-      const { records } = await translate(
+      const { records } = await mapRows(
         config,
         new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n1,Piper,\n', 'utf8')]])
       );
@@ -1136,7 +1136,7 @@ describe('engine — negative and edge cases', () => {
 
     it('leaves a single-row key untouched', async () => {
       const files = new Map([primary(), ['jf', Buffer.from('K,EXTRA,KIND\n1,Cessna,a\n', 'utf8')]]);
-      const { records } = await translate(merging({ fields: ['EXTRA', 'KIND'] }), files);
+      const { records } = await mapRows(merging({ fields: ['EXTRA', 'KIND'] }), files);
       expect(records.get('1')?.manufacturer).toBe('Cessna');
     });
   });
@@ -1158,13 +1158,13 @@ describe('engine — negative and edge cases', () => {
       registration: 'REG',
       mapping: { registration: { field: 'REG' } },
     };
-    // Zero-record refusal lives in the writer; translate itself must not misreport an empty
+    // Zero-record refusal lives in the writer; mapping itself must not misreport an empty
     // primary as a join failure.
     const files = new Map([
       ['primary', Buffer.from('ID,REG\n', 'utf8')],
       ['jf', Buffer.from('K,EXTRA\n1,Cessna\n', 'utf8')],
     ]);
-    const { records } = await translate(config, files);
+    const { records } = await mapRows(config, files);
     expect(records.size).toBe(0);
   });
 
@@ -1188,7 +1188,7 @@ describe('engine — negative and edge cases', () => {
     // A renamed/broken registration mapping nulls every mark; row count and content hash both
     // stay plausible, so the schema reject is the only guard that can catch it.
     const files = new Map([['primary', Buffer.from('ID,REG\n1,\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     expect(records.size).toBe(0);
   });
@@ -1211,7 +1211,7 @@ describe('engine — negative and edge cases', () => {
       mapping: { registration: { field: 'REG' } },
     };
     const files = new Map([['primary', Buffer.from('ID,REG\n1,"   "\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     expect(records.size).toBe(0);
   });
@@ -1234,7 +1234,7 @@ describe('engine — negative and edge cases', () => {
       mapping: { 'owner.name': { field: 'REG' } },
     };
     const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     expect(records.size).toBe(0);
   });
@@ -1263,7 +1263,7 @@ describe('engine — negative and edge cases', () => {
       },
     };
     const files = new Map([['primary', Buffer.from('ID,REG,STATUS\n1,N1,\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.status).toBeNull();
   });
@@ -1301,7 +1301,7 @@ describe('engine — negative and edge cases', () => {
       },
     };
     const files = new Map([['primary', Buffer.from(`ID,REG,STATUS\n1,N1,${status}\n`, 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.get('1')?.status).toBe(expected);
   });
@@ -1329,7 +1329,7 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,valid\n', 'utf8')],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N2');
@@ -1359,7 +1359,7 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,STATUS\n1,N1,valid\n1,N2,cancelled\n', 'utf8')],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
@@ -1397,7 +1397,7 @@ describe('engine — negative and edge cases', () => {
         ),
       ],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
@@ -1428,7 +1428,7 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,ACTION\n1,N1,2018-01-01\n1,N2,2021-06-01\n', 'utf8')],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N2');
@@ -1466,7 +1466,7 @@ describe('engine — negative and edge cases', () => {
         ),
       ],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
@@ -1497,7 +1497,7 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,ACTION\n1,N1,\n1,N2,2020-01-01\n', 'utf8')],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N2');
@@ -1521,7 +1521,7 @@ describe('engine — negative and edge cases', () => {
       mapping: { registration: { field: 'REG' } },
     };
     const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N1\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(stats.skipped).toBe(1);
     expect(records.size).toBe(1);
@@ -1556,7 +1556,7 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,\n', 'utf8')],
     ]);
-    const { records, stats, retryable } = await translate(config, files);
+    const { records, stats, retryable } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
     // A fresh download can resolve this on its own (a later publish may add the missing status or
@@ -1585,7 +1585,7 @@ describe('engine — negative and edge cases', () => {
     // tell them apart, this isn't a reissue — it's an ambiguous id collision, and guessing via
     // file order would silently drop upstream data. It must fail, not guess.
     const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
-    const { records, stats, retryable } = await translate(config, files);
+    const { records, stats, retryable } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     // The first row still succeeded before the second one collided with it.
     expect(records.size).toBe(1);
@@ -1613,7 +1613,7 @@ describe('engine — negative and edge cases', () => {
     // ambiguous id=1 collision as above. One retryable failure plus one that isn't must not retry:
     // a fresh download can't fix the missing-id row, so retrying would only burn a download.
     const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n,N3\n', 'utf8')]]);
-    const { stats, retryable } = await translate(config, files);
+    const { stats, retryable } = await mapRows(config, files);
     expect(stats.failed).toBe(2);
     expect(retryable).toBe(false);
   });
@@ -1639,7 +1639,7 @@ describe('engine — negative and edge cases', () => {
     // PSORO: one row leaves owner.state undisclosed, the other populates it. The richer row must win
     // rather than the collision failing. Sparse row first so the "candidate is richer" branch runs.
     const files = new Map([['primary', Buffer.from('ID,REG,ST\n1,N1,\n1,N1,CA\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.owner.state).toBe('CA');
@@ -1665,7 +1665,7 @@ describe('engine — negative and edge cases', () => {
     // Richer row first: the sparser candidate must not overwrite it. Completeness resolution is
     // independent of file order, exactly like the status and date tiebreaks above it.
     const files = new Map([['primary', Buffer.from('ID,REG,ST\n1,N1,CA\n1,N1,\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.owner.state).toBe('CA');
@@ -1705,7 +1705,7 @@ describe('engine — negative and edge cases', () => {
     };
     const files = new Map([['primary', Buffer.from(`ID,REG,NAME,ST\n${input.rows}`, 'utf8')]]);
 
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
 
     expect(stats.failed).toBe(1);
     expect(stats.duplicateSkipped).toBe(0);
@@ -1736,7 +1736,7 @@ describe('engine — negative and edge cases', () => {
     // check must catch it instead of falling through to a spurious "no distinguishing signal"
     // failure — there is nothing ambiguous about two rows that map to the same output.
     const files = new Map([['primary', Buffer.from('ID,REG,EXTRA\n1,N1,a\n1,N1,b\n', 'utf8')]]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(stats.skipped).toBe(1);
     expect(records.size).toBe(1);
@@ -1766,7 +1766,7 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,KIND\n1,N1,x\n1,N1,x\n,N3,banner\n', 'utf8')],
     ]);
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(0);
     expect(stats.skipped).toBe(2); // 1 duplicate + 1 missing-id
     expect(records.size).toBe(1);
@@ -1843,7 +1843,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     const config = buildOdsConfig();
     const files = new Map([['register', buf]]);
 
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
 
     expect(stats.total).toBe(2);
     expect(stats.failed).toBe(0);
@@ -1879,7 +1879,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     };
     const files = new Map([['register', buf]]);
 
-    const { records, stats } = await translate(config, files);
+    const { records, stats } = await mapRows(config, files);
 
     expect(stats.skipped).toBe(1);
     expect(stats.failed).toBe(0);
@@ -1887,7 +1887,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     expect(records.get('PH-OK')?.registration).toBe('PH-OK');
   });
 
-  describe('NL ILT fixture translation', () => {
+  describe('NL ILT fixture mapping', () => {
     const NL_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'nl-ilt.yaml');
     const NL_FIXTURE = resolve(
       import.meta.dirname,
@@ -1904,12 +1904,12 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     beforeAll(async () => {
       const config = loadSourceConfig(NL_CONFIG_PATH);
       const buf = readFileSync(NL_FIXTURE);
-      const result = await translate(config, new Map([['register', buf]]));
+      const result = await mapRows(config, new Map([['register', buf]]));
       nlRecords = result.records;
       nlStats = result.stats;
     });
 
-    it('skips the "Information" banner row and translates 8 aircraft', () => {
+    it('skips the "Information" banner row and maps 8 aircraft', () => {
       expect(nlStats).toEqual({ total: 9, ok: 8, failed: 0, skipped: 1, duplicateSkipped: 0 });
       expect(nlRecords.size).toBe(8);
     });
@@ -2030,7 +2030,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     const config: SourceConfig = { ...buildOdsConfig(), sheet: 'Register' };
     const files = new Map([['register', buf]]);
 
-    const { records } = await translate(config, files);
+    const { records } = await mapRows(config, files);
 
     expect(records.size).toBe(1);
     expect(records.get('200')?.registration).toBe('PH-OK');
@@ -2044,18 +2044,18 @@ const TW_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'tw-caa.yam
 const twFixtureBuffer = (filename: string): Buffer =>
   readFileSync(resolve(TW_FIXTURES, 'input', filename));
 
-describe('CAA Taiwan fixture translation (binary .xls)', () => {
+describe('CAA Taiwan fixture mapping (binary .xls)', () => {
   let twRecords: Map<string, Aircraft>;
   let twStats: EngineStats;
 
   beforeAll(async () => {
     const config = loadSourceConfig(TW_CONFIG_PATH);
     const files = new Map([['register', twFixtureBuffer('register.xls')]]);
-    const result = await translate(config, files);
+    const result = await mapRows(config, files);
     twRecords = result.records;
     twStats = result.stats;
   });
-  it('translates 6 aircraft and skips the 6 subtotal/total rows', () => {
+  it('maps 6 aircraft and skips the 6 subtotal/total rows', () => {
     expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6, duplicateSkipped: 0 });
     expect(twRecords.size).toBe(6);
   });
@@ -2154,13 +2154,13 @@ let brStats: EngineStats;
 beforeAll(async () => {
   const config = loadSourceConfig(BR_CONFIG_PATH);
   const files = new Map([['aircraft', brBuffer('dados_aeronaves.csv')]]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   brRecords = result.records;
   brStats = result.stats;
 });
 
-describe('BR-ANAC fixture translation', () => {
-  it('translates all 9 fixture rows with no failures (banner row skipped)', () => {
+describe('BR-ANAC fixture mapping', () => {
+  it('maps all 9 fixture rows with no failures (banner row skipped)', () => {
     expect(brStats).toEqual({ total: 9, ok: 9, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(brRecords.size).toBe(9);
   });
@@ -2319,19 +2319,19 @@ describe('BR-ANAC fixture translation', () => {
 const CH_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ch-foca');
 const CH_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ch-foca.yaml');
 
-describe('CH-FOCA fixture translation', () => {
+describe('CH-FOCA fixture mapping', () => {
   let chRecords: Map<string, Aircraft>;
   let chStats: EngineStats;
 
   beforeAll(async () => {
     const config: SourceConfig = loadSourceConfig(CH_CONFIG_PATH);
     const buf = readFileSync(resolve(CH_FIXTURES, 'input', 'lfr.json'));
-    const result = await translate(config, new Map([['aircraft', buf]]));
+    const result = await mapRows(config, new Map([['aircraft', buf]]));
     chRecords = result.records;
     chStats = result.stats;
   });
 
-  it('translates every fixture record', () => {
+  it('maps every fixture record', () => {
     expect(chStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
@@ -2481,18 +2481,18 @@ describe('CH-FOCA fixture translation', () => {
   });
 });
 
-describe('CAA Maldives fixture translation (PDF)', () => {
+describe('CAA Maldives fixture mapping (PDF)', () => {
   const MV_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'mv-caa.yaml');
   const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
   let mvRecords: Map<string, Aircraft>;
 
   beforeAll(async () => {
     const config = loadSourceConfig(MV_CONFIG);
-    const result = await translate(config, new Map([['register', readFileSync(MV_PDF)]]));
+    const result = await mapRows(config, new Map([['register', readFileSync(MV_PDF)]]));
     mvRecords = result.records;
   });
 
-  it('translates all 137 register rows with no failures', () => {
+  it('maps all 137 register rows with no failures', () => {
     expect(mvRecords.size).toBe(137);
   });
 
@@ -2537,7 +2537,7 @@ describe('CAA Maldives fixture translation (PDF)', () => {
     expect([...mvRecords.values()].every((r) => r.status === 'valid')).toBe(true));
 });
 
-describe('AESA Spain fixture translation (PDF)', () => {
+describe('AESA Spain fixture mapping (PDF)', () => {
   const ES_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'es-aesa.yaml');
   const ES_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'es-aesa', 'input', 'register.pdf');
   let esRecords: Map<string, Aircraft>;
@@ -2545,12 +2545,12 @@ describe('AESA Spain fixture translation (PDF)', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(ES_CONFIG);
-    const result = await translate(config, new Map([['register', readFileSync(ES_PDF)]]));
+    const result = await mapRows(config, new Map([['register', readFileSync(ES_PDF)]]));
     esRecords = result.records;
     esStats = result.stats;
   });
 
-  it('translates all 90 fixture rows with no failures', () => {
+  it('maps all 90 fixture rows with no failures', () => {
     expect(esStats).toEqual({ total: 90, ok: 90, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(esRecords.size).toBe(90);
   });
@@ -2642,7 +2642,7 @@ describe('AESA Spain fixture translation (PDF)', () => {
   });
 });
 
-describe('CCAA Croatia fixture translation (PDF)', () => {
+describe('CCAA Croatia fixture mapping (PDF)', () => {
   const HR_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hr-ccaa.yaml');
   const HR_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hr-ccaa', 'input', 'register.pdf');
   let hrRecords: Map<string, Aircraft>;
@@ -2650,7 +2650,7 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(HR_CONFIG);
-    const result = await translate(config, new Map([['register', readFileSync(HR_PDF)]]));
+    const result = await mapRows(config, new Map([['register', readFileSync(HR_PDF)]]));
     hrRecords = result.records;
     hrStats = result.stats;
   });
@@ -2659,7 +2659,7 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
   // owner-cell continuation line that happens to read "PZO" from ever being mistaken for its own
   // anchor, so there is no false-positive row to skip (see the MORH test below for what that line
   // actually belongs to).
-  it('translates all 33 real rows with no failures', () => {
+  it('maps all 33 real rows with no failures', () => {
     expect(hrStats).toEqual({ total: 33, ok: 33, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(hrRecords.size).toBe(33);
   });
@@ -2754,13 +2754,13 @@ let eeStats: EngineStats;
 beforeAll(async () => {
   const config = loadSourceConfig(EE_CONFIG_PATH);
   const files = new Map([['register', eeFixtureBuffer('register.html')]]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   eeRecords = result.records;
   eeStats = result.stats;
 });
 
-describe('Transpordiamet Estonia (HTML) fixture translation', () => {
-  it('translates all 10 fixture aircraft with no failures', () => {
+describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
+  it('maps all 10 fixture aircraft with no failures', () => {
     expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(eeRecords.size).toBe(10);
   });
@@ -2866,8 +2866,8 @@ const eeTable = (statedTotal: number, marks: string[]): Buffer => {
 describe('record_count guard (ee-tram)', () => {
   const config = loadSourceConfig(EE_CONFIG_PATH);
 
-  it('passes when the translated count equals the published total', async () => {
-    const { records } = await translate(
+  it('passes when the mapped count equals the published total', async () => {
+    const { records } = await mapRows(
       config,
       new Map([['register', eeTable(2, ['ES - AAA', 'ES - AAB'])]])
     );
@@ -2876,8 +2876,8 @@ describe('record_count guard (ee-tram)', () => {
 
   it('fails loudly when a row is missing vs the published total', async () => {
     await expect(
-      translate(config, new Map([['register', eeTable(3, ['ES - AAA', 'ES - AAB'])]]))
-    ).rejects.toThrow(/translated 2 records but the source publishes 3/);
+      mapRows(config, new Map([['register', eeTable(3, ['ES - AAA', 'ES - AAB'])]]))
+    ).rejects.toThrow(/mapped 2 records but the source publishes 3/);
   });
 
   it('fails loudly when the published total cannot be found', async () => {
@@ -2885,7 +2885,7 @@ describe('record_count guard (ee-tram)', () => {
       .toString('utf8')
       .replace(/Kokku[^<]*/, 'x');
     await expect(
-      translate(config, new Map([['register', Buffer.from(noTotal, 'utf8')]]))
+      mapRows(config, new Map([['register', Buffer.from(noTotal, 'utf8')]]))
     ).rejects.toThrow(/pattern matched no count/);
   });
 
@@ -2893,7 +2893,7 @@ describe('record_count guard (ee-tram)', () => {
     // 'NOT-A-MARK' fails ee_registration (no ES- prefix), so this row is a row-level failure —
     // independent of and prior to the record_count guard, which pipeline.ts's own
     // `stats.failed > 0` abort path is responsible for surfacing.
-    const { stats } = await translate(
+    const { stats } = await mapRows(
       config,
       new Map([['register', eeTable(2, ['ES - AAA', 'NOT-A-MARK'])]])
     );
@@ -2901,7 +2901,7 @@ describe('record_count guard (ee-tram)', () => {
   });
 });
 
-// lt-tka counts against the parsed rows, not the translated records: its published total covers
+// lt-tka counts against the parsed rows, not the mapped records: its published total covers
 // the accumulated history that latest_snapshot_by then filters down to one publication.
 describe('record_count against a separately published total (lt-tka)', () => {
   const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
@@ -2909,20 +2909,20 @@ describe('record_count against a separately published total (lt-tka)', () => {
     readFileSync(resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv'));
   const files = (): Map<string, Buffer> => new Map([['register', register()]]);
 
-  it('counts the parsed rows, not the smaller translated set', async () => {
-    const { records, stats } = await translate(config, files(), '{"_data":[{"count()":13}]}');
+  it('counts the parsed rows, not the smaller mapped set', async () => {
+    const { records, stats } = await mapRows(config, files(), '{"_data":[{"count()":13}]}');
     expect(stats.total).toBe(11);
     expect(records.size).toBe(11);
   });
 
   it('fails loudly when the download is short of the published total', async () => {
-    await expect(translate(config, files(), '{"_data":[{"count()":14}]}')).rejects.toThrow(
+    await expect(mapRows(config, files(), '{"_data":[{"count()":14}]}')).rejects.toThrow(
       /parsed 13 records but the source publishes 14/
     );
   });
 
   it('names the endpoint when the published total cannot be found there', async () => {
-    await expect(translate(config, files(), '{"_data":[]}')).rejects.toThrow(
+    await expect(mapRows(config, files(), '{"_data":[]}')).rejects.toThrow(
       /pattern matched no count in https:\/\/get\.data\.gov\.lt/
     );
   });
@@ -2939,13 +2939,13 @@ let sgStats: EngineStats;
 
 beforeAll(async () => {
   const config = loadSourceConfig(SG_CONFIG_PATH);
-  const result = await translate(config, new Map([['register', sgFixtureBuffer('register.xlsx')]]));
+  const result = await mapRows(config, new Map([['register', sgFixtureBuffer('register.xlsx')]]));
   sgRecords = result.records;
   sgStats = result.stats;
 });
 
-describe('CAAS Singapore fixture translation', () => {
-  it('translates all 10 fixture rows with no failures', () => {
+describe('CAAS Singapore fixture mapping', () => {
+  it('maps all 10 fixture rows with no failures', () => {
     expect(sgStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(sgRecords.size).toBe(10);
   });
@@ -3060,19 +3060,19 @@ describe('CAAS Singapore fixture translation', () => {
 const NO_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'no-caa');
 const NO_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'no-caa.yaml');
 
-describe('NO-CAA fixture translation', () => {
+describe('NO-CAA fixture mapping', () => {
   let noRecords: Map<string, Aircraft>;
   let noStats: EngineStats;
 
   beforeAll(async () => {
     const config: SourceConfig = loadSourceConfig(NO_CONFIG_PATH);
     const buf = readFileSync(resolve(NO_FIXTURES, 'input', 'nlr.json'));
-    const result = await translate(config, new Map([['aircraft', buf]]));
+    const result = await mapRows(config, new Map([['aircraft', buf]]));
     noRecords = result.records;
     noStats = result.stats;
   });
 
-  it('translates every fixture record', () => {
+  it('maps every fixture record', () => {
     expect(noStats).toEqual({ total: 7, ok: 7, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
@@ -3196,14 +3196,14 @@ describe('NO-CAA fixture translation', () => {
 const CL_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'cl-dgac');
 const CL_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'cl-dgac.yaml');
 
-describe('DGAC Chile fixture translation', () => {
+describe('DGAC Chile fixture mapping', () => {
   let clRecords: Map<string, Aircraft>;
   let clStats: EngineStats;
 
   beforeAll(async () => {
     const config: SourceConfig = loadSourceConfig(CL_CONFIG_PATH);
     const buf = readFileSync(resolve(CL_FIXTURES, 'input', 'register.xlsx'));
-    const result = await translate(config, new Map([['register', buf]]));
+    const result = await mapRows(config, new Map([['register', buf]]));
     clRecords = result.records;
     clStats = result.stats;
   });
@@ -3337,7 +3337,7 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', ''],
       ['1', 'CC-AAA', 'LATE ADDITION SPA'],
     ]);
-    const { records, stats } = await translate(
+    const { records, stats } = await mapRows(
       buildMergeConfig({ 'owner.kind': 'co-owner' }),
       new Map([['register', buf]])
     );
@@ -3354,7 +3354,7 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', 'FIRST PARTY'],
       ['1', 'CC-AAA', 'SECOND PARTY'],
     ]);
-    const { records, stats, retryable } = await translate(
+    const { records, stats, retryable } = await mapRows(
       buildMergeConfig({ 'owner.kind': 'not-a-real-kind' }),
       new Map([['register', buf]])
     );
@@ -3381,7 +3381,7 @@ describe('engine — merge_duplicates edge cases', () => {
     ]);
     const descriptor = Object.getOwnPropertyDescriptor(Object.prototype, 'toString')!;
     try {
-      const { records, stats } = await translate(
+      const { records, stats } = await mapRows(
         buildMergeConfig({ 'owner.__proto__.toString': 'PWNED' }),
         new Map([['register', buf]])
       );
@@ -3408,7 +3408,7 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', 'FIRST PARTY', 'private'],
       ['1', 'CC-AAA', 'SECOND PARTY', 'private'],
     ]);
-    const { records, stats } = await translate(config, new Map([['register', buf]]));
+    const { records, stats } = await mapRows(config, new Map([['register', buf]]));
     expect(stats.failed).toBe(1);
     expect(records.get('1')!.operational_classes).toEqual(['private']);
   });
@@ -3443,7 +3443,7 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', '2000'],
       ['1', 'CC-AAA', '2001'],
     ]);
-    const { stats } = await translate(config, new Map([['register', buf]]));
+    const { stats } = await mapRows(config, new Map([['register', buf]]));
     expect(stats.failed).toBe(1);
   });
 
@@ -3483,7 +3483,7 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', 'FIRST PARTY', 'CL'],
       ['1', 'CC-AAA', 'SECOND PARTY', 'AR'],
     ]);
-    const { records, stats } = await translate(config, new Map([['register', buf]]));
+    const { records, stats } = await mapRows(config, new Map([['register', buf]]));
     expect(stats.failed).toBe(1);
     expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
     expect(records.get('1')!.owner.country).toBe('CL');
@@ -3525,7 +3525,7 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', 'FIRST PARTY', 'AR'],
       ['1', 'CC-AAA', 'SECOND PARTY', ''],
     ]);
-    const { records, stats } = await translate(config, new Map([['register', buf]]));
+    const { records, stats } = await mapRows(config, new Map([['register', buf]]));
     expect(stats.failed).toBe(1);
     expect(records.get('1')!.owner.country).toBe('AR');
   });
@@ -3543,13 +3543,13 @@ let nzStats: EngineStats;
 beforeAll(async () => {
   const config = loadSourceConfig(NZ_CONFIG_PATH);
   const files = new Map([['register', nzFixtureBuffer('register.csv')]]);
-  const result = await translate(config, files);
+  const result = await mapRows(config, files);
   nzRecords = result.records;
   nzStats = result.stats;
 });
 
-describe('CAA NZ fixture translation', () => {
-  it('translates all 13 fixture rows with no failures', () => {
+describe('CAA NZ fixture mapping', () => {
+  it('maps all 13 fixture rows with no failures', () => {
     expect(nzStats).toEqual({ total: 13, ok: 13, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(nzRecords.size).toBe(13);
   });
@@ -3684,10 +3684,7 @@ describe('CAA NZ fixture translation', () => {
     const config = loadSourceConfig(NZ_CONFIG_PATH);
     const header = nzFixtureBuffer('register.csv').toString('utf8').split('\n')[0];
     const drifted = `${header}\nSeaplane (Amphibian),ZK-ZZZ,01/06/2011,Maker,Model,1,600,Owner Limited,"1 Example Street, Testville 1234, New Zealand",C81E57,0,\n`;
-    const { stats } = await translate(
-      config,
-      new Map([['register', Buffer.from(drifted, 'utf8')]])
-    );
+    const { stats } = await mapRows(config, new Map([['register', Buffer.from(drifted, 'utf8')]]));
     expect(stats.failed).toBe(1);
     expect(stats.ok).toBe(0);
   });
@@ -3722,10 +3719,10 @@ describe('unmatched lookup reporting', () => {
     const rows = ['ID,REG,KIND', '1,N1,Mystery', '2,N2,Mystery', '3,N3,Mystery', '4,N4,Other'];
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await translate(config, new Map([['f', Buffer.from(rows.join('\n'))]]));
+      await mapRows(config, new Map([['f', Buffer.from(rows.join('\n'))]]));
       const lines = logSpy.mock.calls
         .map((c) => String(c[0]))
-        .filter((l) => l.includes('translate_lookup_default'));
+        .filter((l) => l.includes('map_lookup_default'));
       expect(lines).toHaveLength(2);
       expect(lines.some((l) => l.includes('value=Mystery') && l.includes('rows=3'))).toBe(true);
       expect(lines.some((l) => l.includes('value=Other') && l.includes('rows=1'))).toBe(true);
@@ -3737,13 +3734,13 @@ describe('unmatched lookup reporting', () => {
   it('does not carry counts from one source into the next', async () => {
     const rows = ['ID,REG,KIND', '1,N1,Mystery'];
     const buf = new Map([['f', Buffer.from(rows.join('\n'))]]);
-    await translate(config, buf);
+    await mapRows(config, buf);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await translate(config, buf);
+      await mapRows(config, buf);
       const line = logSpy.mock.calls
         .map((c) => String(c[0]))
-        .find((l) => l.includes('translate_lookup_default'));
+        .find((l) => l.includes('map_lookup_default'));
       expect(line).toContain('rows=1');
     } finally {
       logSpy.mockRestore();
@@ -3752,7 +3749,7 @@ describe('unmatched lookup reporting', () => {
 
   // The refresh matrix runs sources concurrently in one process. A single shared accumulator let
   // either run's entry clear the other's counts and report values under the wrong source id.
-  it('keeps the counts of concurrently translated sources apart', async () => {
+  it('keeps the counts of concurrently mapped sources apart', async () => {
     const a = { ...config, id: 'src-a' };
     const b = { ...config, id: 'src-b' };
     const bufA = new Map([['f', Buffer.from(['ID,REG,KIND', '1,N1,Alpha'].join('\n'))]]);
@@ -3761,10 +3758,10 @@ describe('unmatched lookup reporting', () => {
     ]);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await Promise.all([translate(a, bufA), translate(b, bufB)]);
+      await Promise.all([mapRows(a, bufA), mapRows(b, bufB)]);
       const lines = logSpy.mock.calls
         .map((c) => String(c[0]))
-        .filter((l) => l.includes('translate_lookup_default'));
+        .filter((l) => l.includes('map_lookup_default'));
       expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Alpha'))).toBe(true);
       expect(
         lines.some(
@@ -3790,11 +3787,11 @@ describe('unmatched lookup reporting', () => {
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
       await expect(
-        translate(counted, new Map([['f', Buffer.from(rows.join('\n'))]]))
+        mapRows(counted, new Map([['f', Buffer.from(rows.join('\n'))]]))
       ).rejects.toThrow(/publishes 99/);
       const lines = logSpy.mock.calls
         .map((c) => String(c[0]))
-        .filter((l) => l.includes('translate_lookup_default'));
+        .filter((l) => l.includes('map_lookup_default'));
       expect(lines.some((l) => l.includes('value=Mystery'))).toBe(true);
     } finally {
       logSpy.mockRestore();
@@ -3825,7 +3822,7 @@ describe('latest_snapshot_by', () => {
     },
   };
   const parse = async (rows: string[], cfg: SourceConfig = config) =>
-    translate(cfg, new Map([['f', Buffer.from(rows.join('\n'))]]));
+    mapRows(cfg, new Map([['f', Buffer.from(rows.join('\n'))]]));
 
   // The reason this exists: an accumulating register keeps a row per publication, so the same mark
   // appears cancelled in the newest and active in an older one. Keeping both serves the stale row.
@@ -3850,7 +3847,7 @@ describe('latest_snapshot_by', () => {
     expect(stats.total).toBe(2);
   });
 
-  // An upstream rename would otherwise drop every row and translate zero records — a far quieter
+  // An upstream rename would otherwise drop every row and map zero records — a far quieter
   // failure than refusing to run.
   it('throws when the column holds no value on any row', async () => {
     await expect(parse(['ID,REG,ST,PUB', '1,N1,A,', '2,N2,A,'])).rejects.toThrow(
@@ -3864,7 +3861,7 @@ describe('latest_snapshot_by', () => {
       await parse(['ID,REG,ST,PUB', '1,N1,A,2025-04-29', '2,N2,A,2026-03-09']);
       const line = logSpy.mock.calls
         .map((c) => String(c[0]))
-        .find((l) => l.includes('translate_snapshot_filtered'));
+        .find((l) => l.includes('map_snapshot_filtered'));
       expect(line).toContain('snapshot=2026-03-09');
       expect(line).toContain('kept=1');
       expect(line).toContain('dropped=1');
@@ -3874,7 +3871,7 @@ describe('latest_snapshot_by', () => {
   });
 });
 
-describe('TKA Lithuania fixture translation', () => {
+describe('TKA Lithuania fixture mapping', () => {
   let r: Map<string, Aircraft>;
   let s: EngineStats;
 
@@ -3889,12 +3886,12 @@ describe('TKA Lithuania fixture translation', () => {
       resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'count.json'),
       'utf8'
     );
-    const out = await translate(config, new Map([['register', buf]]), published);
+    const out = await mapRows(config, new Map([['register', buf]]), published);
     r = out.records;
     s = out.stats;
   });
 
-  // data.gov.lt keeps every prior publication in the same table; only the newest may be translated.
+  // data.gov.lt keeps every prior publication in the same table; only the newest may be mapped.
   it('drops the superseded publications', () => {
     expect(s.total).toBe(11);
     expect(s.ok).toBe(11);

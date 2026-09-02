@@ -4,7 +4,7 @@ import { rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
-import { translate } from './engine.js';
+import { mapRows } from './engine.js';
 import type { EngineStats } from './engine.js';
 import type { Aircraft } from './schema.js';
 import { localizeRecords } from './localize/localize.js';
@@ -24,17 +24,17 @@ import type { SourceState, StalenessEntry } from './cadence.js';
 
 // A same-status/same-date duplicate collision with neither row a strict superset (engine.ts's
 // `retryable: true`) is a fresh-data problem: ANAC has republished a corrected RAB file within the
-// same day after this exact failure, three days running. Retrying the whole download+translate
+// same day after this exact failure, three days running. Retrying the whole download+mapping
 // with real backoff gives the upstream a chance to settle before this source fails its whole run
-// over one row. Any other translation failure is a deterministic bug in the same bytes — retrying
+// over one row. Any other mapping failure is a deterministic bug in the same bytes — retrying
 // would just burn a fresh download for nothing, so those still throw a plain Error immediately.
-class RetryableTranslationFailure extends Error {}
+class RetryableMappingFailure extends Error {}
 
 // Long backoff, not the network-blip scale used elsewhere: this waits on an upstream data
 // condition to clear, not a dropped connection. 3 attempts × ~45-180s of jittered backoff adds at
 // most a few minutes, well inside the workflow's 30-minute job timeout, and costs nothing on a
 // normal run.
-const TRANSLATION_RETRY_BASE_DELAY_MS = 90_000;
+const MAPPING_RETRY_BASE_DELAY_MS = 90_000;
 
 const r2ConfigFromEnv = (): R2Config => ({
   accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
@@ -94,7 +94,7 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
     };
   }
 
-  const attemptDownloadAndTranslate = async (): Promise<{
+  const attemptDownloadAndMap = async (): Promise<{
     records: Map<string, Aircraft>;
     stats: EngineStats;
   }> => {
@@ -108,21 +108,21 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
       countUrl === undefined
         ? undefined
         : await fetchPublishedTotal(countUrl, config.download.headers);
-    const { records, stats, retryable } = await translate(config, files, publishedTotal);
+    const { records, stats, retryable } = await mapRows(config, files, publishedTotal);
 
-    log('info', 'translate_summary', { source: sourceId, ...stats });
+    log('info', 'map_summary', { source: sourceId, ...stats });
     if (stats.failed > 0) {
-      const msg = `Translation failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`;
-      throw retryable ? new RetryableTranslationFailure(msg) : new Error(msg);
+      const msg = `Row mapping failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`;
+      throw retryable ? new RetryableMappingFailure(msg) : new Error(msg);
     }
     return { records, stats };
   };
 
-  const { records } = await retry(attemptDownloadAndTranslate, {
+  const { records } = await retry(attemptDownloadAndMap, {
     attempts: 3,
-    baseDelayMs: TRANSLATION_RETRY_BASE_DELAY_MS,
+    baseDelayMs: MAPPING_RETRY_BASE_DELAY_MS,
     ...opts,
-    isRetryable: (err) => err instanceof RetryableTranslationFailure,
+    isRetryable: (err) => err instanceof RetryableMappingFailure,
     onRetry: (attempt, err) => {
       opts.onRetry?.(attempt, err);
       log('warn', 'pipeline_retry', { source: sourceId, attempt, reason: errorMessage(err) });

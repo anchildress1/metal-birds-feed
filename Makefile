@@ -56,7 +56,7 @@ check: format-check lint typecheck test ## Everything CI gates on, in one comman
 ENV_FILE ?= .env
 
 # Reads R2 credentials from $(ENV_FILE) (default .env). Set REFRESH_SOURCE there to do one source.
-refresh: build ## Pull every source: download, translate, write artifacts + feed slices
+refresh: build ## Pull every source: download, map, write artifacts + feed slices
 	@if [ ! -f $(ENV_FILE) ]; then \
 		echo "$(ENV_FILE) not found. Create it with MBF_R2_* and optional REFRESH_SOURCE/DRY_RUN."; \
 		exit 1; \

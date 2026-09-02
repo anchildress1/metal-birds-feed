@@ -99,7 +99,7 @@ export interface FieldMapping {
 
 // Collapses a join file that emits one row per party into a single row per key. Distinct from the
 // primary's MergeDuplicatesConfig: this names raw upstream columns, not canonical paths, and runs
-// before translation, so the mapping's own lookups still convert whatever the merge produces.
+// before row mapping, so the mapping's own lookups still convert whatever the merge produces.
 export interface JoinMergeConfig {
   // Upstream columns whose distinct values are concatenated in file order (blanks skipped,
   // duplicates collapsed). Every column the mapping reads from this join must appear here or in
@@ -176,7 +176,7 @@ export interface AllowedMissingSourceIdRowsConfig {
 export type SourceFormat = 'csv' | 'ods' | 'xlsx' | 'xls' | 'json' | 'pdf' | 'html';
 
 // Source-published fleet total used to catch silent structural drift. `pattern` is a regex with one
-// capture group, matched against the decoded primary file; the engine asserts the translated record
+// capture group, matched against the decoded primary file; the engine asserts the mapped record
 // count equals that integer and fails the run on mismatch (e.g. a dropped row or a preamble-count
 // shift that would otherwise publish a short fleet silently).
 export interface RecordCountCheck {
@@ -187,11 +187,11 @@ export interface RecordCountCheck {
   // detect a partially truncated response — a short page carries no marker distinguishing it from
   // a complete one, and the writer's retain-ratio floor only catches a loss of more than half.
   url?: string;
-  // Which count the published total describes. `translated` (the default) is the record set the
+  // Which count the published total describes. `mapped` (the default) is the record set the
   // artifact receives. `parsed` is every row the parser read, before `latest_snapshot_by` drops
   // prior publications — required where the total counts the accumulated history rather than the
   // current fleet, and the only count an accumulating register publishes about itself.
-  against?: 'parsed' | 'translated';
+  against?: 'parsed' | 'mapped';
 }
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
@@ -249,7 +249,7 @@ export interface SourceConfig {
   allowed_missing_source_id_rows?: AllowedMissingSourceIdRowsConfig;
   // Column naming the publication a row belongs to, for registers published as an accumulating
   // history rather than a current snapshot: every row not in the newest publication is dropped
-  // before translation. Values compare as strings, so the format must sort lexicographically
+  // before row mapping. Values compare as strings, so the format must sort lexicographically
   // (ISO-8601 dates do). Without it such a register serves stale rows — an aircraft deregistered in
   // the newest publication still has an active row in an older one, and the feed drops the
   // cancelled row and keeps the stale active one, answering a lookup with a wrong record.

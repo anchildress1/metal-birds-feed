@@ -11,13 +11,13 @@
 
 `metal-birds-watch` displays live ADS-B traffic but has no way to enrich a tail number or ICAO hex code with anything beyond what the ADS-B feed alone provides. Existing enrichment APIs (Aviation Edge, OpenSky's commercial tier, etc.) are paid, rate-limited, or both. National aviation registries (FAA, Transport Canada, CAA NZ, GCAA, CASA, EU member states, UK CAA, etc.) publish data of varying quality, accessibility, and licensing — some clean monthly bulk CSVs under open licenses, some web search interfaces, some PDF dumps, some paid Excel under restrictive single-PC licenses. Painful to consume directly.
 
-`metal-birds-feed` solves this by translating each national registry into a normalized SQLite artifact, stored in a private Cloudflare R2 bucket (free tier), for fast indexed lookup by registration ID and ICAO hex from Ashley-operated applications. One translation engine, many config-driven source mappings.
+`metal-birds-feed` solves this by mapping each national registry into a normalized SQLite artifact, stored in a private Cloudflare R2 bucket (free tier), for fast indexed lookup by registration ID and ICAO hex from Ashley-operated applications. One mapping engine, many config-driven source mappings.
 
 ---
 
 ## Goals
 
-1. **FAA registry, fully translated, in R2.** Every field FAA exposes in MASTER + ACFTREF + ENGINE, normalized into the canonical schema. ~300k US-registered aircraft queryable by registration ID or ICAO hex. _(v1)_
+1. **FAA registry, fully mapped, in R2.** Every field FAA exposes in MASTER + ACFTREF + ENGINE, normalized into the canonical schema. ~300k US-registered aircraft queryable by registration ID or ICAO hex. _(v1)_
 2. **Transport Canada registry, same shape.** ~37k Canadian aircraft, same canonical schema, no consumer-side code changes. Proves the engine generalizes — the second source is a config file, not a code change. _(v2)_
 3. **Third-registry milestone — two parallel sources.** _(v3)_
    - **Netherlands ILT** (PH-prefix, ~3k aircraft). CC-0 (public domain) per data.overheid.nl. **No CC.2 permission email needed** — ships independently of any agency reply. Published as OpenDocument Spreadsheet (.ods), filename includes a date stamp that requires a small discovery step. Adds the spreadsheet parser path to the engine (R2.6), which also unblocks IAA Ireland later.
@@ -31,7 +31,7 @@ UK CAA is **excluded** for the foreseeable future (see Future Considerations →
 
 Ireland (IAA) and other EU member-state registries are explicitly **post-v4 / future**. Each requires per-source CC.1 source-use classification and CC.2 permission protocol before slotting when applicable. Australia (CASA) is already live in phase 4 under an Open classification after license re-research confirmed the register surfaces are CC BY 4.0, not CC BY-NC. EASA does not maintain an aircraft registry, so there is no single "EU" source — only national ones, added incrementally.
 
-Stretch goal across all phases: the translation engine itself stays generic. Adding a new country = writing a config file (and, when the source format requires it, registering a parser path) — never modifying the engine's translation logic.
+Stretch goal across all phases: the mapping engine itself stays generic. Adding a new country = writing a config file (and, when the source format requires it, registering a parser path) — never modifying the engine's row-mapping logic.
 
 ---
 
@@ -61,7 +61,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 - As the operator, I want to add a new national registry by writing a config file (no engine changes) so that growing geographic coverage is bounded effort.
 - As the operator, I want monthly refreshes to run unattended so that I do not have to babysit the pipeline.
-- As the operator, I want clear logs when a source row fails to translate so that I can fix the mapping config and re-run.
+- As the operator, I want clear logs when a source row fails to map so that I can fix the mapping config and re-run.
 
 **Future: forks / contributors**
 
@@ -104,7 +104,7 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 - Cross-table joins (MASTER.MFR_MDL_CODE → ACFTREF; MASTER.ENG_MFR_MDL → ENGINE)
 - CERTIFICATION packed-string parser (first char → `category` and `airworthiness_class`; remaining → `operational_classes` array)
 
-**R0.4 Translation engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
+**R0.4 Mapping engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
 
 **R0.5 R2 writer.** Writes one SQLite artifact per source plus a small state object:
 
@@ -113,9 +113,9 @@ Stretch goal across all phases: the translation engine itself stays generic. Add
 
 The same hex / registration can point to multiple historical records over time; consumers query the artifact (point lookup by the indexed columns) and filter by `status = 'valid'` for current. Replaces the prior object-per-record + by-hex / by-registration index scheme.
 
-**R0.6 Refresh orchestration.** GitHub Actions scheduled workflow fires daily (~6:00 UTC); per-source `cadence_days` gates whether each source does actual work on a given run. Workflow downloads, translates, builds the SQLite artifact, writes to R2 via S3-compatible API keys (`MBF_R2_ACCESS_KEY_ID` / `MBF_R2_SECRET_ACCESS_KEY`) stored in GHA secrets. On failure, leaves the previous R2 state untouched and logs the error. Manual `workflow_dispatch` trigger also available for ad-hoc runs.
+**R0.6 Refresh orchestration.** GitHub Actions scheduled workflow fires daily (~6:00 UTC); per-source `cadence_days` gates whether each source does actual work on a given run. Workflow downloads, maps, builds the SQLite artifact, writes to R2 via S3-compatible API keys (`MBF_R2_ACCESS_KEY_ID` / `MBF_R2_SECRET_ACCESS_KEY`) stored in GHA secrets. On failure, leaves the previous R2 state untouched and logs the error. Manual `workflow_dispatch` trigger also available for ad-hoc runs.
 
-Why GHA over Workers Cron Triggers: the FAA refresh needs ~5 minutes of CPU and a few hundred MB of RAM to download, parse, join, and translate. Workers free-tier crons cap at 10ms CPU per invocation; running this in Workers requires the $5/month paid plan. GHA gives a full Linux runner (2 vCPU, 7 GB RAM, 6-hour timeout) for free on public repos, well under quota on private. Egress to R2 is free either way.
+Why GHA over Workers Cron Triggers: the FAA refresh needs ~5 minutes of CPU and a few hundred MB of RAM to download, parse, join, and map. Workers free-tier crons cap at 10ms CPU per invocation; running this in Workers requires the $5/month paid plan. GHA gives a full Linux runner (2 vCPU, 7 GB RAM, 6-hour timeout) for free on public repos, well under quota on private. Egress to R2 is free either way.
 
 GHA disables scheduled workflows after 60 days of repo inactivity. Mitigated by Dependabot PR activity (see R0.9), and operator will manually re-enable + refresh if it ever lapses.
 
@@ -165,17 +165,17 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R2.5 NL field-coverage parity.** Document fields ILT does not provide. Null-rather-than-invent rule unchanged.
 
-**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`; CAA Taiwan publishes legacy binary `.xls`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`, `xls`. Implementation uses `hucre` for ODS/XLSX and SheetJS for legacy XLS. The engine's row-translation logic stays format-agnostic — only the parser dispatch is new.
+**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`; CAA Taiwan publishes legacy binary `.xls`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`, `xls`. Implementation uses `hucre` for ODS/XLSX and SheetJS for legacy XLS. The engine's row-mapping logic stays format-agnostic — only the parser dispatch is new.
 
 **R2.7 Filename discovery (NL-specific).** ILT's bulk download URL embeds the file's publication date (e.g. `luchtvaartuigregister-ilt-datas2-2026-04-28.ods`), which changes every refresh. Downloader gains a small "discovery" step for sources that declare `download.discover_url:` — fetch the index page, regex out the latest data-file URL, then download. NL is the first source to use this; future sources with the same pattern reuse it.
 
-**Acceptance (NL ILT track):** A consumer point-querying `aircraft/nl-ilt.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA, TC, and CAA NZ. The spreadsheet parser path round-trips an ILT fixture without changes to `src/engine.ts`'s translation logic.
+**Acceptance (NL ILT track):** A consumer point-querying `aircraft/nl-ilt.sqlite` by `source_id` gets a record with the same TypeScript shape as FAA, TC, and CAA NZ. The spreadsheet parser path round-trips an ILT fixture without changes to `src/engine.ts`'s row-mapping logic.
 
 ### Could-Have (P3) — Georgia (GCAA), v4
 
 **R3.1 Data source acquisition (research milestone, blocking R3.2).** Investigate whether GCAA (gcaa.ge) publishes a downloadable aircraft register. If yes, document the URL, format, update cadence, and licensing. If no, decide: (a) scrape the public web search interface, (b) request data via FOIA-equivalent, (c) hand-curate, or (d) drop Georgia and pick a different v4. Time-box this research to 1 week. Do not start R3.2 until R3.1 has a yes-or-no answer.
 
-**R3.2 Georgia GCAA source config.** New file `sources/ge-gcaa.yaml`. Adapter shape depends on R3.1's outcome — if bulk download, mirror the FAA/Canada/NZ pattern; if scraping, build a small scraper that respects rate limits and robots.txt and feeds the same translation engine.
+**R3.2 Georgia GCAA source config.** New file `sources/ge-gcaa.yaml`. Adapter shape depends on R3.1's outcome — if bulk download, mirror the FAA/Canada/NZ pattern; if scraping, build a small scraper that respects rate limits and robots.txt and feeds the same mapping engine.
 
 **R3.3 Cyrillic / Georgian script handling.** GCAA records may include owner names in Mkhedruli (Georgian script) or Cyrillic. Schema is already Unicode-clean (TypeScript `string`), but verify R2 stores and serves UTF-8 cleanly end-to-end with non-Latin owner names. Add a fixture record covering this.
 
@@ -199,7 +199,7 @@ Each new registry is gated on CC.1 source-use classification + CC.2 permission p
 
 **R4.5 Schema migration tooling.** When the canonical schema changes in a non-backward-compatible way, a migration script regenerates all existing R2 records from the cached source dumps without re-downloading.
 
-**R4.6 Sibling project: NTSB accident-history feed.** Same translation-engine pattern, different source. Out of scope for `metal-birds-feed` itself, but the engine should be reusable.
+**R4.6 Sibling project: NTSB accident-history feed.** Same mapping-engine pattern, different source. Out of scope for `metal-birds-feed` itself, but the engine should be reusable.
 
 #### Blocked
 
@@ -213,7 +213,7 @@ Each new registry is gated on CC.1 source-use classification + CC.2 permission p
 
 ### Leading indicators (visible within days of each milestone)
 
-- **Translation success rate:** ≥99% of source rows produce a valid canonical record. Failed rows are logged with row number, source field, and reason.
+- **Mapping success rate:** ≥99% of source rows produce a valid canonical record. Failed rows are logged with row number, source field, and reason.
 - **Schema validation pass rate:** 100% of written R2 objects validate against the TypeScript schema at runtime.
 - **Lookup hit rate from `metal-birds-watch`:** % of ADS-B blips with US-registered hex codes that successfully resolve to a `metal-birds-feed` record. Target: ≥95% for FAA-registered traffic post-v1.
 
