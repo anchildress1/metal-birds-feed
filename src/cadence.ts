@@ -31,12 +31,8 @@ const MS_PER_DAY = 86_400_000;
 // A source is considered overdue once it has been silent for 1.5× its declared cadence.
 export const STALENESS_MULTIPLIER = 1.5;
 
-export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
-  if (!state) return false;
-  const lastRun = new Date(state.last_run);
-  if (Number.isNaN(lastRun.getTime())) return false;
-  return now.getTime() - lastRun.getTime() < cadenceDays * MS_PER_DAY;
-};
+// Epoch 0 is a UTC midnight, so flooring ms to days yields the UTC day number.
+const utcDay = (d: Date): number => Math.floor(d.getTime() / MS_PER_DAY);
 
 export const isOverdue = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
   if (!state) return false;
@@ -45,6 +41,21 @@ export const isOverdue = (state: SourceState | null, cadenceDays: number, now: D
   // false here would disarm the staleness alarm for that source forever.
   if (Number.isNaN(lastChange.getTime())) return true;
   return now.getTime() - lastChange.getTime() > cadenceDays * STALENESS_MULTIPLIER * MS_PER_DAY;
+};
+
+export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
+  if (!state) return false;
+  const lastRun = new Date(state.last_run);
+  if (Number.isNaN(lastRun.getTime())) return false;
+  // Shares the staleness issue's threshold so the open issue and the daily polling stay one
+  // condition rather than two knobs. Guarded on a parseable timestamp: isOverdue fails open to keep
+  // the alarm armed, but that value never heals, so escalating on it would disable the gate for
+  // good and refetch the whole register every tick forever.
+  const lastChange = new Date(state.last_content_change);
+  if (!Number.isNaN(lastChange.getTime()) && isOverdue(state, cadenceDays, now)) return false;
+  // last_run is stamped at run completion, so a strict ms window falls short on the next cron tick
+  // and pushes every cycle a day later.
+  return utcDay(now) - utcDay(lastRun) < cadenceDays;
 };
 
 export const buildStalenessEntry = (

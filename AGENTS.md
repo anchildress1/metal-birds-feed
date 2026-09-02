@@ -135,6 +135,9 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - A `refresh.yml` run waiting on `cloud-run-deploy` keeps holding `registry-refresh-gemini` while it waits, because its deploy job is the last thing in that run. A manual refresh dispatched during a release deploy therefore sits blocked with no visible cause until the release finishes. One-directional, so it cannot deadlock — do not "fix" it by giving the deploy its own group.
 - Ad-hoc deploys (rollback, retry, shipping without a release) are a local `make deploy` — same R2 slices, same path. Do not add a `workflow_dispatch` deploy button.
 - **Refresh cadence:** where a declared cadence and the observed publishing rhythm differ, run at the **more frequent** of the two, and record both in `DATA_LICENSES.md`. Per-source `cadence_days` gates actual work; sources without it run every time the cron fires. Sources publishing faster than the cron need their own workflow. The downloader sends no conditional-request headers, so each run is a full fetch — `content_hash` still gates the PUT.
+- `shouldSkip` compares **whole UTC days**, never an ms window: `last_run` is stamped at run completion, so a strict window makes the next tick fall short and pushes every cycle a day later.
+- An overdue source bypasses the cadence gate and runs every tick until it publishes, on the staleness issue's own 1.5× threshold — one threshold, never two. Stuck escalated means `cadence_days` is wrong.
+- Three things bypass the cadence gate and no fourth may be added: `DRY_RUN` (writes nothing), `FORCE_REFRESH=true`, and the overdue escalation inside `shouldSkip`. `FORCE_REFRESH` without `REFRESH_SOURCE` throws in `resolveSources` — enforced at the pipeline boundary, not only in `refresh.yml`, because `make refresh` never touches the workflow.
 
 ## Commits
 

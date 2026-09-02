@@ -203,6 +203,7 @@ afterEach(() => {
   delete process.env['MBF_R2_SECRET_ACCESS_KEY'];
   delete process.env['MBF_R2_BUCKET_NAME'];
   delete process.env['DRY_RUN'];
+  delete process.env['FORCE_REFRESH'];
   delete process.env['GITHUB_TOKEN'];
   delete process.env['GITHUB_REPOSITORY'];
   delete process.env['REFRESH_SOURCE'];
@@ -421,6 +422,40 @@ describe('run', () => {
     expect(result.skipped).toBe(true);
     expect(mockDownload).not.toHaveBeenCalled();
     expect(mockR2Write).not.toHaveBeenCalled();
+  });
+
+  it('does not honor a cadence skip when FORCE_REFRESH is set', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['FORCE_REFRESH'] = 'true';
+    const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentTimestamp,
+      last_content_change: recentTimestamp,
+      content_hash: HASH64,
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+    expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not honor a cadence skip when the register is overdue (escalates to daily)', async () => {
+    process.env['DRY_RUN'] = 'false';
+    // last_run is recent, so only the escalation can let this through.
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 7 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: new Date(Date.now() - 86_400_000).toISOString(),
+      last_content_change: new Date(Date.now() - 20 * 86_400_000).toISOString(),
+      content_hash: HASH64,
+    });
+
+    const result = await run('faa');
+
+    expect(result.skipped).toBe(false);
+    expect(mockDownload).toHaveBeenCalledTimes(1);
   });
 
   it('does not honor a cadence skip when the artifact is missing (self-heal)', async () => {
@@ -772,6 +807,88 @@ describe('main', () => {
     expect(mockDownload.mock.calls).toHaveLength(yamlCount);
   });
 
+  // Escalation makes an overdue source run instead of skip, and a silent register is often silent
+  // because its download broke — so a rejected run must still report a staleness reading.
+  it('still opens a staleness issue when the run itself fails', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: new Date(Date.now() - 60 * 86_400_000).toISOString(),
+      last_content_change: new Date(Date.now() - 60 * 86_400_000).toISOString(),
+      content_hash: HASH64,
+    });
+    mockDownload.mockRejectedValue(new Error('register 404'));
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+    // main() exits non-zero on a failed source; stub it so the runner survives to assert.
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+      const body = JSON.parse(createCall.body as string) as { title: string };
+      expect(body.title).toContain('[staleness] faa');
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
+  // run() rejects a traversal-bearing id, and that rejection lands on the recovery path with the
+  // same unchecked value — which resolves it against `sources/` and an R2 key.
+  // refresh.yml guards the dispatch path, but `make refresh` reaches resolveSources directly with
+  // whatever .env exports — an unnamed force there is a fleet-wide cadence bypass.
+  it('refuses FORCE_REFRESH without a named source', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['FORCE_REFRESH'] = 'true';
+    delete process.env['REFRESH_SOURCE'];
+
+    await expect(main()).rejects.toThrow(/FORCE_REFRESH requires REFRESH_SOURCE/);
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  it('allows FORCE_REFRESH when a source is named', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['FORCE_REFRESH'] = 'true';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: new Date().toISOString(),
+      last_content_change: new Date().toISOString(),
+      content_hash: HASH64,
+    });
+
+    await main();
+
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses to resolve a traversal-bearing source on the staleness recovery path', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = '../../etc/passwd';
+    const fetchMock = mock().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) });
+    setFetch(fetchMock);
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+      expect(mockLoadSourceConfig).not.toHaveBeenCalled();
+      expect(mockReadState).not.toHaveBeenCalled();
+      // No staleness entry, so no issue is opened for a name that names nothing.
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
   it('opens a staleness issue when source is overdue and token is present', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
@@ -800,9 +917,9 @@ describe('main', () => {
     expect(body.title).toContain('[staleness] faa');
   });
 
-  it('opens a staleness issue for an overdue source even when cadence skips the run', async () => {
-    // Cadence-skipped sources are exactly the ones most likely stuck (recent last_run, ancient
-    // last_content_change); a refactor adding `if (skipped) continue` would kill their alarm.
+  it('escalates an overdue source to a real run and opens its staleness issue', async () => {
+    // Overdue and cadence-skipped are mutually exclusive; both halves asserted because a change
+    // that decouples them breaks this.
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
@@ -822,11 +939,12 @@ describe('main', () => {
 
     await main();
 
-    expect(mockDownload).not.toHaveBeenCalled();
+    expect(mockDownload).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
-    const body = JSON.parse(createCall.body as string) as { title: string };
+    const body = JSON.parse(createCall.body as string) as { title: string; body: string };
     expect(body.title).toContain('[staleness] faa');
+    expect(body.body).toContain('cadence gate is bypassed');
   });
 
   it('logs and skips issue creation when the open-issues list fetch fails', async () => {

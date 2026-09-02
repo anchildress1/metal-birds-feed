@@ -15,6 +15,12 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      force:
+        description: 'Ignore cadence_days and refresh now (use with a named source)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 concurrency:
   # Gemini RPM limits apply per project, not per ref. One shared group prevents a manual branch run
@@ -39,10 +45,22 @@ jobs:
         id: list
         env:
           INPUT_SOURCE: ${{ inputs.source }}
+          INPUT_FORCE: ${{ inputs.force || 'false' }}
         run: |
           set -euo pipefail
-          if [ -n "$INPUT_SOURCE" ]; then
-            sources=$(jq -c -n --arg s "$INPUT_SOURCE" '[$s]')
+          # Normalize before both the guard and the matrix: pipeline.ts trims REFRESH_SOURCE, so a
+          # whitespace-only input would clear the guard here and then fall back to every source.
+          # Source ids never contain whitespace, so dropping all of it is safe.
+          src="$(printf '%s' "${INPUT_SOURCE:-}" | tr -d '[:space:]')"
+          # Refuse a fleet-wide cadence bypass: it would pull all 16 registers at once against the
+          # shared Gemini quota group and the 30-minute job timeout.
+          force="${INPUT_FORCE:-false}"
+          if [ "$force" = "true" ] && [ -z "$src" ]; then
+            echo "::error::force requires a named source"
+            exit 1
+          fi
+          if [ -n "$src" ]; then
+            sources=$(jq -c -n --arg s "$src" '[$s]')
           else
             sources=$(find sources -maxdepth 1 -name '*.yaml' -type f -print0 \
               | xargs -0 -n1 basename \
@@ -94,6 +112,7 @@ jobs:
           GEMINI_REQUESTS_PER_MINUTE: ${{ vars.GEMINI_REQUESTS_PER_MINUTE || '10' }}
           REFRESH_SOURCE: ${{ matrix.source }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FORCE_REFRESH: ${{ inputs.force || 'false' }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: bun run dist/pipeline.js

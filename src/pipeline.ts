@@ -64,6 +64,8 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
   const config = loadSourceConfig(configPath);
 
   const dryRun = process.env['DRY_RUN'] === 'true';
+  // The only other bypass is DRY_RUN, which writes nothing.
+  const force = process.env['FORCE_REFRESH'] === 'true';
   const writer = new R2ArtifactWriter(r2ConfigFromEnv(), dryRun);
 
   // State is read for every source: cadence sources gate on last_run, all sources gate the artifact
@@ -74,6 +76,7 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
     config.cadence_days !== undefined &&
     hasCurrentArtifactState &&
     !dryRun &&
+    !force &&
     shouldSkip(priorState, config.cadence_days, new Date()) &&
     (await writer.feedRowsExist(sourceId)) &&
     // Checked last: it's the most expensive condition. readArtifactHeader + isArtifactCaughtUp
@@ -213,6 +216,11 @@ const createStalenessIssue = async (
     '',
     `The register has been silent for ${entry.days_since_change} days (threshold: ${threshold} days).`,
     '',
+    `While this is open the cadence gate is bypassed: \`${entry.source}\` refreshes on every daily`,
+    `cron tick instead of every ${entry.cadence_days} days. If the register genuinely publishes less`,
+    `often than declared, raise \`cadence_days\` in \`sources/${entry.source}.yaml\` rather than`,
+    'leaving it polling daily.',
+    '',
     '> Auto-opened by the Registry Refresh workflow. Closes automatically on next successful content change.',
   ].join('\n');
 
@@ -281,6 +289,10 @@ export const resolveAllSources = (): string[] =>
 
 const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
+  // The refresh.yml guard only covers workflow_dispatch; `make refresh` reaches here directly with
+  // whatever .env exports, and an unnamed force is a fleet-wide cadence bypass either way.
+  if (sourceEnv === '' && process.env['FORCE_REFRESH'] === 'true')
+    throw new Error('FORCE_REFRESH requires REFRESH_SOURCE to name a single source');
   return sourceEnv ? [sourceEnv] : resolveAllSources();
 };
 
@@ -332,23 +344,50 @@ interface ProcessedResults {
   closePromises: Promise<void>[];
 }
 
-const processResults = (
+// A failed run still owes a staleness reading. Escalation makes an overdue source run instead of
+// skip, and the conditions that keep a register silent are the same ones that break its download —
+// so without this the alarm goes quiet exactly when it matters. Prior state is authoritative here:
+// nothing was written.
+const stalenessFromPriorState = async (
+  source: string,
+  writer: R2ArtifactWriter,
+  now: Date
+): Promise<StalenessEntry | null> => {
+  try {
+    // run() rejects a traversal-bearing source id, but that rejection lands here with the same
+    // unchecked value — and this path resolves it against `sources/` and an R2 key.
+    validateSourceId(source);
+    const cadenceDays = loadSourceConfig(resolve('sources', `${source}.yaml`)).cadence_days;
+    if (cadenceDays === undefined) return null;
+    return buildStalenessEntry(source, cadenceDays, await writer.readState(source), now);
+  } catch (err) {
+    log('warn', 'staleness_entry_unavailable', { source, msg: errorMessage(err) });
+    return null;
+  }
+};
+
+const processResults = async (
   results: PromiseSettledResult<RunResult>[],
   sources: string[],
   now: Date,
   dryRun: boolean,
-  gh: GitHubCtx
-): ProcessedResults => {
+  gh: GitHubCtx,
+  writer: R2ArtifactWriter
+): Promise<ProcessedResults> => {
   const { token, repo } = gh;
   const failures: Failure[] = [];
   const stalenessEntries: StalenessEntry[] = [];
   const closePromises: Promise<void>[] = [];
 
+  const rejected: string[] = [];
+
   for (const [i, result] of results.entries()) {
     if (result.status === 'rejected') {
+      const source = sources[i] ?? 'unknown';
       const msg = errorMessage(result.reason);
-      log('error', 'pipeline_failed', { source: sources[i], msg });
-      failures.push({ source: sources[i] ?? 'unknown', msg });
+      log('error', 'pipeline_failed', { source, msg });
+      failures.push({ source, msg });
+      rejected.push(source);
       continue;
     }
     const { cadence_days, new_state, source } = result.value;
@@ -357,6 +396,9 @@ const processResults = (
     if (token && repo && justChanged(result.value, dryRun))
       closePromises.push(closeWithLogging(source, token, repo));
   }
+  const recovered = await Promise.all(rejected.map((s) => stalenessFromPriorState(s, writer, now)));
+  stalenessEntries.push(...recovered.filter((e) => e !== null));
+
   return { failures, stalenessEntries, closePromises };
 };
 
@@ -493,12 +535,13 @@ export async function main(): Promise<void> {
     repo: process.env['GITHUB_REPOSITORY'],
   };
 
-  const { failures, stalenessEntries, closePromises } = processResults(
+  const { failures, stalenessEntries, closePromises } = await processResults(
     results,
     sources,
     now,
     dryRun,
-    gh
+    gh,
+    new R2ArtifactWriter(r2ConfigFromEnv(), dryRun)
   );
   await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
