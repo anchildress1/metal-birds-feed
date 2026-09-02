@@ -1556,12 +1556,9 @@ describe('engine — negative and edge cases', () => {
     const files = new Map([
       ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,\n', 'utf8')],
     ]);
-    const { records, stats, retryable } = await mapRows(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
-    // A fresh download can resolve this on its own (a later publish may add the missing status or
-    // date signal) — not a config bug, so the caller should retry rather than fail immediately.
-    expect(retryable).toBe(true);
   });
 
   it('fails a duplicate source_id with no distinguishing signal', async () => {
@@ -1585,37 +1582,10 @@ describe('engine — negative and edge cases', () => {
     // tell them apart, this isn't a reissue — it's an ambiguous id collision, and guessing via
     // file order would silently drop upstream data. It must fail, not guess.
     const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n', 'utf8')]]);
-    const { records, stats, retryable } = await mapRows(config, files);
+    const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     // The first row still succeeded before the second one collided with it.
     expect(records.size).toBe(1);
-    expect(retryable).toBe(true);
-  });
-
-  it('is not retryable when an ambiguous duplicate is mixed with a deterministic failure', async () => {
-    const config: SourceConfig = {
-      id: 'synthetic-dup-mixed',
-      label: 'synthetic',
-      country: 'US',
-      language: 'en',
-      encoding: 'utf8',
-      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
-      primary: 'primary',
-      delimiter: ',',
-      trim_all: true,
-      format: 'csv',
-      joins: [],
-      source_id: 'ID',
-      registration: 'REG',
-      mapping: { registration: { field: 'REG' } },
-    };
-    // Row 3 has no ID at all — a deterministic, config-level failure — alongside the same
-    // ambiguous id=1 collision as above. One retryable failure plus one that isn't must not retry:
-    // a fresh download can't fix the missing-id row, so retrying would only burn a download.
-    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n1,N2\n,N3\n', 'utf8')]]);
-    const { stats, retryable } = await mapRows(config, files);
-    expect(stats.failed).toBe(2);
-    expect(retryable).toBe(false);
   });
 
   it('replaces a duplicate with the more complete record when status and dates tie', async () => {
@@ -3463,15 +3433,12 @@ describe('engine — merge_duplicates edge cases', () => {
       ['1', 'CC-AAA', 'FIRST PARTY'],
       ['1', 'CC-AAA', 'SECOND PARTY'],
     ]);
-    const { records, stats, retryable } = await mapRows(
+    const { records, stats } = await mapRows(
       buildMergeConfig({ 'owner.kind': 'not-a-real-kind' }),
       new Map([['register', buf]])
     );
     expect(stats.failed).toBe(1);
     expect(records.get('1')!.owner.name).toBe('FIRST PARTY');
-    // A schema-invalid merge is deterministic on these same bytes — a fresh download can't fix it,
-    // so the caller must not retry.
-    expect(retryable).toBe(false);
   });
 
   // The leaf must be a real own property of Object.prototype. With a made-up leaf the final

@@ -119,6 +119,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - The artifact PUT is gated on `content_hash` (sha256 over the sorted record set). Registry data lives inside the SQLite, never in an R2 key, so it carries no key-escaping constraint.
 - FAA `UNIQUE ID` = `source_id`, never N-number. N-numbers are reissued; UNIQUE ID is permanent. More generally: a per-row surrogate key that changes between publications is not a `source_id`.
 - Duplicate `source_id` within a source: byte-identical rows skip; differing rows resolve via `resolveRecency` (`src/engine.ts`) only when a real signal exists. A collision with no signal fails the run — never last-wins, which silently drops upstream data.
+- Never retry a mapping failure. It is deterministic on the same bytes, and file position is not a recency signal: ANAC's RAB arrives as 57 unordered runs, so a duplicate's two rows carry no information about which was read later. Fix the mapping so a signal exists (`null_values` on an absence code) instead of re-downloading and hoping.
 
 ## Distribution model
 
