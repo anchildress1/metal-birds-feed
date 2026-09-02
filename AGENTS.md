@@ -136,7 +136,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - Ad-hoc deploys (rollback, retry, shipping without a release) are a local `make deploy` — same R2 slices, same path. Do not add a `workflow_dispatch` deploy button.
 - **Refresh cadence:** where a declared cadence and the observed publishing rhythm differ, run at the **more frequent** of the two, and record both in `DATA_LICENSES.md`. Per-source `cadence_days` gates actual work; sources without it run every time the cron fires. Sources publishing faster than the cron need their own workflow. The downloader sends no conditional-request headers, so each run is a full fetch — `content_hash` still gates the PUT.
 - `shouldSkip` compares **whole UTC days**, never an ms window: `last_run` is stamped at run completion, so a strict window makes the next tick fall short and pushes every cycle a day later.
-- An overdue source (same 1.5× threshold as the staleness issue) bypasses the cadence gate and runs every tick until it publishes. One threshold, not two — the open issue and the daily polling are the same fact. A source stuck escalated means `cadence_days` is wrong; raise it in the YAML.
+- An overdue source bypasses the cadence gate and runs every tick until it publishes, on the staleness issue's own 1.5× threshold — one threshold, never two. Stuck escalated means `cadence_days` is wrong.
 - `FORCE_REFRESH=true` (`refresh.yml`'s `force` input) is the only cadence bypass. Never add a second.
 
 ## Commits
