@@ -137,7 +137,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 - **Refresh cadence:** where a declared cadence and the observed publishing rhythm differ, run at the **more frequent** of the two, and record both in `DATA_LICENSES.md`. Per-source `cadence_days` gates actual work; sources without it run every time the cron fires. Sources publishing faster than the cron need their own workflow. The downloader sends no conditional-request headers, so each run is a full fetch — `content_hash` still gates the PUT.
 - `shouldSkip` compares **whole UTC days**, never an ms window: `last_run` is stamped at run completion, so a strict window makes the next tick fall short and pushes every cycle a day later.
 - An overdue source bypasses the cadence gate and runs every tick until it publishes, on the staleness issue's own 1.5× threshold — one threshold, never two. Stuck escalated means `cadence_days` is wrong.
-- `FORCE_REFRESH=true` (`refresh.yml`'s `force` input) is the only cadence bypass. Never add a second.
+- Three things bypass the cadence gate and no fourth may be added: `DRY_RUN` (writes nothing), `FORCE_REFRESH=true` (`refresh.yml`'s `force` input, which requires a named source), and the overdue escalation inside `shouldSkip`.
 
 ## Commits
 

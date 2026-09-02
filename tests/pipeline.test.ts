@@ -807,6 +807,39 @@ describe('main', () => {
     expect(mockDownload.mock.calls).toHaveLength(yamlCount);
   });
 
+  // Escalation makes an overdue source run instead of skip, and a silent register is often silent
+  // because its download broke — so a rejected run must still report a staleness reading.
+  it('still opens a staleness issue when the run itself fails', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: new Date(Date.now() - 60 * 86_400_000).toISOString(),
+      last_content_change: new Date(Date.now() - 60 * 86_400_000).toISOString(),
+      content_hash: HASH64,
+    });
+    mockDownload.mockRejectedValue(new Error('register 404'));
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+    // main() exits non-zero on a failed source; stub it so the runner survives to assert.
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+      const body = JSON.parse(createCall.body as string) as { title: string };
+      expect(body.title).toContain('[staleness] faa');
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
   it('opens a staleness issue when source is overdue and token is present', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';

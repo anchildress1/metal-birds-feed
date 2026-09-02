@@ -45,8 +45,16 @@ jobs:
         id: list
         env:
           INPUT_SOURCE: ${{ inputs.source }}
+          INPUT_FORCE: ${{ inputs.force || 'false' }}
         run: |
           set -euo pipefail
+          # Refuse a fleet-wide cadence bypass: it would pull all 16 registers at once against the
+          # shared Gemini quota group and the 30-minute job timeout.
+          force="${INPUT_FORCE:-false}"
+          if [ "$force" = "true" ] && [ -z "$INPUT_SOURCE" ]; then
+            echo "::error::force requires a named source"
+            exit 1
+          fi
           if [ -n "$INPUT_SOURCE" ]; then
             sources=$(jq -c -n --arg s "$INPUT_SOURCE" '[$s]')
           else

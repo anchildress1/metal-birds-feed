@@ -48,8 +48,11 @@ export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: 
   const lastRun = new Date(state.last_run);
   if (Number.isNaN(lastRun.getTime())) return false;
   // Shares the staleness issue's threshold so the open issue and the daily polling stay one
-  // condition rather than two knobs.
-  if (isOverdue(state, cadenceDays, now)) return false;
+  // condition rather than two knobs. Guarded on a parseable timestamp: isOverdue fails open to keep
+  // the alarm armed, but that value never heals, so escalating on it would disable the gate for
+  // good and refetch the whole register every tick forever.
+  const lastChange = new Date(state.last_content_change);
+  if (!Number.isNaN(lastChange.getTime()) && isOverdue(state, cadenceDays, now)) return false;
   // last_run is stamped at run completion, so a strict ms window falls short on the next cron tick
   // and pushes every cycle a day later.
   return utcDay(now) - utcDay(lastRun) < cadenceDays;

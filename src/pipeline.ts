@@ -340,23 +340,47 @@ interface ProcessedResults {
   closePromises: Promise<void>[];
 }
 
-const processResults = (
+// A failed run still owes a staleness reading. Escalation makes an overdue source run instead of
+// skip, and the conditions that keep a register silent are the same ones that break its download —
+// so without this the alarm goes quiet exactly when it matters. Prior state is authoritative here:
+// nothing was written.
+const stalenessFromPriorState = async (
+  source: string,
+  writer: R2ArtifactWriter,
+  now: Date
+): Promise<StalenessEntry | null> => {
+  try {
+    const cadenceDays = loadSourceConfig(resolve('sources', `${source}.yaml`)).cadence_days;
+    if (cadenceDays === undefined) return null;
+    return buildStalenessEntry(source, cadenceDays, await writer.readState(source), now);
+  } catch (err) {
+    log('warn', 'staleness_entry_unavailable', { source, msg: errorMessage(err) });
+    return null;
+  }
+};
+
+const processResults = async (
   results: PromiseSettledResult<RunResult>[],
   sources: string[],
   now: Date,
   dryRun: boolean,
-  gh: GitHubCtx
-): ProcessedResults => {
+  gh: GitHubCtx,
+  writer: R2ArtifactWriter
+): Promise<ProcessedResults> => {
   const { token, repo } = gh;
   const failures: Failure[] = [];
   const stalenessEntries: StalenessEntry[] = [];
   const closePromises: Promise<void>[] = [];
 
+  const rejected: string[] = [];
+
   for (const [i, result] of results.entries()) {
     if (result.status === 'rejected') {
+      const source = sources[i] ?? 'unknown';
       const msg = errorMessage(result.reason);
-      log('error', 'pipeline_failed', { source: sources[i], msg });
-      failures.push({ source: sources[i] ?? 'unknown', msg });
+      log('error', 'pipeline_failed', { source, msg });
+      failures.push({ source, msg });
+      rejected.push(source);
       continue;
     }
     const { cadence_days, new_state, source } = result.value;
@@ -365,6 +389,9 @@ const processResults = (
     if (token && repo && justChanged(result.value, dryRun))
       closePromises.push(closeWithLogging(source, token, repo));
   }
+  const recovered = await Promise.all(rejected.map((s) => stalenessFromPriorState(s, writer, now)));
+  stalenessEntries.push(...recovered.filter((e) => e !== null));
+
   return { failures, stalenessEntries, closePromises };
 };
 
@@ -501,12 +528,13 @@ export async function main(): Promise<void> {
     repo: process.env['GITHUB_REPOSITORY'],
   };
 
-  const { failures, stalenessEntries, closePromises } = processResults(
+  const { failures, stalenessEntries, closePromises } = await processResults(
     results,
     sources,
     now,
     dryRun,
-    gh
+    gh,
+    new R2ArtifactWriter(r2ConfigFromEnv(), dryRun)
   );
   await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
