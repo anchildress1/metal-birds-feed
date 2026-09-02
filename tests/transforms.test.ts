@@ -1141,6 +1141,16 @@ describe('br_status', () => {
     expect(() => applyCompound('br_status', ['', 'CQ8'])).toThrow(/unrecognized CD_INTERDICAO/);
   });
 
+  it('throws on a lowercase letter rather than silently dropping it', () => {
+    expect(() => applyCompound('br_status', ['', 'Cq8'])).toThrow(/unrecognized CD_INTERDICAO/);
+  });
+
+  // The register pads five codes with a stray space (`R 4`, `M 8`, `M8 2`, `M 482`).
+  it('tolerates the register\u2019s stray spaces', () => {
+    expect(applyCompound('br_status', ['', 'R 4'])).toBe('reserved');
+    expect(applyCompound('br_status', ['', 'M 482'])).toBe('cancelled');
+  });
+
   it('throws on a digits-only situation cell', () => {
     expect(() => applyCompound('br_status', ['', '82'])).toThrow(/no situation letter/);
   });

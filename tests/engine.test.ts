@@ -1645,6 +1645,74 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.owner.state).toBe('CA');
   });
 
+  // The contract that separates resolveStatusCompound from resolveCompound: a compound status
+  // transform returning null means the register stated nothing, so `default` must not fire. On
+  // status alone, null carries feed-exclusion meaning no published code could express.
+  it('keeps a null compound status null rather than falling to default', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-compound-status-null',
+      label: 'synthetic',
+      country: 'BR',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: {
+          fields: ['DT_CANC', 'CD_INTERDICAO'],
+          compound_transform: 'br_status',
+          default: 'other',
+        },
+      },
+    };
+    // Both source columns blank — br_status returns null, and `default: 'other'` must not apply.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,DT_CANC,CD_INTERDICAO\n1,PPAAA,,\n', 'utf8')],
+    ]);
+    const { records, stats } = await mapRows(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.status).toBeNull();
+  });
+
+  // Same mapping, non-blank cell: the transform's value wins and `default` still stays out of it.
+  it('uses the compound status value when the register does state one', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-compound-status-value',
+      label: 'synthetic',
+      country: 'BR',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: {
+          fields: ['DT_CANC', 'CD_INTERDICAO'],
+          compound_transform: 'br_status',
+          default: 'other',
+        },
+      },
+    };
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,DT_CANC,CD_INTERDICAO\n1,PPAAA,,R\n', 'utf8')],
+    ]);
+    const { records } = await mapRows(config, files);
+    expect(records.get('1')?.status).toBe('reserved');
+  });
+
   it('keeps the more complete incumbent over a sparser duplicate (order-independent)', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-completeness-reverse',

@@ -442,7 +442,10 @@ const brStatus = (values: string[]): string | null => {
   // Neither column stated anything; null beats asserting a live registration.
   if (situation.length === 0) return null;
 
-  const letters = new Set(situation.replace(/[^A-Z]/g, ''));
+  // Strips only what the register actually pads codes with — digits and the five stray spaces.
+  // Discarding "everything that is not A-Z" instead would swallow an unrecognized character
+  // (`Cq8`) before the check below could fail on it.
+  const letters = new Set(situation.replace(/[\d\s]/g, ''));
   for (const letter of letters)
     if (!BR_KNOWN_SITUATIONS.has(letter))
       throw new Error(`br_status: unrecognized CD_INTERDICAO situation code "${situation}"`);
