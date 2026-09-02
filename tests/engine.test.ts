@@ -2408,9 +2408,6 @@ describe('BR-ANAC fixture mapping', () => {
     });
   });
 
-  // ANAC publishes PRALL twice, byte-identical across all 30 columns except CD_INTERDICAO ("N"
-  // against "S8"). Same status, same dates, neither row a strict superset — resolveRecency had no
-  // signal and failed the entire 34,807-row run on this one collision, three days running.
   describe('PRALL — duplicated mark whose only difference is the situation code', () => {
     it('collapses to a single record', () => {
       expect([...brRecords.values()].filter((r) => r.registration === 'PR-ALL')).toHaveLength(1);
