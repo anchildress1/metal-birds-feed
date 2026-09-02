@@ -152,7 +152,7 @@ mapping:
   # constant would write a false country for them. The address's trailing component is the country,
   # which is permitted PII; the rest of the address stays dropped. `default: ~` rather than a throw
   # because an owner moving to a new country is routine data, not upstream drift — it nulls and logs
-  # translate_lookup_default, which stays legible at this volume.
+  # map_lookup_default, which stays legible at this volume.
   owner.country:
     field: Owner Address
     transform: last_comma_segment_or_null

@@ -201,7 +201,7 @@ export async function mapRows(
     field: config.source_id,
     transform: config.source_id_transform ?? 'trim_or_null',
   };
-  const ctx: TranslateRowContext = {
+  const ctx: MapRowContext = {
     config,
     joinMaps,
     missingSourceIdPolicy,
@@ -448,7 +448,7 @@ const tryMergeDuplicate = (
   return { record: mergeDuplicateRecord(incumbent, candidate, policy), fields: [...diff] };
 };
 
-interface TranslateRowContext {
+interface MapRowContext {
   config: SourceConfig;
   joinMaps: Map<string, Map<string, Row>>;
   missingSourceIdPolicy: MissingSourceIdPolicy | null;
@@ -528,12 +528,7 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
 // Maps one row to its outcome (record / skipped / failed) with the appropriate log; the caller
 // owns the counters and the insert. `missingIdSkipped` is the running missing-id skip count, used
 // only for the missing-id bound — duplicate skips are counted separately so they can't consume it.
-function mapRow(
-  row: Row,
-  i: number,
-  missingIdSkipped: number,
-  ctx: TranslateRowContext
-): RowOutcome {
+function mapRow(row: Row, i: number, missingIdSkipped: number, ctx: MapRowContext): RowOutcome {
   const { config, joinMaps, missingSourceIdPolicy, seenRows, records, sourceIdMapping } = ctx;
   const merged = mergeJoins(row, config, joinMaps);
   const rawId = resolveScalar(merged, sourceIdMapping, config.id);
