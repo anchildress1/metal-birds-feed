@@ -1092,8 +1092,7 @@ describe('br_status', () => {
     expect(applyCompound('br_status', ['18/03/2020', 'M824'])).toBe('cancelled');
   });
 
-  // The bug this transform exists for: 3,127 reserved marks carry no cancellation date, so a
-  // date-only status served every one of them as a flyable aircraft.
+  // The bug this exists for: reserved marks carry no DT_CANC, so a date-only status served them.
   it('maps a mark reserve to reserved', () => {
     expect(applyCompound('br_status', ['', 'R'])).toBe('reserved');
     expect(applyCompound('br_status', ['', 'R4'])).toBe('reserved');
@@ -1108,8 +1107,6 @@ describe('br_status', () => {
     expect(applyCompound('br_status', ['', 'Z'])).toBe('valid');
   });
 
-  // A suspended, cancelled, expired or interdicted airworthiness certificate says nothing about the
-  // registration itself — the mark is still held by a real airframe and stays servable.
   it('keeps an airworthiness-restricted mark valid', () => {
     expect(applyCompound('br_status', ['', 'S8'])).toBe('valid');
     expect(applyCompound('br_status', ['', 'C18'])).toBe('valid');
@@ -1118,7 +1115,6 @@ describe('br_status', () => {
     expect(applyCompound('br_status', ['', 'P'])).toBe('valid');
   });
 
-  // Both columns silent: null, never a fabricated 'valid'. The feed excludes null-status rows.
   it('returns null when neither column states anything', () =>
     expect(applyCompound('br_status', ['', ''])).toBeNull());
 

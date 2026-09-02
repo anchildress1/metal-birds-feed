@@ -2307,8 +2307,6 @@ describe('BR-ANAC fixture mapping', () => {
     });
   });
 
-  // 3,127 live-file rows state `R` (mark reserve) and none carry a DT_CANC, so a status read from
-  // the cancellation date alone served every held mark as a flyable aircraft.
   describe('CD_INTERDICAO drives status where DT_CANC cannot', () => {
     it('maps a reserved mark to reserved, not valid', () => {
       expect(brRecords.get('PPAPA')?.status).toBe('reserved');

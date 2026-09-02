@@ -415,18 +415,15 @@ const brAirframe = (value: string): string | null => {
 const brBuildCertification = (value: string): string | null =>
   value.trim().toUpperCase() === 'NÃO CERTIFICADA' ? 'not-type-certificated' : null;
 
-// ANAC's situation codes, from the RAB metadata: the leading letter is the situation and any
-// trailing digits are sub-codes this mapping does not interpret. `R` is the only one that means no
-// airframe exists behind the mark, and 3,127 of them carry no DT_CANC — reading status from the
-// cancellation date alone served every one of them as a live aircraft.
+// ANAC's RAB situation codes, keyed on the leading letter; trailing digits are uninterpreted
+// sub-codes. Reserved marks carry no DT_CANC, so a date-only status served them all as live.
 const BR_SITUATION_STATUS: Record<string, string> = {
   R: 'reserved', // Mark reserve
   M: 'cancelled', // Registration cancelled
   N: 'valid', // Normal situation
   U: 'valid', // Ultralight, normal situation
   Z: 'valid', // Experimental, normal situation
-  // The registration stays live while the airworthiness certificate does not — these describe the
-  // CofA, not the mark, so they remain servable.
+  // CofA state, not registration state — the mark is still live.
   S: 'valid', // CofA suspended
   C: 'valid', // CofA cancelled
   V: 'valid', // CofA expired
@@ -434,14 +431,12 @@ const BR_SITUATION_STATUS: Record<string, string> = {
   P: 'valid', // Aircraft under punitive status
 };
 
-// DT_CANC first: a populated cancellation date is unambiguous, and one row carries it with an empty
-// situation cell. Throws on an unrecognized letter rather than defaulting to valid — a new ANAC
-// code must fail the run, not silently become a served aircraft.
+// DT_CANC first: unambiguous, and one row carries it with an empty situation cell.
 const brStatus = (values: string[]): string | null => {
   const cancelledAt = values[0]?.trim() ?? '';
   const situation = values[1]?.trim() ?? '';
   if (cancelledAt.length > 0) return 'cancelled';
-  // Neither column stated anything — status stays null rather than asserting a live registration.
+  // Neither column stated anything; null beats asserting a live registration.
   if (situation.length === 0) return null;
   const status = BR_SITUATION_STATUS[situation[0]];
   if (status === undefined)

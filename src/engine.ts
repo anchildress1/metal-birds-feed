@@ -837,9 +837,7 @@ function resolveStatusCompound(
 ): string | null {
   const fields = fm.fields ?? [];
   const values = fields.map((f) => row[f] ?? '');
-  // Blankness is the transform's call here, not this function's: a compound status reads several
-  // columns and only the transform knows whether the combination means "the register said nothing".
-  // A null return therefore stays null rather than falling to `default`.
+  // Only the transform can judge blankness across several columns, so null stays null here.
   const transformed = applyCompound(transform, values);
   if (transformed === null) return null;
   if (fm.lookup) return resolveLookup(transformed, fm.lookup, fm.default, fields.join(','), source);
