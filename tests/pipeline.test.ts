@@ -842,6 +842,33 @@ describe('main', () => {
 
   // run() rejects a traversal-bearing id, and that rejection lands on the recovery path with the
   // same unchecked value — which resolves it against `sources/` and an R2 key.
+  // refresh.yml guards the dispatch path, but `make refresh` reaches resolveSources directly with
+  // whatever .env exports — an unnamed force there is a fleet-wide cadence bypass.
+  it('refuses FORCE_REFRESH without a named source', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['FORCE_REFRESH'] = 'true';
+    delete process.env['REFRESH_SOURCE'];
+
+    await expect(main()).rejects.toThrow(/FORCE_REFRESH requires REFRESH_SOURCE/);
+    expect(mockDownload).not.toHaveBeenCalled();
+  });
+
+  it('allows FORCE_REFRESH when a source is named', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['FORCE_REFRESH'] = 'true';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: new Date().toISOString(),
+      last_content_change: new Date().toISOString(),
+      content_hash: HASH64,
+    });
+
+    await main();
+
+    expect(mockDownload).toHaveBeenCalledTimes(1);
+  });
+
   it('refuses to resolve a traversal-bearing source on the staleness recovery path', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
