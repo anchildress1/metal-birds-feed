@@ -84,6 +84,21 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  // null_values matches one raw cell; a compound mapping reads several. The engine silently
+  // ignored it, which is a quiet trap on `status`, where null decides feed inclusion.
+  it('rejects null_values alongside compound_transform', () => {
+    const tmp = tmpConfig('_test_compound_null_values.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { fields: ['A', 'B'], compound_transform: tc_airframe, null_values: ['N'] }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/null_values cannot be combined/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects fields without compound_transform', () => {
     const tmp = tmpConfig('_test_fields_no_compound.yaml');
     writeFileSync(

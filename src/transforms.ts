@@ -415,21 +415,24 @@ const brAirframe = (value: string): string | null => {
 const brBuildCertification = (value: string): string | null =>
   value.trim().toUpperCase() === 'NÃO CERTIFICADA' ? 'not-type-certificated' : null;
 
-// ANAC's RAB situation codes, keyed on the leading letter; trailing digits are uninterpreted
-// sub-codes. Reserved marks carry no DT_CANC, so a date-only status served them all as live.
-const BR_SITUATION_STATUS: Record<string, string> = {
-  R: 'reserved', // Mark reserve
-  M: 'cancelled', // Registration cancelled
-  N: 'valid', // Normal situation
-  U: 'valid', // Ultralight, normal situation
-  Z: 'valid', // Experimental, normal situation
-  // CofA state, not registration state — the mark is still live.
-  S: 'valid', // CofA suspended
-  C: 'valid', // CofA cancelled
-  V: 'valid', // CofA expired
-  X: 'valid', // Aircraft interdicted
-  P: 'valid', // Aircraft under punitive status
-};
+// ANAC's RAB situation codes, ordered strongest-first. The codes are unordered composites — both
+// `SX1` and `XS1` occur upstream — so every letter is read and the first match here decides.
+// Keying on the leading character instead would let a future `XM` serve a cancelled mark as valid.
+const BR_SITUATION_STATUS: ReadonlyArray<readonly [string, string]> = [
+  ['M', 'cancelled'], // registration cancelled
+  ['R', 'reserved'], // mark reserve — no airframe behind it
+  // The rest describe the airworthiness certificate, not the mark, so the registration stays live.
+  ['X', 'valid'], // aircraft interdicted
+  ['V', 'valid'], // CofA expired
+  ['C', 'valid'], // CofA cancelled
+  ['S', 'valid'], // CofA suspended
+  ['P', 'valid'], // punitive status
+  ['U', 'valid'], // ultralight, normal
+  ['Z', 'valid'], // experimental, normal
+  ['N', 'valid'], // normal
+];
+
+const BR_KNOWN_SITUATIONS = new Set(BR_SITUATION_STATUS.map(([letter]) => letter));
 
 // DT_CANC first: unambiguous, and one row carries it with an empty situation cell.
 const brStatus = (values: string[]): string | null => {
@@ -438,10 +441,15 @@ const brStatus = (values: string[]): string | null => {
   if (cancelledAt.length > 0) return 'cancelled';
   // Neither column stated anything; null beats asserting a live registration.
   if (situation.length === 0) return null;
-  const status = BR_SITUATION_STATUS[situation[0]];
-  if (status === undefined)
-    throw new Error(`br_status: unrecognized CD_INTERDICAO situation code "${situation}"`);
-  return status;
+
+  const letters = new Set(situation.replace(/[^A-Z]/g, ''));
+  for (const letter of letters)
+    if (!BR_KNOWN_SITUATIONS.has(letter))
+      throw new Error(`br_status: unrecognized CD_INTERDICAO situation code "${situation}"`);
+
+  const governing = BR_SITUATION_STATUS.find(([letter]) => letters.has(letter));
+  if (!governing) throw new Error(`br_status: no situation letter in CD_INTERDICAO "${situation}"`);
+  return governing[1];
 };
 
 // "Indisponível" is the undisclosed-party sentinel -> null.

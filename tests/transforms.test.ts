@@ -1118,7 +1118,30 @@ describe('br_status', () => {
   it('returns null when neither column states anything', () =>
     expect(applyCompound('br_status', ['', ''])).toBeNull());
 
+  // Live codes are unordered composites: both `SX1` and `XS1` occur, and 47 values carry more than
+  // one letter, so the leading character does not govern.
+  it('reads every letter, not just the first', () => {
+    expect(applyCompound('br_status', ['', 'SX1'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'XS1'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'C8X'])).toBe('valid');
+  });
+
+  it('lets the strongest state win regardless of position', () => {
+    expect(applyCompound('br_status', ['', 'XM'])).toBe('cancelled');
+    expect(applyCompound('br_status', ['', 'MX'])).toBe('cancelled');
+    expect(applyCompound('br_status', ['', 'CR8'])).toBe('reserved');
+    expect(applyCompound('br_status', ['', 'RC182'])).toBe('reserved');
+  });
+
   it('throws on an unrecognized situation code rather than defaulting to valid', () => {
     expect(() => applyCompound('br_status', ['', 'Q9'])).toThrow(/unrecognized CD_INTERDICAO/);
+  });
+
+  it('throws when an unrecognized letter is not the first one', () => {
+    expect(() => applyCompound('br_status', ['', 'CQ8'])).toThrow(/unrecognized CD_INTERDICAO/);
+  });
+
+  it('throws on a digits-only situation cell', () => {
+    expect(() => applyCompound('br_status', ['', '82'])).toThrow(/no situation letter/);
   });
 });

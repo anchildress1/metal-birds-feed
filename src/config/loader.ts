@@ -72,6 +72,12 @@ const FieldMappingSchema = z
   .refine((v) => (v.compound_transform === undefined) === (v.fields === undefined), {
     message: 'compound_transform requires fields, and fields requires compound_transform',
   })
+  // null_values matches one raw cell; a compound mapping reads several, so there is no cell for it
+  // to match. The engine silently ignores it there, which is a quiet trap on `status`, where the
+  // difference between null and a value decides feed inclusion.
+  .refine((v) => v.compound_transform === undefined || v.null_values === undefined, {
+    message: 'null_values cannot be combined with compound_transform',
+  })
   .refine(
     (v) =>
       v.constant === undefined ||
