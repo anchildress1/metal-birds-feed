@@ -350,6 +350,9 @@ const stalenessFromPriorState = async (
   now: Date
 ): Promise<StalenessEntry | null> => {
   try {
+    // run() rejects a traversal-bearing source id, but that rejection lands here with the same
+    // unchecked value — and this path resolves it against `sources/` and an R2 key.
+    validateSourceId(source);
     const cadenceDays = loadSourceConfig(resolve('sources', `${source}.yaml`)).cadence_days;
     if (cadenceDays === undefined) return null;
     return buildStalenessEntry(source, cadenceDays, await writer.readState(source), now);

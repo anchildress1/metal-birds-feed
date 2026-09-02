@@ -840,6 +840,28 @@ describe('main', () => {
     }
   });
 
+  // run() rejects a traversal-bearing id, and that rejection lands on the recovery path with the
+  // same unchecked value — which resolves it against `sources/` and an R2 key.
+  it('refuses to resolve a traversal-bearing source on the staleness recovery path', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = '../../etc/passwd';
+    const fetchMock = mock().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) });
+    setFetch(fetchMock);
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+      expect(mockLoadSourceConfig).not.toHaveBeenCalled();
+      expect(mockReadState).not.toHaveBeenCalled();
+      // No staleness entry, so no issue is opened for a name that names nothing.
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
   it('opens a staleness issue when source is overdue and token is present', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
