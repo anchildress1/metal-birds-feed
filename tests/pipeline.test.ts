@@ -252,59 +252,7 @@ describe('run', () => {
     await expect(run('faa')).rejects.toThrow(/aborting write/i);
 
     expect(mockR2Write).not.toHaveBeenCalled();
-    // A missing `retryable` (as an older/stub engine mock would return) must read as non-retryable,
-    // the same as `retryable: false` — never default to retrying.
-    expect(mockMapRows).toHaveBeenCalledTimes(1);
-  });
-
-  // engine.ts marks a failure retryable only when every failed row is an ambiguous-duplicate
-  // collision — a fresh-data problem a later download can resolve on its own, not a config bug.
-  it('retries a fully ambiguous-duplicate mapping failure with a fresh download', async () => {
-    const finalRecords = new Map([['1', aircraft()]]);
-    mockMapRows
-      .mockResolvedValueOnce({
-        records: new Map(),
-        stats: { total: 10, ok: 9, failed: 1 },
-        retryable: true,
-      })
-      .mockResolvedValueOnce({
-        records: finalRecords,
-        stats: { total: 10, ok: 10, failed: 0 },
-      });
-
-    await run('faa', { baseDelayMs: 0, sleep: async () => {} });
-
-    expect(mockDownload).toHaveBeenCalledTimes(2);
-    expect(mockMapRows).toHaveBeenCalledTimes(2);
-    expect(mockR2Write).toHaveBeenCalledWith(finalRecords, 'faa', null, expect.any(String));
-  });
-
-  it('still fails loudly once a retryable mapping failure exhausts every attempt', async () => {
-    mockMapRows.mockResolvedValue({
-      records: new Map(),
-      stats: { total: 10, ok: 9, failed: 1 },
-      retryable: true,
-    });
-
-    await expect(run('faa', { baseDelayMs: 0, sleep: async () => {} })).rejects.toThrow(
-      /aborting write/i
-    );
-
-    expect(mockMapRows).toHaveBeenCalledTimes(3);
-    expect(mockR2Write).not.toHaveBeenCalled();
-  });
-
-  it('does not retry a mapping failure that mixes an ambiguous duplicate with another cause', async () => {
-    mockMapRows.mockResolvedValue({
-      records: new Map(),
-      stats: { total: 10, ok: 8, failed: 2 },
-      retryable: false,
-    });
-
-    await expect(run('faa', { baseDelayMs: 0, sleep: async () => {} })).rejects.toThrow(
-      /aborting write/i
-    );
-
+    // One attempt, no retry: a mapping failure is deterministic on the same bytes.
     expect(mockMapRows).toHaveBeenCalledTimes(1);
   });
 

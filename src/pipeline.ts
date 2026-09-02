@@ -5,15 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
 import { mapRows } from './engine.js';
-import type { EngineStats } from './engine.js';
-import type { Aircraft } from './schema.js';
 import { localizeRecords } from './localize/localize.js';
 import { MIN_RETAIN_RATIO, R2ArtifactWriter, isArtifactCaughtUp, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
 import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
-import { retry, type RetryOptions } from './retry.js';
 import {
   shouldSkip,
   buildStalenessEntry,
@@ -21,20 +18,6 @@ import {
   STALENESS_MULTIPLIER,
 } from './cadence.js';
 import type { SourceState, StalenessEntry } from './cadence.js';
-
-// A same-status/same-date duplicate collision with neither row a strict superset (engine.ts's
-// `retryable: true`) is a fresh-data problem: ANAC has republished a corrected RAB file within the
-// same day after this exact failure, three days running. Retrying the whole download+mapping
-// with real backoff gives the upstream a chance to settle before this source fails its whole run
-// over one row. Any other mapping failure is a deterministic bug in the same bytes — retrying
-// would just burn a fresh download for nothing, so those still throw a plain Error immediately.
-class RetryableMappingFailure extends Error {}
-
-// Long backoff, not the network-blip scale used elsewhere: this waits on an upstream data
-// condition to clear, not a dropped connection. 3 attempts × ~45-180s of jittered backoff adds at
-// most a few minutes, well inside the workflow's 30-minute job timeout, and costs nothing on a
-// normal run.
-const MAPPING_RETRY_BASE_DELAY_MS = 90_000;
 
 const r2ConfigFromEnv = (): R2Config => ({
   accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
@@ -55,7 +38,7 @@ interface RunResult {
   new_state: SourceState | null;
 }
 
-export async function run(sourceId: string, opts: RetryOptions = {}): Promise<RunResult> {
+export async function run(sourceId: string): Promise<RunResult> {
   log('info', 'pipeline_start', { source: sourceId });
   const start = Date.now();
 
@@ -94,40 +77,21 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
     };
   }
 
-  const attemptDownloadAndMap = async (): Promise<{
-    records: Map<string, Aircraft>;
-    stats: EngineStats;
-  }> => {
-    const files = await download(config.download);
-    const countUrl = config.record_count?.url;
-    // After the register itself, so the two responses bracket as little publishing time as
-    // possible: a publication landing between them reports a total the download predates, which
-    // fails the run. Rerunning clears it, and that is the right trade against absorbing a
-    // truncated download.
-    const publishedTotal =
-      countUrl === undefined
-        ? undefined
-        : await fetchPublishedTotal(countUrl, config.download.headers);
-    const { records, stats, retryable } = await mapRows(config, files, publishedTotal);
+  const files = await download(config.download);
+  const countUrl = config.record_count?.url;
+  // After the register itself, so the two responses bracket as little publishing time as possible:
+  // a publication landing between them reports a total the download predates, which fails the run.
+  const publishedTotal =
+    countUrl === undefined
+      ? undefined
+      : await fetchPublishedTotal(countUrl, config.download.headers);
+  const { records, stats } = await mapRows(config, files, publishedTotal);
 
-    log('info', 'map_summary', { source: sourceId, ...stats });
-    if (stats.failed > 0) {
-      const msg = `Row mapping failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`;
-      throw retryable ? new RetryableMappingFailure(msg) : new Error(msg);
-    }
-    return { records, stats };
-  };
-
-  const { records } = await retry(attemptDownloadAndMap, {
-    attempts: 3,
-    baseDelayMs: MAPPING_RETRY_BASE_DELAY_MS,
-    ...opts,
-    isRetryable: (err) => err instanceof RetryableMappingFailure,
-    onRetry: (attempt, err) => {
-      opts.onRetry?.(attempt, err);
-      log('warn', 'pipeline_retry', { source: sourceId, attempt, reason: errorMessage(err) });
-    },
-  });
+  log('info', 'map_summary', { source: sourceId, ...stats });
+  if (stats.failed > 0)
+    throw new Error(
+      `Row mapping failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`
+    );
 
   if (dryRun) {
     log('info', 'dry_run_mode', { source: sourceId, records: records.size });
@@ -525,8 +489,8 @@ export const markFeedDeployed = async (hash: string | undefined): Promise<void> 
 
 export async function main(): Promise<void> {
   const sources = resolveSources();
-  // Not `sources.map(run)`: Array.prototype.map passes (value, index, array) positionally, and
-  // `run`'s second parameter is retry options — the numeric index would land there by accident.
+  // Wrapped rather than `sources.map(run)`: map passes (value, index, array) positionally, so any
+  // second parameter `run` grows would silently receive the index.
   const results = await Promise.allSettled(sources.map((sourceId) => run(sourceId)));
   const now = new Date();
   const dryRun = process.env['DRY_RUN'] === 'true';
