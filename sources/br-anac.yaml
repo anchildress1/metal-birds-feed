@@ -240,6 +240,15 @@ mapping:
     field: DS_GRAVAME
     transform: trim_or_null
 
+  # `N` is ANAC's "normal situation" — the register stating there is no restriction, not a code for
+  # one — so it resolves like a blank rather than filling 11,670 rows with a value meaning nothing.
+  # That is also what makes a duplicated mark resolvable: PRALL is published twice, identical in all
+  # 30 columns except this one (`N` against `S8`), which left resolveRecency with no signal and
+  # failed the whole run on one row. Nulled, the row stating a real suspension is a strict superset
+  # of the one stating nothing, and recency picks it — the register's own assertion wins over its
+  # absence. `U` and `Z` also mean normal situation but additionally carry the airframe's class
+  # (ultralight, experimental), which no other mapped column reproduces, so they stay.
   interdiction_code:
     field: CD_INTERDICAO
     transform: trim_or_null
+    null_values: ['N']
