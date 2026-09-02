@@ -48,15 +48,19 @@ jobs:
           INPUT_FORCE: ${{ inputs.force || 'false' }}
         run: |
           set -euo pipefail
+          # Normalize before both the guard and the matrix: pipeline.ts trims REFRESH_SOURCE, so a
+          # whitespace-only input would clear the guard here and then fall back to every source.
+          # Source ids never contain whitespace, so dropping all of it is safe.
+          src="$(printf '%s' "${INPUT_SOURCE:-}" | tr -d '[:space:]')"
           # Refuse a fleet-wide cadence bypass: it would pull all 16 registers at once against the
           # shared Gemini quota group and the 30-minute job timeout.
           force="${INPUT_FORCE:-false}"
-          if [ "$force" = "true" ] && [ -z "$INPUT_SOURCE" ]; then
+          if [ "$force" = "true" ] && [ -z "$src" ]; then
             echo "::error::force requires a named source"
             exit 1
           fi
-          if [ -n "$INPUT_SOURCE" ]; then
-            sources=$(jq -c -n --arg s "$INPUT_SOURCE" '[$s]')
+          if [ -n "$src" ]; then
+            sources=$(jq -c -n --arg s "$src" '[$s]')
           else
             sources=$(find sources -maxdepth 1 -name '*.yaml' -type f -print0 \
               | xargs -0 -n1 basename \
