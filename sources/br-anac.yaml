@@ -240,6 +240,10 @@ mapping:
     field: DS_GRAVAME
     transform: trim_or_null
 
+  # `N` is "normal situation" — absence, not a code. Left populated, a mark published twice
+  # differing only here (PRALL: `N` against `S8`) gives resolveRecency no signal and fails the run.
+  # `U`/`Z` also mean normal but carry airframe class nothing else reproduces, so they stay.
   interdiction_code:
     field: CD_INTERDICAO
     transform: trim_or_null
+    null_values: ['N']

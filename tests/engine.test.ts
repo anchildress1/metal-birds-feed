@@ -2244,9 +2244,9 @@ beforeAll(async () => {
 });
 
 describe('BR-ANAC fixture mapping', () => {
-  it('maps all 9 fixture rows with no failures (banner row skipped)', () => {
-    expect(brStats).toEqual({ total: 9, ok: 9, failed: 0, skipped: 0, duplicateSkipped: 0 });
-    expect(brRecords.size).toBe(9);
+  it('maps all 11 fixture rows with no failures (banner skipped, PRALL collapsed)', () => {
+    expect(brStats).toEqual({ total: 11, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(brRecords.size).toBe(10);
   });
 
   describe('PPJPG — single-engine piston, individual owner, valid', () => {
@@ -2406,6 +2406,14 @@ describe('BR-ANAC fixture mapping', () => {
       expect(brRecords.get('PPADZ')?.status).toBe('cancelled');
       expect(brRecords.get('PPFAL')?.status).toBe('cancelled');
     });
+  });
+
+  describe('PRALL — duplicated mark whose only difference is the situation code', () => {
+    it('collapses to a single record', () => {
+      expect([...brRecords.values()].filter((r) => r.registration === 'PR-ALL')).toHaveLength(1);
+    });
+    it('keeps the row stating a real restriction over the one stating none', () =>
+      expect(brRecords.get('PRALL')?.interdiction_code).toBe('S8'));
   });
 
   it('every Brazil record carries country=BR and no Mode-S hex', () => {
