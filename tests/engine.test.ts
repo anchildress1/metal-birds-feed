@@ -7,7 +7,7 @@ import { loadSourceConfig } from '../src/config/loader.js';
 import { mapRows } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
-import type { SourceConfig } from '../src/types/config.js';
+import type { FieldMapping, SourceConfig } from '../src/types/config.js';
 
 const FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'faa');
 const CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'faa.yaml');
@@ -1645,6 +1645,90 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.owner.state).toBe('CA');
   });
 
+  // One shape for every compound-status case; only the lookup/default overrides differ.
+  const compoundStatusConfig = (id: string, statusExtras: Partial<FieldMapping>): SourceConfig => ({
+    id,
+    label: 'synthetic',
+    country: 'BR',
+    language: 'en',
+    encoding: 'utf8',
+    download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+    primary: 'primary',
+    delimiter: ',',
+    trim_all: true,
+    format: 'csv',
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: {
+      registration: { field: 'REG' },
+      status: {
+        fields: ['DT_CANC', 'CD_INTERDICAO'],
+        compound_transform: 'br_status',
+        ...statusExtras,
+      },
+    },
+  });
+
+  // The contract that separates resolveStatusCompound from resolveCompound: a compound status
+  // transform returning null means the register stated nothing, so `default` must not fire. On
+  // status alone, null carries feed-exclusion meaning no published code could express.
+  it('keeps a null compound status null rather than falling to default', async () => {
+    // Both source columns blank — br_status returns null, and `default: 'other'` must not apply.
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,DT_CANC,CD_INTERDICAO\n1,PPAAA,,\n', 'utf8')],
+    ]);
+    const { records, stats } = await mapRows(
+      compoundStatusConfig('synthetic-compound-status-null', { default: 'other' }),
+      files
+    );
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.status).toBeNull();
+  });
+
+  // The lookup branch: a compound transform's output is still subject to the mapping's own lookup,
+  // so a register whose vocabulary differs from the canonical enum can route through both.
+  it('runs a compound status result through the mapping lookup', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,DT_CANC,CD_INTERDICAO\n1,PPAAA,,R\n', 'utf8')],
+    ]);
+    const { records } = await mapRows(
+      compoundStatusConfig('synthetic-compound-status-lookup', {
+        lookup: { reserved: 'other' },
+      }),
+      files
+    );
+    expect(records.get('1')?.status).toBe('other');
+  });
+
+  // An unmatched lookup value is the only place `default` legitimately fires on a compound status:
+  // the register stated something, the mapping just does not recognize it yet.
+  it('falls a compound status to default when the lookup does not match', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,DT_CANC,CD_INTERDICAO\n1,PPAAA,,R\n', 'utf8')],
+    ]);
+    const { records } = await mapRows(
+      compoundStatusConfig('synthetic-compound-status-lookup-default', {
+        lookup: { cancelled: 'cancelled' },
+        default: 'other',
+      }),
+      files
+    );
+    expect(records.get('1')?.status).toBe('other');
+  });
+
+  // Same mapping, non-blank cell: the transform's value wins and `default` still stays out of it.
+  it('uses the compound status value when the register does state one', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,DT_CANC,CD_INTERDICAO\n1,PPAAA,,R\n', 'utf8')],
+    ]);
+    const { records } = await mapRows(
+      compoundStatusConfig('synthetic-compound-status-value', { default: 'other' }),
+      files
+    );
+    expect(records.get('1')?.status).toBe('reserved');
+  });
+
   it('keeps the more complete incumbent over a sparser duplicate (order-independent)', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-completeness-reverse',
@@ -2304,6 +2388,23 @@ describe('BR-ANAC fixture mapping', () => {
     it('keeps status valid: an interdiction code on a lien-free active aircraft is not restricted', () => {
       expect(r.lien_status).toBe('NENHUM GRAVAME REGISTRADO');
       expect(r.status).toBe('valid');
+    });
+  });
+
+  describe('CD_INTERDICAO drives status where DT_CANC cannot', () => {
+    it('maps a reserved mark to reserved, not valid', () => {
+      expect(brRecords.get('PPAPA')?.status).toBe('reserved');
+      expect(brRecords.get('PRAFV')?.status).toBe('reserved');
+    });
+    it('keeps a normal-situation mark valid', () => {
+      expect(brRecords.get('PPJPG')?.status).toBe('valid');
+    });
+    it('keeps a CofA-suspended/cancelled mark valid — the registration is still live', () => {
+      expect(brRecords.get('PPACK')?.status).toBe('valid');
+    });
+    it('still reads a populated DT_CANC as cancelled', () => {
+      expect(brRecords.get('PPADZ')?.status).toBe('cancelled');
+      expect(brRecords.get('PPFAL')?.status).toBe('cancelled');
     });
   });
 

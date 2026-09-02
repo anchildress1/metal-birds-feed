@@ -38,9 +38,11 @@ mapping:
     field: CD_TIPO_ICAO
     transform: trim_or_null
 
+  # Reserved marks are stated only in CD_INTERDICAO and carry no DT_CANC. Codes:
+  # BR_SITUATION_STATUS in src/transforms.ts.
   status:
-    field: DT_CANC
-    transform: br_status
+    fields: ['DT_CANC', 'CD_INTERDICAO']
+    compound_transform: br_status
 
   country:
     constant: BR

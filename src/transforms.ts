@@ -415,8 +415,45 @@ const brAirframe = (value: string): string | null => {
 const brBuildCertification = (value: string): string | null =>
   value.trim().toUpperCase() === 'NÃO CERTIFICADA' ? 'not-type-certificated' : null;
 
-// No status column upstream; a populated cancellation date is the cancellation signal.
-const brStatus = (value: string): string => (value.trim().length > 0 ? 'cancelled' : 'valid');
+// ANAC's RAB situation codes, ordered strongest-first. The codes are unordered composites — both
+// `SX1` and `XS1` occur upstream — so every letter is read and the first match here decides.
+// Keying on the leading character instead would let a future `XM` serve a cancelled mark as valid.
+const BR_SITUATION_STATUS: ReadonlyArray<readonly [string, string]> = [
+  ['M', 'cancelled'], // registration cancelled
+  ['R', 'reserved'], // mark reserve — no airframe behind it
+  // The rest describe the airworthiness certificate, not the mark, so the registration stays live.
+  ['X', 'valid'], // aircraft interdicted
+  ['V', 'valid'], // CofA expired
+  ['C', 'valid'], // CofA cancelled
+  ['S', 'valid'], // CofA suspended
+  ['P', 'valid'], // punitive status
+  ['U', 'valid'], // ultralight, normal
+  ['Z', 'valid'], // experimental, normal
+  ['N', 'valid'], // normal
+];
+
+const BR_KNOWN_SITUATIONS = new Set(BR_SITUATION_STATUS.map(([letter]) => letter));
+
+// DT_CANC first: unambiguous, and one row carries it with an empty situation cell.
+const brStatus = (values: string[]): string | null => {
+  const cancelledAt = values[0]?.trim() ?? '';
+  const situation = values[1]?.trim() ?? '';
+  if (cancelledAt.length > 0) return 'cancelled';
+  // Neither column stated anything; null beats asserting a live registration.
+  if (situation.length === 0) return null;
+
+  // Strips only what the register actually pads codes with — digits and the five stray spaces.
+  // Discarding "everything that is not A-Z" instead would swallow an unrecognized character
+  // (`Cq8`) before the check below could fail on it.
+  const letters = new Set(situation.replace(/[\d\s]/g, ''));
+  for (const letter of letters)
+    if (!BR_KNOWN_SITUATIONS.has(letter))
+      throw new Error(`br_status: unrecognized CD_INTERDICAO situation code "${situation}"`);
+
+  const governing = BR_SITUATION_STATUS.find(([letter]) => letters.has(letter));
+  if (!governing) throw new Error(`br_status: no situation letter in CD_INTERDICAO "${situation}"`);
+  return governing[1];
+};
 
 // "Indisponível" is the undisclosed-party sentinel -> null.
 const BR_UNDISCLOSED = 'Indisponível';
@@ -745,7 +782,6 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   ee_registration: eeRegistration,
   br_airframe: brAirframe,
   br_build_certification: brBuildCertification,
-  br_status: brStatus,
   br_party_name: brPartyName,
   br_party_state: brPartyState,
   br_party_kind: brPartyKind,
@@ -918,6 +954,7 @@ const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => str
   casa_airframe: casaAirframe,
   es_aesa_airframe: esAesaAirframe,
   no_operator_kind: noOperatorKind,
+  br_status: brStatus,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

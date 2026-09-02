@@ -30,7 +30,6 @@ export const SCALAR_TRANSFORMS = [
   'br_registration',
   'br_airframe',
   'br_build_certification',
-  'br_status',
   'br_party_name',
   'br_party_state',
   'br_party_kind',
@@ -68,6 +67,7 @@ export const COMPOUND_TRANSFORMS = [
   'casa_airframe',
   'es_aesa_airframe',
   'no_operator_kind',
+  'br_status',
 ] as const;
 
 export type ScalarTransformName = (typeof SCALAR_TRANSFORMS)[number];

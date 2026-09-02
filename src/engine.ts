@@ -822,18 +822,33 @@ function scalarField(mapping: FieldMap, row: Row, key: string, source: string): 
   return resolveScalar(row, fm, source);
 }
 
+const resolveStatusCompound = (
+  fm: FieldMapping,
+  transform: NonNullable<FieldMapping['compound_transform']>,
+  row: Row,
+  source: string
+): string | null => {
+  const fields = fm.fields ?? [];
+  const values = fields.map((f) => row[f] ?? '');
+  // Only the transform can judge blankness across several columns, so null stays null here.
+  const transformed = applyCompound(transform, values);
+  if (transformed === null) return null;
+  if (fm.lookup) return resolveLookup(transformed, fm.lookup, fm.default, fields.join(','), source);
+  return transformed;
+};
+
 // status is the schema's one field where null carries feed-exclusion meaning distinct from any
 // value a register could actually publish. A mapping's `default` exists to absorb a genuinely new
 // or unrecognized status code (AU/FAA/NL/TC each enumerate many but not all) — not to paper over a
 // blank cell as if the register had stated something. resolveScalar can't make that distinction
 // generically without risking every other default-bearing field's established behavior, so status
 // gets its own resolution here: a blank cell always stays null, and only a non-blank, unrecognized
-// code falls to the default. Every current status mapping uses `field` + optional `transform` +
-// `lookup` (never `compound_transform` or `null_values`), so those paths aren't reproduced.
+// code falls to the default. `null_values` is rejected at load time alongside a compound transform.
 function resolveStatus(mapping: FieldMap, row: Row, source: string): string | null {
   const fm = mapping['status'];
   if (!fm) return null;
   if (fm.constant !== undefined) return fm.constant;
+  if (fm.compound_transform) return resolveStatusCompound(fm, fm.compound_transform, row, source);
   const field = fm.field;
   if (!field) return fm.default ?? null;
   const raw = row[field] ?? '';
