@@ -822,12 +822,12 @@ function scalarField(mapping: FieldMap, row: Row, key: string, source: string): 
   return resolveScalar(row, fm, source);
 }
 
-function resolveStatusCompound(
+const resolveStatusCompound = (
   fm: FieldMapping,
   transform: NonNullable<FieldMapping['compound_transform']>,
   row: Row,
   source: string
-): string | null {
+): string | null => {
   const fields = fm.fields ?? [];
   const values = fields.map((f) => row[f] ?? '');
   // Only the transform can judge blankness across several columns, so null stays null here.
@@ -835,7 +835,7 @@ function resolveStatusCompound(
   if (transformed === null) return null;
   if (fm.lookup) return resolveLookup(transformed, fm.lookup, fm.default, fields.join(','), source);
   return transformed;
-}
+};
 
 // status is the schema's one field where null carries feed-exclusion meaning distinct from any
 // value a register could actually publish. A mapping's `default` exists to absorb a genuinely new
