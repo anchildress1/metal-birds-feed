@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.0.0...v2.1.0) (2026-09-02)
+
+
+### Features
+
+* onboard hr-ccaa (Croatian Civil Aviation Agency register) ([#137](https://github.com/anchildress1/metal-birds-feed/issues/137)) ([303e762](https://github.com/anchildress1/metal-birds-feed/commit/303e76211ca63a1f60c6c1254fca9197cfe3e69c))
+
+
+### Bug Fixes
+
+* hold cadence to calendar days and escalate an overdue source ([#154](https://github.com/anchildress1/metal-birds-feed/issues/154)) ([1aa79a1](https://github.com/anchildress1/metal-birds-feed/commit/1aa79a11065bdab116affd2875e840ccb200f603))
+* null br-anac's "normal situation" code so PRALL resolves ([#157](https://github.com/anchildress1/metal-birds-feed/issues/157)) ([a30fdfc](https://github.com/anchildress1/metal-birds-feed/commit/a30fdfc50c72e728c4b557aed1b2c6ed409e9e3b))
+* read br-anac status from CD_INTERDICAO, not the cancellation date ([#156](https://github.com/anchildress1/metal-birds-feed/issues/156)) ([084bebc](https://github.com/anchildress1/metal-birds-feed/commit/084bebcc47a672df7bcf1616a930339650940b39))
+* retry a translation run when only ambiguous duplicates failed ([#149](https://github.com/anchildress1/metal-birds-feed/issues/149)) ([68e3adf](https://github.com/anchildress1/metal-birds-feed/commit/68e3adf3b593b81fea8e6eb7bd7889323265f9d2))
+* retry discovery-pattern matching, not just the discovery fetch ([#141](https://github.com/anchildress1/metal-birds-feed/issues/141)) ([7609b17](https://github.com/anchildress1/metal-birds-feed/commit/7609b17d1cc8a645550cb6b08607243c9343c17a))
+
 ## [2.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v1.0.0...v2.0.0) (2026-08-21)
 
 
