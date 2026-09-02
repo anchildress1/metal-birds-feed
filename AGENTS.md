@@ -98,7 +98,7 @@ Authoritative rules for AI agents in this repo. Overrides any conflicting local 
 
 - `src/schema.ts` = canonical Zod schema. All engine output validates against it before entering the artifact.
 - `src/engine.ts` = source-agnostic. New registry = new YAML + (when needed) new transform/parser path. Never edit row-mapping logic for one source.
-- `mapRows()` (`engine.ts`, log prefix `map_*`) is column mapping. `localizeRecords()` (`localize/`, prefix `localize_*`) is the Gemini pass. Never name either "translate": br-anac is the only Gemini source, so a `translate_*` failure there reads as a Gemini failure and sends the reader to the wrong module.
+- `mapRows()` (`engine.ts`, `map_*`) is column mapping; `localizeRecords()` (`localize/`, `localize_*`) is the Gemini pass. Never call either "translate" — br-anac is the only Gemini source, so the collision misroutes every reader.
 - `src/db.ts` builds one SQLite artifact per source via `bun:sqlite` (in-memory → `serialize()`, no filesystem). Table `aircraft`: every canonical field its own typed column, nested objects flattened, arrays as JSON strings. `PRAGMA user_version` is the producer shape marker; bump on any column/contract change.
 - **Three version markers, bumped independently — check all three on every schema change.** `db.ts` `PRAGMA user_version` (per-source artifact) · `feed.ts` `PRAGMA user_version` (consolidated `feed.sqlite`) · `FEED_SLICE_VERSION` (the R2 JSON intermediate). Their numbers coinciding is chance, never a reason to skip one.
   - The two `PRAGMA user_version` markers describe the **consumer-facing contract**; `FEED_SLICE_VERSION` describes the **slice's structure**. They answer different questions, so they do not move together.
