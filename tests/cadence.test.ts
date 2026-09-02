@@ -13,6 +13,16 @@ const HASH_UP = 'b'.repeat(64);
 
 const DAY_MS = 86_400_000;
 
+// Absolute timestamps, for the cases where the assertion turns on which UTC day each side lands on
+// and a relative offset would make the result depend on the wall clock the suite happens to run at.
+const stateAt = (lastRun: string, lastChange: string): SourceState => ({
+  last_run: lastRun,
+  last_content_change: lastChange,
+  record_count: 1000,
+  content_hash: HASH64,
+  upstream_hash: HASH_UP,
+});
+
 const makeState = (lastRunDaysAgo: number, lastChangeDaysAgo: number): SourceState => {
   const now = Date.now();
   return {
@@ -62,9 +72,49 @@ describe('shouldSkip', () => {
     expect(shouldSkip(state, 30, new Date())).toBe(false);
   });
 
-  it('returns true for a 1-day cadence run 12 hours ago', () => {
-    const state = makeState(0.5, 0.5);
-    expect(shouldSkip(state, 1, new Date())).toBe(true);
+  it('returns true for a 1-day cadence already run earlier the same UTC day', () => {
+    const now = new Date('2026-09-02T18:00:00.000Z');
+    const state = stateAt('2026-09-02T06:11:00.000Z', '2026-09-02T06:11:00.000Z');
+    expect(shouldSkip(state, 1, now)).toBe(true);
+  });
+
+  // Regression: last_run is stamped at run *completion*, so it always lands after the cron tick
+  // that produced it. A strict ms window made the next day's tick fall short and skip, halving the
+  // effective rate of every `cadence_days: 1` source.
+  it('does not skip a 1-day cadence on the next daily tick despite a sub-24h gap', () => {
+    const state = stateAt('2026-09-01T06:11:00.000Z', '2026-09-01T06:11:00.000Z');
+    const nextTick = new Date('2026-09-02T06:03:00.000Z');
+    expect(nextTick.getTime() - new Date(state.last_run).getTime()).toBeLessThan(DAY_MS);
+    expect(shouldSkip(state, 1, nextTick)).toBe(false);
+  });
+
+  it('does not skip a 7-day cadence on the seventh daily tick despite a sub-7-day gap', () => {
+    const state = stateAt('2026-09-01T06:11:00.000Z', '2026-08-30T06:11:00.000Z');
+    const seventhTick = new Date('2026-09-08T06:03:00.000Z');
+    expect(seventhTick.getTime() - new Date(state.last_run).getTime()).toBeLessThan(7 * DAY_MS);
+    expect(shouldSkip(state, 7, seventhTick)).toBe(false);
+  });
+
+  it('still skips a 7-day cadence on the sixth daily tick', () => {
+    const state = stateAt('2026-09-01T06:11:00.000Z', '2026-08-30T06:11:00.000Z');
+    expect(shouldSkip(state, 7, new Date('2026-09-07T06:03:00.000Z'))).toBe(true);
+  });
+
+  // Escalation: an overdue register is polled every cron tick until it publishes. Same threshold
+  // as the staleness issue, so "issue open" and "polling daily" are one condition.
+  it('returns false for an overdue source even when it ran minutes ago', () => {
+    const now = new Date('2026-09-02T06:03:00.000Z');
+    // cadence 7 → overdue past 10.5 days of silence; 12 days qualifies.
+    const state = stateAt('2026-09-02T05:58:00.000Z', '2026-08-21T06:11:00.000Z');
+    expect(isOverdue(state, 7, now)).toBe(true);
+    expect(shouldSkip(state, 7, now)).toBe(false);
+  });
+
+  it('keeps skipping a source that is inside the cadence window and not yet overdue', () => {
+    const now = new Date('2026-09-02T06:03:00.000Z');
+    const state = stateAt('2026-09-01T06:11:00.000Z', '2026-08-29T06:11:00.000Z');
+    expect(isOverdue(state, 7, now)).toBe(false);
+    expect(shouldSkip(state, 7, now)).toBe(true);
   });
 
   it('returns true when last_run is in the future (clock skew permanently suppresses until that date passes)', () => {

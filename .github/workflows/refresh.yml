@@ -15,6 +15,12 @@ on:
         default: 'false'
         type: choice
         options: ['false', 'true']
+      force:
+        description: 'Ignore cadence_days and refresh now (use with a named source)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
 
 concurrency:
   # Gemini RPM limits apply per project, not per ref. One shared group prevents a manual branch run
@@ -94,6 +100,7 @@ jobs:
           GEMINI_REQUESTS_PER_MINUTE: ${{ vars.GEMINI_REQUESTS_PER_MINUTE || '10' }}
           REFRESH_SOURCE: ${{ matrix.source }}
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          FORCE_REFRESH: ${{ inputs.force || 'false' }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: bun run dist/pipeline.js

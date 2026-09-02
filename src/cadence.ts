@@ -31,12 +31,8 @@ const MS_PER_DAY = 86_400_000;
 // A source is considered overdue once it has been silent for 1.5× its declared cadence.
 export const STALENESS_MULTIPLIER = 1.5;
 
-export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
-  if (!state) return false;
-  const lastRun = new Date(state.last_run);
-  if (Number.isNaN(lastRun.getTime())) return false;
-  return now.getTime() - lastRun.getTime() < cadenceDays * MS_PER_DAY;
-};
+// Epoch ms floored to whole days is the UTC day number, since epoch 0 is a UTC midnight.
+const utcDay = (d: Date): number => Math.floor(d.getTime() / MS_PER_DAY);
 
 export const isOverdue = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
   if (!state) return false;
@@ -45,6 +41,22 @@ export const isOverdue = (state: SourceState | null, cadenceDays: number, now: D
   // false here would disarm the staleness alarm for that source forever.
   if (Number.isNaN(lastChange.getTime())) return true;
   return now.getTime() - lastChange.getTime() > cadenceDays * STALENESS_MULTIPLIER * MS_PER_DAY;
+};
+
+export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
+  if (!state) return false;
+  const lastRun = new Date(state.last_run);
+  if (Number.isNaN(lastRun.getTime())) return false;
+  // Overdue sources run every cron tick until the register publishes. Same threshold as the
+  // staleness issue, deliberately: the issue being open and the source polling daily are one fact,
+  // so there is no second knob to keep in sync and the issue body can state the escalation.
+  if (isOverdue(state, cadenceDays, now)) return false;
+  // Whole UTC days elapsed, not an exact ms window. last_run is stamped at run *completion*, so a
+  // strict ms comparison makes the next cron tick fall microseconds short of the window and skip,
+  // pushing every cycle a day later — a `cadence_days: 1` source against a daily cron then runs
+  // every other day. Comparing day numbers makes cadence_days mean calendar days and holds the
+  // period regardless of queue jitter or how long the run takes.
+  return utcDay(now) - utcDay(lastRun) < cadenceDays;
 };
 
 export const buildStalenessEntry = (

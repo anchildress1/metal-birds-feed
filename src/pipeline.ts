@@ -64,6 +64,9 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
   const config = loadSourceConfig(configPath);
 
   const dryRun = process.env['DRY_RUN'] === 'true';
+  // Operator override for a named source: without it the only way past the cadence gate is DRY_RUN,
+  // which writes nothing, so investigating a staleness issue could not produce a real refresh.
+  const force = process.env['FORCE_REFRESH'] === 'true';
   const writer = new R2ArtifactWriter(r2ConfigFromEnv(), dryRun);
 
   // State is read for every source: cadence sources gate on last_run, all sources gate the artifact
@@ -74,6 +77,7 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
     config.cadence_days !== undefined &&
     hasCurrentArtifactState &&
     !dryRun &&
+    !force &&
     shouldSkip(priorState, config.cadence_days, new Date()) &&
     (await writer.feedRowsExist(sourceId)) &&
     // Checked last: it's the most expensive condition. readArtifactHeader + isArtifactCaughtUp
@@ -212,6 +216,11 @@ const createStalenessIssue = async (
     `- **Days since change:** ${entry.days_since_change}`,
     '',
     `The register has been silent for ${entry.days_since_change} days (threshold: ${threshold} days).`,
+    '',
+    `While this is open the cadence gate is bypassed: \`${entry.source}\` refreshes on every daily`,
+    `cron tick instead of every ${entry.cadence_days} days. If the register genuinely publishes less`,
+    `often than declared, raise \`cadence_days\` in \`sources/${entry.source}.yaml\` rather than`,
+    'leaving it polling daily.',
     '',
     '> Auto-opened by the Registry Refresh workflow. Closes automatically on next successful content change.',
   ].join('\n');
