@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
 import { mapRows } from './engine.js';
-import type { EngineStats } from './engine.js';
-import type { Aircraft } from './schema.js';
 import { localizeRecords } from './localize/localize.js';
 import { MIN_RETAIN_RATIO, R2ArtifactWriter, isArtifactCaughtUp, type R2Config } from './writer.js';
 import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
@@ -79,31 +77,21 @@ export async function run(sourceId: string): Promise<RunResult> {
     };
   }
 
-  const attemptDownloadAndMap = async (): Promise<{
-    records: Map<string, Aircraft>;
-    stats: EngineStats;
-  }> => {
-    const files = await download(config.download);
-    const countUrl = config.record_count?.url;
-    // After the register itself, so the two responses bracket as little publishing time as
-    // possible: a publication landing between them reports a total the download predates, which
-    // fails the run. Rerunning clears it, and that is the right trade against absorbing a
-    // truncated download.
-    const publishedTotal =
-      countUrl === undefined
-        ? undefined
-        : await fetchPublishedTotal(countUrl, config.download.headers);
-    const { records, stats } = await mapRows(config, files, publishedTotal);
+  const files = await download(config.download);
+  const countUrl = config.record_count?.url;
+  // After the register itself, so the two responses bracket as little publishing time as possible:
+  // a publication landing between them reports a total the download predates, which fails the run.
+  const publishedTotal =
+    countUrl === undefined
+      ? undefined
+      : await fetchPublishedTotal(countUrl, config.download.headers);
+  const { records, stats } = await mapRows(config, files, publishedTotal);
 
-    log('info', 'map_summary', { source: sourceId, ...stats });
-    if (stats.failed > 0)
-      throw new Error(
-        `Row mapping failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`
-      );
-    return { records, stats };
-  };
-
-  const { records } = await attemptDownloadAndMap();
+  log('info', 'map_summary', { source: sourceId, ...stats });
+  if (stats.failed > 0)
+    throw new Error(
+      `Row mapping failed for ${stats.failed} of ${stats.total} ${sourceId} rows; aborting write`
+    );
 
   if (dryRun) {
     log('info', 'dry_run_mode', { source: sourceId, records: records.size });
