@@ -38,9 +38,12 @@ mapping:
     field: CD_TIPO_ICAO
     transform: trim_or_null
 
+  # DT_CANC alone cannot see a reserved mark: ANAC states that in CD_INTERDICAO (`R`), and none of
+  # those rows carry a cancellation date, so reading the date alone served 3,127 held marks as live
+  # aircraft. See BR_SITUATION_STATUS in src/transforms.ts for the full code table.
   status:
-    field: DT_CANC
-    transform: br_status
+    fields: ['DT_CANC', 'CD_INTERDICAO']
+    compound_transform: br_status
 
   country:
     constant: BR

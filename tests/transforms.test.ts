@@ -652,15 +652,6 @@ describe('br_airframe', () => {
   it('returns null for an empty string', () => expect(applyScalar('br_airframe', '')).toBeNull());
 });
 
-describe('br_status', () => {
-  it('returns cancelled when a cancellation date is present', () =>
-    expect(applyScalar('br_status', '19/11/2025')).toBe('cancelled'));
-  it('returns valid for an empty cancellation date', () =>
-    expect(applyScalar('br_status', '')).toBe('valid'));
-  it('returns valid for a whitespace-only cancellation date', () =>
-    expect(applyScalar('br_status', '   ')).toBe('valid'));
-});
-
 describe('br_party_name', () => {
   const owner = '[{"NOME":"GRANO LTDA","DOCUMENTO":"52511458000109","UF":"SP"}]';
   it('extracts the first party name from the JSON array', () =>
@@ -1093,4 +1084,45 @@ describe('hr_ccaa_build_certification', () => {
     expect(applyScalar('hr_ccaa_build_certification', 'The Boeing Company')).toBeNull());
   it('returns null for an empty string', () =>
     expect(applyScalar('hr_ccaa_build_certification', '')).toBeNull());
+});
+
+describe('br_status', () => {
+  it('reads a populated DT_CANC as cancelled regardless of situation code', () => {
+    expect(applyCompound('br_status', ['19/11/2025', 'M'])).toBe('cancelled');
+    expect(applyCompound('br_status', ['18/03/2020', 'M824'])).toBe('cancelled');
+  });
+
+  // The bug this transform exists for: 3,127 reserved marks carry no cancellation date, so a
+  // date-only status served every one of them as a flyable aircraft.
+  it('maps a mark reserve to reserved', () => {
+    expect(applyCompound('br_status', ['', 'R'])).toBe('reserved');
+    expect(applyCompound('br_status', ['', 'R4'])).toBe('reserved');
+  });
+
+  it('maps a cancelled registration with no DT_CANC to cancelled', () =>
+    expect(applyCompound('br_status', ['', 'M'])).toBe('cancelled'));
+
+  it('keeps every normal-situation code valid', () => {
+    expect(applyCompound('br_status', ['', 'N'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'U'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'Z'])).toBe('valid');
+  });
+
+  // A suspended, cancelled, expired or interdicted airworthiness certificate says nothing about the
+  // registration itself — the mark is still held by a real airframe and stays servable.
+  it('keeps an airworthiness-restricted mark valid', () => {
+    expect(applyCompound('br_status', ['', 'S8'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'C18'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'V8'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'X'])).toBe('valid');
+    expect(applyCompound('br_status', ['', 'P'])).toBe('valid');
+  });
+
+  // Both columns silent: null, never a fabricated 'valid'. The feed excludes null-status rows.
+  it('returns null when neither column states anything', () =>
+    expect(applyCompound('br_status', ['', ''])).toBeNull());
+
+  it('throws on an unrecognized situation code rather than defaulting to valid', () => {
+    expect(() => applyCompound('br_status', ['', 'Q9'])).toThrow(/unrecognized CD_INTERDICAO/);
+  });
 });

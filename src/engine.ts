@@ -828,12 +828,29 @@ function scalarField(mapping: FieldMap, row: Row, key: string, source: string): 
 // blank cell as if the register had stated something. resolveScalar can't make that distinction
 // generically without risking every other default-bearing field's established behavior, so status
 // gets its own resolution here: a blank cell always stays null, and only a non-blank, unrecognized
-// code falls to the default. Every current status mapping uses `field` + optional `transform` +
-// `lookup` (never `compound_transform` or `null_values`), so those paths aren't reproduced.
+// code falls to the default. `null_values` is not reproduced — no status mapping uses it.
+function resolveStatusCompound(
+  fm: FieldMapping,
+  transform: NonNullable<FieldMapping['compound_transform']>,
+  row: Row,
+  source: string
+): string | null {
+  const fields = fm.fields ?? [];
+  const values = fields.map((f) => row[f] ?? '');
+  // Blankness is the transform's call here, not this function's: a compound status reads several
+  // columns and only the transform knows whether the combination means "the register said nothing".
+  // A null return therefore stays null rather than falling to `default`.
+  const transformed = applyCompound(transform, values);
+  if (transformed === null) return null;
+  if (fm.lookup) return resolveLookup(transformed, fm.lookup, fm.default, fields.join(','), source);
+  return transformed;
+}
+
 function resolveStatus(mapping: FieldMap, row: Row, source: string): string | null {
   const fm = mapping['status'];
   if (!fm) return null;
   if (fm.constant !== undefined) return fm.constant;
+  if (fm.compound_transform) return resolveStatusCompound(fm, fm.compound_transform, row, source);
   const field = fm.field;
   if (!field) return fm.default ?? null;
   const raw = row[field] ?? '';

@@ -415,8 +415,39 @@ const brAirframe = (value: string): string | null => {
 const brBuildCertification = (value: string): string | null =>
   value.trim().toUpperCase() === 'NÃO CERTIFICADA' ? 'not-type-certificated' : null;
 
-// No status column upstream; a populated cancellation date is the cancellation signal.
-const brStatus = (value: string): string => (value.trim().length > 0 ? 'cancelled' : 'valid');
+// ANAC's situation codes, from the RAB metadata: the leading letter is the situation and any
+// trailing digits are sub-codes this mapping does not interpret. `R` is the only one that means no
+// airframe exists behind the mark, and 3,127 of them carry no DT_CANC — reading status from the
+// cancellation date alone served every one of them as a live aircraft.
+const BR_SITUATION_STATUS: Record<string, string> = {
+  R: 'reserved', // Mark reserve
+  M: 'cancelled', // Registration cancelled
+  N: 'valid', // Normal situation
+  U: 'valid', // Ultralight, normal situation
+  Z: 'valid', // Experimental, normal situation
+  // The registration stays live while the airworthiness certificate does not — these describe the
+  // CofA, not the mark, so they remain servable.
+  S: 'valid', // CofA suspended
+  C: 'valid', // CofA cancelled
+  V: 'valid', // CofA expired
+  X: 'valid', // Aircraft interdicted
+  P: 'valid', // Aircraft under punitive status
+};
+
+// DT_CANC first: a populated cancellation date is unambiguous, and one row carries it with an empty
+// situation cell. Throws on an unrecognized letter rather than defaulting to valid — a new ANAC
+// code must fail the run, not silently become a served aircraft.
+const brStatus = (values: string[]): string | null => {
+  const cancelledAt = values[0]?.trim() ?? '';
+  const situation = values[1]?.trim() ?? '';
+  if (cancelledAt.length > 0) return 'cancelled';
+  // Neither column stated anything — status stays null rather than asserting a live registration.
+  if (situation.length === 0) return null;
+  const status = BR_SITUATION_STATUS[situation[0]];
+  if (status === undefined)
+    throw new Error(`br_status: unrecognized CD_INTERDICAO situation code "${situation}"`);
+  return status;
+};
 
 // "Indisponível" is the undisclosed-party sentinel -> null.
 const BR_UNDISCLOSED = 'Indisponível';
@@ -745,7 +776,6 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   ee_registration: eeRegistration,
   br_airframe: brAirframe,
   br_build_certification: brBuildCertification,
-  br_status: brStatus,
   br_party_name: brPartyName,
   br_party_state: brPartyState,
   br_party_kind: brPartyKind,
@@ -918,6 +948,7 @@ const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => str
   casa_airframe: casaAirframe,
   es_aesa_airframe: esAesaAirframe,
   no_operator_kind: noOperatorKind,
+  br_status: brStatus,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

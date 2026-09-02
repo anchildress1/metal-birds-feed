@@ -2307,6 +2307,25 @@ describe('BR-ANAC fixture mapping', () => {
     });
   });
 
+  // 3,127 live-file rows state `R` (mark reserve) and none carry a DT_CANC, so a status read from
+  // the cancellation date alone served every held mark as a flyable aircraft.
+  describe('CD_INTERDICAO drives status where DT_CANC cannot', () => {
+    it('maps a reserved mark to reserved, not valid', () => {
+      expect(brRecords.get('PPAPA')?.status).toBe('reserved');
+      expect(brRecords.get('PRAFV')?.status).toBe('reserved');
+    });
+    it('keeps a normal-situation mark valid', () => {
+      expect(brRecords.get('PPJPG')?.status).toBe('valid');
+    });
+    it('keeps a CofA-suspended/cancelled mark valid — the registration is still live', () => {
+      expect(brRecords.get('PPACK')?.status).toBe('valid');
+    });
+    it('still reads a populated DT_CANC as cancelled', () => {
+      expect(brRecords.get('PPADZ')?.status).toBe('cancelled');
+      expect(brRecords.get('PPFAL')?.status).toBe('cancelled');
+    });
+  });
+
   it('every Brazil record carries country=BR and no Mode-S hex', () => {
     for (const r of brRecords.values()) {
       expect(r.country).toBe('BR');
