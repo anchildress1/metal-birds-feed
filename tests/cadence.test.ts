@@ -13,8 +13,7 @@ const HASH_UP = 'b'.repeat(64);
 
 const DAY_MS = 86_400_000;
 
-// Absolute timestamps, for the cases where the assertion turns on which UTC day each side lands on
-// and a relative offset would make the result depend on the wall clock the suite happens to run at.
+// Absolute, because a relative offset would make the UTC-day assertions depend on the wall clock.
 const stateAt = (lastRun: string, lastChange: string): SourceState => ({
   last_run: lastRun,
   last_content_change: lastChange,
@@ -78,9 +77,7 @@ describe('shouldSkip', () => {
     expect(shouldSkip(state, 1, now)).toBe(true);
   });
 
-  // Regression: last_run is stamped at run *completion*, so it always lands after the cron tick
-  // that produced it. A strict ms window made the next day's tick fall short and skip, halving the
-  // effective rate of every `cadence_days: 1` source.
+  // Regression: a strict ms window halved the effective rate of every `cadence_days: 1` source.
   it('does not skip a 1-day cadence on the next daily tick despite a sub-24h gap', () => {
     const state = stateAt('2026-09-01T06:11:00.000Z', '2026-09-01T06:11:00.000Z');
     const nextTick = new Date('2026-09-02T06:03:00.000Z');
@@ -100,11 +97,9 @@ describe('shouldSkip', () => {
     expect(shouldSkip(state, 7, new Date('2026-09-07T06:03:00.000Z'))).toBe(true);
   });
 
-  // Escalation: an overdue register is polled every cron tick until it publishes. Same threshold
-  // as the staleness issue, so "issue open" and "polling daily" are one condition.
   it('returns false for an overdue source even when it ran minutes ago', () => {
     const now = new Date('2026-09-02T06:03:00.000Z');
-    // cadence 7 → overdue past 10.5 days of silence; 12 days qualifies.
+    // cadence 7 → overdue past 10.5 days; 12 qualifies.
     const state = stateAt('2026-09-02T05:58:00.000Z', '2026-08-21T06:11:00.000Z');
     expect(isOverdue(state, 7, now)).toBe(true);
     expect(shouldSkip(state, 7, now)).toBe(false);

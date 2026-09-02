@@ -425,8 +425,6 @@ describe('run', () => {
   });
 
   it('does not honor a cadence skip when FORCE_REFRESH is set', async () => {
-    // The operator override for investigating a staleness issue: without it the only way past the
-    // gate is DRY_RUN, which writes nothing.
     process.env['DRY_RUN'] = 'false';
     process.env['FORCE_REFRESH'] = 'true';
     const recentTimestamp = new Date(Date.now() - 5 * 86_400_000).toISOString();
@@ -446,8 +444,7 @@ describe('run', () => {
 
   it('does not honor a cadence skip when the register is overdue (escalates to daily)', async () => {
     process.env['DRY_RUN'] = 'false';
-    // cadence 7 → overdue past 10.5 days of silence. last_run is recent, so only the escalation
-    // can be what lets this through.
+    // last_run is recent, so only the escalation can let this through.
     mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 7 });
     mockReadState.mockResolvedValueOnce({
       last_run: new Date(Date.now() - 86_400_000).toISOString(),
@@ -839,9 +836,8 @@ describe('main', () => {
   });
 
   it('escalates an overdue source to a real run and opens its staleness issue', async () => {
-    // Overdue and cadence-skipped are now mutually exclusive: shouldSkip bails on isOverdue, so the
-    // register is polled every tick while the issue is open. Both halves are asserted together
-    // because they are one condition — a change that decouples them breaks this.
+    // Overdue and cadence-skipped are mutually exclusive; both halves asserted because a change
+    // that decouples them breaks this.
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';

@@ -64,8 +64,7 @@ export async function run(sourceId: string, opts: RetryOptions = {}): Promise<Ru
   const config = loadSourceConfig(configPath);
 
   const dryRun = process.env['DRY_RUN'] === 'true';
-  // Operator override for a named source: without it the only way past the cadence gate is DRY_RUN,
-  // which writes nothing, so investigating a staleness issue could not produce a real refresh.
+  // The only other bypass is DRY_RUN, which writes nothing.
   const force = process.env['FORCE_REFRESH'] === 'true';
   const writer = new R2ArtifactWriter(r2ConfigFromEnv(), dryRun);
 
