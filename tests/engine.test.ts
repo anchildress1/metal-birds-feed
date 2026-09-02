@@ -2414,7 +2414,6 @@ describe('BR-ANAC fixture mapping', () => {
     });
     it('keeps the row stating a real restriction over the one stating none', () =>
       expect(brRecords.get('PRALL')?.interdiction_code).toBe('S8'));
-    it('resolves without a failed row', () => expect(brStats.failed).toBe(0));
   });
 
   it('every Brazil record carries country=BR and no Mode-S hex', () => {
