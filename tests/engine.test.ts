@@ -48,8 +48,8 @@ beforeAll(async () => {
   records = result.records;
 });
 
-describe('FAA fixture translation', () => {
-  it('translates all 10 fixture rows', () => {
+describe('FAA fixture mapping', () => {
+  it('maps all 10 fixture rows', () => {
     expect(records.size).toBe(10);
   });
 
@@ -256,8 +256,8 @@ beforeAll(async () => {
   tcStats = result.stats;
 });
 
-describe('TC-CA fixture translation', () => {
-  it('translates all 11 fixture rows', () => {
+describe('TC-CA fixture mapping', () => {
+  it('maps all 11 fixture rows', () => {
     expect(tcRecords.size).toBe(11);
   });
 
@@ -415,8 +415,8 @@ beforeAll(async () => {
   casaStats = result.stats;
 });
 
-describe('CASA fixture translation', () => {
-  it('translates all 11 fixture rows with no failures', () => {
+describe('CASA fixture mapping', () => {
+  it('maps all 11 fixture rows with no failures', () => {
     expect(casaStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(casaRecords.size).toBe(11);
   });
@@ -594,8 +594,8 @@ beforeAll(async () => {
   lvStats = result.stats;
 });
 
-describe('CAA Latvia fixture translation', () => {
-  it('translates all 10 fixture rows with no failures', () => {
+describe('CAA Latvia fixture mapping', () => {
+  it('maps all 10 fixture rows with no failures', () => {
     expect(lvStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(lvRecords.size).toBe(10);
   });
@@ -1158,7 +1158,7 @@ describe('engine — negative and edge cases', () => {
       registration: 'REG',
       mapping: { registration: { field: 'REG' } },
     };
-    // Zero-record refusal lives in the writer; translate itself must not misreport an empty
+    // Zero-record refusal lives in the writer; mapping itself must not misreport an empty
     // primary as a join failure.
     const files = new Map([
       ['primary', Buffer.from('ID,REG\n', 'utf8')],
@@ -1887,7 +1887,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
     expect(records.get('PH-OK')?.registration).toBe('PH-OK');
   });
 
-  describe('NL ILT fixture translation', () => {
+  describe('NL ILT fixture mapping', () => {
     const NL_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'nl-ilt.yaml');
     const NL_FIXTURE = resolve(
       import.meta.dirname,
@@ -1909,7 +1909,7 @@ describe('engine — spreadsheet dispatch (parsePrimary)', () => {
       nlStats = result.stats;
     });
 
-    it('skips the "Information" banner row and translates 8 aircraft', () => {
+    it('skips the "Information" banner row and maps 8 aircraft', () => {
       expect(nlStats).toEqual({ total: 9, ok: 8, failed: 0, skipped: 1, duplicateSkipped: 0 });
       expect(nlRecords.size).toBe(8);
     });
@@ -2044,7 +2044,7 @@ const TW_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'tw-caa.yam
 const twFixtureBuffer = (filename: string): Buffer =>
   readFileSync(resolve(TW_FIXTURES, 'input', filename));
 
-describe('CAA Taiwan fixture translation (binary .xls)', () => {
+describe('CAA Taiwan fixture mapping (binary .xls)', () => {
   let twRecords: Map<string, Aircraft>;
   let twStats: EngineStats;
 
@@ -2055,7 +2055,7 @@ describe('CAA Taiwan fixture translation (binary .xls)', () => {
     twRecords = result.records;
     twStats = result.stats;
   });
-  it('translates 6 aircraft and skips the 6 subtotal/total rows', () => {
+  it('maps 6 aircraft and skips the 6 subtotal/total rows', () => {
     expect(twStats).toEqual({ total: 12, ok: 6, failed: 0, skipped: 6, duplicateSkipped: 0 });
     expect(twRecords.size).toBe(6);
   });
@@ -2159,8 +2159,8 @@ beforeAll(async () => {
   brStats = result.stats;
 });
 
-describe('BR-ANAC fixture translation', () => {
-  it('translates all 9 fixture rows with no failures (banner row skipped)', () => {
+describe('BR-ANAC fixture mapping', () => {
+  it('maps all 9 fixture rows with no failures (banner row skipped)', () => {
     expect(brStats).toEqual({ total: 9, ok: 9, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(brRecords.size).toBe(9);
   });
@@ -2319,7 +2319,7 @@ describe('BR-ANAC fixture translation', () => {
 const CH_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ch-foca');
 const CH_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ch-foca.yaml');
 
-describe('CH-FOCA fixture translation', () => {
+describe('CH-FOCA fixture mapping', () => {
   let chRecords: Map<string, Aircraft>;
   let chStats: EngineStats;
 
@@ -2331,7 +2331,7 @@ describe('CH-FOCA fixture translation', () => {
     chStats = result.stats;
   });
 
-  it('translates every fixture record', () => {
+  it('maps every fixture record', () => {
     expect(chStats).toEqual({ total: 11, ok: 11, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
@@ -2481,7 +2481,7 @@ describe('CH-FOCA fixture translation', () => {
   });
 });
 
-describe('CAA Maldives fixture translation (PDF)', () => {
+describe('CAA Maldives fixture mapping (PDF)', () => {
   const MV_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'mv-caa.yaml');
   const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
   let mvRecords: Map<string, Aircraft>;
@@ -2492,7 +2492,7 @@ describe('CAA Maldives fixture translation (PDF)', () => {
     mvRecords = result.records;
   });
 
-  it('translates all 137 register rows with no failures', () => {
+  it('maps all 137 register rows with no failures', () => {
     expect(mvRecords.size).toBe(137);
   });
 
@@ -2537,7 +2537,7 @@ describe('CAA Maldives fixture translation (PDF)', () => {
     expect([...mvRecords.values()].every((r) => r.status === 'valid')).toBe(true));
 });
 
-describe('AESA Spain fixture translation (PDF)', () => {
+describe('AESA Spain fixture mapping (PDF)', () => {
   const ES_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'es-aesa.yaml');
   const ES_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'es-aesa', 'input', 'register.pdf');
   let esRecords: Map<string, Aircraft>;
@@ -2550,7 +2550,7 @@ describe('AESA Spain fixture translation (PDF)', () => {
     esStats = result.stats;
   });
 
-  it('translates all 90 fixture rows with no failures', () => {
+  it('maps all 90 fixture rows with no failures', () => {
     expect(esStats).toEqual({ total: 90, ok: 90, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(esRecords.size).toBe(90);
   });
@@ -2642,7 +2642,7 @@ describe('AESA Spain fixture translation (PDF)', () => {
   });
 });
 
-describe('CCAA Croatia fixture translation (PDF)', () => {
+describe('CCAA Croatia fixture mapping (PDF)', () => {
   const HR_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hr-ccaa.yaml');
   const HR_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hr-ccaa', 'input', 'register.pdf');
   let hrRecords: Map<string, Aircraft>;
@@ -2659,7 +2659,7 @@ describe('CCAA Croatia fixture translation (PDF)', () => {
   // owner-cell continuation line that happens to read "PZO" from ever being mistaken for its own
   // anchor, so there is no false-positive row to skip (see the MORH test below for what that line
   // actually belongs to).
-  it('translates all 33 real rows with no failures', () => {
+  it('maps all 33 real rows with no failures', () => {
     expect(hrStats).toEqual({ total: 33, ok: 33, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(hrRecords.size).toBe(33);
   });
@@ -2759,8 +2759,8 @@ beforeAll(async () => {
   eeStats = result.stats;
 });
 
-describe('Transpordiamet Estonia (HTML) fixture translation', () => {
-  it('translates all 10 fixture aircraft with no failures', () => {
+describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
+  it('maps all 10 fixture aircraft with no failures', () => {
     expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(eeRecords.size).toBe(10);
   });
@@ -2866,7 +2866,7 @@ const eeTable = (statedTotal: number, marks: string[]): Buffer => {
 describe('record_count guard (ee-tram)', () => {
   const config = loadSourceConfig(EE_CONFIG_PATH);
 
-  it('passes when the translated count equals the published total', async () => {
+  it('passes when the mapped count equals the published total', async () => {
     const { records } = await mapRows(
       config,
       new Map([['register', eeTable(2, ['ES - AAA', 'ES - AAB'])]])
@@ -2901,7 +2901,7 @@ describe('record_count guard (ee-tram)', () => {
   });
 });
 
-// lt-tka counts against the parsed rows, not the translated records: its published total covers
+// lt-tka counts against the parsed rows, not the mapped records: its published total covers
 // the accumulated history that latest_snapshot_by then filters down to one publication.
 describe('record_count against a separately published total (lt-tka)', () => {
   const config = loadSourceConfig(resolve(import.meta.dirname, '..', 'sources', 'lt-tka.yaml'));
@@ -2909,7 +2909,7 @@ describe('record_count against a separately published total (lt-tka)', () => {
     readFileSync(resolve(import.meta.dirname, '..', 'fixtures', 'lt-tka', 'input', 'register.csv'));
   const files = (): Map<string, Buffer> => new Map([['register', register()]]);
 
-  it('counts the parsed rows, not the smaller translated set', async () => {
+  it('counts the parsed rows, not the smaller mapped set', async () => {
     const { records, stats } = await mapRows(config, files(), '{"_data":[{"count()":13}]}');
     expect(stats.total).toBe(11);
     expect(records.size).toBe(11);
@@ -2944,8 +2944,8 @@ beforeAll(async () => {
   sgStats = result.stats;
 });
 
-describe('CAAS Singapore fixture translation', () => {
-  it('translates all 10 fixture rows with no failures', () => {
+describe('CAAS Singapore fixture mapping', () => {
+  it('maps all 10 fixture rows with no failures', () => {
     expect(sgStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(sgRecords.size).toBe(10);
   });
@@ -3060,7 +3060,7 @@ describe('CAAS Singapore fixture translation', () => {
 const NO_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'no-caa');
 const NO_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'no-caa.yaml');
 
-describe('NO-CAA fixture translation', () => {
+describe('NO-CAA fixture mapping', () => {
   let noRecords: Map<string, Aircraft>;
   let noStats: EngineStats;
 
@@ -3072,7 +3072,7 @@ describe('NO-CAA fixture translation', () => {
     noStats = result.stats;
   });
 
-  it('translates every fixture record', () => {
+  it('maps every fixture record', () => {
     expect(noStats).toEqual({ total: 7, ok: 7, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
@@ -3196,7 +3196,7 @@ describe('NO-CAA fixture translation', () => {
 const CL_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'cl-dgac');
 const CL_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'cl-dgac.yaml');
 
-describe('DGAC Chile fixture translation', () => {
+describe('DGAC Chile fixture mapping', () => {
   let clRecords: Map<string, Aircraft>;
   let clStats: EngineStats;
 
@@ -3548,8 +3548,8 @@ beforeAll(async () => {
   nzStats = result.stats;
 });
 
-describe('CAA NZ fixture translation', () => {
-  it('translates all 13 fixture rows with no failures', () => {
+describe('CAA NZ fixture mapping', () => {
+  it('maps all 13 fixture rows with no failures', () => {
     expect(nzStats).toEqual({ total: 13, ok: 13, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(nzRecords.size).toBe(13);
   });
@@ -3749,7 +3749,7 @@ describe('unmatched lookup reporting', () => {
 
   // The refresh matrix runs sources concurrently in one process. A single shared accumulator let
   // either run's entry clear the other's counts and report values under the wrong source id.
-  it('keeps the counts of concurrently translated sources apart', async () => {
+  it('keeps the counts of concurrently mapped sources apart', async () => {
     const a = { ...config, id: 'src-a' };
     const b = { ...config, id: 'src-b' };
     const bufA = new Map([['f', Buffer.from(['ID,REG,KIND', '1,N1,Alpha'].join('\n'))]]);
@@ -3847,7 +3847,7 @@ describe('latest_snapshot_by', () => {
     expect(stats.total).toBe(2);
   });
 
-  // An upstream rename would otherwise drop every row and translate zero records — a far quieter
+  // An upstream rename would otherwise drop every row and map zero records — a far quieter
   // failure than refusing to run.
   it('throws when the column holds no value on any row', async () => {
     await expect(parse(['ID,REG,ST,PUB', '1,N1,A,', '2,N2,A,'])).rejects.toThrow(
@@ -3871,7 +3871,7 @@ describe('latest_snapshot_by', () => {
   });
 });
 
-describe('TKA Lithuania fixture translation', () => {
+describe('TKA Lithuania fixture mapping', () => {
   let r: Map<string, Aircraft>;
   let s: EngineStats;
 
@@ -3891,7 +3891,7 @@ describe('TKA Lithuania fixture translation', () => {
     s = out.stats;
   });
 
-  // data.gov.lt keeps every prior publication in the same table; only the newest may be translated.
+  // data.gov.lt keeps every prior publication in the same table; only the newest may be mapped.
   it('drops the superseded publications', () => {
     expect(s.total).toBe(11);
     expect(s.ok).toBe(11);
