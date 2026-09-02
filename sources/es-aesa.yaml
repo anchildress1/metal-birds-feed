@@ -107,7 +107,7 @@ mapping:
 
   # Clase rendered as an English label ("ultralight airplane", "amateur-built gyroplane"): keeps the
   # certification tier (ULM = ultralight, AFI = amateur-built, none = standard) that airframe_type
-  # flattens away, so no upstream distinction is lost — translated here rather than at a consumer.
+  # flattens away, so no upstream distinction is lost — rendered here rather than at a consumer.
   airworthiness_class:
     field: clase
     transform: es_aesa_class_en

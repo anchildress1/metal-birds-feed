@@ -187,7 +187,7 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // 8 narrows nine numeric columns to non-negative — engine_count, engine_horsepower,
     // engine_thrust_lbs, year_manufactured, cruise_speed_ktas, max_takeoff_weight_kg, seats,
     // max_passengers, min_crew — so a row carrying a negative value in any of them now fails
-    // translation instead of reaching the artifact; a version-8-or-later consumer may rely on that.
+    // mapping instead of reaching the artifact; a version-8-or-later consumer may rely on that.
     // 9 adds the propeller column — registers publish it as one undifferentiated free-text string,
     // so it is not a maker/model pair and the service does not compose it.
     // 10 widens the `status` value domain with `reserved`, for a mark held against a future

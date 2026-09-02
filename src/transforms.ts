@@ -264,7 +264,7 @@ const esAesaDetailOrNull = (value: string): string | null => {
 // Renders AESA's Spanish `Clase` as an English label, preserving the certification tier the enum
 // `airframe_type` flattens away: the optional "ULM - " (ultralight) / "AFI - " (amateur-built)
 // prefix becomes an English qualifier, its absence meaning a standard type-certificated aircraft.
-// The physical type is translated from the base word (the wrapped PLANEADOR/MOTOPLANEADOR cell
+// The physical type is rendered from the base word (the wrapped PLANEADOR/MOTOPLANEADOR cell
 // collapses first). Unknown/blank → null.
 const esAesaClassEn = (value: string): string | null => {
   const raw = value.replace(/\s+/g, ' ').trim().toUpperCase();
@@ -830,7 +830,7 @@ const tcAirframe = (values: string[]): string | null => {
 //   Engines column. Engines holds an integer for powered records and "-" (or empty) for
 //   sailplanes / balloons / drones, so the transform returns null when the count is not
 //   a positive integer.
-// - Anything else returns null. The translation engine surfaces null airframe_type in
+// - Anything else returns null. The mapping engine surfaces null airframe_type in
 //   the canonical record without failing the row.
 const nlIltAirframe = (values: string[]): string | null => {
   const group = values[0]?.trim() ?? '';

@@ -129,7 +129,7 @@ joins:
       separator: ', '
       # Each party's row states its own type ("Individual"), which stops being true of the mark once
       # several parties share it. Stamped in TC's own vocabulary so the owner.kind lookup below
-      # still does the canonical translation.
+      # still does the canonical mapping.
       set_on_merge:
         TYPE_OF_OWNER_E: 'Co-owner'
 
