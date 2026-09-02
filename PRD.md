@@ -104,7 +104,7 @@ Stretch goal across all phases: the mapping engine itself stays generic. Adding 
 - Cross-table joins (MASTER.MFR_MDL_CODE → ACFTREF; MASTER.ENG_MFR_MDL → ENGINE)
 - CERTIFICATION packed-string parser (first char → `category` and `airworthiness_class`; remaining → `operational_classes` array)
 
-**R0.4 Translation engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
+**R0.4 Mapping engine.** Reads a source config + raw rows, emits canonical records. Source-agnostic. Errors on unknown enum values rather than silently dropping.
 
 **R0.5 R2 writer.** Writes one SQLite artifact per source plus a small state object:
 
@@ -213,7 +213,7 @@ Each new registry is gated on CC.1 source-use classification + CC.2 permission p
 
 ### Leading indicators (visible within days of each milestone)
 
-- **Translation success rate:** ≥99% of source rows produce a valid canonical record. Failed rows are logged with row number, source field, and reason.
+- **Mapping success rate:** ≥99% of source rows produce a valid canonical record. Failed rows are logged with row number, source field, and reason.
 - **Schema validation pass rate:** 100% of written R2 objects validate against the TypeScript schema at runtime.
 - **Lookup hit rate from `metal-birds-watch`:** % of ADS-B blips with US-registered hex codes that successfully resolve to a `metal-birds-feed` record. Target: ≥95% for FAA-registered traffic post-v1.
 

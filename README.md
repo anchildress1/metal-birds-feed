@@ -9,7 +9,7 @@
 
 </div>
 
-Translates national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
+Maps national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
 serves fast tail-number and ICAO hex lookups from a private [feed service](#feed-service) on
 Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
@@ -26,18 +26,18 @@ Sources with `cadence_days` skip early until due; sources without it run every d
 Each runner:
 
 1. Downloads the source's full bulk export (registries don't publish deltas)
-2. Translates every row into the canonical `Aircraft` schema via the source's YAML mapping
+2. Maps every row into the canonical `Aircraft` schema via the source's YAML mapping
 3. Computes a content hash over the full record set and compares it to the prior run's hash in `_state`
 4. Rebuilds the per-source SQLite artifact and PUTs it whole — only when that hash changed
 
 ### What's full vs skipped
 
-| Step      | Pass type      | Notes                                                                                   |
-| --------- | -------------- | --------------------------------------------------------------------------------------- |
-| Download  | Full           | All sources ship full snapshots; no `If-Modified-Since` semantics                       |
-| Translate | Full           | All rows re-parsed and transformed every run (~10s for FAA's 312k records)              |
-| Hash      | Full O(n)      | One `sha256` over the sorted record set, compared to the prior run's hash in `_state`   |
-| R2 write  | All-or-nothing | The whole SQLite artifact is PUT when the hash changed; skipped entirely when unchanged |
+| Step     | Pass type      | Notes                                                                                   |
+| -------- | -------------- | --------------------------------------------------------------------------------------- |
+| Download | Full           | All sources ship full snapshots; no `If-Modified-Since` semantics                       |
+| Map      | Full           | All rows re-parsed and transformed every run (~10s for FAA's 312k records)              |
+| Hash     | Full O(n)      | One `sha256` over the sorted record set, compared to the prior run's hash in `_state`   |
+| R2 write | All-or-nothing | The whole SQLite artifact is PUT when the hash changed; skipped entirely when unchanged |
 
 The write is wholesale, not incremental — no per-record diffing, no manifest, no DELETEs.
 Registries don't expose deltas, and R2 ops are the expensive part, so an unchanged refresh
