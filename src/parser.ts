@@ -365,6 +365,16 @@ const outerSpread = (sortedCoords: number[]): number => {
   return min / 2;
 };
 
+// Maps a coordinate to its field index, considering only bands this orientation prints. A null band
+// is skipped entirely so nothing snaps into it and the surrounding indexes keep their meaning.
+const bandIndexer = (columnPos: (number | null)[]): ((coord: number) => number) => {
+  const bands = columnPos
+    .map((pos, index) => ({ pos, index }))
+    .filter((b): b is { pos: number; index: number } => b.pos !== null);
+  const positions = bands.map((b) => b.pos);
+  return (coord: number): number => bands[nearestIndex(positions, coord)].index;
+};
+
 const pushTo = (m: Map<number, PdfItem[]>, key: number, it: PdfItem): void => {
   const arr = m.get(key);
   if (arr) arr.push(it);
@@ -474,13 +484,7 @@ const parsePdfPage = (
   beforeFirstAnchorRe: RegExp | undefined
 ): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
-  // Bands this orientation actually prints, carrying their index in `columns` so a null band shifts
-  // nothing downstream. The loader guarantees at least one.
-  const bands = options.column_pos
-    .map((pos, index) => ({ pos, index }))
-    .filter((b): b is { pos: number; index: number } => b.pos !== null);
-  const bandPositions = bands.map((b) => b.pos);
-  const fieldIndexAt = (coord: number): number => bands[nearestIndex(bandPositions, coord)].index;
+  const fieldIndexAt = bandIndexer(options.column_pos);
   const anchors = page
     .filter((it) => anchorRe.test(it.str.trim()))
     .filter(
@@ -560,13 +564,76 @@ const detectRecordAxis = (anchors: PdfItem[]): 'x' | 'y' | undefined => {
   return undefined;
 };
 
+// Axes detected across the document when read through one candidate layout. The anchor-band filter
+// is applied here, not only in the page walk: a generic `anchor_pattern` also matches text in other
+// columns (hr-ccaa's `^[A-Z]{3}$` hits a `PZO` owner continuation), and an off-column match drags
+// the spans on both axes — enough to abstain, or to read the wrong axis, before the real anchor
+// filter ever runs. The band depends on the layout's own `column_pos`, so each candidate is judged
+// through its own geometry.
+interface LayoutCandidate {
+  layout: PdfLayoutOptions;
+  axes: Set<'x' | 'y'>;
+  anchors: number;
+}
+
+const evaluateLayout = (
+  pages: PdfItem[][],
+  layout: PdfLayoutOptions,
+  anchorColumn: number | undefined,
+  anchorRe: RegExp
+): LayoutCandidate => {
+  const fieldIndexAt = bandIndexer(layout.column_pos);
+  const perPage = pages.map((page) =>
+    page
+      .filter((it) => anchorRe.test(it.str.trim()))
+      .filter(
+        (it) =>
+          anchorColumn === undefined ||
+          fieldIndexAt(axisCoord(it, layout.field_axis)) === anchorColumn
+      )
+  );
+  return {
+    layout,
+    axes: new Set(
+      perPage.map(detectRecordAxis).filter((axis): axis is 'x' | 'y' => axis !== undefined)
+    ),
+    anchors: perPage.reduce((total, page) => total + page.length, 0),
+  };
+};
+
 const resolveLayout = (
   options: ParsePdfOptions,
   pages: PdfItem[][],
   anchorRe: RegExp
 ): ResolvedPdfOptions => {
   const { layouts, ...shared } = options;
-  const detected = new Set(
+  const candidates = layouts.map((layout) =>
+    evaluateLayout(pages, layout, options.anchor_column, anchorRe)
+  );
+  // A layout fits when the axis seen through its own bands is the one perpendicular to its fields.
+  // More than one can fit: a mismatched layout's bands still admit a handful of coincidental
+  // matches, and two of those can spread convincingly along one axis. The right layout is the one
+  // that captures the register's marks rather than a few strays, so the anchor count decides.
+  const fitting = candidates
+    .filter((c) => c.axes.size === 1 && !c.axes.has(c.layout.field_axis))
+    .sort((a, b) => b.anchors - a.anchors);
+  if (fitting.length > 1 && fitting[0].anchors === fitting[1].anchors)
+    throw new Error(
+      `PDF fits ${fitting.length} declared layouts equally (${fitting[0].anchors} anchors each) — ` +
+        'the column bands do not separate the orientations; re-measure them against the live file'
+    );
+  if (fitting.length > 0) return { ...shared, ...fitting[0].layout };
+  const mixed = candidates.find((c) => c.axes.size > 1);
+  if (mixed)
+    throw new Error(
+      `PDF mixes record orientations across pages (${[...mixed.axes].sort((a, b) => a.localeCompare(b)).join(', ')}) — ` +
+        'one document is expected to be uniform'
+    );
+
+  // Nothing fits. Filtering through a mismatched layout's bands discards that layout's anchors
+  // wholesale, which is indistinguishable from having none — so fall back to unfiltered matches to
+  // tell a flip apart from real drift. Diagnostic only; selection above stays band-filtered.
+  const rawAxes = new Set(
     pages
       .map((page) => detectRecordAxis(page.filter((it) => anchorRe.test(it.str.trim()))))
       .filter((axis): axis is 'x' | 'y' => axis !== undefined)
@@ -576,23 +643,18 @@ const resolveLayout = (
   // or the zero-row guard moments later with a far more precise diagnosis — so defer to those rather
   // than pre-empting them with an orientation error. Such a document cannot parse into a usable
   // fleet under either axis, which is why picking the first layout here costs nothing.
-  if (detected.size === 0) return { ...shared, ...layouts[0] };
-  if (detected.size > 1)
+  if (rawAxes.size === 0) return { ...shared, ...layouts[0] };
+  if (rawAxes.size > 1)
     throw new Error(
-      `PDF mixes record orientations across pages (${[...detected].sort((a, b) => a.localeCompare(b)).join(', ')}) — ` +
+      `PDF mixes record orientations across pages (${[...rawAxes].sort((a, b) => a.localeCompare(b)).join(', ')}) — ` +
         'one document is expected to be uniform'
     );
-  const [recordAxis] = [...detected];
-  // field_axis is the axis perpendicular to the one records run along.
-  const fieldAxis = recordAxis === 'x' ? 'y' : 'x';
-  const layout = layouts.find((l) => l.field_axis === fieldAxis);
-  if (!layout)
-    throw new Error(
-      `PDF records run along ${recordAxis}, needing a field_axis: ${fieldAxis} layout, but only ` +
-        `${layouts.map((l) => l.field_axis).join(', ')} declared — the register flipped ` +
-        'orientation; measure the new layout against the live file and declare it'
-    );
-  return { ...shared, ...layout };
+  const [recordAxis] = [...rawAxes];
+  throw new Error(
+    `PDF records run along ${recordAxis}, needing a field_axis: ${recordAxis === 'x' ? 'y' : 'x'} ` +
+      `layout, but only ${layouts.map((l) => l.field_axis).join(', ')} declared — the register ` +
+      'flipped orientation; measure the new layout against the live file and declare it'
+  );
 };
 
 export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<Row[]> {

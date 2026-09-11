@@ -948,6 +948,45 @@ describe('parsePdf', () => {
       ).rejects.toThrow(/mixes record orientations/i);
     });
 
+    // hr-ccaa's `^[A-Z]{3}$` also matches a `PZO` owner continuation. An off-column match drags the
+    // spans on both axes, so detection abstains and silently falls to the first layout — here the
+    // wrong axis. The anchor band must be applied while choosing the layout, not only afterwards.
+    it('ignores an off-column anchor match when choosing the layout', async () => {
+      // Mirrors hr-ccaa's live page 2: marks in one band, a `PZO` owner continuation off in the
+      // owner column. Unfiltered those spans read 441 x 399 — ratio 0.9, so the page abstains and
+      // falls to the first declared layout, here deliberately the wrong axis. Band-filtered the
+      // same page reads 1.4 x 399.
+      const withOffColumnMatch: SynthItem[] = [
+        { str: 'AAA', x: 66, y: 500 },
+        { str: 'Alpha Ltd', x: 506, y: 500 },
+        { str: 'BBB', x: 66, y: 400 },
+        { str: 'Bravo Ltd', x: 506, y: 400 },
+        { str: 'CCC', x: 66, y: 300 },
+        { str: 'Charlie Ltd', x: 506, y: 300 },
+        { str: 'PZO', x: 506, y: 450 },
+      ];
+      const rows = await parsePdf(
+        buildPdf([withOffColumnMatch]),
+        synthOpts({
+          anchor_pattern: '^[A-Z]{3}$',
+          anchor_column: 0,
+          columns: ['mark', 'owner'],
+          layouts: [
+            { field_axis: 'y', column_pos: [500, 400] },
+            { field_axis: 'x', column_pos: [66, 506] },
+          ],
+        })
+      );
+
+      // One record per mark, ascending record coordinate — proof the x-field layout was chosen.
+      // Under the y-field layout the marks collapse into two garbage rows.
+      expect(rows.map((r) => r.mark)).toEqual(['CCC', 'BBB', 'AAA']);
+      expect(rows.find((r) => r.mark === 'CCC')!.owner).toBe('Charlie Ltd');
+      // The stray still snaps into the owner band of its nearest record — a page-walk concern, not
+      // an orientation one, and harmless next to reading the whole table on the wrong axis.
+      expect(rows.find((r) => r.mark === 'AAA')!.owner).toContain('Alpha Ltd');
+    });
+
     // An undetectable document cannot parse into a usable fleet under either axis, so the parser
     // defers to the page walk, whose anchorless-page and zero-row guards name the real cause.
     it('defers to the page-walk guards when no page offers an axis reading', async () => {
