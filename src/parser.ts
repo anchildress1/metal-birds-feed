@@ -579,7 +579,7 @@ const resolveLayout = (
   if (detected.size === 0) return { ...shared, ...layouts[0] };
   if (detected.size > 1)
     throw new Error(
-      `PDF mixes record orientations across pages (${[...detected].sort().join(', ')}) — ` +
+      `PDF mixes record orientations across pages (${[...detected].sort((a, b) => a.localeCompare(b)).join(', ')}) — ` +
         'one document is expected to be uniform'
     );
   const [recordAxis] = [...detected];
