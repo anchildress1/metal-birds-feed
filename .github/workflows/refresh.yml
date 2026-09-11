@@ -67,6 +67,9 @@ jobs:
             # Paused sources are excluded from the fleet enumeration, not from the pipeline: every
             # matrix job exports its own REFRESH_SOURCE, which the pipeline reads as a named run, so
             # a paused source filtered only in resolveSources() would still be pulled here daily.
+            # nullglob: an unmatched glob stays literal, so an empty sources/ would otherwise emit a
+            # phantom source named "*.yaml" and fan out a matrix job for it.
+            shopt -s nullglob
             for f in sources/*.yaml; do
               if grep -qE '^paused:[[:space:]]*true[[:space:]]*$' "$f"; then
                 echo "Skipping paused source: $(basename "$f" .yaml)"
