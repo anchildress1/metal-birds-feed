@@ -22,20 +22,24 @@ format: pdf
 # Landscape positioned table: each aircraft is one y-row, each field a fixed x-band. `column_pos`
 # are the value-band x-centers (paired by index with `columns`); records anchor on the EC-XXX
 # nationality mark. See PdfConfig in src/types/config.ts for the extraction model.
+# Only the unrotated orientation has been observed. If AESA ever republishes the table rotated the
+# parse fails naming the missing axis rather than reading it wrong; measure the new bands against the
+# live file and add a second layouts entry.
 pdf:
-  field_axis: x
   anchor_pattern: '^EC-[A-Z0-9]{3}$'
-  column_pos:
-    - 21 # mark
-    - 62 # date (registration)
-    - 110 # manufacturer
-    - 266 # model
-    - 414 # serial
-    - 484 # year
-    - 514 # engine manufacturer
-    - 606 # engine model
-    - 712 # engine count
-    - 740 # clase
+  layouts:
+    - field_axis: x
+      column_pos:
+        - 21 # mark
+        - 62 # date (registration)
+        - 110 # manufacturer
+        - 266 # model
+        - 414 # serial
+        - 484 # year
+        - 514 # engine manufacturer
+        - 606 # engine model
+        - 712 # engine count
+        - 740 # clase
 
 columns:
   register:

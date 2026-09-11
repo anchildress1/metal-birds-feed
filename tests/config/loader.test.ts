@@ -99,6 +99,22 @@ describe('loadSourceConfig', () => {
     }
   });
 
+  // resolveStatus never consults null_values, so a declared one was silently ignored and the
+  // sentinel reached the lookup as if it were a real code — failing the run, or with a default,
+  // entering the feed as a status the register never stated.
+  it('rejects null_values on status, which resolves outside resolveScalar', () => {
+    const tmp = tmpConfig('_test_status_null_values.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  status: { field: S, null_values: ['N/A'], lookup: { Valid: valid } }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/null_values is not supported on/i);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
   it('rejects fields without compound_transform', () => {
     const tmp = tmpConfig('_test_fields_no_compound.yaml');
     writeFileSync(
@@ -501,8 +517,10 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  const pdfYaml = (anchorlessLine: string): string =>
-    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  field_axis: y\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${anchorlessLine}  column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+  // `pdfLine` lands at pdf level, `layoutLine` inside the single layout — the reach/pattern pair and
+  // column_pos are per-orientation, while anchor_pattern and the page budget are shared.
+  const pdfYaml = (pdfLine: string, layoutLine = ''): string =>
+    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${pdfLine}  layouts:\n    - field_axis: y\n${layoutLine}      column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
 
   it('accepts pdf.allowed_anchorless_pages', () => {
     const tmp = tmpConfig('_test_pdf_anchorless.yaml');
@@ -517,7 +535,7 @@ describe('loadSourceConfig', () => {
 
   it('rejects pdf.before_first_anchor_reach without a pattern', () => {
     const tmp = tmpConfig('_test_pdf_before_first_anchor_reach_without_pattern.yaml');
-    writeFileSync(tmp, pdfYaml('  before_first_anchor_reach: 17\n'));
+    writeFileSync(tmp, pdfYaml('', '      before_first_anchor_reach: 17\n'));
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
     } finally {
@@ -529,10 +547,13 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern.yaml');
     writeFileSync(
       tmp,
-      pdfYaml('  before_first_anchor_reach: 17\n  before_first_anchor_pattern: "^Slovenia$"\n')
+      pdfYaml(
+        '',
+        '      before_first_anchor_reach: 17\n      before_first_anchor_pattern: "^Slovenia$"\n'
+      )
     );
     try {
-      expect(loadSourceConfig(tmp).pdf?.before_first_anchor_pattern).toBe('^Slovenia$');
+      expect(loadSourceConfig(tmp).pdf?.layouts[0].before_first_anchor_pattern).toBe('^Slovenia$');
     } finally {
       unlinkSync(tmp);
     }
@@ -576,7 +597,7 @@ describe('loadSourceConfig', () => {
 
   it('rejects pdf.before_first_anchor_pattern without a reach', () => {
     const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern_without_reach.yaml');
-    writeFileSync(tmp, pdfYaml('  before_first_anchor_pattern: "^Slovenia$"\n'));
+    writeFileSync(tmp, pdfYaml('', '      before_first_anchor_pattern: "^Slovenia$"\n'));
     try {
       expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
     } finally {

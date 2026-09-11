@@ -49,13 +49,10 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
     if (!pdf) throw new Error(`Source "${config.id}" has format "pdf" but no pdf config`);
     const columns = config.columns?.[config.primary] ?? [];
     return parsePdf(buf, {
-      field_axis: pdf.field_axis,
-      column_pos: pdf.column_pos,
+      layouts: pdf.layouts,
       columns,
       anchor_pattern: pdf.anchor_pattern,
       allowed_anchorless_pages: pdf.allowed_anchorless_pages,
-      before_first_anchor_reach: pdf.before_first_anchor_reach,
-      before_first_anchor_pattern: pdf.before_first_anchor_pattern,
       // Loader validates anchor_field names a real column, so indexOf here is never -1.
       anchor_column: pdf.anchor_field ? columns.indexOf(pdf.anchor_field) : undefined,
       trim: config.trim_all,
@@ -497,6 +494,19 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
   // assumption is wrong and last-wins would silently drop upstream data.
   const resolution = resolveRecency(candidate, incumbent);
   if (!resolution) {
+    // Opt-in per source, and deliberately not the default: last-wins takes file position as a
+    // recency signal, which it is not, so it silently drops one of two rows the register actually
+    // published. Only for a register that contradicts itself on a field with nothing to arbitrate
+    // it — DGAC Chile lists CC-DQA twice with two different models — where the alternative is the
+    // whole 2,000-row fleet failing on one bad row. The warn is the only record that a row was
+    // dropped; it is not a duplicate skip, so do not quieten it.
+    if (config.duplicate_conflict === 'last-wins') {
+      log('warn', 'map_duplicate_id_last_wins', {
+        ...logCtx,
+        reason: 'no distinguishing signal; keeping the later row per duplicate_conflict: last-wins',
+      });
+      return { status: 'ok', id: rawId, record: candidate, row };
+    }
     log('error', 'map_duplicate_id', {
       ...logCtx,
       reason:
@@ -830,7 +840,8 @@ const resolveStatusCompound = (
 // blank cell as if the register had stated something. resolveScalar can't make that distinction
 // generically without risking every other default-bearing field's established behavior, so status
 // gets its own resolution here: a blank cell always stays null, and only a non-blank, unrecognized
-// code falls to the default. `null_values` is rejected at load time alongside a compound transform.
+// code falls to the default. `null_values` is unreachable from here and is rejected at load time
+// (see the mapping superRefine in src/config/loader.ts); a sentinel belongs in `lookup` as null.
 function resolveStatus(mapping: FieldMap, row: Row, source: string): string | null {
   const fm = mapping['status'];
   if (!fm) return null;

@@ -48,6 +48,14 @@ merge_duplicates:
   set_on_merge:
     operator.kind: co-owner
 
+# DGAC contradicts itself on a handful of rows: the 2026-08-31 publication lists CC-DQA twice under
+# one N°, identical but for MODELO ("MBB-BK117 A-4" vs "MBB-BK117 D-2"). The register publishes no
+# date or status, so there is no signal to arbitrate it and the default behaviour fails the whole
+# 2,032-row fleet on one bad row. Keeping the later row is an explicit operator decision, not an
+# engine default — it does drop a row the register published, and map_duplicate_id_last_wins is the
+# only record of it. Scoped to this source alone.
+duplicate_conflict: last-wins
+
 mapping:
   registration:
     field: MATRICULA
