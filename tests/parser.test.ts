@@ -13,6 +13,7 @@ import {
   parsePdf,
   type HucreFormat,
   type ParsePdfOptions,
+  type PdfLayoutOptions,
 } from '../src/parser.js';
 
 const buf = (s: string): Buffer => Buffer.from(s, 'latin1');
@@ -747,35 +748,71 @@ describe('parseJson', () => {
 });
 
 const MV_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'mv-caa', 'input', 'register.pdf');
+const MV_ROTATED_PDF = resolve(
+  import.meta.dirname,
+  '..',
+  'fixtures',
+  'mv-caa',
+  'input',
+  'register-rotated.pdf'
+);
 const mvBuf = (): Buffer => readFileSync(MV_PDF);
-// Mirrors sources/mv-caa.yaml: 90°-rotated grid, fields on y, records anchored on the 8Q mark
-// along x. Keep both in step — the register alternates layouts, and this harness is what proves
-// the parser still separates the bands after a flip.
-const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
-  field_axis: 'y',
-  anchor_pattern: '^8Q-[A-Z]{3}$',
+const mvRotatedBuf = (): Buffer => readFileSync(MV_ROTATED_PDF);
+// Mirrors sources/mv-caa.yaml, both orientations. Keep them in step — the register alternates
+// layouts, and these two real publications are what prove the parser picks the right axis and still
+// separates the bands after a flip.
+const MV_UNROTATED_LAYOUT: PdfLayoutOptions = {
+  field_axis: 'x',
+  after_last_anchor_reach: 14,
   column_pos: [
-    746, 713.1, 685.8, 616.1, 551.8, 467.8, 420, 383.8, 299.8, 217.9, 205.6, 183, 156.9, 87.6, 66.2,
-    40.6, 28.9,
+    31.5,
+    50.4,
+    87.0,
+    118.0,
+    219.2,
+    259.0,
+    289.0,
+    306.4,
+    424.7,
+    null,
+    null,
+    null,
+    546.1,
+    null,
+    647.0,
+    687.0,
+    736.0,
   ],
+};
+const MV_ROTATED_LAYOUT: PdfLayoutOptions = {
+  field_axis: 'y',
+  column_pos: [
+    28.9, 40.6, 66.2, 87.6, 156.9, 183, 205.6, 217.9, 299.8, 383.8, 420, 467.8, 551.8, 616.1, 685.8,
+    713.1, 746,
+  ],
+};
+const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
+  anchor_pattern: '^8Q-[A-Z]{3}$',
+  anchor_column: 2,
+  layouts: [MV_UNROTATED_LAYOUT, MV_ROTATED_LAYOUT],
   columns: [
-    'status',
-    'date_revision',
-    'date_issue',
-    'idera',
-    'mortgage',
-    'other_specifics',
-    'basis',
-    'operator',
-    'legal_owner',
-    'owner',
-    'year',
-    'serial',
-    'mtow',
-    'mfg',
-    'mark',
-    'cert_no',
     'sn',
+    'cert_no',
+    'mark',
+    'mfg',
+    'mtow',
+    'serial',
+    'year',
+    'owner',
+    'legal_owner',
+    'operator',
+    'basis',
+    'other_specifics',
+    'mortgage',
+    'idera',
+    'date_issue',
+    'date_revision',
+    'status',
   ],
   trim: true,
   ...overrides,
@@ -784,7 +821,7 @@ const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
 describe('parsePdf', () => {
   it('reconstructs one row per anchor across all pages', async () => {
     const rows = await parsePdf(mvBuf(), mvOpts());
-    expect(rows).toHaveLength(137);
+    expect(rows).toHaveLength(97);
     expect(rows.every((r) => /^8Q-[A-Z]{3}$/.test(r.mark ?? ''))).toBe(true);
     expect(rows.every((r) => /^CR-/.test(r.cert_no ?? ''))).toBe(true);
   });
@@ -809,11 +846,163 @@ describe('parsePdf', () => {
     expect(r.mfg.split('\n')[0]).toBe('Viking Air (De Havilland)');
   });
 
+  // 8Q-TBC carries two mortgagees (8 lines) between neighbours printing a single "None", so its
+  // cell overflows its own row band. Nearest-anchor snapping handed the first and last lines to the
+  // records above and below, which made a company registry number 8Q-RAP's lien holder.
+  it('keeps a cell that outgrows its row band whole instead of bleeding into its neighbours', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts());
+    const byMark = (m: string): string => rows.find((r) => r.mark === m)!.mortgage;
+    expect(byMark('8Q-TBC').split('\n')).toEqual([
+      'LEN-Promotion ApS',
+      'Vedbaek Strandvej 456',
+      '2950 Vedbaek, Denmark',
+      'CVR DK 14596038',
+      'Tally Ho A/S',
+      'Kvaegdriften 13',
+      '8330 Beder, Denmark',
+      'CVR DK 16680877',
+    ]);
+    expect(byMark('8Q-TBB')).toBe('None');
+    expect(byMark('8Q-RAP')).toBe('None');
+  });
+
+  // The page-wide minimum row pitch is not a safe outer reach: page 4 closes with 25.5pt rows while
+  // its top record spans 32pt, clipping that record's first owner line by 0.05pt and promoting its
+  // street address to the party name.
+  it('keeps the top record’s tallest cell under the declared outer reach', async () => {
+    const rows = await parsePdf(mvBuf(), mvOpts());
+    const r = rows.find((row) => row.mark === '8Q-MBG')!;
+    expect(r.owner.split('\n')[0]).toBe('Trans Maldivian Airways Pvt. Ltd.');
+    expect(r.legal_owner.split('\n')[0]).toBe('Trans Maldivian Airways Pvt. Ltd.');
+  });
+
+  it('still excludes the column headers at the default outer reach', async () => {
+    const noReach: PdfLayoutOptions = {
+      ...MV_UNROTATED_LAYOUT,
+      after_last_anchor_reach: undefined,
+    };
+    const rows = await parsePdf(mvBuf(), mvOpts({ layouts: [noReach, MV_ROTATED_LAYOUT] }));
+    const blob = rows.flatMap((r) => Object.values(r)).join('\n');
+    expect(blob).not.toMatch(/Registration S\/N|Date of Original Issue|Nationality &/);
+  });
+
   it('excludes the repeated header-label column and the page footer', async () => {
     const rows = await parsePdf(mvBuf(), mvOpts());
     const blob = rows.flatMap((r) => Object.values(r)).join('\n');
     expect(blob).not.toMatch(/Registration S\/N|Date of Original Issue|Nationality &/);
     expect(blob).not.toMatch(/Whilst reasonable care|Page \d of \d/);
+  });
+
+  // CAA has flipped this table four times since 2026-07. The axis is read off the anchors rather
+  // than declared, so the same config parses both real publications.
+  describe('orientation detection', () => {
+    it('reads the unrotated publication on the x field axis', async () => {
+      const rows = await parsePdf(mvBuf(), mvOpts());
+      expect(rows).toHaveLength(97);
+      expect(rows.find((r) => r.mark === '8Q-OEQ')!.cert_no).toBe('CR-121');
+    });
+
+    it('reads the rotated publication on the y field axis with the same config', async () => {
+      const rows = await parsePdf(mvRotatedBuf(), mvOpts());
+      expect(rows).toHaveLength(137);
+      expect(rows.find((r) => r.mark === '8Q-OEQ')!.cert_no).toBe('CR-121');
+    });
+
+    // The rotated orientation prints four columns the unrotated one omits. They keep their slot in
+    // the shared `columns` order via null bands, so the mapping needs no orientation branch.
+    it('fills the rotated-only columns and leaves them absent when unrotated', async () => {
+      const rotated = await parsePdf(mvRotatedBuf(), mvOpts());
+      const unrotated = await parsePdf(mvBuf(), mvOpts());
+      expect(rotated.filter((r) => (r.idera ?? '') !== '').length).toBeGreaterThan(0);
+      expect(unrotated.every((r) => r.idera === undefined)).toBe(true);
+    });
+
+    // Reading a flipped file on the stale axis yields a full set of structurally valid, scrambled
+    // rows — the failure mode this must never degrade into.
+    it('throws rather than reading a flipped file on the only declared axis', async () => {
+      await expect(
+        parsePdf(mvRotatedBuf(), mvOpts({ layouts: [MV_UNROTATED_LAYOUT] }))
+      ).rejects.toThrow(/records run along x, needing a field_axis: y layout/i);
+    });
+
+    it('throws when a document mixes orientations across pages', async () => {
+      // One page's records run along x, the next along y.
+      const rotatedPage: SynthItem[] = [
+        { str: '8Q-AAA', x: 100, y: 50 },
+        { str: '8Q-BBB', x: 300, y: 50 },
+      ];
+      const unrotatedPage: SynthItem[] = [
+        { str: '8Q-CCC', x: 100, y: 200 },
+        { str: '8Q-DDD', x: 100, y: 400 },
+      ];
+      await expect(
+        parsePdf(
+          buildPdf([rotatedPage, unrotatedPage]),
+          synthOpts({
+            layouts: [
+              { field_axis: 'y', column_pos: [100, 50] },
+              { field_axis: 'x', column_pos: [50, 100] },
+            ],
+          })
+        )
+      ).rejects.toThrow(/mixes record orientations/i);
+    });
+
+    // hr-ccaa's `^[A-Z]{3}$` also matches a `PZO` owner continuation. An off-column match drags the
+    // spans on both axes, so detection abstains and silently falls to the first layout — here the
+    // wrong axis. The anchor band must be applied while choosing the layout, not only afterwards.
+    it('ignores an off-column anchor match when choosing the layout', async () => {
+      // Mirrors hr-ccaa's live page 2: marks in one band, a `PZO` owner continuation off in the
+      // owner column. Unfiltered those spans read 441 x 399 — ratio 0.9, so the page abstains and
+      // falls to the first declared layout, here deliberately the wrong axis. Band-filtered the
+      // same page reads 1.4 x 399.
+      const withOffColumnMatch: SynthItem[] = [
+        { str: 'AAA', x: 66, y: 500 },
+        { str: 'Alpha Ltd', x: 506, y: 500 },
+        { str: 'BBB', x: 66, y: 400 },
+        { str: 'Bravo Ltd', x: 506, y: 400 },
+        { str: 'CCC', x: 66, y: 300 },
+        { str: 'Charlie Ltd', x: 506, y: 300 },
+        { str: 'PZO', x: 506, y: 450 },
+      ];
+      const rows = await parsePdf(
+        buildPdf([withOffColumnMatch]),
+        synthOpts({
+          anchor_pattern: '^[A-Z]{3}$',
+          anchor_column: 0,
+          columns: ['mark', 'owner'],
+          layouts: [
+            { field_axis: 'y', column_pos: [500, 400] },
+            { field_axis: 'x', column_pos: [66, 506] },
+          ],
+        })
+      );
+
+      // One record per mark, ascending record coordinate — proof the x-field layout was chosen.
+      // Under the y-field layout the marks collapse into two garbage rows.
+      expect(rows.map((r) => r.mark)).toEqual(['CCC', 'BBB', 'AAA']);
+      expect(rows.find((r) => r.mark === 'CCC')!.owner).toBe('Charlie Ltd');
+      // The stray still snaps into the owner band of its nearest record — a page-walk concern, not
+      // an orientation one, and harmless next to reading the whole table on the wrong axis.
+      expect(rows.find((r) => r.mark === 'AAA')!.owner).toContain('Alpha Ltd');
+    });
+
+    // An undetectable document cannot parse into a usable fleet under either axis, so the parser
+    // defers to the page walk, whose anchorless-page and zero-row guards name the real cause.
+    it('defers to the page-walk guards when no page offers an axis reading', async () => {
+      const onePerPage: SynthItem[] = [{ str: '8Q-AAA', x: 100, y: 50 }];
+      await expect(
+        parsePdf(
+          buildPdf([onePerPage]),
+          synthOpts({
+            layouts: [
+              { field_axis: 'y', column_pos: [100, 50] },
+              { field_axis: 'x', column_pos: [50, 100] },
+            ],
+          })
+        )
+      ).resolves.toEqual([{ mark: '8Q-AAA' }]);
+    });
   });
 
   it('throws when the anchor pattern matches nothing on a text-bearing page', async () => {
@@ -875,11 +1064,10 @@ const buildPdf = (pages: SynthItem[][]): Buffer => {
   return Buffer.from(body, 'latin1');
 };
 
-// Same orientation as mv-caa: fields banded on y (value at 100, mark at 50), records along x.
+// Fields banded on y (value at 100, mark at 50), records along x — mv-caa's rotated orientation.
 const synthOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
-  field_axis: 'y',
   anchor_pattern: '^8Q-[A-Z]{3}$',
-  column_pos: [100, 50],
+  layouts: [{ field_axis: 'y', column_pos: [100, 50] }],
   columns: ['value', 'mark'],
   trim: true,
   ...overrides,
@@ -920,12 +1108,16 @@ const finalContinuationPage: SynthItem[] = [
 ];
 
 const finalContinuationOpts: ParsePdfOptions = {
-  field_axis: 'x',
   anchor_pattern: '^[A-Z]{3}$',
   anchor_column: 0,
-  before_first_anchor_reach: 20,
-  before_first_anchor_pattern: '^Slovenia$',
-  column_pos: [50, 100],
+  layouts: [
+    {
+      field_axis: 'x',
+      before_first_anchor_reach: 20,
+      before_first_anchor_pattern: '^Slovenia$',
+      column_pos: [50, 100],
+    },
+  ],
   columns: ['mark', 'address'],
   trim: true,
 };
@@ -953,12 +1145,16 @@ describe('parsePdf final record continuations', () => {
     const rows = await parsePdf(
       buildPdf([singleAnchorPage]),
       synthOpts({
-        field_axis: 'x',
         anchor_pattern: '^[A-Z]{3}$',
         anchor_column: 0,
-        before_first_anchor_reach: 30,
-        before_first_anchor_pattern: '^Slovenia$',
-        column_pos: [50, 100],
+        layouts: [
+          {
+            field_axis: 'x',
+            before_first_anchor_reach: 30,
+            before_first_anchor_pattern: '^Slovenia$',
+            column_pos: [50, 100],
+          },
+        ],
         columns: ['mark', 'address'],
       })
     );
@@ -979,12 +1175,16 @@ describe('parsePdf final record continuations', () => {
     const rows = await parsePdf(
       buildPdf([singleAnchorJitterPage]),
       synthOpts({
-        field_axis: 'x',
         anchor_pattern: '^[A-Z]{3}$',
         anchor_column: 0,
-        before_first_anchor_reach: 30,
-        before_first_anchor_pattern: '^Slovenia$',
-        column_pos: [50, 100],
+        layouts: [
+          {
+            field_axis: 'x',
+            before_first_anchor_reach: 30,
+            before_first_anchor_pattern: '^Slovenia$',
+            column_pos: [50, 100],
+          },
+        ],
         columns: ['mark', 'model'],
       })
     );

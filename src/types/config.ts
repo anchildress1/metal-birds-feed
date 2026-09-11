@@ -194,15 +194,45 @@ export interface RecordCountCheck {
   against?: 'parsed' | 'mapped';
 }
 
-// Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited.
-// `field_axis` is the axis along which fields (columns) are distributed; the perpendicular axis is
-// the record axis. Each field's value band sits at `column_pos[i]` on `field_axis`, paired by index
-// with the field name in `columns[primary]`. One record per item matching `anchor_pattern`.
-// (CAA Maldives publishes a 90°-rotated grid: fields run down y, records across x.)
-export interface PdfConfig {
+// One page orientation a register has been observed publishing. `field_axis` is the axis along which
+// fields (columns) are distributed; the perpendicular axis is the record axis. Each field's value
+// band sits at `column_pos[i]` on `field_axis`, paired by index with the field name in
+// `columns[primary]`.
+//
+// Every value here is measured against this orientation's geometry and does not transfer to the
+// other one — a flip moves the axis and the band positions together — so re-measure against a live
+// file in that orientation rather than deriving one layout from the other.
+export interface PdfLayout {
   field_axis: 'x' | 'y';
-  column_pos: number[];
+  // `null` means this orientation prints no cell for that field, keeping the shared `columns` order
+  // usable by every layout. See ParsePdfOptions.column_pos in src/parser.ts.
+  column_pos: (number | null)[];
+  // Extra reach before the first sorted record coordinate. Declare only a measured value that
+  // retains a known final-row continuation without reaching the source's page footer.
+  before_first_anchor_reach?: number;
+  // Optional allowlist for text in the extra reach. Use when a nearby footer/disclaimer falls in
+  // the same coordinate band as the continuation.
+  before_first_anchor_pattern?: string;
+  // Extra reach past the last record coordinate (the column-header side). Declare a measured value
+  // that clears the outermost record's tallest cell without reaching the header band; the default
+  // reach is half the page's tightest row pitch, which a taller outer record overruns.
+  after_last_anchor_reach?: number;
+}
+
+// Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited. One record
+// per item matching `anchor_pattern`.
+//
+// A register can republish the same table rotated 90° — CAA Maldives has flipped four times since
+// 2026-07 — and the field ORDER survives a flip while the axis and every band position do not. So
+// the orientation is detected from the anchors at parse time and the matching `layouts` entry is
+// selected, rather than being declared as one fixed axis. `columns[primary]` is shared by every
+// layout. Declare only orientations measured against a real file: a file in an undeclared
+// orientation fails the parse loudly, which is the point — read on the wrong axis it would yield a
+// full set of structurally valid, silently scrambled records.
+export interface PdfConfig {
   anchor_pattern: string;
+  // One entry per observed orientation, at most one per `field_axis`.
+  layouts: PdfLayout[];
   // Budget of text-bearing pages expected to yield zero anchor matches (cover/preface/legend
   // pages). Any anchorless page beyond this fails the parse: a register page that silently loses
   // its anchors drops its whole fleet slice, and PDF sources cannot use record_count to catch it.
@@ -212,12 +242,6 @@ export interface PdfConfig {
   // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
   // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
   anchor_field?: string;
-  // Extra reach before the first sorted record coordinate. Declare only a measured value that
-  // retains a known final-row continuation without reaching the source's page footer.
-  before_first_anchor_reach?: number;
-  // Optional allowlist for text in the extra reach. Use when a nearby footer/disclaimer falls in
-  // the same coordinate band as the continuation.
-  before_first_anchor_pattern?: string;
 }
 
 export interface SourceConfig {
@@ -228,6 +252,15 @@ export interface SourceConfig {
   // asking a translator to render English as English rewords curated values and mangles bare codes.
   language: string;
   encoding: 'utf8' | 'latin1';
+  // Excludes the source from the scheduled refresh while its upstream is unreachable for reasons no
+  // config change can fix (a WAF block on the whole publisher domain). Feed assembly still includes
+  // it, so the last good slice keeps serving; naming it in REFRESH_SOURCE runs it anyway.
+  paused?: boolean;
+  // How a duplicate source_id with no recency signal resolves. Default (omitted) fails the run —
+  // the collision usually means the source_id assumption is wrong. `last-wins` keeps the later row
+  // and logs map_duplicate_id_last_wins; declare it only where the register genuinely contradicts
+  // itself on a field nothing can arbitrate, since file position is not a recency signal.
+  duplicate_conflict?: 'last-wins';
   download: DownloadConfig;
   primary: string;
   delimiter: string;

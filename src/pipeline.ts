@@ -251,13 +251,32 @@ export const resolveAllSources = (): string[] =>
     .map((f) => f.replace(/\.yaml$/, ''))
     .sort((a, b) => a.localeCompare(b));
 
+// Sources whose upstream is unreachable through no fault of the config. Excluded from the scheduled
+// refresh only — `resolveAllSources()` still feeds them to publishFeed, so the last good slice keeps
+// serving instead of the register vanishing from the feed while access is restored. Naming one in
+// REFRESH_SOURCE runs it anyway, which is how a recovery is tested without editing the YAML.
+//
+// A paused source cannot regenerate its slice, so a future FEED_SLICE_VERSION bump invalidates it
+// and publish fails closed until the source is either unpaused or removed. That is the intended
+// loud failure, not a case to special-case.
+const resolvePausedSources = (): Set<string> =>
+  new Set(
+    resolveAllSources().filter(
+      (id) => loadSourceConfig(resolve('sources', `${id}.yaml`)).paused === true
+    )
+  );
+
 const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
   // The refresh.yml guard only covers workflow_dispatch; `make refresh` reaches here directly with
   // whatever .env exports, and an unnamed force is a fleet-wide cadence bypass either way.
   if (sourceEnv === '' && process.env['FORCE_REFRESH'] === 'true')
     throw new Error('FORCE_REFRESH requires REFRESH_SOURCE to name a single source');
-  return sourceEnv ? [sourceEnv] : resolveAllSources();
+  if (sourceEnv) return [sourceEnv];
+  const paused = resolvePausedSources();
+  const active = resolveAllSources().filter((id) => !paused.has(id));
+  for (const id of paused) log('warn', 'source_paused', { source: id });
+  return active;
 };
 
 // Content just changed when this run's write stamped last_content_change to last_run.

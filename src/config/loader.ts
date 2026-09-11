@@ -112,6 +112,8 @@ const SourceConfigSchema = z
       .regex(/^[a-z]{2}$/, 'language must be a lowercase two-letter code')
       .refine(isIso639_1, { message: 'language must be an assigned ISO 639-1 code' }),
     encoding: z.enum(['utf8', 'latin1']),
+    paused: z.boolean().optional(),
+    duplicate_conflict: z.literal('last-wins').optional(),
     download: z
       .strictObject({
         url: z.url(),
@@ -164,21 +166,53 @@ const SourceConfigSchema = z
     record_path: z.string().optional(),
     pdf: z
       .strictObject({
-        field_axis: z.enum(['x', 'y']),
-        column_pos: z.array(z.number()).min(1),
         anchor_pattern: z.string().min(1).refine(isValidRegex, {
           message: 'pdf.anchor_pattern must be a valid regular expression',
         }),
+        layouts: z
+          .array(
+            z
+              .strictObject({
+                field_axis: z.enum(['x', 'y']),
+                // null = this orientation prints no cell for that field; at least one must print.
+                column_pos: z
+                  .array(z.number().nullable())
+                  .min(1)
+                  .refine((ps) => ps.some((p) => p !== null), {
+                    message: 'pdf.layouts[].column_pos must declare at least one printed band',
+                  }),
+                before_first_anchor_reach: z.number().nonnegative().optional(),
+                after_last_anchor_reach: z.number().nonnegative().optional(),
+                before_first_anchor_pattern: z
+                  .string()
+                  .min(1)
+                  .refine(isValidRegex, {
+                    message: 'pdf.before_first_anchor_pattern must be a valid regular expression',
+                  })
+                  .optional(),
+              })
+              // Required together, not just pattern-requires-reach: a reach with no pattern admits
+              // whatever text falls in the widened zone unconditionally — the exact failure mode a
+              // column-position-only rescue hit in review (an unrelated page-footer paragraph got
+              // pulled into the last record). The pattern is what makes the widened zone safe.
+              .refine(
+                (l) =>
+                  (l.before_first_anchor_reach === undefined) ===
+                  (l.before_first_anchor_pattern === undefined),
+                {
+                  message:
+                    'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
+                }
+              )
+          )
+          .min(1)
+          // Two layouts on one axis would make selection order-dependent, and the parser picks the
+          // first match — a silent choice between two measured geometries.
+          .refine((ls) => new Set(ls.map((l) => l.field_axis)).size === ls.length, {
+            message: 'pdf.layouts must declare at most one layout per field_axis',
+          }),
         allowed_anchorless_pages: z.number().int().nonnegative().optional(),
         anchor_field: z.string().min(1).optional(),
-        before_first_anchor_reach: z.number().nonnegative().optional(),
-        before_first_anchor_pattern: z
-          .string()
-          .min(1)
-          .refine(isValidRegex, {
-            message: 'pdf.before_first_anchor_pattern must be a valid regular expression',
-          })
-          .optional(),
       })
       .optional(),
     record_count: z
@@ -271,6 +305,16 @@ const SourceConfigSchema = z
             code: 'custom',
             message: `mapping key "${path}" is not a canonical schema path`,
           });
+      // `status` resolves through resolveStatus, which never consults null_values — a declared one
+      // would be ignored and the sentinel would fall through to the lookup as if it were a real
+      // code, failing the run or, with a default, entering the feed as a status the register never
+      // stated. Enumerate the sentinel as a null lookup value instead.
+      if (m['status']?.null_values !== undefined)
+        ctx.addIssue({
+          code: 'custom',
+          message:
+            'null_values is not supported on "status"; map the sentinel to a null lookup value',
+        });
     }),
   })
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
@@ -304,10 +348,14 @@ const SourceConfigSchema = z
       message: 'columns arrays must not contain duplicate names',
     }
   )
+  // Every layout maps the same field list, so each one's band count must match it — a flip reorders
+  // neither `columns` nor `column_pos`.
   .refine(
-    (c) => c.pdf === undefined || c.pdf.column_pos.length === (c.columns?.[c.primary]?.length ?? 0),
+    (c) =>
+      c.pdf === undefined ||
+      c.pdf.layouts.every((l) => l.column_pos.length === (c.columns?.[c.primary]?.length ?? 0)),
     {
-      message: 'pdf.column_pos length must match columns[primary] length',
+      message: 'every pdf.layouts[].column_pos length must match columns[primary] length',
     }
   )
   .refine(
@@ -316,19 +364,6 @@ const SourceConfigSchema = z
       (c.columns?.[c.primary] ?? []).includes(c.pdf.anchor_field),
     {
       message: 'pdf.anchor_field must name a column in columns[primary]',
-    }
-  )
-  // Required together, not just pattern-requires-reach: a reach with no pattern admits whatever
-  // text falls in the widened zone unconditionally — the exact failure mode a column-position-only
-  // rescue hit in review (an unrelated page-footer paragraph got pulled into the last record). The
-  // pattern is what makes the widened zone safe, so a reach without one is never a valid config.
-  .refine(
-    (c) =>
-      (c.pdf?.before_first_anchor_reach === undefined) ===
-      (c.pdf?.before_first_anchor_pattern === undefined),
-    {
-      message:
-        'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
     }
   )
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's

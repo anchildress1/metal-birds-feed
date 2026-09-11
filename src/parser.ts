@@ -272,10 +272,35 @@ export async function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise
   return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
 }
 
-export interface ParsePdfOptions {
+// One observed page orientation. `column_pos` and the reach tolerances are measured against that
+// orientation's geometry and are not transferable to the other one — a flip moves the axis AND the
+// band positions — so each layout carries its own.
+export interface PdfLayoutOptions {
   field_axis: 'x' | 'y';
-  // Value-band coordinate per field on `field_axis`, index-paired with `columns`.
-  column_pos: number[];
+  // Value-band coordinate per field on `field_axis`, index-paired with `columns`. `null` means this
+  // orientation prints no cell for that field — CAA Maldives' rotated layout carries four columns
+  // (IDERA, basis, other-specifics, operator) that its unrotated one omits, and `columns` is shared
+  // across layouts. A null band is excluded from snapping, so nothing lands in it and the field
+  // resolves to null downstream; a placeholder coordinate would instead compete for nearby items.
+  column_pos: (number | null)[];
+  // Extra reach before the first sorted anchor coordinate. Opt in only when a known final record
+  // wraps beyond the default half-gap, and bound it below the source's page footer.
+  before_first_anchor_reach?: number;
+  // Optional allowlist for items in the extra reach. It keeps a known final continuation without
+  // admitting nearby footer/disclaimer text that starts in the same coordinate band.
+  before_first_anchor_pattern?: string;
+  // Extra reach past the last sorted anchor coordinate, mirroring before_first_anchor_reach at the
+  // other end. Opt in when the outermost record's own cell runs taller than half the page's
+  // tightest row pitch, which is all the default reach allows. Bound it below the column headers.
+  after_last_anchor_reach?: number;
+}
+
+export interface ParsePdfOptions {
+  // Every orientation this register has been observed publishing, one entry per `field_axis`. The
+  // orientation in the file is detected from the anchors and the matching layout is selected; a file
+  // in an orientation with no declared layout fails the parse rather than being read on the wrong
+  // axis, which yields a full set of structurally valid but scrambled rows.
+  layouts: PdfLayoutOptions[];
   columns: string[];
   anchor_pattern: string;
   trim: boolean;
@@ -286,15 +311,14 @@ export interface ParsePdfOptions {
   // when the pattern can only occur in the mark column (AESA's `^EC-[A-Z0-9]{3}$`), but a short
   // generic pattern (a bare 3-letter mark, with no source-specific prefix) can also match a wrapped
   // continuation line in an unrelated column, minting a phantom record that steals that line from
-  // its real row. Restricting anchors to one column band closes that off at the source.
+  // its real row. Restricting anchors to one column band closes that off at the source. The index is
+  // shared across layouts: a flip reorders neither `columns` nor `column_pos`.
   anchor_column?: number;
-  // Extra reach before the first sorted anchor coordinate. Opt in only when a known final record
-  // wraps beyond the default half-gap, and bound it below the source's page footer.
-  before_first_anchor_reach?: number;
-  // Optional allowlist for items in the extra reach. It keeps a known final continuation without
-  // admitting nearby footer/disclaimer text that starts in the same coordinate band.
-  before_first_anchor_pattern?: string;
 }
+
+// Per-page options after the orientation is resolved — the selected layout flattened onto the
+// document-level settings, which is the shape the page walker reads.
+type ResolvedPdfOptions = PdfLayoutOptions & Omit<ParsePdfOptions, 'layouts'>;
 
 interface PdfItem {
   str: string;
@@ -341,6 +365,16 @@ const outerSpread = (sortedCoords: number[]): number => {
   return min / 2;
 };
 
+// Maps a coordinate to its field index, considering only bands this orientation prints. A null band
+// is skipped entirely so nothing snaps into it and the surrounding indexes keep their meaning.
+const bandIndexer = (columnPos: (number | null)[]): ((coord: number) => number) => {
+  const bands = columnPos
+    .map((pos, index) => ({ pos, index }))
+    .filter((b): b is { pos: number; index: number } => b.pos !== null);
+  const positions = bands.map((b) => b.pos);
+  return (coord: number): number => bands[nearestIndex(positions, coord)].index;
+};
+
 const pushTo = (m: Map<number, PdfItem[]>, key: number, it: PdfItem): void => {
   const arr = m.get(key);
   if (arr) arr.push(it);
@@ -352,7 +386,7 @@ const pushTo = (m: Map<number, PdfItem[]>, key: number, it: PdfItem): void => {
 // with "\n" so line-slicing transforms (first/last line) can recover structure.
 const buildPdfRow = (
   cells: Map<number, PdfItem[]>,
-  options: ParsePdfOptions,
+  options: ResolvedPdfOptions,
   recordAxis: 'x' | 'y'
 ): Row => {
   const dir = recordAxis === 'x' ? 1 : -1;
@@ -369,20 +403,94 @@ const buildPdfRow = (
 const toPdfItems = (raw: { str: string; x: number; y: number }[]): PdfItem[] =>
   raw.filter((i) => i.str.trim().length > 0).map((i) => ({ str: i.str, x: i.x, y: i.y }));
 
+// A gap must exceed the column's typical line leading by this much to read as a row boundary rather
+// than the next line of the same cell. 1.5x sits well above the jitter between a cell's own lines
+// (a few tenths of a point) and well below a real row break, which adds the shorter cell's unused
+// remainder to the leading and in practice runs 3x or more.
+const ROW_BREAK_GAP_RATIO = 1.5;
+
+const medianOf = (sorted: number[]): number => {
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+// Split coordinate between each adjacent anchor pair, computed per field column. Snapping an item
+// to its nearest anchor assumes every record's cells sit symmetrically around that record's anchor,
+// which a tall multi-line cell breaks: CAA Maldives prints two mortgagees (8 lines) against one
+// aircraft whose neighbours print one line each, so that cell overflows its own row band and its
+// first and last lines fall past the anchor midpoint — stolen by the records above and below,
+// recording a company registry number as the next aircraft's lien holder.
+//
+// The boundary is the outlier gap in that one column between those two anchors: a gap inside a cell
+// is line leading, so a gap materially larger than the column's median is where one record's cell
+// ends and the next begins. Judging it per column and per anchor pair keeps that local — a tall
+// cell's leading elsewhere on the page never enters the comparison.
+//
+// Falls back to the anchor midpoint (exactly what nearest-anchor snapping produced) whenever no gap
+// stands out, which is the common case: where cells abut with uniform leading there is no boundary
+// signal in the geometry at all, and the largest gap is then just the widest line spacing — taking
+// it would steal the neighbour's first line, the same defect in the other direction.
+const splitBetween = (coords: number[], lo: number, hi: number): number => {
+  const seq = [lo, ...coords.filter((c) => c > lo && c < hi), hi];
+  const gaps = seq.slice(1).map((c, i) => c - seq[i]);
+  // Under three gaps there is no leading to compare against — one cell's lines cannot be told from
+  // a row break, so position is the only available answer.
+  const median = gaps.length >= 3 ? medianOf([...gaps].sort((a, b) => a - b)) : Infinity;
+  let bestSplit = (lo + hi) / 2;
+  let bestGap = median * ROW_BREAK_GAP_RATIO;
+  gaps.forEach((gap, i) => {
+    if (gap > bestGap) {
+      bestGap = gap;
+      bestSplit = (seq[i] + seq[i + 1]) / 2;
+    }
+  });
+  return bestSplit;
+};
+
+const columnBoundaries = (
+  items: { rc: number; fi: number }[],
+  anchorCoords: number[]
+): Map<number, number[]> => {
+  const byField = new Map<number, number[]>();
+  for (const { rc, fi } of items) {
+    const arr = byField.get(fi);
+    if (arr) arr.push(rc);
+    else byField.set(fi, [rc]);
+  }
+  const boundaries = new Map<number, number[]>();
+  for (const [fi, coords] of byField) {
+    coords.sort((a, b) => a - b);
+    boundaries.set(
+      fi,
+      anchorCoords.slice(1).map((hi, k) => splitBetween(coords, anchorCoords[k], hi))
+    );
+  }
+  return boundaries;
+};
+
+// Record index for an item, from its column's split coordinates. Boundaries ascend with the sorted
+// anchors, so the count of boundaries at or below the item is its record.
+const recordIndex = (perPair: number[] | undefined, anchorCoords: number[], rc: number): number => {
+  if (perPair === undefined) return nearestIndex(anchorCoords, rc);
+  let i = 0;
+  while (i < perPair.length && rc >= perPair[i]) i++;
+  return i;
+};
+
 const parsePdfPage = (
   page: PdfItem[],
-  options: ParsePdfOptions,
+  options: ResolvedPdfOptions,
   anchorRe: RegExp,
   beforeFirstAnchorRe: RegExp | undefined
 ): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
+  const fieldIndexAt = bandIndexer(options.column_pos);
   const anchors = page
     .filter((it) => anchorRe.test(it.str.trim()))
     .filter(
       (it) =>
         options.anchor_column === undefined ||
-        nearestIndex(options.column_pos, axisCoord(it, options.field_axis)) ===
-          options.anchor_column
+        fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column
     )
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   if (anchors.length === 0) return [];
@@ -406,9 +514,13 @@ const parsePdfPage = (
       : Math.max(safeSpread, options.before_first_anchor_reach);
   const lo = anchorCoords[0] - beforeFirstAnchorReach;
   // anchors is non-empty (guarded above), so first/last coords are defined.
-  const hi = anchorCoords.at(-1)! + spread;
+  const hi =
+    anchorCoords.at(-1)! +
+    (options.after_last_anchor_reach === undefined
+      ? spread
+      : Math.max(safeSpread, options.after_last_anchor_reach));
 
-  const buckets = anchors.map(() => new Map<number, PdfItem[]>());
+  const inRange: { it: PdfItem; rc: number; fi: number }[] = [];
   for (const it of page) {
     const rc = axisCoord(it, recordAxis);
     if (rc < lo || rc > hi) continue;
@@ -418,15 +530,133 @@ const parsePdfPage = (
     // whose renderer splits a multi-word alternative across items mid-line would need a pattern
     // matching each fragment, not just the whole phrase.
     if (rc < defaultLo && beforeFirstAnchorRe && !beforeFirstAnchorRe.test(it.str.trim())) continue;
-    const ri = nearestIndex(anchorCoords, rc);
-    const fi = nearestIndex(options.column_pos, axisCoord(it, options.field_axis));
-    pushTo(buckets[ri], fi, it);
+    inRange.push({ it, rc, fi: fieldIndexAt(axisCoord(it, options.field_axis)) });
+  }
+
+  const boundaries = columnBoundaries(inRange, anchorCoords);
+  const buckets = anchors.map(() => new Map<number, PdfItem[]>());
+  for (const { it, rc, fi } of inRange) {
+    pushTo(buckets[recordIndex(boundaries.get(fi), anchorCoords, rc)], fi, it);
   }
   return buckets.map((cells) => buildPdfRow(cells, options, recordAxis));
 };
 
 // Reconstructs a positioned-coordinate PDF table into Row[]. Items are snapped to a field by nearest
 // `column_pos` and to a record by nearest anchor along the perpendicular axis. See `PdfConfig`.
+// An orientation is only called when one axis dominates the other by this much. Records spread
+// across the page along the record axis while every anchor shares one field-axis band, so the true
+// ratio is two orders of magnitude (CAA Maldives: 434pt against 3.8pt). A page whose anchors spread
+// comparably on both axes is not a coordinate table this parser can read, and guessing an axis there
+// yields a full set of structurally valid, silently scrambled rows.
+const ORIENTATION_RATIO = 8;
+
+const spanOf = (values: number[]): number => Math.max(...values) - Math.min(...values);
+
+// The axis records run along, read off the anchors themselves rather than declared. Detected per
+// page so a document that mixes orientations is caught instead of being read on one page's axis;
+// pages with a single anchor carry no spread and abstain.
+const detectRecordAxis = (anchors: PdfItem[]): 'x' | 'y' | undefined => {
+  if (anchors.length < 2) return undefined;
+  const xSpan = spanOf(anchors.map((a) => a.x));
+  const ySpan = spanOf(anchors.map((a) => a.y));
+  if (xSpan > ySpan * ORIENTATION_RATIO) return 'x';
+  if (ySpan > xSpan * ORIENTATION_RATIO) return 'y';
+  return undefined;
+};
+
+// Axes detected across the document when read through one candidate layout. The anchor-band filter
+// is applied here, not only in the page walk: a generic `anchor_pattern` also matches text in other
+// columns (hr-ccaa's `^[A-Z]{3}$` hits a `PZO` owner continuation), and an off-column match drags
+// the spans on both axes — enough to abstain, or to read the wrong axis, before the real anchor
+// filter ever runs. The band depends on the layout's own `column_pos`, so each candidate is judged
+// through its own geometry.
+interface LayoutCandidate {
+  layout: PdfLayoutOptions;
+  axes: Set<'x' | 'y'>;
+  anchors: number;
+}
+
+const evaluateLayout = (
+  pages: PdfItem[][],
+  layout: PdfLayoutOptions,
+  anchorColumn: number | undefined,
+  anchorRe: RegExp
+): LayoutCandidate => {
+  const fieldIndexAt = bandIndexer(layout.column_pos);
+  const perPage = pages.map((page) =>
+    page
+      .filter((it) => anchorRe.test(it.str.trim()))
+      .filter(
+        (it) =>
+          anchorColumn === undefined ||
+          fieldIndexAt(axisCoord(it, layout.field_axis)) === anchorColumn
+      )
+  );
+  return {
+    layout,
+    axes: new Set(
+      perPage.map(detectRecordAxis).filter((axis): axis is 'x' | 'y' => axis !== undefined)
+    ),
+    anchors: perPage.reduce((total, page) => total + page.length, 0),
+  };
+};
+
+const resolveLayout = (
+  options: ParsePdfOptions,
+  pages: PdfItem[][],
+  anchorRe: RegExp
+): ResolvedPdfOptions => {
+  const { layouts, ...shared } = options;
+  const candidates = layouts.map((layout) =>
+    evaluateLayout(pages, layout, options.anchor_column, anchorRe)
+  );
+  // A layout fits when the axis seen through its own bands is the one perpendicular to its fields.
+  // More than one can fit: a mismatched layout's bands still admit a handful of coincidental
+  // matches, and two of those can spread convincingly along one axis. The right layout is the one
+  // that captures the register's marks rather than a few strays, so the anchor count decides.
+  const fitting = candidates
+    .filter((c) => c.axes.size === 1 && !c.axes.has(c.layout.field_axis))
+    .sort((a, b) => b.anchors - a.anchors);
+  if (fitting.length > 1 && fitting[0].anchors === fitting[1].anchors)
+    throw new Error(
+      `PDF fits ${fitting.length} declared layouts equally (${fitting[0].anchors} anchors each) — ` +
+        'the column bands do not separate the orientations; re-measure them against the live file'
+    );
+  if (fitting.length > 0) return { ...shared, ...fitting[0].layout };
+  const mixed = candidates.find((c) => c.axes.size > 1);
+  if (mixed)
+    throw new Error(
+      `PDF mixes record orientations across pages (${[...mixed.axes].sort((a, b) => a.localeCompare(b)).join(', ')}) — ` +
+        'one document is expected to be uniform'
+    );
+
+  // Nothing fits. Filtering through a mismatched layout's bands discards that layout's anchors
+  // wholesale, which is indistinguishable from having none — so fall back to unfiltered matches to
+  // tell a flip apart from real drift. Diagnostic only; selection above stays band-filtered.
+  const rawAxes = new Set(
+    pages
+      .map((page) => detectRecordAxis(page.filter((it) => anchorRe.test(it.str.trim()))))
+      .filter((axis): axis is 'x' | 'y' => axis !== undefined)
+  );
+  // No page offers a reading: the marks drifted out of the anchor format, or the document is down to
+  // one record per page. Neither is an orientation question, and both hit the anchorless-page budget
+  // or the zero-row guard moments later with a far more precise diagnosis — so defer to those rather
+  // than pre-empting them with an orientation error. Such a document cannot parse into a usable
+  // fleet under either axis, which is why picking the first layout here costs nothing.
+  if (rawAxes.size === 0) return { ...shared, ...layouts[0] };
+  if (rawAxes.size > 1)
+    throw new Error(
+      `PDF mixes record orientations across pages (${[...rawAxes].sort((a, b) => a.localeCompare(b)).join(', ')}) — ` +
+        'one document is expected to be uniform'
+    );
+  const [recordAxis] = [...rawAxes];
+  throw new Error(
+    `PDF records run along ${recordAxis}, needing a field_axis: ${recordAxis === 'x' ? 'y' : 'x'} ` +
+      `layout, but only ${layouts.map((l) => l.field_axis).join(', ')} declared — the register ` +
+      'flipped orientation; measure the new layout against the live file and declare it'
+  );
+};
+
 export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<Row[]> {
   // unpdf ships canvas/DOM-typed declarations our tsconfig cannot resolve (masked by skipLibCheck),
   // so its exports surface as untyped at this call boundary. The runtime values are correct; cast
@@ -437,15 +667,18 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
+  const pages = items.map(toPdfItems);
+  // Before the page walk: the layout decides which axis every page is read on, and a register that
+  // flipped must fail here rather than per page, where the failure reads as template drift.
+  const resolved = resolveLayout(options, pages, anchorRe);
   // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const beforeFirstAnchorRe = options.before_first_anchor_pattern
-    ? new RegExp(options.before_first_anchor_pattern)
+  const beforeFirstAnchorRe = resolved.before_first_anchor_pattern
+    ? new RegExp(resolved.before_first_anchor_pattern)
     : undefined;
   const rows: Row[] = [];
   const anchorlessPages: number[] = [];
-  for (const [i, pageItems] of items.entries()) {
-    const page = toPdfItems(pageItems);
+  for (const [i, page] of pages.entries()) {
     // A page with no text at all carries no records to lose. A page WITH text but zero anchor
     // matches either is a known cover/preface page or means the template or mark format drifted
     // on that page — a drifted page's whole slice of the fleet would vanish while the >0-records
@@ -455,7 +688,7 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
     // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
     // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
     if (page.length === 0) continue;
-    const pageRows = parsePdfPage(page, options, anchorRe, beforeFirstAnchorRe);
+    const pageRows = parsePdfPage(page, resolved, anchorRe, beforeFirstAnchorRe);
     if (pageRows.length === 0) anchorlessPages.push(i + 1);
     else rows.push(...pageRows);
   }

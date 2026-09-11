@@ -755,6 +755,33 @@ describe('main', () => {
     expect(mockDownload.mock.calls).toHaveLength(yamlCount);
   });
 
+  // A paused source leaves the scheduled fan-out entirely — its upstream is unreachable, so running
+  // it only produces a daily failure. Feed assembly still receives it via resolveAllSources().
+  it('excludes a paused source from the scheduled fan-out', async () => {
+    const ids = readdirSync('sources')
+      .filter((f) => f.endsWith('.yaml'))
+      .map((f) => f.replace(/\.yaml$/, ''));
+    const parked = ids[0];
+    mockLoadSourceConfig.mockImplementation((path: string) =>
+      path.includes(`${parked}.yaml`) ? { ...CONFIG, paused: true } : CONFIG
+    );
+
+    await main();
+
+    expect(mockDownload.mock.calls).toHaveLength(ids.length - 1);
+  });
+
+  // An explicit REFRESH_SOURCE overrides the pause, which is how a restored upstream is tested
+  // without editing the YAML.
+  it('still runs a paused source when REFRESH_SOURCE names it', async () => {
+    process.env['REFRESH_SOURCE'] = 'lt-tka';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, paused: true });
+
+    await main();
+
+    expect(mockDownload.mock.calls).toHaveLength(1);
+  });
+
   // Escalation makes an overdue source run instead of skip, and a silent register is often silent
   // because its download broke — so a rejected run must still report a staleness reading.
   it('still opens a staleness issue when the run itself fails', async () => {

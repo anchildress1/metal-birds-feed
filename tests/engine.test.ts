@@ -2571,49 +2571,106 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
     mvRecords = result.records;
   });
 
-  it('maps all 137 register rows with no failures', () => {
-    expect(mvRecords.size).toBe(137);
+  it('maps all 97 register rows with no failures', () => {
+    expect(mvRecords.size).toBe(97);
   });
 
-  it('keys records on the certificate number, not the reissued mark', () => {
-    expect(mvRecords.has('CR-121')).toBe(true);
-    expect(mvRecords.get('CR-121')!.registration).toBe('8Q-OEQ');
+  // CAA reuses a CR-xxx across two registrations when an airframe is re-marked, so the certificate
+  // number is no longer unique within a publication; the registration S/N is.
+  it('keys records on the registration S/N, not the reused certificate number', () => {
+    expect(mvRecords.get('21')!.registration).toBe('8Q-OEQ');
+    expect(mvRecords.get('199')!.registration).toBe('8Q-TAI');
+    expect(mvRecords.get('218')!.registration).toBe('8Q-RAL');
   });
 
-  describe('CR-337 — ATR 42-500, registrant + foreign lessor', () => {
+  it('keeps both registrations sharing certificate CR-292 rather than colliding on it', () => {
+    const shared = [...mvRecords.values()].filter((r) => r.serial_number === '45');
+    expect(shared.map((r) => r.registration).sort()).toEqual(['8Q-RAL', '8Q-TAI']);
+  });
+
+  describe('243 — 8Q-TBC, registrant + foreign lessor + two mortgagees', () => {
     let r: Aircraft;
     beforeAll(() => {
-      r = mvRecords.get('CR-337')!;
+      r = mvRecords.get('243')!;
     });
 
     it('maps the combined manufacturer/model cell to model', () =>
-      expect(r.model).toBe('Avions de Transport Regional, ATR 42-500'));
+      expect(r.model).toBe('Viking Air (De Havilland) DHC-6-300'));
     it('maps the registrant to owner with constant MV country', () => {
-      expect(r.owner.name).toBe('Island Aviation Services Limited');
+      expect(r.owner.name).toBe('Trans Maldivian Airways Pvt. Ltd.');
       expect(r.owner.country).toBe('MV');
     });
     it('maps the legal owner (lessor) to legal_owner', () =>
-      expect(r.legal_owner.name).toBe('Abelo Capital FL 1 Limited'));
+      expect(r.legal_owner.name).toBe('DHC6 Invest ApS'));
     it('leaves the operator slot null (registrant is the operator)', () =>
       expect(r.operator).toEqual({ name: null, kind: null, state: null, country: null }));
     it('parses the D-MMM-YY dates', () => {
-      expect(r.certification_date).toBe('2025-06-02');
+      expect(r.certification_date).toBe('2023-11-30');
       expect(r.last_action_date).toBe('2025-06-15');
     });
     it('maps MTOW and year as numbers', () => {
-      expect(r.max_takeoff_weight_kg).toBe(18600);
-      expect(r.year_manufactured).toBe(2025);
+      expect(r.max_takeoff_weight_kg).toBe(5670);
+      expect(r.year_manufactured).toBe(1978);
     });
-    it('keeps the IDERA authorised-party name and drops its address (PII)', () => {
-      expect(r.idera_authorised_party).toBe('Export Development Canada');
-      expect(r.idera_authorised_party).not.toContain('Slater Street');
+    it('takes the first mortgagee name and drops the address block (PII)', () => {
+      expect(r.lien_status).toBe('LEN-Promotion ApS');
+      expect(r.lien_status).not.toContain('Vedbaek Strandvej');
     });
+    it('leaves idera null — the column is absent from this layout', () =>
+      expect(r.idera_authorised_party).toBeNull());
     it('drops owner/legal-owner address PII (no street/postal keys)', () =>
       expect(Object.keys(r)).not.toContain('owner_street'));
   });
 
-  it('marks the current-fleet register as valid', () =>
-    expect([...mvRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+  // "N/A" is CAA declining to state a status on the superseded half of a re-marked airframe, not a
+  // status of its own — it resolves to null so the row stays in the artifact but out of the feed.
+  it('resolves the N/A status to null rather than coercing it to other', () => {
+    expect(mvRecords.get('199')!.status).toBeNull();
+    expect(mvRecords.get('218')!.status).toBe('valid');
+  });
+
+  it('marks every other record in the current-fleet register as valid', () => {
+    const statuses = new Set([...mvRecords.values()].map((r) => r.status));
+    expect(statuses).toEqual(new Set(['valid', null]));
+  });
+
+  // The same config, no orientation branch: CAA flips this table and the parser detects which axis a
+  // file uses. Both fixtures are real publications, so this is the ground truth that a flip is a
+  // no-op end to end — not just in the parser.
+  describe('rotated publication, same config', () => {
+    const MV_ROTATED_PDF = resolve(
+      import.meta.dirname,
+      '..',
+      'fixtures',
+      'mv-caa',
+      'input',
+      'register-rotated.pdf'
+    );
+    let rotated: Map<string, Aircraft>;
+    beforeAll(async () => {
+      const result = await mapRows(
+        loadSourceConfig(MV_CONFIG),
+        new Map([['register', readFileSync(MV_ROTATED_PDF)]])
+      );
+      rotated = result.records;
+    });
+
+    it('maps all 137 rows of the rotated publication with no failures', () =>
+      expect(rotated.size).toBe(137));
+
+    it('keys on the same registration S/N across orientations', () =>
+      expect(rotated.get('21')!.registration).toBe('8Q-OEQ'));
+
+    // The rotated layout prints an IDERA column the unrotated one omits; the null band keeps the
+    // shared column order intact, so the mapping picks it up whenever CAA prints it.
+    it('recovers the IDERA authorised party and drops its address (PII)', () => {
+      const withIdera = [...rotated.values()].filter((r) => r.idera_authorised_party !== null);
+      expect(withIdera.length).toBeGreaterThan(0);
+      expect(
+        withIdera.every((r) => !/Street|Avenue|P\.?O\.? Box/i.test(r.idera_authorised_party!))
+      ).toBe(true);
+    });
+  });
 });
 
 describe('AESA Spain fixture mapping (PDF)', () => {
@@ -3487,6 +3544,61 @@ describe('engine — merge_duplicates edge cases', () => {
     const { records, stats } = await mapRows(config, new Map([['register', buf]]));
     expect(stats.failed).toBe(1);
     expect(records.get('1')!.operational_classes).toEqual(['private']);
+  });
+
+  // Opt-in only, for a register that contradicts itself with nothing to arbitrate the difference.
+  // Without the flag the same rows fail, which the sibling tests above pin.
+  describe('duplicate_conflict: last-wins', () => {
+    const clashConfig = (opt?: 'last-wins'): SourceConfig => ({
+      id: 'synthetic-last-wins',
+      label: 'Synthetic unresolvable duplicate',
+      country: 'CL',
+      language: 'en',
+      encoding: 'utf8',
+      duplicate_conflict: opt,
+      download: { url: 'https://example.com/x.ods', format: 'zip', entries: { register: 'r.ods' } },
+      primary: 'register',
+      delimiter: ',',
+      trim_all: true,
+      format: 'ods',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { constant: 'valid' },
+        country: { constant: 'CL' },
+        model: { field: 'MODEL', transform: 'trim_or_null' },
+      },
+    });
+    const clashRows = (): Promise<Buffer> =>
+      odsBuffer([
+        ['ID', 'REG', 'MODEL'],
+        ['1', 'CC-AAA', 'MBB-BK117 A-4'],
+        ['1', 'CC-AAA', 'MBB-BK117 D-2'],
+      ]);
+
+    it('keeps the later row instead of failing the run', async () => {
+      const { records, stats } = await mapRows(
+        clashConfig('last-wins'),
+        new Map([['register', await clashRows()]])
+      );
+      expect(stats.failed).toBe(0);
+      expect(records.get('1')!.model).toBe('MBB-BK117 D-2');
+    });
+
+    it('does not count the dropped row as a duplicate skip', async () => {
+      const { stats } = await mapRows(
+        clashConfig('last-wins'),
+        new Map([['register', await clashRows()]])
+      );
+      expect(stats.duplicateSkipped).toBe(0);
+    });
+
+    it('still fails the run when the flag is absent', async () => {
+      const { stats } = await mapRows(clashConfig(), new Map([['register', await clashRows()]]));
+      expect(stats.failed).toBe(1);
+    });
   });
 
   // A non-string merge field is a misconfiguration: merge can only concatenate strings, so the row

@@ -28,65 +28,102 @@ primary: register
 delimiter: ','
 format: pdf
 
-# A 90°-rotated table: each aircraft is one x-column, each field a y-band. `column_pos` are the
-# value-band y-centers (paired by index with `columns`), ordered top-of-page (highest y) down;
-# records are anchored on the 8Q-XXX nationality mark. The register alternates between this layout
-# and an unrotated one — it was rotated before 2026-07-13, unrotated until 2026-08-17, and is
-# rotated again now. The field order is identical either way, so a flip only moves the axis and the
-# band centers; re-derive both from the live PDF rather than reviving an older block, since the
-# centers shift too. The repeated row-label column needs no handling here: it sits a half-slot
-# outside the record range, which is exactly what the parser's outer-spread reach drops.
+# CAA alternates this table between two orientations and has flipped four times since 2026-07:
+# rotated before 2026-07-13, unrotated until 2026-08-17, rotated again until 2026-09-03, unrotated
+# since. Both are declared and the parser detects which one a file is in from the anchors, so a flip
+# is a no-op here. The field ORDER survives a flip; the axis and every band position do not, so each
+# layout carries its own measured `column_pos` — never derive one from the other.
 # See PdfConfig in src/types/config.ts for the extraction model.
 pdf:
-  field_axis: y
   anchor_pattern: '^8Q-[A-Z]{3}$'
-  column_pos:
-    - 746 # status
-    - 713.1 # date_revision
-    - 685.8 # date_issue
-    - 616.1 # idera
-    - 551.8 # mortgage
-    - 467.8 # other_specifics
-    # Empty on every record in this publication. The position still has to exist, or the next
-    # column's band becomes the nearest one and absorbs anything CAA starts printing here.
-    - 420 # basis
-    # Parsed but deliberately unmapped. CAA prints its own column header, "Operator of Aircraft",
-    # into this cell on 9 of 137 records and leaves it empty on the rest — a template artifact, not
-    # an operator. Naming the column is what keeps that string out of `basis`, whose band is its
-    # nearest neighbour; mapping it to operator.name would record the header as a party name.
-    - 383.8 # operator (unmapped)
-    - 299.8 # legal_owner
-    - 217.9 # owner (registered)
-    - 205.6 # year
-    - 183 # serial
-    - 156.9 # mtow
-    - 87.6 # mfg
-    - 66.2 # mark
-    - 40.6 # cert_no
-    - 28.9 # sn
+  # PDF sources cannot use record_count, so nothing else would catch a phantom record minted by an
+  # 8Q mark printed inside a free-text party cell; restricting anchors to the mark column closes
+  # that off rather than relying on CAA never quoting a mark in an address.
+  anchor_field: mark
+  layouts:
+    # Unrotated: each aircraft is one y-band, each field an x-column, ordered left-to-right. Values
+    # are left-aligned, so these are left edges rather than centers. This orientation prints no
+    # operator/basis/other-specifics/IDERA cell at any x — hence the null bands.
+    - field_axis: x
+      # The top record on a page carries its owner/legal-owner block up to 12.84pt above its mark,
+      # but pages closing with a tight run of 25.5pt rows leave a default reach of only 12.75 —
+      # clipping that record's first line and promoting its street address to the party name.
+      # Measured across all eight pages the window is [12.84, 15.24): 14 clears every record's
+      # tallest cell and still stops short of the column headers, at +15.24 on the tightest page.
+      after_last_anchor_reach: 14
+      column_pos:
+        - 31.5 # sn
+        - 50.4 # cert_no
+        - 87.0 # mark
+        - 118.0 # mfg
+        - 219.2 # mtow
+        - 259.0 # serial
+        - 289.0 # year
+        - 306.4 # owner (registered)
+        - 424.7 # legal_owner
+        - ~ # operator — not printed in this orientation
+        - ~ # basis — not printed in this orientation
+        - ~ # other_specifics — not printed in this orientation
+        - 546.1 # mortgage
+        - ~ # idera — not printed in this orientation
+        - 647.0 # date_issue
+        - 687.0 # date_revision
+        - 736.0 # status
+    # Rotated 90°: each aircraft is one x-column, each field a y-band, ordered bottom-of-page up so
+    # the index order matches the unrotated layout above. The repeated row-label column needs no
+    # handling: it sits a half-slot outside the record range, which the outer-spread reach drops.
+    - field_axis: y
+      column_pos:
+        - 28.9 # sn
+        - 40.6 # cert_no
+        - 66.2 # mark
+        - 87.6 # mfg
+        - 156.9 # mtow
+        - 183 # serial
+        - 205.6 # year
+        - 217.9 # owner (registered)
+        - 299.8 # legal_owner
+        # CAA prints its own column header, "Operator of Aircraft", into this cell on 9 of 137
+        # records and leaves it empty on the rest — a template artifact, not an operator. Naming the
+        # column is what keeps that string out of `basis`, its nearest neighbour; mapping it to
+        # operator.name would record the header as a party name.
+        - 383.8 # operator (parsed, deliberately unmapped)
+        - 420 # basis
+        - 467.8 # other_specifics
+        - 551.8 # mortgage
+        - 616.1 # idera
+        - 685.8 # date_issue
+        - 713.1 # date_revision
+        - 746 # status
 
+# Shared by both layouts — a flip reorders nothing. Fields the unrotated orientation omits keep their
+# slot (null band above) so one order serves both and the mappings below need no orientation branch.
 columns:
   register:
-    - status
-    - date_revision
-    - date_issue
-    - idera
-    - mortgage
-    - other_specifics
-    - basis
-    - operator
-    - legal_owner
-    - owner
-    - year
-    - serial
-    - mtow
-    - mfg
-    - mark
-    - cert_no
     - sn
+    - cert_no
+    - mark
+    - mfg
+    - mtow
+    - serial
+    - year
+    - owner
+    - legal_owner
+    - operator
+    - basis
+    - other_specifics
+    - mortgage
+    - idera
+    - date_issue
+    - date_revision
+    - status
 
-# Certificate number (CR-xxx) is the permanent per-registration key; the 8Q mark is reissued.
-source_id: cert_no
+# Registration S/N, not the certificate number: CAA reuses a CR-xxx across two registrations when an
+# airframe is re-marked (CR-292 covers both 8Q-TAI and 8Q-RAL), so it is no longer unique within a
+# publication. `sn` is unique in every published snapshot and stable per registration across them
+# (identical on all 96 marks common to the 2026-08 and 2026-09 publications), which the mark is not
+# — 8Q marks are reissued.
+source_id: sn
 source_id_transform: trim_or_null
 registration: mark
 
@@ -102,15 +139,19 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # Current-fleet register: every listed aircraft is "Valid". No default — an unexpected status
-  # (upstream change or a parser mis-snap) fails the run loudly instead of silently becoming "other".
-  # An empty cell resolves to null (status is nullable) and is excluded from the served feed, same
-  # as cancelled/reserved — never silently coerced to "other".
+  # Current-fleet register: every listed aircraft is "Valid" bar the superseded half of a re-marked
+  # airframe, where CAA writes "N/A" — the register declining to state a status, not a status of its
+  # own, so it resolves to null and the row is excluded from the served feed. No default — an
+  # unexpected status (upstream change or a parser mis-snap) fails the run loudly instead of
+  # silently becoming "other".
+  # Enumerated rather than null_values: the column holds exactly these two codes, so a lookup can
+  # cover it, and `status` resolves before null_values would ever be consulted.
   status:
     field: status
     transform: trim
     lookup:
       Valid: valid
+      'N/A': ~
 
   country:
     constant: MV
@@ -215,7 +256,9 @@ mapping:
     constant: ~
 
   # IDERA cell holds a letter ref, the authorised-party name, then its postal address. Only the
-  # party name is kept; the address block is PII and dropped at this boundary.
+  # party name is kept; the address block is PII and dropped at this boundary. The unrotated
+  # orientation prints no IDERA column, so the cell is absent there and this resolves to null —
+  # no orientation branch needed.
   idera_authorised_party:
     field: idera
     transform: mv_idera_party
