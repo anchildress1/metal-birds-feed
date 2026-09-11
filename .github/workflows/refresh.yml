@@ -60,12 +60,23 @@ jobs:
             exit 1
           fi
           if [ -n "$src" ]; then
+            # A named dispatch is an explicit recovery probe and runs even when paused — that is how
+            # a restored upstream is tested without editing the YAML.
             sources=$(jq -c -n --arg s "$src" '[$s]')
           else
-            sources=$(find sources -maxdepth 1 -name '*.yaml' -type f -print0 \
-              | xargs -0 -n1 basename \
-              | sed 's/\.yaml$//' \
-              | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            # Paused sources are excluded from the fleet enumeration, not from the pipeline: every
+            # matrix job exports its own REFRESH_SOURCE, which the pipeline reads as a named run, so
+            # a paused source filtered only in resolveSources() would still be pulled here daily.
+            for f in sources/*.yaml; do
+              if grep -qE '^paused:[[:space:]]*true[[:space:]]*$' "$f"; then
+                echo "Skipping paused source: $(basename "$f" .yaml)"
+              fi
+            done
+            sources=$(for f in sources/*.yaml; do
+                if ! grep -qE '^paused:[[:space:]]*true[[:space:]]*$' "$f"; then
+                  basename "$f" .yaml
+                fi
+              done | jq -R -s -c 'split("\n") | map(select(length > 0))')
           fi
           echo "sources=$sources" >> "$GITHUB_OUTPUT"
           echo "Resolved sources: $sources"
