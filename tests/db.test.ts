@@ -15,6 +15,7 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   model: '172',
   serial_number: null,
   year_manufactured: null,
+  year_manufactured_range: null,
   airframe_type: null,
   category: null,
   build_certification: null,
@@ -68,6 +69,7 @@ const populated: Aircraft = {
   model: 'L 33 SÓLO',
   serial_number: '960404',
   year_manufactured: 1996,
+  year_manufactured_range: null,
   airframe_type: 'glider',
   category: 'standard',
   build_certification: 'type-certificated',
@@ -260,7 +262,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(12);
+    expect(version.user_version).toBe(13);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -283,6 +285,7 @@ describe('buildSqlite', () => {
       'model',
       'serial_number',
       'year_manufactured',
+      'year_manufactured_range',
       'airframe_type',
       'category',
       'build_certification',
@@ -329,7 +332,7 @@ describe('buildSqlite', () => {
       'interdiction_code',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(12);
+    expect(version.user_version).toBe(13);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -349,7 +352,7 @@ describe('buildSqlite', () => {
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(12);
+    expect(version.user_version).toBe(13);
   });
 });
 

@@ -1248,3 +1248,19 @@ describe('hu_kh_party_kind', () => {
   );
   it('returns null for an empty cell', () => expect(run('')).toBeNull());
 });
+
+describe('hu_kh_year_range_or_null', () => {
+  const run = (v: string): string | null => applyScalar('hu_kh_year_range_or_null', v);
+
+  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58'])(
+    'keeps the published span %p verbatim',
+    (value) => expect(run(value)).toBe(value)
+  );
+  it('tolerates the trailing dot the register adds to some year cells', () =>
+    expect(run('1957/58.')).toBe('1957/58.'));
+  it.each(['2016', '2019.', '', 'n/a'])('returns null for %p, which is not a span', (value) =>
+    expect(run(value)).toBeNull()
+  );
+  it('returns null for a date that happens to contain a slash', () =>
+    expect(run('2016/05/31')).toBeNull());
+});

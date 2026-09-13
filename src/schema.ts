@@ -145,6 +145,9 @@ export const AircraftSchema = z.object({
   model: z.string().nullable(),
   serial_number: z.string().nullable(),
   year_manufactured: z.number().int().nonnegative().nullable(),
+  // Verbatim where a register states a span rather than a single year ("1957/58", "1959-61").
+  // year_manufactured cannot hold one and nulls, so without this the published year is lost.
+  year_manufactured_range: z.string().nullable(),
   airframe_type: AirframeTypeSchema.nullable(),
   category: AircraftCategorySchema.nullable(),
   build_certification: BuildCertificationSchema.nullable(),

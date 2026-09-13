@@ -112,10 +112,15 @@ mapping:
     field: serial
     transform: collapse_ws_or_null
 
-  # A build spanning two years ("1957/58", "1959-61") nulls rather than taking either end.
   year_manufactured:
     field: year
     transform: int_or_null
+
+  # A build the register states as a span ("1957/58", "1959-61") nulls year_manufactured, so it is
+  # kept verbatim here rather than lost or narrowed to one end of the range.
+  year_manufactured_range:
+    field: year
+    transform: hu_kh_year_range_or_null
 
   airframe_type:
     constant: ~

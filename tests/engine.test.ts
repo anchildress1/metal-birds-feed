@@ -4169,9 +4169,9 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
   });
 
   // The one skip is the HA-MEI self-contradiction below, not a parse failure.
-  it('maps all 150 fixture rows, skipping only the duplicated mark', () => {
-    expect(huStats).toEqual({ total: 150, ok: 149, failed: 0, skipped: 1, duplicateSkipped: 1 });
-    expect(huRecords.size).toBe(149);
+  it('maps all 168 fixture rows, skipping only the duplicated mark', () => {
+    expect(huStats).toEqual({ total: 168, ok: 167, failed: 0, skipped: 1, duplicateSkipped: 1 });
+    expect(huRecords.size).toBe(167);
   });
 
   it('keys records on the mark and stamps source/country/status', () => {
@@ -4217,6 +4217,20 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.get('HA-MEI')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.certification_date).toBe('2026-07-13');
+  });
+
+  // year_manufactured is an integer and cannot hold "1957/58"; without the range column the only
+  // manufacture-year information the register publishes for that row would be dropped.
+  it('keeps a published year span that year_manufactured cannot hold', () => {
+    const r = huRecords.get('HA-4210')!;
+    expect(r.year_manufactured).toBeNull();
+    expect(r.year_manufactured_range).toBe('1957/58');
+  });
+
+  it('leaves the range null where the register states a single year', () => {
+    const r = huRecords.get('HA-GZQ')!;
+    expect(r.year_manufactured).toBe(2022);
+    expect(r.year_manufactured_range).toBeNull();
   });
 
   it('joins a wrapped type cell into one model and leaves manufacturer null', () => {

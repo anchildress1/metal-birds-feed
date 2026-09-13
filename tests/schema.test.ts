@@ -13,6 +13,7 @@ const base: Aircraft = {
   model: '172',
   serial_number: '12345',
   year_manufactured: 1979,
+  year_manufactured_range: null,
   airframe_type: 'fixed-wing-single-engine',
   category: 'standard',
   build_certification: 'type-certificated',

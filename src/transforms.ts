@@ -802,6 +802,14 @@ const noOwnerKind = (value: string): string | null => {
   return primary.country === NO_DOMESTIC_COUNTRY ? 'individual' : null;
 };
 
+// The manufacture-year cell verbatim when the register states a span ("1957/58", "1959-61") instead
+// of one year, which `int_or_null` nulls. A single year returns null — it is already in
+// year_manufactured, and repeating it here would make the column ambiguous.
+const huKhYearRangeOrNull = (value: string): string | null => {
+  const v = value.trim();
+  return /^\d{4} ?[/-] ?\d{2,4}\.?$/.test(v) ? v : null;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -862,6 +870,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   hu_kh_registration: huKhRegistration,
   hu_kh_date_or_null: huKhDateOrNull,
   hu_kh_party_kind: huKhPartyKind,
+  hu_kh_year_range_or_null: huKhYearRangeOrNull,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

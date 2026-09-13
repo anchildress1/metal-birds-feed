@@ -17,6 +17,7 @@ const make = (id: string, hex: string): Aircraft =>
     model: '172',
     serial_number: null,
     year_manufactured: null,
+    year_manufactured_range: null,
     airframe_type: null,
     category: null,
     build_certification: null,

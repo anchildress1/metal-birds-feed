@@ -9,7 +9,7 @@ import type { Aircraft, Engine, Owner } from './schema.js';
 // unrelated upstream data changes. Salting the hash rather than versioning the state envelope
 // keeps record_count/upstream_hash intact through the migration run, so the retain-ratio guard and
 // staleness tracking keep working off the real prior values instead of an invalidated null state.
-export const DB_SCHEMA_VERSION = 12;
+export const DB_SCHEMA_VERSION = 13;
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
@@ -60,6 +60,7 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   model: r.model,
   serial_number: r.serial_number,
   year_manufactured: r.year_manufactured,
+  year_manufactured_range: r.year_manufactured_range,
   airframe_type: r.airframe_type,
   category: r.category,
   build_certification: r.build_certification,
@@ -121,6 +122,7 @@ const DDL = `CREATE TABLE aircraft (
   model TEXT,
   serial_number TEXT,
   year_manufactured INTEGER,
+  year_manufactured_range TEXT,
   airframe_type TEXT,
   category TEXT,
   build_certification TEXT,
@@ -197,6 +199,8 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // 12 makes status nullable, dropping the engine's blanket `?? 'other'` fallback for a blank or
     // unresolved cell; a version-11-or-earlier consumer would read every row as carrying a concrete
     // status and must not assume that here.
+    // 13 adds year_manufactured_range for a register that publishes a span ("1957/58") the integer
+    // year column cannot hold.
     db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
