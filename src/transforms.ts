@@ -402,12 +402,13 @@ const huKhDateOrNull = (value: string): string | null => {
   const m = /^(\d{2}|\d{4})\.(\d{2})\.(\d{2})\.?$/.exec(value.trim());
   if (!m) return null;
   const yy = Number(m[1]);
-  const year = m[1].length === 4 ? m[1] : String(yy < 50 ? 2000 + yy : 1900 + yy);
+  const century = yy < 50 ? 2000 : 1900;
+  const year = m[1].length === 4 ? m[1] : String(century + yy);
   return validateAndFormatYMD(year, m[2], m[3]);
 };
 
-// Kind from the legal-form token the register prints, surveyed across a live publication. Kft. is Hungary's LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its
-// partnerships; a share split (";", "50%", "( 1/3)") is how it prints co-ownership. Associations are
+// Kind from the legal-form token the register prints, surveyed across a live publication. Kft. is
+// Hungary's LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its partnerships; a share split (";", "50%", "( 1/3)") is how it prints co-ownership. Associations are
 // matched first: a club can carry a word that otherwise reads as a state body ("HONVÉD REPÜLŐKLUB").
 //
 // An unmatched cell stays null, never `individual`: ~400 rows are bare personal names, but so are
@@ -416,7 +417,8 @@ const huKhDateOrNull = (value: string): string | null => {
 const huKhPartyKind = (value: string): string | null => {
   const s = value.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!s) return null;
-  if (s.includes(';') || /\d+\s*%/.test(s) || /\(\s*\d+\s*\/\s*\d+\s*\)/.test(s)) return 'co-owner';
+  if (s.includes(';') || /\d{1,3} ?%/.test(s) || /\( ?\d{1,3} ?\/ ?\d{1,3} ?\)/.test(s))
+    return 'co-owner';
   if (/egyesület|egyesulet|\bklub\b|\bclub\b|szövetkezet|alapítvány|egyéni cég/.test(s))
     return 'other';
   if (/magyar állam|minisztérium|rendőr|önkormányzat|katasztrófavédelm|honvédség/.test(s))
