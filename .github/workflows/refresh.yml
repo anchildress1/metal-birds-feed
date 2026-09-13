@@ -52,7 +52,7 @@ jobs:
           # whitespace-only input would clear the guard here and then fall back to every source.
           # Source ids never contain whitespace, so dropping all of it is safe.
           src="$(printf '%s' "${INPUT_SOURCE:-}" | tr -d '[:space:]')"
-          # Refuse a fleet-wide cadence bypass: it would pull all 18 registers at once against the
+          # Refuse a fleet-wide cadence bypass: it would pull every register at once against the
           # shared Gemini quota group and the 30-minute job timeout.
           force="${INPUT_FORCE:-false}"
           if [ "$force" = "true" ] && [ -z "$src" ]; then

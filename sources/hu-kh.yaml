@@ -4,7 +4,7 @@ country: HU
 language: hu
 encoding: utf8
 trim_all: true
-# No declared cadence; version 321 by 2026-09-11 against a 2020-08-14 creation is roughly weekly.
+# No declared cadence; the observed republish rhythm is near-weekly (evidence in DATA_LICENSES.md).
 cadence_days: 7
 
 download:
@@ -170,7 +170,7 @@ mapping:
   owner.country:
     constant: ~
 
-  # Real data, not a mirror: the operator differs from the owner on 587 of 1252 rows.
+  # Real data, not a mirror: the operator names a different party than the owner on ~half the rows.
   operator.name:
     field: operator
     transform: collapse_ws_or_null
