@@ -4260,8 +4260,15 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.get('HA-BJF')!.owner.kind).toBe('corporation');
     expect(huRecords.get('HA-MHW')!.owner.kind).toBe('partnership');
     expect(huRecords.get('HA-AAE')!.owner.kind).toBe('other');
-    expect(huRecords.get('HA-GZP')!.owner.kind).toBe('co-owner');
+    // HA-TVA keeps its ";" separator through masking; HA-NSB carries a share against each party.
+    expect(huRecords.get('HA-TVA')!.owner.kind).toBe('co-owner');
+    expect(huRecords.get('HA-NSB')!.owner.kind).toBe('co-owner');
   });
+
+  // Sanitizing this cell dropped the ";" that joins its two owners, leaving one fractional share and
+  // no separator — which is exactly the single-party shape that must not read as co-ownership.
+  it('does not read co-ownership out of a lone fractional share', () =>
+    expect(huRecords.get('HA-GZP')!.owner.kind).toBeNull());
 
   it('leaves a party the register names without a legal form unclassified', () => {
     const r = huRecords.get('HA-GYZ')!;
@@ -4297,4 +4304,16 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
 
   it('publishes no ICAO hex — the register prints none', () =>
     expect([...huRecords.values()].every((r) => r.icao_hex === null)).toBe(true));
+
+  // The fixture only renders zero or one space around the hyphen, so the `\s*` the config declares
+  // is not exercised by the rows above. The mark prints as independently positioned glyph runs, so
+  // a wider render is the same failure mode already observed — and an unmatched anchor drops the
+  // row from the fleet with nothing failing, since a PDF source has no record_count.
+  it('anchors a mark however many spaces the glyph runs put around the hyphen', () => {
+    const anchor = new RegExp(loadSourceConfig(HU_CONFIG).pdf!.anchor_pattern);
+    for (const mark of ['HA-GZQ', 'HA- GZQ', 'HA -GZQ', 'HA  -  GZQ', 'HA-YFKA', 'HA - 742'])
+      expect(anchor.test(mark)).toBe(true);
+    for (const mark of ['HA-GZ', 'HA-GZABC', '9A-BTI', 'GZQ'])
+      expect(anchor.test(mark)).toBe(false);
+  });
 });

@@ -419,10 +419,14 @@ const huKhDateOrNull = (value: string): string | null => {
 const huKhPartyKind = (value: string): string | null => {
   const s = value.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!s) return null;
-  // A single share token is part of one party's own name ("100% Aviation Kft."); co-ownership shows
-  // up as a separator between parties, or as a share against each of them.
-  const shares = (s.match(/\d{1,3} ?%|\( ?\d{1,3} ?\/ ?\d{1,3} ?\)/g) ?? []).length;
-  if (s.includes(';') || shares > 1 || (shares === 1 && s.includes('/'))) return 'co-owner';
+  // A single share token is part of one party's own name ("100% Aviation Kft.", "Nagy András
+  // (1/3)"); co-ownership shows up as a separator between parties, or as a share against each of
+  // them. The separator test runs on the cell with its share tokens removed — a fractional share
+  // carries its own slash, which would otherwise read as the separator.
+  const shareToken = /\d{1,3} ?%|\( ?\d{1,3} ?\/ ?\d{1,3} ?\)/g;
+  const shares = (s.match(shareToken) ?? []).length;
+  if (s.includes(';') || shares > 1 || (shares === 1 && s.replace(shareToken, '').includes('/')))
+    return 'co-owner';
   if (/egyesület|egyesulet|\bklub\b|\bclub\b|szövetkezet|alapítvány|egyéni cég/.test(s))
     return 'other';
   if (/\bkft\b|kft\.|d\.o\.o|\bllc\b/.test(s)) return 'llc';
@@ -817,9 +821,10 @@ const huKhYearRangeOrNull = (value: string): string | null => {
   const m = /^(\d{4}) ?[/-] ?(\d{1,4})\.?$/.exec(v);
   if (!m) return null;
   // A two-digit tail that reads as a month and does not continue the year is a truncated date
-  // ("2016-05"), not a span — "1959-61" is the same shape and 61 is neither.
+  // ("2016-05"), not a span — "1959-61" is the same shape and 61 is neither. `00` is no month
+  // either, and it is how a century-crossing span is written ("1999/00").
   const tail = Number(m[2]);
-  if (m[2].length === 2 && tail <= 12 && tail <= Number(m[1].slice(2))) return null;
+  if (m[2].length === 2 && tail >= 1 && tail <= 12 && tail <= Number(m[1].slice(2))) return null;
   return v;
 };
 
