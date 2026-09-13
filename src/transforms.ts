@@ -430,11 +430,11 @@ const huKhPartyKind = (value: string): string | null => {
   if (/egyesület|egyesulet|\bklub\b|\bclub\b|szövetkezet|alapítvány|egyéni cég/.test(s))
     return 'other';
   if (/\bkft\b|kft\.|d\.o\.o|\bllc\b/.test(s)) return 'llc';
-  if (/\bbt\.|\bkkt\b/.test(s)) return 'partnership';
-  // `rt.` needs a letter-aware boundary: JS \b counts an accented letter as a word break, so \brt\.
-  // also fires inside "Ért." and classified "Ker. és Ért. Bt." as a corporation.
+  // Every abbreviation takes a letter-aware boundary, not \b: JS counts an accented letter as a word
+  // break, so \brt\. fired inside "Ért." and read "Ker. és Ért. Bt." as a corporation.
+  if (/(?<!\p{L})(bt\.|kkt\b)/u.test(s)) return 'partnership';
   if (
-    /\bzrt|\bnyrt|(^|[^\p{L}])rt\.|\bltd\b|limited|gmbh|\binc\b|\bplc\b|a\.s\.|s\.r\.o|designated activity/u.test(
+    /(?<!\p{L})(zrt|nyrt|rt\.|ltd\b|inc\b|plc\b|a\.s\.|s\.r\.o)|limited|gmbh|designated activity/u.test(
       s
     )
   )
@@ -816,17 +816,14 @@ const noOwnerKind = (value: string): string | null => {
 // The manufacture-year cell verbatim when the register states a span ("1957/58", "1959-61") instead
 // of one year, which `int_or_null` nulls. A single year returns null — it is already in
 // year_manufactured, and repeating it here would make the column ambiguous.
-const huKhYearRangeOrNull = (value: string): string | null => {
-  const v = value.trim();
-  const m = /^(\d{4}) ?[/-] ?(\d{1,4})\.?$/.exec(v);
-  if (!m) return null;
-  // A two-digit tail that reads as a month and does not continue the year is a truncated date
-  // ("2016-05"), not a span — "1959-61" is the same shape and 61 is neither. `00` is no month
-  // either, and it is how a century-crossing span is written ("1999/00").
-  const tail = Number(m[2]);
-  if (m[2].length === 2 && tail >= 1 && tail <= 12 && tail <= Number(m[1].slice(2))) return null;
-  return v;
-};
+//
+// No attempt is made to tell a span from a truncated date ("2016-05"). An earlier revision rejected
+// a tail that read as a month, which dropped "1999/00" and "1999/05" — real century-crossing spans
+// whose only manufacture-year information the register publishes there. Any rule sharp enough to
+// catch a date also cuts a span, the register has never printed a date in this column, and the
+// column's contract is what the year cell says when it is not a single year.
+const huKhYearRangeOrNull = (value: string): string | null =>
+  /^\d{4} ?[/-] ?\d{1,4}\.?$/.test(value.trim()) ? value.trim() : null;
 
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,

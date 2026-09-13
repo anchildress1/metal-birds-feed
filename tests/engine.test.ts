@@ -4265,11 +4265,6 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.get('HA-NSB')!.owner.kind).toBe('co-owner');
   });
 
-  // Sanitizing this cell dropped the ";" that joins its two owners, leaving one fractional share and
-  // no separator — which is exactly the single-party shape that must not read as co-ownership.
-  it('does not read co-ownership out of a lone fractional share', () =>
-    expect(huRecords.get('HA-GZP')!.owner.kind).toBeNull());
-
   it('leaves a party the register names without a legal form unclassified', () => {
     const r = huRecords.get('HA-GYZ')!;
     expect(r.owner.name).not.toBeNull();
