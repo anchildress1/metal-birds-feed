@@ -9,9 +9,15 @@ cadence_days: 7
 
 download:
   # Liferay builds this path from the document's ORIGINAL name, so the 2026-02-25 slug is not a
-  # publication date and does not roll — it serves whatever version is current. No discover_* needed.
+  # publication date: it serves whatever version is current, and `url` alone fetches the right file
+  # today. discovery re-reads the document page anyway, because the one failure this cannot survive
+  # is silent: were the authority to re-upload the register as a NEW document, this path would keep
+  # answering 200 with the superseded PDF, content_hash would report "unchanged", and nothing would
+  # fail until the staleness threshold. `url` stays as the schema-required fallback.
   url: https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-?download=true
   format: file
+  discover_url: https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604
+  discover_pattern: 'href="(https://kozlekedesihatosag\.kormany\.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/[^"]+\?download=true)"'
   entries:
     register: register.pdf
 
@@ -22,14 +28,16 @@ format: pdf
 # A3 landscape table, bilingual (HU/EN) header repeated per page, no cover page.
 #
 # The mark prints as separately positioned glyph runs, so the anchor pattern must tolerate the stray
-# internal spaces the extractor sees ("HA- GZQ", "HA -MEI", "HA - 742"). The suffix is 3 or 4
+# internal spaces the extractor sees ("HA- GZQ", "HA -MEI", "HA - 742") — `\s*`, not `\s?`, because
+# a run rendered with two spaces would otherwise match no anchor at all, and a PDF source has no
+# record_count to notice the row going missing. The suffix is 3 or 4
 # characters: HA-YFKA sits in the same publication as HA-YFK, so `{3}` would truncate real rows into
 # phantom duplicates.
 #
 # Only the unrotated orientation has been observed; measure the bands against a real file in the
 # other one before adding a second layout.
 pdf:
-  anchor_pattern: '^HA\s?-\s?[A-Z0-9]{3,4}$'
+  anchor_pattern: '^HA\s*-\s*[A-Z0-9]{3,4}$'
   anchor_field: mark
   layouts:
     - field_axis: x

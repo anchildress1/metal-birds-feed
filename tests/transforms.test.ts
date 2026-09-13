@@ -1242,6 +1242,16 @@ describe('hu_kh_party_kind', () => {
     expect(run('KOVÁCS JÁNOS E.V.')).toBe('individual'));
   it('classifies a wrapped (newline-joined) cell by its still-intact form token', () =>
     expect(run('KER-SZER\nMÉRNÖKIRODA KFT.')).toBe('llc'));
+  // JS \b treats an accented letter as a word break, so a bare \brt\. also fires inside "Ért.".
+  it('does not read the rt. corporate suffix out of an accented word', () =>
+    expect(run('KER. ÉS ÉRT. BT.')).toBe('partnership'));
+  // Identity words are tested after the legal forms: a municipally owned Kft. is still an LLC.
+  it('classifies a municipally owned company by its legal form, not its owner', () =>
+    expect(run('ÖNKORMÁNYZATI SZOLGÁLTATÓ KFT.')).toBe('llc'));
+  it('does not read co-ownership out of a share figure inside a single party name', () =>
+    expect(run('100% AVIATION KFT.')).toBe('llc'));
+  it('classifies a numbered list of shareholders as co-owner without a separator', () =>
+    expect(run('1. NAGY ANDRÁS (50%) 2. KIS BÉLA (50%)')).toBe('co-owner'));
   it.each(['HRUBOS ATTILA RAJMUND', 'BANK OF UTAH', 'MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI MÚZEUM'])(
     'leaves %p unclassified rather than guessing individual',
     (value) => expect(run(value)).toBeNull()
@@ -1252,7 +1262,7 @@ describe('hu_kh_party_kind', () => {
 describe('hu_kh_year_range_or_null', () => {
   const run = (v: string): string | null => applyScalar('hu_kh_year_range_or_null', v);
 
-  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58'])(
+  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58', '1957/8'])(
     'keeps the published span %p verbatim',
     (value) => expect(run(value)).toBe(value)
   );
@@ -1263,4 +1273,8 @@ describe('hu_kh_year_range_or_null', () => {
   );
   it('returns null for a date that happens to contain a slash', () =>
     expect(run('2016/05/31')).toBeNull());
+  // "2016-05" is the same shape as the "1959-61" span; only the tail separates them — 05 reads as a
+  // month and does not continue 2016, 61 does neither.
+  it('returns null for a truncated year-month rather than storing it as a span', () =>
+    expect(run('2016-05')).toBeNull());
 });
