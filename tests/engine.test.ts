@@ -4154,3 +4154,142 @@ describe('TKA Lithuania fixture mapping', () => {
     ).toBe(true);
   });
 });
+
+describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
+  const HU_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hu-kh.yaml');
+  const HU_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hu-kh', 'input', 'register.pdf');
+  let huRecords: Map<string, Aircraft>;
+  let huStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(HU_CONFIG);
+    const result = await mapRows(config, new Map([['register', readFileSync(HU_PDF)]]));
+    huRecords = result.records;
+    huStats = result.stats;
+  });
+
+  // Seven real pages, 150 rows. The one skip is the HA-MEI self-contradiction below, not a parse
+  // failure — every row the authority printed is read.
+  it('maps all 150 fixture rows, skipping only the duplicated mark', () => {
+    expect(huStats).toEqual({ total: 150, ok: 149, failed: 0, skipped: 1, duplicateSkipped: 1 });
+    expect(huRecords.size).toBe(149);
+  });
+
+  it('keys records on the mark and stamps source/country/status', () => {
+    const r = huRecords.get('HA-GZQ')!;
+    expect(r.source).toBe('hu-kh');
+    expect(r.source_id).toBe('HA-GZQ');
+    expect(r.registration).toBe('HA-GZQ');
+    expect(r.country).toBe('HU');
+    expect(r.status).toBe('valid');
+  });
+
+  // The mark prints as separately positioned glyph runs, so the extractor sees "HA- GZQ" here and
+  // "HA -MEI" three pages later. Both have to key on the same shape as an unspaced "HA-GZA".
+  it('strips the stray spaces the mark column prints, in both the key and the registration', () => {
+    for (const mark of ['HA-GZQ', 'HA-MEI', 'HA-GZA']) {
+      expect(huRecords.get(mark)!.source_id).toBe(mark);
+      expect(huRecords.get(mark)!.registration).toBe(mark);
+    }
+  });
+
+  // HA-YFK and HA-YFKA are two different aircraft in the same publication: a 3-character pattern
+  // would truncate the longer one onto the shorter one's key.
+  it('keeps a 4-character mark suffix distinct from its 3-character neighbour', () => {
+    expect(huRecords.get('HA-YRAB')!.registration).toBe('HA-YRAB');
+    expect(huRecords.get('HA-2336')!.registration).toBe('HA-2336');
+  });
+
+  // The register contradicts itself: HA-MEI is printed once as a 1980-registered AN-2 R whose ARC
+  // lapsed in 2010 and once as a 2017-registered AN-2 TD with a current one. No `duplicate_conflict`
+  // is declared — the mapped dates are a real recency signal and the newer row wins on them.
+  it('resolves the register’s own duplicated mark on the newer registration date', () => {
+    const r = huRecords.get('HA-MEI')!;
+    expect(r.certification_date).toBe('2017-06-01');
+    expect(r.model).toBe('ANTONOV AN-2 TD');
+    expect(r.owner.name).toBe('FLY-COOP KFT.');
+  });
+
+  it('maps the three date columns onto their canonical fields', () => {
+    const r = huRecords.get('HA-GZQ')!;
+    expect(r.certification_date).toBe('2022-09-16');
+    expect(r.airworthiness_date).toBe('2026-02-03');
+    expect(r.airworthiness_review_date).toBe('2027-02-03');
+  });
+
+  // "202.05.26" and "T010.11.02" are typos the authority prints in the ARC columns.
+  it('nulls a malformed date instead of coercing it into a plausible one', () => {
+    expect(huRecords.get('HA-MEI')!.airworthiness_date).toBeNull();
+    expect(huRecords.get('HA-MJS')!.airworthiness_date).toBeNull();
+    expect(huRecords.get('HA-MJS')!.certification_date).toBe('2026-07-13');
+  });
+
+  it('joins a wrapped type cell into one model and leaves manufacturer null', () => {
+    const r = huRecords.get('HA-GZA')!;
+    expect(r.model).toBe('SKYCRUISER SC- 200');
+    expect(r.manufacturer).toBeNull();
+  });
+
+  // Cells are centred on their row, so the outermost record of a page reaches past the default
+  // half-gap reach at both ends. Without the declared reaches HA-MKG's operator loses its first line
+  // ("RSZ-COOP", top of its page) and HA-HML's owner loses its last ("KFT.", bottom of its own) —
+  // the party name silently truncated, which is what the measured reaches exist to prevent.
+  it('keeps an outermost record’s wrapped party name whole at both ends of a page', () => {
+    expect(huRecords.get('HA-MKG')!.operator.name).toBe(
+      'RSZ-COOP LÉGISZOLGÁLTATÓ ÉS KERESKEDELMI KFT.'
+    );
+    expect(huRecords.get('HA-HML')!.owner.name).toBe(
+      'HM ZRÍNYI GEOINFORMÁCIÓS ÉS TOBORZÁSTÁMOGATÓ KÖZHASZNÚ NONPROFIT KFT.'
+    );
+  });
+
+  it('never pulls the page footer into the last record of a page', () => {
+    const all = JSON.stringify([...huRecords.values()]);
+    expect(all).not.toMatch(/Méret|Frissítési dátum/);
+  });
+
+  it('classifies party kinds from the legal form the register prints', () => {
+    expect(huRecords.get('HA-GYV')!.owner.kind).toBe('llc');
+    expect(huRecords.get('HA-BJF')!.owner.kind).toBe('corporation');
+    expect(huRecords.get('HA-MHW')!.owner.kind).toBe('partnership');
+    expect(huRecords.get('HA-AAE')!.owner.kind).toBe('other');
+    expect(huRecords.get('HA-GZP')!.owner.kind).toBe('co-owner');
+  });
+
+  it('leaves a party the register names without a legal form unclassified', () => {
+    const r = huRecords.get('HA-GYZ')!;
+    expect(r.owner.name).not.toBeNull();
+    expect(r.owner.kind).toBeNull();
+  });
+
+  it('publishes the operator as its own party, not a mirror of the owner', () => {
+    const r = huRecords.get('HA-GYJ')!;
+    expect(r.owner.name).toBe('BLA-SO MEZŐGAZDASÁGI KFT.');
+    expect(r.operator.name).toBe('AUTOGYRO KFT.');
+    expect(r.operator.kind).toBe('llc');
+  });
+
+  // Both address columns are street/postal detail, dropped at the boundary. Nothing downstream can
+  // reach a country out of them either — this register states it inconsistently and mid-string.
+  it('drops both address columns and leaves every party state/country null', () => {
+    for (const r of huRecords.values()) {
+      for (const party of [r.owner, r.operator, r.legal_owner]) {
+        expect(party.state).toBeNull();
+        expect(party.country).toBeNull();
+      }
+    }
+    const all = JSON.stringify([...huRecords.values()]);
+    expect(all).not.toMatch(/HRSZ|BUDAPEST|\bUTCA\b/i);
+  });
+
+  it('publishes no legal owner (the register has no such column)', () => {
+    const nullParty = { name: null, kind: null, state: null, country: null };
+    for (const r of huRecords.values()) expect(r.legal_owner).toEqual(nullParty);
+  });
+
+  it('marks the current-publication register as valid throughout', () =>
+    expect([...huRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+
+  it('publishes no ICAO hex — the register prints none', () =>
+    expect([...huRecords.values()].every((r) => r.icao_hex === null)).toBe(true));
+});

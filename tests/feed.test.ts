@@ -66,8 +66,8 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
 });
 
 describe('toFeedRows', () => {
-  // Ten of sixteen registers publish no Mode S address. Dropping them here is what made
-  // /feed/registration unable to reach ~60k of 418k records — the endpoint's whole purpose.
+  // Twelve of eighteen registers publish no Mode S address. Dropping them here is what made
+  // /feed/registration unable to reach ~50k of 412k records — the endpoint's whole purpose.
   it('keeps a record without an icao_hex, reachable by its mark', () => {
     const rows = toFeedRows([make('1', 'a1b2c3'), make('2', null)]);
     expect(rows).toHaveLength(2);

@@ -57,6 +57,9 @@ export const SCALAR_TRANSFORMS = [
   'hr_ccaa_owner_country',
   'hr_ccaa_owner_kind',
   'hr_ccaa_build_certification',
+  'hu_kh_registration',
+  'hu_kh_date_or_null',
+  'hu_kh_party_kind',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;

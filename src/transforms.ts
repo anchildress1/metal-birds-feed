@@ -385,6 +385,66 @@ const hrCcaaOwnerKind = (value: string): string | null => {
 const hrCcaaBuildCertification = (value: string): string | null =>
   value.toLowerCase().includes('amatersk') ? 'not-type-certificated' : null;
 
+// Hungary's Lajstromjel column renders the mark with the prefix and suffix as separately positioned
+// glyph runs, so the extracted string carries stray internal spaces that vary per row ("HA- GZQ",
+// "HA -MEI", "HA - 742" and "HA-GZA" all appear in one publication). Stripping every space is what
+// makes the mark usable as source_id: left as printed, the same aircraft keys differently across
+// publications the moment the renderer shifts a glyph run. The suffix is 3 or 4 characters — gliders
+// and balloons carry a 4-character one (HA-YFKA next to HA-YFK) — and anything else nulls, failing
+// the row loudly rather than publishing a malformed registration.
+const huKhRegistration = (value: string): string | null => {
+  const v = value.replace(/\s+/g, '').toUpperCase();
+  return /^HA-[A-Z0-9]{3,4}$/.test(v) ? v : null;
+};
+
+// Hungarian dates print year-first, dot-separated, with an optional trailing dot ("2022.09.16",
+// "2026.02.03."). A two-digit year is the same format abbreviated ("25.01.17." is 2025-01-17, read
+// against the ARC issue/expiry pair on its own row), pivoted at 50 like the Maldives D-MMM-YY style.
+// The live register also prints typos and non-dates in these columns — "202.05.26", "2024.0713",
+// "T010.11.02", "VÉGRH-IG", "-" — which all null rather than being coerced into a plausible date.
+const huKhDateOrNull = (value: string): string | null => {
+  const m = /^(\d{2}|\d{4})\.(\d{2})\.(\d{2})\.?$/.exec(value.trim());
+  if (!m) return null;
+  const yy = Number(m[1]);
+  const year = m[1].length === 4 ? m[1] : String(yy < 50 ? 2000 + yy : 1900 + yy);
+  return validateAndFormatYMD(year, m[2], m[3]);
+};
+
+// Classifies an owner/operator cell into the schema's kind enum from the legal-form token the
+// register itself prints, surveyed across all 1252 rows of a live publication. Kft. is Hungary's
+// LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its partnerships; d.o.o., Ltd, GmbH, Inc,
+// a.s., s.r.o. and Irish "designated activity company" cover the foreign lessors. A share split
+// (";", "50%", "( 1/3)") is the register's way of printing co-ownership. Clubs, associations,
+// cooperatives, foundations and "egyéni cég" are checked first, since a club can carry a word that
+// otherwise reads as a state body ("HONVÉD REPÜLŐKLUB" is an association, not the defence ministry).
+//
+// An unmatched cell stays null, never `individual`: ~400 rows are bare personal names, but so are
+// organisations the register names without any legal form ("BANK OF UTAH / Not in its individual
+// capacity but solely as owner trustee", "MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI MÚZEUM"), and nothing in the
+// cell separates the two. Same reasoning as Norway's orgnr-less foreign party — absence of a form
+// token proves nothing. Null reads as unknown; `other` would assert the register named a form this
+// mapping recognized and rejected.
+const huKhPartyKind = (value: string): string | null => {
+  const s = value.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!s) return null;
+  if (s.includes(';') || /\d+\s*%/.test(s) || /\(\s*\d+\s*\/\s*\d+\s*\)/.test(s)) return 'co-owner';
+  if (/egyesület|egyesulet|\bklub\b|\bclub\b|szövetkezet|alapítvány|egyéni cég/.test(s))
+    return 'other';
+  if (/magyar állam|minisztérium|rendőr|önkormányzat|katasztrófavédelm|honvédség/.test(s))
+    return 'government';
+  if (/\bkft\b|kft\.|d\.o\.o|\bllc\b/.test(s)) return 'llc';
+  if (
+    /\bzrt|\bnyrt|\brt\.|\bltd\b|limited|gmbh|\binc\b|\bplc\b|a\.s\.|s\.r\.o|designated activity/.test(
+      s
+    )
+  )
+    return 'corporation';
+  if (/\bbt\.|\bkkt\b/.test(s)) return 'partnership';
+  // Egyéni vállalkozó — a registered sole trader, i.e. a natural person trading under their own name.
+  if (/\be\.\s?v\.\s?$|\be\.\s?v\.\s/.test(s)) return 'individual';
+  return null;
+};
+
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
 // unpowered (glider). RPA is the register's own class for a remotely piloted aircraft and carries
 // no structural digit, so it maps to `uav` rather than being dropped — nulling it left nothing in
@@ -808,6 +868,9 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   hr_ccaa_owner_country: hrCcaaOwnerCountry,
   hr_ccaa_owner_kind: hrCcaaOwnerKind,
   hr_ccaa_build_certification: hrCcaaBuildCertification,
+  hu_kh_registration: huKhRegistration,
+  hu_kh_date_or_null: huKhDateOrNull,
+  hu_kh_party_kind: huKhPartyKind,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

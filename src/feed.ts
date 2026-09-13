@@ -52,7 +52,7 @@ const resolveCandidates = (candidates: Aircraft[]): Aircraft | null => {
 };
 
 // Per-source slice: one row per aircraft, collapsed on icao_hex where the register publishes one
-// and on the normalized mark where it does not. Ten of sixteen registers publish no Mode S
+// and on the normalized mark where it does not. Twelve of eighteen registers publish no Mode S
 // address, so keying the whole slice on hex silently excluded them from the feed entirely.
 export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   const byHex = new Map<string, Aircraft[]>();
