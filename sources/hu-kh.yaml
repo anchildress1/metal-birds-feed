@@ -1,0 +1,248 @@
+id: hu-kh
+label: Közlekedési Hatóság Magyarország Légijármű Lajstroma
+country: HU
+language: hu
+encoding: utf8
+trim_all: true
+# No declared cadence; the observed republish rhythm is near-weekly (evidence in DATA_LICENSES.md).
+cadence_days: 7
+
+download:
+  # Liferay builds this path from the document's ORIGINAL name, so the 2026-02-25 slug is not a
+  # publication date and does not roll — it serves whatever version is current. No discover_* needed.
+  url: https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-?download=true
+  format: file
+  entries:
+    register: register.pdf
+
+primary: register
+delimiter: ','
+format: pdf
+
+# A3 landscape table, bilingual (HU/EN) header repeated per page, no cover page.
+#
+# The mark prints as separately positioned glyph runs, so the anchor pattern must tolerate the stray
+# internal spaces the extractor sees ("HA- GZQ", "HA -MEI", "HA - 742"). The suffix is 3 or 4
+# characters: HA-YFKA sits in the same publication as HA-YFK, so `{3}` would truncate real rows into
+# phantom duplicates.
+#
+# Only the unrotated orientation has been observed; measure the bands against a real file in the
+# other one before adding a second layout.
+pdf:
+  anchor_pattern: '^HA\s?-\s?[A-Z0-9]{3,4}$'
+  anchor_field: mark
+  layouts:
+    - field_axis: x
+      # Cells centre on their row, so a multi-line one reaches both above and below its own mark.
+      # The tightest mark-to-mark gap is 18.84pt, and that default 9.42pt reach clips a wrapped party
+      # name on a page's outermost record. Measured against the live file: mapped columns reach 12pt
+      # below the bottom mark and 11.88pt above the top one, the page footer 39.8pt below and the
+      # column header 28.92pt above. Only an owner-address line (29.67pt above, dropped as PII)
+      # falls outside 20pt.
+      before_first_anchor_reach: 20
+      # The reach already stops short of the footer; the pattern names it so a publication that moves
+      # it up cannot feed it into the last record.
+      before_first_anchor_pattern: '^(?!Méret:|Frissítési dátum|\d+/\d+$).'
+      after_last_anchor_reach: 20
+      # Values are centred, so each band is the centre of that column's observed x spread. `year` is
+      # declared left of its own ink (278.5–287.1): the wide owner column beside it (336.5–469.8)
+      # would otherwise pull the midpoint between the two bands inside the owner's spread.
+      column_pos:
+        - 83 # mark
+        - 143 # type
+        - 212 # serial
+        - 260 # year
+        - 403 # owner
+        - 558 # owner_addr (PII — read only so the column cannot swallow its neighbours)
+        - 711 # operator
+        - 822 # operator_addr (PII — same)
+        - 916 # reg_date
+        - 990 # arc_expiry
+        - 1068 # arc_issue
+
+columns:
+  register:
+    - mark
+    - type
+    - serial
+    - year
+    - owner
+    - owner_addr
+    - operator
+    - operator_addr
+    - reg_date
+    - arc_expiry
+    - arc_issue
+
+# No certificate number or sequence column is published, so the mark is the only key available. It
+# is unique bar one self-contradiction: HA-MEI is printed as both a 1980 and a 2017 registration,
+# which resolves on the newer certification_date rather than needing `duplicate_conflict`.
+source_id: mark
+source_id_transform: hu_kh_registration
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: hu_kh_registration
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # No per-row status column; the publication IS the current active fleet.
+  status:
+    constant: valid
+
+  country:
+    constant: HU
+
+  # "Légijármű típusa" holds a bare model ("MTO SPORT") or maker and model together ("ANTONOV AN-2
+  # TD"), with no maker list published to split them on — so it maps whole to `model`.
+  manufacturer:
+    constant: ~
+
+  model:
+    field: type
+    transform: collapse_ws_or_null
+
+  serial_number:
+    field: serial
+    transform: collapse_ws_or_null
+
+  year_manufactured:
+    field: year
+    transform: int_or_null
+
+  # A build the register states as a span ("1957/58", "1959-61") nulls year_manufactured, so it is
+  # kept verbatim here rather than lost or narrowed to one end of the range.
+  year_manufactured_range:
+    field: year
+    transform: hu_kh_year_range_or_null
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    field: owner
+    transform: collapse_ws_or_null
+
+  owner.kind:
+    field: owner
+    transform: hu_kh_party_kind
+
+  # Both address columns are street/postal detail, dropped as PII with nothing read out of them. The
+  # country appears as a leading postal prefix ("A-2353 GUNTRANSDORF"), mid-string ("…, RO 505600"),
+  # or not at all — never as a trailing component, so reading one would mean guessing.
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  # A party in its own right: the operator column often names someone other than the owner.
+  operator.name:
+    field: operator
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    field: operator
+    transform: hu_kh_party_kind
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: reg_date
+    transform: hu_kh_date_or_null
+
+  airworthiness_date:
+    field: arc_issue
+    transform: hu_kh_date_or_null
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    field: arc_expiry
+    transform: hu_kh_date_or_null
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

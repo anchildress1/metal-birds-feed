@@ -50,6 +50,7 @@ const make = (id: string, overrides: Partial<Aircraft> = {}): Aircraft => ({
   model: null,
   serial_number: null,
   year_manufactured: null,
+  year_manufactured_range: null,
   airframe_type: null,
   category: null,
   build_certification: null,

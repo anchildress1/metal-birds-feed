@@ -385,6 +385,57 @@ const hrCcaaOwnerKind = (value: string): string | null => {
 const hrCcaaBuildCertification = (value: string): string | null =>
   value.toLowerCase().includes('amatersk') ? 'not-type-certificated' : null;
 
+// The Lajstromjel column renders prefix and suffix as separate glyph runs, so one publication
+// carries "HA- GZQ", "HA -MEI", "HA - 742" and "HA-GZA": left as printed, the same aircraft keys
+// differently the moment the renderer shifts a run. The suffix is 3 or 4 characters (HA-YFKA sits
+// next to HA-YFK); anything else nulls, failing the row rather than publishing a malformed mark.
+const huKhRegistration = (value: string): string | null => {
+  const v = value.replace(/\s+/g, '').toUpperCase();
+  return /^HA-[A-Z0-9]{3,4}$/.test(v) ? v : null;
+};
+
+// Year-first and dot-separated, with an optional trailing dot ("2026.02.03."). A two-digit year is
+// the same format abbreviated ("25.01.17." is 2025-01-17, read against its row's ARC pair), pivoted
+// at 50. The register also prints typos and non-dates in these columns — "202.05.26", "T010.11.02",
+// "VÉGRH-IG" — which null rather than being coerced into a plausible date.
+const huKhDateOrNull = (value: string): string | null => {
+  const m = /^(\d{2}|\d{4})\.(\d{2})\.(\d{2})\.?$/.exec(value.trim());
+  if (!m) return null;
+  const yy = Number(m[1]);
+  const century = yy < 50 ? 2000 : 1900;
+  const year = m[1].length === 4 ? m[1] : String(century + yy);
+  return validateAndFormatYMD(year, m[2], m[3]);
+};
+
+// Kind from the legal-form token the register prints, surveyed across a live publication. Kft. is
+// Hungary's LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its partnerships; a share split (";", "50%", "( 1/3)") is how it prints co-ownership. Associations are
+// matched first: a club can carry a word that otherwise reads as a state body ("HONVÉD REPÜLŐKLUB").
+//
+// An unmatched cell stays null, never `individual`: ~400 rows are bare personal names, but so are
+// organisations named without any legal form ("BANK OF UTAH", "MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI
+// MÚZEUM"), and nothing in the cell separates the two.
+const huKhPartyKind = (value: string): string | null => {
+  const s = value.replace(/\s+/g, ' ').trim().toLowerCase();
+  if (!s) return null;
+  if (s.includes(';') || /\d{1,3} ?%/.test(s) || /\( ?\d{1,3} ?\/ ?\d{1,3} ?\)/.test(s))
+    return 'co-owner';
+  if (/egyesület|egyesulet|\bklub\b|\bclub\b|szövetkezet|alapítvány|egyéni cég/.test(s))
+    return 'other';
+  if (/magyar állam|minisztérium|rendőr|önkormányzat|katasztrófavédelm|honvédség/.test(s))
+    return 'government';
+  if (/\bkft\b|kft\.|d\.o\.o|\bllc\b/.test(s)) return 'llc';
+  if (
+    /\bzrt|\bnyrt|\brt\.|\bltd\b|limited|gmbh|\binc\b|\bplc\b|a\.s\.|s\.r\.o|designated activity/.test(
+      s
+    )
+  )
+    return 'corporation';
+  if (/\bbt\.|\bkkt\b/.test(s)) return 'partnership';
+  // Egyéni vállalkozó — a registered sole trader, i.e. a natural person trading under their own name.
+  if (/\be\.\s?v\.\s?$|\be\.\s?v\.\s/.test(s)) return 'individual';
+  return null;
+};
+
 // Class code (type letter + engine-count digit, e.g. L1P/H2T/L00) -> airframe_type. Digit 0 is
 // unpowered (glider). RPA is the register's own class for a remotely piloted aircraft and carries
 // no structural digit, so it maps to `uav` rather than being dropped — nulling it left nothing in
@@ -751,6 +802,14 @@ const noOwnerKind = (value: string): string | null => {
   return primary.country === NO_DOMESTIC_COUNTRY ? 'individual' : null;
 };
 
+// The manufacture-year cell verbatim when the register states a span ("1957/58", "1959-61") instead
+// of one year, which `int_or_null` nulls. A single year returns null — it is already in
+// year_manufactured, and repeating it here would make the column ambiguous.
+const huKhYearRangeOrNull = (value: string): string | null => {
+  const v = value.trim();
+  return /^\d{4} ?[/-] ?\d{2,4}\.?$/.test(v) ? v : null;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -808,6 +867,10 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   hr_ccaa_owner_country: hrCcaaOwnerCountry,
   hr_ccaa_owner_kind: hrCcaaOwnerKind,
   hr_ccaa_build_certification: hrCcaaBuildCertification,
+  hu_kh_registration: huKhRegistration,
+  hu_kh_date_or_null: huKhDateOrNull,
+  hu_kh_party_kind: huKhPartyKind,
+  hu_kh_year_range_or_null: huKhYearRangeOrNull,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

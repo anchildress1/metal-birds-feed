@@ -920,6 +920,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     model: scalarField(m, row, 'model', s),
     serial_number: scalarField(m, row, 'serial_number', s),
     year_manufactured: numField(m, row, 'year_manufactured', s),
+    year_manufactured_range: scalarField(m, row, 'year_manufactured_range', s),
     airframe_type: scalarField(m, row, 'airframe_type', s),
     category: scalarField(m, row, 'category', s),
     build_certification: scalarField(m, row, 'build_certification', s),

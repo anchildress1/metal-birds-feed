@@ -1155,3 +1155,112 @@ describe('br_status', () => {
     expect(() => applyCompound('br_status', ['', '82'])).toThrow(/no situation letter/);
   });
 });
+
+describe('hu_kh_registration', () => {
+  const run = (v: string): string | null => applyScalar('hu_kh_registration', v);
+
+  it('keeps a mark the extractor reports without stray spaces', () =>
+    expect(run('HA-GZA')).toBe('HA-GZA'));
+  it.each(['HA- GZQ', 'HA -MEI', 'HA - 742', 'HA- 4004'])(
+    'strips the stray internal spaces the glyph runs introduce in %p',
+    (value) => expect(run(value)).toBe(value.replace(/\s+/g, ''))
+  );
+  it('keeps a 4-character suffix (gliders and balloons carry one)', () =>
+    expect(run('HA-YFKA')).toBe('HA-YFKA'));
+  it('keeps a numeric suffix', () => expect(run('HA-4522')).toBe('HA-4522'));
+  it('uppercases a lowercased mark', () => expect(run('ha-gza')).toBe('HA-GZA'));
+  it('returns null for a too-short suffix', () => expect(run('HA-GZ')).toBeNull());
+  it('returns null for a too-long suffix', () => expect(run('HA-GZABC')).toBeNull());
+  it('returns null for another register’s prefix', () => expect(run('9A-BTI')).toBeNull());
+  it('returns null for an empty cell', () => expect(run('')).toBeNull());
+});
+
+describe('hu_kh_date_or_null', () => {
+  const run = (v: string): string | null => applyScalar('hu_kh_date_or_null', v);
+
+  it('reads the year-first dotted date', () => expect(run('2022.09.16')).toBe('2022-09-16'));
+  it('tolerates the trailing dot Hungarian dates often carry', () =>
+    expect(run('2026.02.03.')).toBe('2026-02-03'));
+  it('expands a two-digit year below the 50 pivot into the 2000s', () =>
+    expect(run('25.01.17.')).toBe('2025-01-17'));
+  it('expands a two-digit year at or above the pivot into the 1900s', () =>
+    expect(run('80.12.31')).toBe('1980-12-31'));
+  it.each(['202.05.26', '2024.0713', 'T010.11.02', 'VÉGRH-IG', 'Végrehajt.', '-', ''])(
+    'returns null for the non-date %p the register prints in these columns',
+    (value) => expect(run(value)).toBeNull()
+  );
+  it('returns null for an impossible calendar date', () => expect(run('2022.02.30')).toBeNull());
+  it('returns null for a day-first date, which this register never prints', () =>
+    expect(run('16.09.2022')).toBeNull());
+});
+
+describe('hu_kh_party_kind', () => {
+  const run = (v: string): string | null => applyScalar('hu_kh_party_kind', v);
+
+  it('classifies a Kft. (Hungary’s LLC) as llc', () => expect(run('KESSEL-BAU Kft.')).toBe('llc'));
+  it('classifies a foreign d.o.o. as llc', () => expect(run('AIR MEDULIN d.o.o.')).toBe('llc'));
+  it.each([
+    'WIZZ AIR HUNGARY LÉGIKÖZLEKEDÉSI Zrt.',
+    'Példa Nyrt.',
+    'Malév Rt.',
+    'Some Leasing Ltd',
+    'ACS Aero Limited',
+    'Beispiel GmbH',
+    'Example Inc',
+    'MAM AIRCRAFT LEASING DESIGNATED ACTIVITY COMPANY',
+  ])('classifies the joint-stock or foreign corporate form %p as corporation', (value) =>
+    expect(run(value)).toBe('corporation')
+  );
+  it.each(['PÉLDA Bt.', 'PÉLDA KKT'])(
+    'classifies the partnership form %p as partnership',
+    (value) => expect(run(value)).toBe('partnership')
+  );
+  it.each([
+    'MALÉV REPÜLŐ KLUB',
+    'GYŐRI SPORTEGYESÜLET',
+    'TISZAI BALLON CLUB',
+    'PÉLDA SZÖVETKEZET',
+    'PÉLDA ALAPÍTVÁNY',
+    'AERO-WASP LÉGISZOLGÁLTATÓ EGYÉNI CÉG',
+  ])('classifies the association-style form %p as other', (value) =>
+    expect(run(value)).toBe('other')
+  );
+  it.each(['ORSZÁGOS RENDŐR-FŐKAPITÁNYSÁG', 'MAGYAR ÁLLAM', 'PÉLDA MINISZTÉRIUM'])(
+    'classifies the state body %p as government',
+    (value) => expect(run(value)).toBe('government')
+  );
+  it('classifies a Honvéd flying club as an association, not as government', () =>
+    expect(run('HONVÉD REPÜLŐKLUB GYÖNGYÖS')).toBe('other'));
+  it.each([
+    'Dr. Kalmár Sándor Flóris( 1/3); Dr. Barla-Szabó István (2/3)',
+    'MARTIN HEGER (99%) ; AVIA-RENT KFT (1%)',
+    'TURCSÁN RÓBERT 50%; HARSFALVI PÉTER 50%',
+  ])('classifies the shared ownership %p as co-owner', (value) =>
+    expect(run(value)).toBe('co-owner')
+  );
+  it('classifies an egyéni vállalkozó (sole trader) as individual', () =>
+    expect(run('KOVÁCS JÁNOS E.V.')).toBe('individual'));
+  it('classifies a wrapped (newline-joined) cell by its still-intact form token', () =>
+    expect(run('KER-SZER\nMÉRNÖKIRODA KFT.')).toBe('llc'));
+  it.each(['HRUBOS ATTILA RAJMUND', 'BANK OF UTAH', 'MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI MÚZEUM'])(
+    'leaves %p unclassified rather than guessing individual',
+    (value) => expect(run(value)).toBeNull()
+  );
+  it('returns null for an empty cell', () => expect(run('')).toBeNull());
+});
+
+describe('hu_kh_year_range_or_null', () => {
+  const run = (v: string): string | null => applyScalar('hu_kh_year_range_or_null', v);
+
+  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58'])(
+    'keeps the published span %p verbatim',
+    (value) => expect(run(value)).toBe(value)
+  );
+  it('tolerates the trailing dot the register adds to some year cells', () =>
+    expect(run('1957/58.')).toBe('1957/58.'));
+  it.each(['2016', '2019.', '', 'n/a'])('returns null for %p, which is not a span', (value) =>
+    expect(run(value)).toBeNull()
+  );
+  it('returns null for a date that happens to contain a slash', () =>
+    expect(run('2016/05/31')).toBeNull());
+});
