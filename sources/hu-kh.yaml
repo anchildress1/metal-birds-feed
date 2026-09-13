@@ -170,7 +170,7 @@ mapping:
   owner.country:
     constant: ~
 
-  # Real data, not a mirror: the operator names a different party than the owner on ~half the rows.
+  # A party in its own right: the operator column often names someone other than the owner.
   operator.name:
     field: operator
     transform: collapse_ws_or_null

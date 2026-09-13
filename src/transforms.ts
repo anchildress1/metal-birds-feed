@@ -406,7 +406,7 @@ const huKhDateOrNull = (value: string): string | null => {
   return validateAndFormatYMD(year, m[2], m[3]);
 };
 
-// Kind from the legal-form token the register prints, surveyed across a full live publication. Kft. is Hungary's LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its
+// Kind from the legal-form token the register prints, surveyed across a live publication. Kft. is Hungary's LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its
 // partnerships; a share split (";", "50%", "( 1/3)") is how it prints co-ownership. Associations are
 // matched first: a club can carry a word that otherwise reads as a state body ("HONVÉD REPÜLŐKLUB").
 //

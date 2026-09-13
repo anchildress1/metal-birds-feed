@@ -66,8 +66,8 @@ const make = (id: string, hex: string | null, overrides: Partial<Aircraft> = {})
 });
 
 describe('toFeedRows', () => {
-  // Most registers publish no Mode S address; dropping those rows here is what made
-  // /feed/registration unable to reach them at all — the endpoint's whole purpose.
+  // Dropping hex-less rows here is what made /feed/registration unable to reach them at all —
+  // the endpoint's whole purpose.
   it('keeps a record without an icao_hex, reachable by its mark', () => {
     const rows = toFeedRows([make('1', 'a1b2c3'), make('2', null)]);
     expect(rows).toHaveLength(2);
