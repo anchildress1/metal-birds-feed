@@ -385,23 +385,19 @@ const hrCcaaOwnerKind = (value: string): string | null => {
 const hrCcaaBuildCertification = (value: string): string | null =>
   value.toLowerCase().includes('amatersk') ? 'not-type-certificated' : null;
 
-// Hungary's Lajstromjel column renders the mark with the prefix and suffix as separately positioned
-// glyph runs, so the extracted string carries stray internal spaces that vary per row ("HA- GZQ",
-// "HA -MEI", "HA - 742" and "HA-GZA" all appear in one publication). Stripping every space is what
-// makes the mark usable as source_id: left as printed, the same aircraft keys differently across
-// publications the moment the renderer shifts a glyph run. The suffix is 3 or 4 characters — gliders
-// and balloons carry a 4-character one (HA-YFKA next to HA-YFK) — and anything else nulls, failing
-// the row loudly rather than publishing a malformed registration.
+// The Lajstromjel column renders prefix and suffix as separate glyph runs, so one publication
+// carries "HA- GZQ", "HA -MEI", "HA - 742" and "HA-GZA": left as printed, the same aircraft keys
+// differently the moment the renderer shifts a run. The suffix is 3 or 4 characters (HA-YFKA sits
+// next to HA-YFK); anything else nulls, failing the row rather than publishing a malformed mark.
 const huKhRegistration = (value: string): string | null => {
   const v = value.replace(/\s+/g, '').toUpperCase();
   return /^HA-[A-Z0-9]{3,4}$/.test(v) ? v : null;
 };
 
-// Hungarian dates print year-first, dot-separated, with an optional trailing dot ("2022.09.16",
-// "2026.02.03."). A two-digit year is the same format abbreviated ("25.01.17." is 2025-01-17, read
-// against the ARC issue/expiry pair on its own row), pivoted at 50 like the Maldives D-MMM-YY style.
-// The live register also prints typos and non-dates in these columns — "202.05.26", "2024.0713",
-// "T010.11.02", "VÉGRH-IG", "-" — which all null rather than being coerced into a plausible date.
+// Year-first and dot-separated, with an optional trailing dot ("2026.02.03."). A two-digit year is
+// the same format abbreviated ("25.01.17." is 2025-01-17, read against its row's ARC pair), pivoted
+// at 50. The register also prints typos and non-dates in these columns — "202.05.26", "T010.11.02",
+// "VÉGRH-IG" — which null rather than being coerced into a plausible date.
 const huKhDateOrNull = (value: string): string | null => {
   const m = /^(\d{2}|\d{4})\.(\d{2})\.(\d{2})\.?$/.exec(value.trim());
   if (!m) return null;
@@ -410,20 +406,14 @@ const huKhDateOrNull = (value: string): string | null => {
   return validateAndFormatYMD(year, m[2], m[3]);
 };
 
-// Classifies an owner/operator cell into the schema's kind enum from the legal-form token the
-// register itself prints, surveyed across all 1252 rows of a live publication. Kft. is Hungary's
-// LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its partnerships; d.o.o., Ltd, GmbH, Inc,
-// a.s., s.r.o. and Irish "designated activity company" cover the foreign lessors. A share split
-// (";", "50%", "( 1/3)") is the register's way of printing co-ownership. Clubs, associations,
-// cooperatives, foundations and "egyéni cég" are checked first, since a club can carry a word that
-// otherwise reads as a state body ("HONVÉD REPÜLŐKLUB" is an association, not the defence ministry).
+// Kind from the legal-form token the register prints, surveyed across all 1252 rows of a live
+// publication. Kft. is Hungary's LLC, Zrt./Nyrt./Rt. its joint-stock forms, Bt./Kkt. its
+// partnerships; a share split (";", "50%", "( 1/3)") is how it prints co-ownership. Associations are
+// matched first: a club can carry a word that otherwise reads as a state body ("HONVÉD REPÜLŐKLUB").
 //
 // An unmatched cell stays null, never `individual`: ~400 rows are bare personal names, but so are
-// organisations the register names without any legal form ("BANK OF UTAH / Not in its individual
-// capacity but solely as owner trustee", "MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI MÚZEUM"), and nothing in the
-// cell separates the two. Same reasoning as Norway's orgnr-less foreign party — absence of a form
-// token proves nothing. Null reads as unknown; `other` would assert the register named a form this
-// mapping recognized and rejected.
+// organisations named without any legal form ("BANK OF UTAH", "MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI
+// MÚZEUM"), and nothing in the cell separates the two.
 const huKhPartyKind = (value: string): string | null => {
   const s = value.replace(/\s+/g, ' ').trim().toLowerCase();
   if (!s) return null;

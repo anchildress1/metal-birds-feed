@@ -4168,8 +4168,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     huStats = result.stats;
   });
 
-  // Seven real pages, 150 rows. The one skip is the HA-MEI self-contradiction below, not a parse
-  // failure — every row the authority printed is read.
+  // The one skip is the HA-MEI self-contradiction below, not a parse failure.
   it('maps all 150 fixture rows, skipping only the duplicated mark', () => {
     expect(huStats).toEqual({ total: 150, ok: 149, failed: 0, skipped: 1, duplicateSkipped: 1 });
     expect(huRecords.size).toBe(149);
@@ -4184,8 +4183,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.status).toBe('valid');
   });
 
-  // The mark prints as separately positioned glyph runs, so the extractor sees "HA- GZQ" here and
-  // "HA -MEI" three pages later. Both have to key on the same shape as an unspaced "HA-GZA".
+  // The extractor sees "HA- GZQ" here and "HA -MEI" three pages later.
   it('strips the stray spaces the mark column prints, in both the key and the registration', () => {
     for (const mark of ['HA-GZQ', 'HA-MEI', 'HA-GZA']) {
       expect(huRecords.get(mark)!.source_id).toBe(mark);
@@ -4193,16 +4191,14 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     }
   });
 
-  // HA-YFK and HA-YFKA are two different aircraft in the same publication: a 3-character pattern
-  // would truncate the longer one onto the shorter one's key.
+  // HA-YFK and HA-YFKA are two aircraft in one publication; a 3-character pattern collapses them.
   it('keeps a 4-character mark suffix distinct from its 3-character neighbour', () => {
     expect(huRecords.get('HA-YRAB')!.registration).toBe('HA-YRAB');
     expect(huRecords.get('HA-2336')!.registration).toBe('HA-2336');
   });
 
-  // The register contradicts itself: HA-MEI is printed once as a 1980-registered AN-2 R whose ARC
-  // lapsed in 2010 and once as a 2017-registered AN-2 TD with a current one. No `duplicate_conflict`
-  // is declared — the mapped dates are a real recency signal and the newer row wins on them.
+  // HA-MEI is printed as both a 1980 AN-2 R and a 2017 AN-2 TD. No `duplicate_conflict` is declared:
+  // the mapped dates are a real recency signal and the newer row wins on them.
   it('resolves the register’s own duplicated mark on the newer registration date', () => {
     const r = huRecords.get('HA-MEI')!;
     expect(r.certification_date).toBe('2017-06-01');
@@ -4217,7 +4213,6 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.airworthiness_review_date).toBe('2027-02-03');
   });
 
-  // "202.05.26" and "T010.11.02" are typos the authority prints in the ARC columns.
   it('nulls a malformed date instead of coercing it into a plausible one', () => {
     expect(huRecords.get('HA-MEI')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.airworthiness_date).toBeNull();
@@ -4230,10 +4225,8 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.manufacturer).toBeNull();
   });
 
-  // Cells are centred on their row, so the outermost record of a page reaches past the default
-  // half-gap reach at both ends. Without the declared reaches HA-MKG's operator loses its first line
-  // ("RSZ-COOP", top of its page) and HA-HML's owner loses its last ("KFT.", bottom of its own) —
-  // the party name silently truncated, which is what the measured reaches exist to prevent.
+  // Without the declared reaches HA-MKG's operator loses its first line ("RSZ-COOP", top of its
+  // page) and HA-HML's owner loses its last ("KFT.", bottom of its own).
   it('keeps an outermost record’s wrapped party name whole at both ends of a page', () => {
     expect(huRecords.get('HA-MKG')!.operator.name).toBe(
       'RSZ-COOP LÉGISZOLGÁLTATÓ ÉS KERESKEDELMI KFT.'
@@ -4269,8 +4262,6 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.operator.kind).toBe('llc');
   });
 
-  // Both address columns are street/postal detail, dropped at the boundary. Nothing downstream can
-  // reach a country out of them either — this register states it inconsistently and mid-string.
   it('drops both address columns and leaves every party state/country null', () => {
     for (const r of huRecords.values()) {
       for (const party of [r.owner, r.operator, r.legal_owner]) {

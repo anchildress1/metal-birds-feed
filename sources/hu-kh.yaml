@@ -4,16 +4,12 @@ country: HU
 language: hu
 encoding: utf8
 trim_all: true
-# The document library stamps a "Frissítési dátum / Updated" footer on every page and had reached
-# version 321 by 2026-09-11 since its 2020-08-14 creation — roughly weekly. The register declares no
-# cadence of its own, so the observed rhythm is what this runs at.
+# No declared cadence; version 321 by 2026-09-11 against a 2020-08-14 creation is roughly weekly.
 cadence_days: 7
 
 download:
-  # Liferay serves the current version of a document from a path built out of its ORIGINAL name, so
-  # the 2026-02-25 slug is not a publication date and does not roll — verified by fetching this URL
-  # against the document library's own "latest version" link and getting the 2026-09-11 version
-  # (2.3 MB, 65 pages). No discover_* needed, unlike CCAA Croatia's per-upload /file/<hash> links.
+  # Liferay builds this path from the document's ORIGINAL name, so the 2026-02-25 slug is not a
+  # publication date and does not roll — it serves whatever version is current. No discover_* needed.
   url: https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-?download=true
   format: file
   entries:
@@ -23,46 +19,34 @@ primary: register
 delimiter: ','
 format: pdf
 
-# A3 landscape positioned table, one aircraft per y-row, each field a fixed x-band, with the
-# bilingual (HU/EN) column header repeated on every page and no cover page. See PdfConfig in
-# src/types/config.ts for the extraction model.
+# A3 landscape table, bilingual (HU/EN) header repeated per page, no cover page.
 #
-# The mark is printed as separately positioned glyph runs, so the anchor pattern has to tolerate the
-# stray internal spaces the extractor sees ("HA- GZQ", "HA -MEI", "HA - 742"); `hu_kh_registration`
-# strips them. The suffix is 3 or 4 characters — gliders and balloons carry a 4-character one, and
-# HA-YFKA sits in the same publication as HA-YFK, so a `{3}` pattern would truncate real rows into
-# phantom duplicates. `anchor_field: mark` keeps the pattern from matching anywhere but the mark
-# column.
+# The mark prints as separately positioned glyph runs, so the anchor pattern must tolerate the stray
+# internal spaces the extractor sees ("HA- GZQ", "HA -MEI", "HA - 742"). The suffix is 3 or 4
+# characters: HA-YFKA sits in the same publication as HA-YFK, so `{3}` would truncate real rows into
+# phantom duplicates.
 #
-# Only the unrotated orientation has been observed. If the authority ever republishes the table
-# rotated the parse fails naming the missing axis rather than reading it wrong; measure the new bands
-# against the live file and add a second layouts entry.
+# Only the unrotated orientation has been observed; measure the bands against a real file in the
+# other one before adding a second layout.
 pdf:
   anchor_pattern: '^HA\s?-\s?[A-Z0-9]{3,4}$'
   anchor_field: mark
   layouts:
     - field_axis: x
-      # Cells are vertically centred on their row, so a multi-line one reaches both above and below
-      # its own mark, and the page's tightest mark-to-mark gap is 18.84pt — a default reach of 9.42pt,
-      # which clips a wrapped owner or operator NAME on the outermost record of a page. Measured
-      # across the live 65-page publication, the mapped columns reach 12pt below the bottom-most mark
-      # and 11.88pt above the top-most, an unmapped operator address 17.88pt below. 20pt clears all
-      # of those and still stops short of the page furniture at either end: the footer sits 39.8pt
-      # below the lowest bottom mark and the column header 28.92pt above the lowest top mark. One
-      # owner-address line reaches 29.67pt above its mark and stays outside the window — that column
-      # is street detail this config drops as PII, so nothing mapped is clipped.
+      # Cells centre on their row, so a multi-line one reaches both above and below its own mark.
+      # The tightest mark-to-mark gap is 18.84pt, and that default 9.42pt reach clips a wrapped party
+      # name on a page's outermost record. Measured against the live file: mapped columns reach 12pt
+      # below the bottom mark and 11.88pt above the top one, the page footer 39.8pt below and the
+      # column header 28.92pt above. Only an owner-address line (29.67pt above, dropped as PII)
+      # falls outside 20pt.
       before_first_anchor_reach: 20
-      # The widened bottom zone holds nothing but wrapped continuations of the last record's own
-      # cells; the only other text below the marks is the fixed three-item page footer, which the
-      # 20pt bound already excludes. The pattern names that footer anyway, so a future publication
-      # that moves it up cannot silently feed it into the last record.
+      # The reach already stops short of the footer; the pattern names it so a publication that moves
+      # it up cannot feed it into the last record.
       before_first_anchor_pattern: '^(?!Méret:|Frissítési dátum|\d+/\d+$).'
       after_last_anchor_reach: 20
-      # Value-band x-centres, paired by index with `columns`. Values are centred in their column, so
-      # each band is the centre of that column's observed x spread rather than a text origin. `year`
-      # is the one exception: its own spread is 278.5–287.1, but the owner column beside it is wide
-      # (336.5–469.8) and pulls the midpoint between the two bands right up against 336.5, so the
-      # year band is declared left of its ink to keep that boundary clear.
+      # Values are centred, so each band is the centre of that column's observed x spread. `year` is
+      # declared left of its own ink (278.5–287.1): the wide owner column beside it (336.5–469.8)
+      # would otherwise pull the midpoint between the two bands inside the owner's spread.
       column_pos:
         - 83 # mark
         - 143 # type
@@ -90,11 +74,9 @@ columns:
     - arc_expiry
     - arc_issue
 
-# The register publishes no permanent per-aircraft identifier — no certificate number, no sequence
-# column — so the mark is the only key available. It is unique across the live publication bar one
-# self-contradiction: HA-MEI appears twice, once as a 1980-registered AN-2 R whose ARC lapsed in 2010
-# and once as a 2017-registered AN-2 TD with a current ARC. That resolves on recency (the newer
-# certification_date wins) rather than needing `duplicate_conflict`.
+# No certificate number or sequence column is published, so the mark is the only key available. It
+# is unique bar one self-contradiction: HA-MEI is printed as both a 1980 and a 2017 registration,
+# which resolves on the newer certification_date rather than needing `duplicate_conflict`.
 source_id: mark
 source_id_transform: hu_kh_registration
 registration: mark
@@ -110,18 +92,15 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # No per-row status column; the publication IS the current active fleet (same reasoning as AESA's
-  # "Matrículas Activas" and CCAA Croatia's monthly list).
+  # No per-row status column; the publication IS the current active fleet.
   status:
     constant: valid
 
   country:
     constant: HU
 
-  # "Légijármű típusa" is one column carrying whatever the authority writes there — sometimes a bare
-  # model ("MTO SPORT"), sometimes maker and model together ("ANTONOV AN-2 TD"). Splitting it would
-  # need a maker list the register never publishes, so it maps whole to `model` and `manufacturer`
-  # stays null rather than being guessed out of the same string.
+  # "Légijármű típusa" holds a bare model ("MTO SPORT") or maker and model together ("ANTONOV AN-2
+  # TD"), with no maker list published to split them on — so it maps whole to `model`.
   manufacturer:
     constant: ~
 
@@ -133,8 +112,7 @@ mapping:
     field: serial
     transform: collapse_ws_or_null
 
-  # "Gyártás éve" is a plain year, with a trailing dot on some rows (Number() accepts it). Rows
-  # stating a build spanning two years ("1957/58", "1959-61") null instead of taking either end.
+  # A build spanning two years ("1957/58", "1959-61") nulls rather than taking either end.
   year_manufactured:
     field: year
     transform: int_or_null
@@ -183,20 +161,16 @@ mapping:
     field: owner
     transform: hu_kh_party_kind
 
-  # "Tulajdonos címe" / "Üzembentaró címe" are street/postal address — dropped as PII, and nothing
-  # survives them here. Unlike CCAA Croatia, this register states a party's country nowhere the value
-  # can be read from a trailing component: it appears as a leading postal country prefix on some rows
-  # ("A-2353 GUNTRANSDORF"), mid-string on others ("…, RO 505600", "…MAROS MEGYE, ROMÁNIA"), and not
-  # at all on most. Reading it would mean guessing which fragment is a country, so both party country
-  # and state stay null.
+  # Both address columns are street/postal detail, dropped as PII with nothing read out of them. The
+  # country appears as a leading postal prefix ("A-2353 GUNTRANSDORF"), mid-string ("…, RO 505600"),
+  # or not at all — never as a trailing component, so reading one would mean guessing.
   owner.state:
     constant: ~
 
   owner.country:
     constant: ~
 
-  # A separate operator column, populated on every row — it repeats the owner on 665 of 1252 rows and
-  # names a different party on the rest, so it is real data, not a mirror.
+  # Real data, not a mirror: the operator differs from the owner on 587 of 1252 rows.
   operator.name:
     field: operator
     transform: collapse_ws_or_null
@@ -226,12 +200,10 @@ mapping:
   idera_authorised_party:
     constant: ~
 
-  # "Lajstromba vétel" — the date the aircraft entered the register.
   certification_date:
     field: reg_date
     transform: hu_kh_date_or_null
 
-  # "ARC érv.kezd." — the airworthiness review certificate's issue date.
   airworthiness_date:
     field: arc_issue
     transform: hu_kh_date_or_null
@@ -257,7 +229,6 @@ mapping:
   min_crew:
     constant: ~
 
-  # "ARC érv.vége" — the same certificate's expiry.
   airworthiness_review_date:
     field: arc_expiry
     transform: hu_kh_date_or_null

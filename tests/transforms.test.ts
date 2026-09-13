@@ -1229,7 +1229,6 @@ describe('hu_kh_party_kind', () => {
     'classifies the state body %p as government',
     (value) => expect(run(value)).toBe('government')
   );
-  // A club can carry a word that otherwise reads as a state body, so the association check runs first.
   it('classifies a Honvéd flying club as an association, not as government', () =>
     expect(run('HONVÉD REPÜLŐKLUB GYÖNGYÖS')).toBe('other'));
   it.each([
@@ -1243,8 +1242,6 @@ describe('hu_kh_party_kind', () => {
     expect(run('KOVÁCS JÁNOS E.V.')).toBe('individual'));
   it('classifies a wrapped (newline-joined) cell by its still-intact form token', () =>
     expect(run('KER-SZER\nMÉRNÖKIRODA KFT.')).toBe('llc'));
-  // A bare name is a natural person or an organisation the register names without a legal form, and
-  // nothing in the cell separates the two — null says unknown, `other` would claim a recognized form.
   it.each(['HRUBOS ATTILA RAJMUND', 'BANK OF UTAH', 'MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI MÚZEUM'])(
     'leaves %p unclassified rather than guessing individual',
     (value) => expect(run(value)).toBeNull()
