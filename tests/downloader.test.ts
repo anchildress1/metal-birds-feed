@@ -663,6 +663,33 @@ describe('download — discover_url + discover_pattern', () => {
       expect(fetchFn.mock.calls[1]?.[0]).toBe(registerUrl);
     }
   );
+
+  // The register is one Liferay document among many on its page, and the other links share the
+  // same /documents/d/ prefix — discovery has to pick the aviation-department one carrying the
+  // download parameter, not whichever document the page happens to list first.
+  it("resolves hu-kh's discover_pattern against the authority's document page", async () => {
+    const HU_KH_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hu-kh.yaml');
+    const { download: huDownload } = loadSourceConfig(HU_KH_CONFIG);
+    const REGISTER_URL =
+      'https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-?download=true';
+
+    const DOCUMENT_PAGE_HTML = `
+      <html><body>
+        <a href="https://kozlekedesihatosag.kormany.hu/documents/d/hajozasi-hatosagi-foosztaly/kishajo-lajstrom?download=true">Hajózás</a>
+        <a href="https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-">Előnézet</a>
+        <a href="${REGISTER_URL}">Letöltés</a>
+      </body></html>
+    `;
+
+    const fetchFn = mockFetchSequence([
+      { ok: true, status: 200, statusText: 'OK', body: DOCUMENT_PAGE_HTML },
+      { ok: true, status: 200, statusText: 'OK', body: Buffer.from('pdf-bytes') },
+    ]);
+
+    await download(huDownload);
+
+    expect(fetchFn.mock.calls[1]?.[0]).toBe(REGISTER_URL);
+  });
 });
 
 describe('download — retry', () => {
