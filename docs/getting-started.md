@@ -487,7 +487,7 @@ Run. It does **not** re-download the registries — run `make refresh` first if 
 the deploy.
 
 Full GitHub Actions automation — daily refreshes, automatic deploys — is documented in
-[README.md](../README.md#required-github-actions-configuration). That's genuinely developer
+[README.md](../README.md#deploying-your-own-copy). That's genuinely developer
 territory.
 
 ---
@@ -520,5 +520,5 @@ Still stuck? Open an issue with the command you ran and the last 20 lines of `lo
 | Let an AI do this instead          | [getting-started-with-ai.md](getting-started-with-ai.md) |
 | Understand how the pipeline works  | [README.md](../README.md#how-it-works)                   |
 | Check whether I may use a registry | [DATA_LICENSES.md](../DATA_LICENSES.md)                  |
-| Add a registry of my own           | [README.md](../README.md#adding-a-new-registry-source)   |
+| Add a registry of my own           | [README.md](../README.md#adding-a-registry-source)       |
 | See every available command        | `make help`                                              |

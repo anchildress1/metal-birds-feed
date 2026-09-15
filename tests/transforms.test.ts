@@ -1242,6 +1242,25 @@ describe('hu_kh_party_kind', () => {
     expect(run('KOVÁCS JÁNOS E.V.')).toBe('individual'));
   it('classifies a wrapped (newline-joined) cell by its still-intact form token', () =>
     expect(run('KER-SZER\nMÉRNÖKIRODA KFT.')).toBe('llc'));
+  // JS \b treats an accented letter as a word break, so a bare \brt\. also fires inside "Ért.".
+  it('does not read the rt. corporate suffix out of an accented word', () =>
+    expect(run('KER. ÉS ÉRT. BT.')).toBe('partnership'));
+  // Identity words are tested after the legal forms: a municipally owned Kft. is still an LLC.
+  it('classifies a municipally owned company by its legal form, not its owner', () =>
+    expect(run('ÖNKORMÁNYZATI SZOLGÁLTATÓ KFT.')).toBe('llc'));
+  it('does not read co-ownership out of a share figure inside a single party name', () =>
+    expect(run('100% AVIATION KFT.')).toBe('llc'));
+  it('classifies a numbered list of shareholders as co-owner without a separator', () =>
+    expect(run('1. NAGY ANDRÁS (50%) 2. KIS BÉLA (50%)')).toBe('co-owner'));
+  // The fraction carries its own slash, so the separator test has to run with the share removed.
+  // No live cell carries a lone share: all 63 parenthesized and 10 bare-percentage cells in a full
+  // publication name several parties. A lone one is damaged input, so it stays unknown.
+  it('does not read a lone fractional share as a party separator', () =>
+    expect(run('NAGY ANDRÁS (1/3)')).toBeNull());
+  it('reads the accented abbreviation boundary the same way for every legal form', () => {
+    expect(run('ÉPÍTŐ ÉS SZOLGÁLTATÓ ZRT.')).toBe('corporation');
+    expect(run('PÉLDA KKT')).toBe('partnership');
+  });
   it.each(['HRUBOS ATTILA RAJMUND', 'BANK OF UTAH', 'MAGYAR MŰSZAKI ÉS KÖZLEKEDÉSI MÚZEUM'])(
     'leaves %p unclassified rather than guessing individual',
     (value) => expect(run(value)).toBeNull()
@@ -1252,7 +1271,7 @@ describe('hu_kh_party_kind', () => {
 describe('hu_kh_year_range_or_null', () => {
   const run = (v: string): string | null => applyScalar('hu_kh_year_range_or_null', v);
 
-  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58'])(
+  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58', '1957/8', '1999/00', '1999/05'])(
     'keeps the published span %p verbatim',
     (value) => expect(run(value)).toBe(value)
   );
@@ -1263,4 +1282,10 @@ describe('hu_kh_year_range_or_null', () => {
   );
   it('returns null for a date that happens to contain a slash', () =>
     expect(run('2016/05/31')).toBeNull());
+  // No rule sharp enough to reject a truncated year-month keeps "1999/05", a real century-crossing
+  // span, so the column takes the cell as printed and the register has never printed a date here.
+  it('keeps a year-month-shaped value rather than dropping a century-crossing span', () => {
+    expect(run('2016-05')).toBe('2016-05');
+    expect(run('1999/05')).toBe('1999/05');
+  });
 });

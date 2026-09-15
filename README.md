@@ -10,7 +10,7 @@
 </div>
 
 Maps national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
-serves fast tail-number and ICAO hex lookups from a private [feed service](#feed-service) on
+serves fast tail-number and ICAO hex lookups from a private [feed service](#how-it-works) on
 Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + private operator
@@ -19,113 +19,46 @@ private R2 bucket with no hosted public read API, public download, or public que
 surface. Forks self-host against their own R2 bucket and their own per-source source-use
 assessment. See [PRD.md](PRD.md) §Cross-Cutting for the full model.
 
-## How It Works
+## What you're getting into
 
-A GitHub Actions matrix runs daily — one runner per source under `sources/*.yaml`.
-Sources with `cadence_days` skip early until due; sources without it run every day.
-Each runner:
+This pulls national aircraft registers into a normalized SQLite artifact and serves point lookups from a private API. Before you copy it, three things decide whether you can:
 
-1. Downloads the source's full bulk export (registries don't publish deltas)
-2. Maps every row into the canonical `Aircraft` schema via the source's YAML mapping
-3. Computes a content hash over the full record set and compares it to the prior run's hash in `_state`
-4. Rebuilds the per-source SQLite artifact and PUTs it whole — only when that hash changed
-
-### What's full vs skipped
-
-| Step     | Pass type      | Notes                                                                                   |
-| -------- | -------------- | --------------------------------------------------------------------------------------- |
-| Download | Full           | All sources ship full snapshots; no `If-Modified-Since` semantics                       |
-| Map      | Full           | All rows re-parsed and transformed every run (~10s for FAA's 312k records)              |
-| Hash     | Full O(n)      | One `sha256` over the sorted record set, compared to the prior run's hash in `_state`   |
-| R2 write | All-or-nothing | The whole SQLite artifact is PUT when the hash changed; skipped entirely when unchanged |
-
-The write is wholesale, not incremental — no per-record diffing, no manifest, no DELETEs.
-Registries don't expose deltas, and R2 ops are the expensive part, so an unchanged refresh
-costs zero PUTs and a changed one costs a single (tens-of-MB) PUT.
-
-### What a typical cadence run looks like
-
-| Phase     | Bootstrap (first run) | Steady state (cadence run)       |
-| --------- | --------------------- | -------------------------------- |
-| Records   | ~312k all new         | ~3–6k changed (~1–2%)            |
-| R2 writes | 1 PUT (full artifact) | 0 (unchanged) or 1 PUT (changed) |
-
-FAA's first load doesn't fit the 30-minute `timeout-minutes` this repo sets on the refresh
-job (`refresh.yml`), so it's run once locally — see below. That ceiling is ours, not
-GitHub's: hosted runners allow 6 hours per job, so raising it is an option if a cold FAA
-load in CI is ever worth the runner minutes. Smaller sources (TC ~37k, NL ILT ~3k) populate
-cleanly inside it and don't need a local bootstrap.
+- **The output is not yours to publish.** Several registers granted access to Ashley by name, and some clearances are non-commercial. A fork owes its own per-source assessment before pulling anything — [DATA_LICENSES.md](DATA_LICENSES.md) records who said what.
+- **It costs money.** Cloudflare R2 for the artifacts, optionally Gemini for non-English registers, optionally Cloud Run to serve.
+- **You are the operator.** Per-country data-use, storage, and privacy obligations land on whoever runs it. See [Legal Notice](#legal-notice).
 
 > [!NOTE]
 > R2 billing. The operator's first data load incurred approximately **$6.50 USD** in R2 charges.
 > That is an observed bill, not a guaranteed quote or a claim about which billing dimension caused
 > it. Check current R2 pricing and your account usage before pulling data.
 
-## Initial Load (Bootstrap)
+## Setting it up
 
-The first FAA load maps ~315k records and PUTs the whole artifact, which exceeds the
-refresh job's 30-minute `timeout-minutes`. Run it once locally; cadence runs handle diffs
-forever after.
+Two guides cover the whole path — accounts, credentials, first pull, local feed service — without assuming you read TypeScript:
 
-```bash
-cp .env.example .env  # fill in MBF_R2_* and GEMINI_API_KEY
-make refresh          # auto-loads .env, runs the full pipeline with no time cap
-```
+- [docs/getting-started.md](docs/getting-started.md) — do it yourself, command by command
+- [docs/getting-started-with-ai.md](docs/getting-started-with-ai.md) — have Claude Code or Codex drive it
 
-Tail `logs/pipeline.log` for `event=pipeline_complete` per source and `event=feed_published`
-at the end. Override the source via `.env`'s `REFRESH_SOURCE` value (e.g.,
-`REFRESH_SOURCE=nl-ilt` to populate only the Dutch register).
-
-For sources whose initial load fits that timeout, skip the local bootstrap and
-trigger the workflow directly:
+The short version, once you have R2 credentials in `.env`:
 
 ```bash
-gh workflow run refresh.yml -f source=nl-ilt   # one-off, single-source
-gh workflow run refresh.yml                    # all sources, respecting per-source cadence
+make install                      # dependencies and git hooks
+make refresh                      # pull every register (REFRESH_SOURCE=nl-ilt for just one)
+make assemble-feed                # build feed.sqlite from the R2 slices
+export FEED_TOKEN=$(uuidgen)      # required at startup, 16+ chars
+make serve                        # serve it on :8080
 ```
 
-## R2 Key Structure
+## How it works
 
-| Path                                        | Contents                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `aircraft/<source>.sqlite`                  | Per-source SQLite DB. Table `aircraft`: one typed column per canonical field (`source_id` PK; `owner_*`/`operator_*`/`engine_*` flattened; `operational_classes` JSON, with an untranslated `operational_classes_source_text` JSON twin). Indexed `icao_hex`, `registration`, `status`, `airframe_type`, `owner_country` |
-| `aircraft/_state/<source>.json`             | Last run/change state + `content_hash` for cadence gating and skip-if-unchanged                                                                                                                                                                                                                                          |
-| `aircraft/_feed/<source>.json`              | Versioned per-source feed slice (descriptive columns, collapsed on hex where the register publishes one and on the normalized mark where it does not) — the pipeline merges every source's slice into the one consolidated `feed.sqlite` the [feed service](#feed-service) serves                                        |
-| `aircraft/_feed/_deployed.json`             | Content hash of the feed last deployed to Cloud Run — the scheduled deploy redeploys only when the freshly built feed differs from it                                                                                                                                                                                    |
-| `aircraft/_translation_cache/<source>.json` | Versioned free-text hash → English text, for Gemini delta translation of the four English-primary fields (see AGENTS.md)                                                                                                                                                                                                 |
+A GitHub Actions matrix runs daily, one runner per `sources/*.yaml`. Each downloads the register's full export (registries publish no deltas), maps every row into the canonical `Aircraft` schema, hashes the result, and rewrites the per-source SQLite artifact in R2 only when that hash changed. `cadence_days` skips a source until it is due.
 
-One queryable artifact per source — filter or point-lookup on any column (every canonical field is its own typed column). Rebuilt and re-uploaded whole only when the record set's content hash changes.
+The feed service merges every source's slice into one `feed.sqlite`, baked into the Cloud Run image and opened read-only at startup — nothing is fetched at request time. Two endpoints, both bearer-gated, rate-limited, and batched to 500 keys:
 
-## Feed Service
+- **`POST /feed`** `{"hexes": ["a1b2c3"]}` → descriptive rows keyed by ICAO hex
+- **`POST /feed/registration`** `{"registrations": ["C-FABC"]}` → the same rows keyed by registration, plus `icao_hex`
 
-A private, authenticated point-lookup API for an authorized consumer application, deployed to Cloud Run. It serves **one consolidated `feed.sqlite`** — every source merged into a single `feed` table carrying two unique keys, `icao_hex` and the normalized `registration_key`, so a lookup is one `WHERE <key> IN (...)` on one table, never a union across per-country files. Both columns are nullable; SQLite does not treat NULLs as equal, so a row missing one key still holds the other.
-
-- **`POST /feed`** `{ "hexes": ["a1b2c3", …] }` → hex-keyed map of the descriptive slice (identity, airframe, engine, performance, ownership), each row carrying the source's exact `attribution` line so a consumer credits it verbatim and only when that row is displayed. Case is normalized — `A004B3` and `a004b3` reach the same row, and the map key is always the lowercase form. ≤ 500 hexes; misses omitted.
-- **`POST /feed/registration`** `{ "registrations": ["C-FABC", …] }` → same payload keyed by the normalized registration, plus `icao_hex` (the caller keyed by something else, so the hex is new information). Punctuation and case are normalized on both sides — `C-FABC`, `c fabc`, and `CFABC` all reach the same row. ≤ 500 marks; misses omitted.
-
-  Why both: `icao_hex` is what an ADS-B blip carries, but a register does not have to publish one. Registration is required and present in every source, so hex-less records enter the feed keyed on the mark alone and `icao_hex` comes back null for them. Cancelled registrations are excluded from the feed so a reissued mark cannot make the key ambiguous. Where two aircraft still normalize to one mark (Canada renders the 3-character mark `ABC` as `CF-ABC` and the 4-character mark `FABC` as `C-FABC`), neither owns the key: it is cleared, so the lookup misses rather than answering with the wrong aircraft.
-
-- Gated by a bearer secret (`FEED_TOKEN`, validated present and ≥ 16 chars at startup; a UUID is the convention) and rate-limited — a private API, not a public one. Every request presents the secret.
-- Runs as a **single instance**, scale-to-zero (cold starts are fine — data is near-static). The consolidated DB is baked into the image.
-- One deploy job (`.github/workflows/deploy.yml`), reached two ways. A merged Release Please PR deploys the released commit unconditionally — verifying `package.json` matches the tag first — because a version bump ships even when the data is unchanged. The daily refresh calls the same job, which redeploys only when the rebuilt DB differs from what is live (tracked by `_deployed.json`), so a register change reaches production the day it lands and a quiet day costs nothing. Ordinary merges never deploy. A single source's failure never blocks shipping another's update. Both paths assemble from existing R2 slices rather than re-pulling the registers, so a release that adds a source or changes the slice format needs a refresh to run first — otherwise the assembly fails closed rather than shipping a partial feed. For a rollback or a retry, run `make deploy` locally — same R2 slices, same path.
-- `make build-feed` refreshes every source and then rebuilds the DB from the per-source `_feed` slices in R2 (`make assemble-feed` skips the refresh and only assembles — that is what CI calls, since its refresh matrix has already written the slices). `make deploy` assembles first (so an ambient stale `feed.sqlite` is never deployed) then ships it — it does not re-pull upstream, so run `make refresh` beforehand if the deploy should carry new register data. R2 stays the artifact + intermediate store — only serving runs on Cloud Run.
-
-### Running the Feed Service Locally
-
-Assembly reads the slices out of R2, so the four `MBF_R2_*` values must already be exported or
-present in `.env` — `make assemble-feed` aborts naming the missing one otherwise. Serving needs
-neither: it only opens the local file.
-
-```bash
-cp .env.example .env                   # fill in MBF_R2_ACCOUNT_ID / ACCESS_KEY_ID / SECRET_ACCESS_KEY / BUCKET_NAME
-make assemble-feed                     # pulls every source's _feed slice from R2, writes feed.sqlite
-                                       # (`make build-feed` re-pulls every configured register first)
-export FEED_TOKEN=$(uuidgen)           # ≥16 chars required; a UUID is the convention
-export MBF_FEED_DB_PATH=./feed.sqlite  # defaults to the service root if unset
-make serve                             # starts on PORT (default 8080)
-```
-
-Call it with the bearer token from a single batched request — up to 500 hexes per call:
+Both keys exist because a register does not have to publish a hex; registration is always present. Every row carries the upstream `attribution` string to display with it. Misses are omitted rather than returned null.
 
 ```bash
 curl -s http://localhost:8080/feed \
@@ -134,82 +67,35 @@ curl -s http://localhost:8080/feed \
   -d '{"hexes": ["a1b2c3", "d4e5f6"]}'
 ```
 
-Misses are omitted from the response map rather than returned as nulls. `FEED_TOKEN` in
-production is a Google Secret Manager binding on the Cloud Run service — never place the real
-value in `.env` or any committed file.
+Deeper mechanics — R2 key layout, version markers, duplicate resolution, the deploy path — live in [AGENTS.md](AGENTS.md), which is authoritative.
 
-## Setup
-
-```bash
-# Install dependencies and hooks
-make install
-```
-
-**Setting up a self-hosted copy and not a developer?** Two guides cover the whole path — accounts,
-credentials, first pull, local feed service — without assuming you read TypeScript:
-
-- [docs/getting-started.md](docs/getting-started.md) — do it yourself, command by command
-- [docs/getting-started-with-ai.md](docs/getting-started-with-ai.md) — have Claude Code or Codex
-  drive it, via the setup skill in `.agents/skills/setup-metal-birds-feed/`
-
-Either way, the registry clearances in [DATA_LICENSES.md](DATA_LICENSES.md) are Ashley's and several
-are granted by name — a fork owes its own per-source assessment before pulling anything.
-
-## Available Commands
+## Commands
 
 | Command              | Description                                         |
 | -------------------- | --------------------------------------------------- |
 | `make help`          | List the commands below (default target)            |
 | `make install`       | Install dependencies and git hooks                  |
-| `make format`        | Format code with Prettier                           |
-| `make format-check`  | Check formatting (non-destructive, used in CI)      |
-| `make lint`          | Run ESLint                                          |
-| `make typecheck`     | TypeScript type check                               |
-| `make test`          | Run unit tests with coverage                        |
 | `make check`         | format-check + lint + typecheck + test (CI gate)    |
-| `make build`         | Compile TypeScript to `dist/`                       |
 | `make refresh`       | Pull every source (reads `.env`)                    |
-| `make serve`         | Run the feed service locally (`MBF_FEED_DB_PATH`)   |
 | `make assemble-feed` | Build `feed.sqlite` from the R2 slices (no refresh) |
 | `make build-feed`    | Refresh every source, then assemble `feed.sqlite`   |
-| `make deploy-only`   | Deploy the on-disk `feed.sqlite` to Cloud Run       |
+| `make serve`         | Run the feed service locally (`MBF_FEED_DB_PATH`)   |
 | `make deploy`        | Rebuild and deploy the feed service to Cloud Run    |
 | `make secret-scan`   | Scan for accidentally committed secrets             |
-| `make clean`         | Remove build artifacts                              |
 
-## Required GitHub Actions Configuration
+`make help` lists the rest (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`, `clean`).
 
-### Secrets
+## Deploying your own copy
 
-| Secret                     | Purpose                     |
-| -------------------------- | --------------------------- |
-| `MBF_R2_ACCOUNT_ID`        | Cloudflare account ID       |
-| `MBF_R2_ACCESS_KEY_ID`     | R2 S3-compatible access key |
-| `MBF_R2_SECRET_ACCESS_KEY` | R2 S3-compatible secret key |
-| `MBF_R2_BUCKET_NAME`       | Target R2 bucket name       |
-| `GEMINI_API_KEY`           | Gemini translation API key  |
-| `SONAR_TOKEN`              | SonarCloud analysis token   |
+Required GitHub Actions secrets: `MBF_R2_ACCOUNT_ID`, `MBF_R2_ACCESS_KEY_ID`, `MBF_R2_SECRET_ACCESS_KEY`, `MBF_R2_BUCKET_NAME`, `GEMINI_API_KEY`, `SONAR_TOKEN`.
 
-### Variables
+Required variables: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, plus optional `GEMINI_REQUESTS_PER_MINUTE` (default 10), `GCP_RUN_REGION` (default `us-east1`), `GCP_RUN_SERVICE` (default `metal-birds-feed`).
 
-| Variable                         | Purpose                                      |
-| -------------------------------- | -------------------------------------------- |
-| `GCP_PROJECT_ID`                 | Cloud Run project                            |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | GitHub Workload Identity Federation provider |
-| `GCP_SERVICE_ACCOUNT`            | Federated Cloud Run deployer service account |
-| `GEMINI_REQUESTS_PER_MINUTE`     | Project-wide Gemini RPM limit (default: 10)  |
-| `GCP_RUN_REGION`                 | Cloud Run region (default `us-east1`)        |
-| `GCP_RUN_SERVICE`                | Service name (default `metal-birds-feed`)    |
+`FEED_TOKEN` is a Google Secret Manager binding on the Cloud Run service — never copied into GitHub or `.env`. `GCP_SERVICE_ACCOUNT` also needs `roles/artifactregistry.repoAdmin`, or deploys succeed but stop pruning old images.
 
-`FEED_TOKEN` remains a Google Secret Manager binding on the Cloud Run service. The workflow never copies the token into GitHub.
+## Adding a registry source
 
-`GCP_SERVICE_ACCOUNT` also needs `roles/artifactregistry.repoAdmin` for the post-deploy Artifact Registry cleanup policy to take effect — without it, deploys still succeed but skip pruning old `cloud-run-source-deploy` images:
-
-```bash
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member="serviceAccount:$GCP_SERVICE_ACCOUNT" \
-  --role="roles/artifactregistry.repoAdmin"
-```
+[AGENTS.md](AGENTS.md) is authoritative: source-use posture first, then all seven surfaces (config, fixtures, `DATA_LICENSES.md`, the sources table below, `## Attribution`, `src/service/attributions.ts`, the onboarding checklist). Miss one and the source is incomplete. [docs/source-onboarding-checklist.md](docs/source-onboarding-checklist.md) tracks what is still in triage.
 
 ## Sources
 
@@ -267,7 +153,7 @@ Required upstream notices, kept short:
 - **ANAC Brazil** (`br-anac`): Source: Agência Nacional de Aviação Civil (ANAC), Brazil — [sistemas.anac.gov.br](https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/). Open data requiring no prior authorization, but proper citation of the source is mandatory.
 - **TKA Lithuania** (`lt-tka`): Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); retrieved from [data.gov.lt](https://data.gov.lt). Attribution, licence identification, and indication of changes are licence conditions; changes were made by normalization into this project schema, without implying endorsement.
 
-Additional source credits — each line is the exact string `attributionFor()` serves with those rows. Registers whose own terms mandate particular wording are credited in the required-notice list above instead; that wording is recorded in [DATA_LICENSES.md](DATA_LICENSES.md) and is what the service returns.
+Additional source credits — the exact string `attributionFor()` serves with those rows:
 
 - **FAA United States** (`faa`) — Source: Federal Aviation Administration (FAA), United States — public-domain civil aircraft registry, normalized into this project schema without implying endorsement.
 - **CAA Latvia** (`lv-caa`) — Source: Civil Aviation Agency of Latvia (CAA Latvia) — open aviation registry, normalized into this project schema without implying endorsement.
@@ -285,27 +171,6 @@ Correspondence, posture, and storage terms for every source are tracked in [DATA
 - **Research is informational, not legal advice.** The source-use classifications and permissions in `DATA_LICENSES.md` reflect good-faith research at a point in time. They are not legal advice and carry no guarantee of completeness, accuracy, or continued validity.
 - **Upstream terms change without notice.** Agencies amend terms, withdraw permissions, or restructure publication channels. Operators are responsible for monitoring those changes.
 - **No liability.** The data pipeline, its output, and the license research are provided as-is. See the `No Liability` section of the [LICENSE](LICENSE).
-
----
-
-## Adding a New Registry Source
-
-[AGENTS.md](AGENTS.md) is authoritative for the rules below; this section is a friendlier overview and stays in sync with it.
-
-1. **Pick the source ID.** No generator script — it's `<iso-country-code>-<agency-abbrev>`, lowercase, hyphenated (e.g. `nl-ilt`, `br-anac`, `nz-caa`). Two checked-in IDs predate the rule and are not templates for new ones: `faa` is bare (globally unambiguous) and `tc-ca` is agency-first (the rule would give `ca-tc`). This slug is the shared identifier across every surface below — a filename stem for the config and fixtures, a row or map key everywhere else — so decide it first — renaming later means touching all seven.
-2. Classify the source-use posture under PRD CC.1 (Open / Private-use / Restrictive / Unknown). Restrictive sources are excluded.
-3. For Private-use or Unknown sources, verify whether the public terms prohibit automated access, storage, caching, or private application use. Send the agency permission email (template at [docs/agency-permission-request.md](docs/agency-permission-request.md)) only when research cannot clear private caching. Record outcome in `DATA_LICENSES.md`.
-4. New source onboarding touches **all seven surfaces** or the source is incomplete:
-   - `sources/<source-id>.yaml` — mapping config; declare `format:` (`csv` | `ods` | `xlsx` | `xls` | `json` | `pdf` | `html`) and, if the upstream URL rolls per refresh, `download.discover_url:`.
-   - `fixtures/<source-id>/` — CI ground-truth records covering positive / negative / edge cases.
-   - `DATA_LICENSES.md` — classification, permitted uses, attribution wording quoted exactly (not the full reply — see AGENTS.md).
-   - `README.md` sources table row — alphabetical by country (`scripts/check-sources-sorted.py` enforces).
-   - `README.md` `## Attribution` block — the prominent display that satisfies the upstream license (courtesy credit for CC-0/public-domain sources).
-   - `src/service/attributions.ts` `NOTICES[<source-id>]` — the exact wording served in the feed API's `attribution` field; a missing entry silently falls back to a generic slug credit.
-   - `docs/source-onboarding-checklist.md` `✅ Done` row — keeps the triage snapshot from losing a shipped source.
-5. New scalar, array, or compound transforms require updates in **two places** simultaneously or the loader rejects the config: the name array in `src/types/config.ts` and the handler map in `src/transforms.ts`. `src/config/loader.ts` validates off those same arrays, so it needs no edit.
-
-The mapping engine itself is source-agnostic and stays unchanged for new registries. The downloader and parser dispatch only grow when a source introduces a new file format or download pattern (e.g., NL ILT added the `.ods`/`.xlsx` parser path and the `discover_url` filename-rolling pattern in v3; CAA Taiwan added the legacy `.xls` parser path; au-casa added the `casa_full_registration` / `date_dd_slash_or_null` / `casa_airframe` transforms; ch-foca added the `json` parser path with a `POST` download body for the FOCA search API, plus the `foca_*` owner/operator transforms; mv-caa added the positioned-coordinate `pdf` parser path for the rotated-grid Maldives register, the `date_dmmmyy_or_null` / `first_line_or_null` / `collapse_ws_or_null` / `mv_idera_party` transforms, and the `legal_owner` canonical field; ee-tram added the `html` parser path that reads a server-rendered register table and the `ee_registration` transform; no-caa added the `date_dd_dot_or_null` / `no_hex_or_null` / `no_owner_*` / `no_operator_kind` / `no_airworthiness_classes` transforms for the Norwegian JSON feed, reusing the existing `json` parser path; hr-ccaa added the `hr_ccaa_registration` / `hr_ccaa_owner_kind` / `hr_ccaa_build_certification` / `hr_ccaa_owner_country` transforms, the `pdf.anchor_field` option (constrains an anchor match to one declared column, closing off a false-positive anchor a short generic mark pattern can otherwise match elsewhere on the page), and the `pdf.before_first_anchor_reach` / `pdf.before_first_anchor_pattern` pair (lets a page's bottom-most record keep a continuation line beyond the default footer-exclusion bound, gated by a content allowlist), reusing the existing positioned-coordinate `pdf` parser path).
 
 ## Author
 
