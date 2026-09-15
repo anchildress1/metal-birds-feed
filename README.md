@@ -13,17 +13,15 @@ Maps national aviation registries into a normalized SQLite artifact in Cloudflar
 serves fast tail-number and ICAO hex lookups from a private [feed service](#how-it-works) on
 Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
-**Distribution model:** source-available code (Polyform Shield) + private operator
-artifacts. The normalized output is for Ashley's own applications only, stored in a
-private R2 bucket with no hosted public read API, public download, or public query
-surface. Forks self-host against their own R2 bucket and their own per-source source-use
-assessment. See [PRD.md](PRD.md) §Cross-Cutting for the full model.
+**Distribution model:** source-available code (Polyform Shield) + private operator artifacts.
+Forks self-host against their own R2 bucket and their own per-source source-use assessment.
+See [PRD.md](PRD.md) §Cross-Cutting for the full model.
 
 ## What you're getting into
 
-This pulls national aircraft registers into a normalized SQLite artifact and serves point lookups from a private API. Before you copy it, three things decide whether you can:
+Before you copy it, three things decide whether you can:
 
-- **The output is not yours to publish.** Several registers granted access to Ashley by name, and some clearances are non-commercial. A fork owes its own per-source assessment before pulling anything — [DATA_LICENSES.md](DATA_LICENSES.md) records who said what.
+- **The output is not yours to publish.** It goes to a private R2 bucket for Ashley-operated applications — no public read API, download, or query surface. Several registers granted access to Ashley by name, and some clearances are non-commercial. A fork owes its own per-source assessment before pulling anything — [DATA_LICENSES.md](DATA_LICENSES.md) records who said what.
 - **It costs money.** Cloudflare R2 for the artifacts, optionally Gemini for non-English registers, optionally Cloud Run to serve.
 - **You are the operator.** Per-country data-use, storage, and privacy obligations land on whoever runs it. See [Legal Notice](#legal-notice).
 
@@ -73,7 +71,6 @@ Deeper mechanics — R2 key layout, version markers, duplicate resolution, the d
 
 | Command              | Description                                         |
 | -------------------- | --------------------------------------------------- |
-| `make help`          | List the commands below (default target)            |
 | `make install`       | Install dependencies and git hooks                  |
 | `make check`         | format-check + lint + typecheck + test (CI gate)    |
 | `make refresh`       | Pull every source (reads `.env`)                    |
@@ -83,7 +80,7 @@ Deeper mechanics — R2 key layout, version markers, duplicate resolution, the d
 | `make deploy`        | Rebuild and deploy the feed service to Cloud Run    |
 | `make secret-scan`   | Scan for accidentally committed secrets             |
 
-`make help` lists the rest (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`, `clean`).
+`make help` is the default target and lists the rest (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`, `clean`).
 
 ## Deploying your own copy
 
@@ -95,7 +92,7 @@ Required variables: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SER
 
 ## Adding a registry source
 
-[AGENTS.md](AGENTS.md) is authoritative: source-use posture first, then all seven surfaces (config, fixtures, `DATA_LICENSES.md`, the sources table below, `## Attribution`, `src/service/attributions.ts`, the onboarding checklist). Miss one and the source is incomplete. [docs/source-onboarding-checklist.md](docs/source-onboarding-checklist.md) tracks what is still in triage.
+[AGENTS.md](AGENTS.md) is authoritative: source-use posture first, then all six surfaces (config, fixtures, `DATA_LICENSES.md`, the sources table below, `src/service/attributions.ts`, the onboarding checklist). Miss one and the source is incomplete. [docs/source-onboarding-checklist.md](docs/source-onboarding-checklist.md) tracks what is still in triage.
 
 ## Sources
 
@@ -116,7 +113,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `ee-tram` | Transpordiamet | Estonia | ✅ Live |
 | `hu-kh` | Közlekedési Hatóság | Hungary | ✅ Live |
 | `lv-caa` | CAA Latvia | Latvia | ✅ Live |
-| `lt-tka` | TKA | Lithuania | ✅ Live |
+| `lt-tka` | TKA | Lithuania | ⏸️ Paused — VPN-only upstream, manual refresh; last slice still served |
 | `mv-caa` | CAA Maldives | Maldives | ✅ Live |
 | `nl-ilt` | ILT | Netherlands | ✅ Live |
 | `nz-caa` | CAA NZ | New Zealand | ✅ Live |
@@ -134,32 +131,11 @@ Full correspondence/status detail: [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ## Attribution
 
-Required upstream notices, kept short:
+Every aircraft record this project hands out comes with a credit line for the authority that published it. You do not have to attach it yourself — it travels with the record, so whatever displays the aircraft displays the credit too.
 
-- Transport Canada: Reproduced and distributed with the permission of the Government of Canada.
-- Transport Canada value-added notice: This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.
-- CASA Australia: source data from the Civil Aviation Safety Authority, licensed under CC BY 4.0; normalized into this project schema without implying endorsement.
-- FOCA / BAZL Switzerland: source data from the Federal Office of Civil Aviation — [bazl.admin.ch](https://app02.bazl.admin.ch/web/bazl/en/); redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.
-- CAA Maldives: source data from the Civil Aviation Authority of the Republic of Maldives — [caa.gov.mv](https://www.caa.gov.mv/); reproduced with the CAA's written permission, normalized into this project schema without implying endorsement. Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission.
-- Source: Estonian Transport Administration (Transpordiamet) – [transpordiamet.ee/ohusoidukite-register](https://transpordiamet.ee/ohusoidukite-register); reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.
-- CAAS Singapore: source data from the Civil Aviation Authority of Singapore — [certificate-of-registration](https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/); publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.
-- Data source: Agencia Estatal de Seguridad Aérea (AESA) — [seguridadaerea.gob.es](https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas); reusable under Real Decreto 1495/2011 (Ley 37/2007 on public-sector-information reuse), normalized into this project schema without implying endorsement.
-- DGAC Chile: source data from the Dirección General de Aeronáutica Civil (DGAC) of Chile — **sole official source and copyright holder** — [dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves](https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/); reused non-commercially for research and reference under Ley N° 17.336 (Chilean Intellectual Property Law), confirmed in writing by DGAC 2026-07-22, normalized into this project schema without implying endorsement.
-- Norway: source data from Luftfartstilsynet (Civil Aviation Authority of Norway), Norges luftfartøyregister — [data.norge.no](https://data.norge.no/datasets/ca241ae5-fc9e-3702-bbcd-5453d2d0f06f); publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.
-- Croatia: source data from the Croatian Civil Aviation Agency (CCAA) — [ccaa.hr](https://www.ccaa.hr/en/list-of-registered-aircraft-94674); publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.
-- Hungary: source data from the Közlekedési Hatóság (Hungarian Transport Authority), Magyarország Légijármű Lajstroma — [kozlekedesihatosag.kormany.hu](https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604); publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.
-- New Zealand: source data from the Civil Aviation Authority of New Zealand — [aviation.govt.nz](https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/); the CAA is acknowledged as the source as its terms require, treated as Private-use and normalized into this project schema without implying endorsement.
-- **CAA Taiwan** (`tw-caa`): Source: Civil Aviation Administration, MOTC R.O.C. — [caa.gov.tw](https://www.caa.gov.tw/article.aspx?a=4499&lang=1). Licensed under the Open Government Data License, v1.0. Wording supplied by CAA and used verbatim; redistribution is permitted only for a non-commercial, source-available project.
-- **ANAC Brazil** (`br-anac`): Source: Agência Nacional de Aviação Civil (ANAC), Brazil — [sistemas.anac.gov.br](https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/). Open data requiring no prior authorization, but proper citation of the source is mandatory.
-- **TKA Lithuania** (`lt-tka`): Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); retrieved from [data.gov.lt](https://data.gov.lt). Attribution, licence identification, and indication of changes are licence conditions; changes were made by normalization into this project schema, without implying endorsement.
+Several authorities set conditions on that credit: exact wording they require, or limits on what the data may be used for. All of it is written down in [DATA_LICENSES.md](DATA_LICENSES.md) — who was asked, what they said, what each source requires, and which sources are non-commercial only.
 
-Additional source credits — the exact string `attributionFor()` serves with those rows:
-
-- **FAA United States** (`faa`) — Source: Federal Aviation Administration (FAA), United States — public-domain civil aircraft registry, normalized into this project schema without implying endorsement.
-- **CAA Latvia** (`lv-caa`) — Source: Civil Aviation Agency of Latvia (CAA Latvia) — open aviation registry, normalized into this project schema without implying endorsement.
-- **ILT Netherlands** (`nl-ilt`) — Source: Human Environment and Transport Inspectorate (ILT), Netherlands — open aviation registry, normalized into this project schema without implying endorsement.
-
-Correspondence, posture, and storage terms for every source are tracked in [DATA_LICENSES.md](DATA_LICENSES.md).
+If you fork this, those conditions are yours to meet. Read that file before you pull anything.
 
 ---
 

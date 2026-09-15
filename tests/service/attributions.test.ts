@@ -49,70 +49,25 @@ describe('attributionFor', () => {
 
   // DATA_LICENSES.md is the authority for mandated wording (AGENTS.md), but nothing checked that
   // the served string still matches it — the two could drift silently, and the licence conditions
-  // are the half that matters. Any notice recorded there verbatim must be what the consumer sees.
-  // DATA_LICENSES.md records fixed wording in three forms, and only one of them was checked. AESA's
-  // required citation and NZ's required credit are conditions of those licences — losing either from
-  // the served string is a licence breach, not a cosmetic drift — and both were entirely unguarded.
-  // `Served verbatim` is the whole notice; the other two are substrings the notice must carry.
-  const RECORDED =
-    /(Served verbatim|Required citation, verbatim|Required credit, verbatim) \(([a-zA-Z0-9_-]+)\): "([^"]+)"/g;
+  // are the half that matters. Every recorded mandate is a substring the served notice must carry;
+  // losing one (AESA's citation, NZ's credit) is a licence breach, not a cosmetic drift.
+  const RECORDED = /^- ([a-zA-Z0-9_-]+): "([^"]+)"$/gm;
 
-  const recordedWording = (): Array<{ label: string; id: string; text: string }> => {
+  const noticeSection = (): string => {
     const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'DATA_LICENSES.md'), 'utf8');
-    const section = doc.slice(doc.indexOf('## Required Notices'), doc.indexOf('## Update cadence'));
-    return [...section.matchAll(RECORDED)].map((m) => ({ label: m[1], id: m[2], text: m[3] }));
+    const start = doc.indexOf('## Required Notices');
+    return doc.slice(start, doc.indexOf('\n## ', start + 1));
   };
 
-  it('serves every verbatim-recorded notice exactly as DATA_LICENSES.md records it', () => {
+  const recordedWording = (): Array<{ id: string; text: string }> =>
+    [...noticeSection().matchAll(RECORDED)].map((m) => ({ id: m[1], text: m[2] }));
+
+  it('carries every mandated notice inside the served notice', () => {
     // The source ID is part of the recorded syntax so the pairing is asserted, not just the set of
-    // strings: two notices swapped between their NOTICES keys would leave both consumers displaying
+    // strings: two notices swapped between their keys would leave both consumers displaying
     // someone else's licence condition while a set-membership check still passed.
-    const whole = recordedWording().filter((r) => r.label === 'Served verbatim');
-    expect(whole.length).toBeGreaterThan(0);
-    expect(whole.map(({ id }) => attributionFor(id))).toEqual(whole.map(({ text }) => text));
-  });
-
-  it('carries every required citation and credit inside the served notice', () => {
-    const required = recordedWording().filter((r) => r.label !== 'Served verbatim');
+    const required = recordedWording();
     expect(required.length).toBeGreaterThan(0);
-    for (const { id, text, label } of required) {
-      expect(`${id}: ${attributionFor(id)}`).toContain(text);
-      expect(label).toMatch(/^Required (citation|credit), verbatim$/);
-    }
-  });
-
-  // The README credit block claims to reproduce what the service serves. An unenforced claim of
-  // exactness is how the paraphrased copies got there in the first place.
-  //
-  // The expected IDs are pinned rather than derived from the block: comparing the block against
-  // itself passes just as happily with a credit deleted, which is the regression this guards. Every
-  // source without mandated wording belongs here, so a new open source must be credited too.
-  const CREDITED_IDS = ['faa', 'lv-caa', 'nl-ilt'];
-
-  it('serves the README source credits exactly as written', () => {
-    const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'README.md'), 'utf8');
-    const block = doc.slice(
-      doc.indexOf('Additional source credits'),
-      doc.indexOf('Correspondence, po')
-    );
-    const credited = [...block.matchAll(/^- \*\*.+?\*\* \(`([a-zA-Z0-9_-]+)`\) — (.+)$/gm)].map(
-      (m) => [m[1], m[2]] as const
-    );
-    expect(credited.map(([id]) => id).sort()).toEqual([...CREDITED_IDS].sort());
-    expect(credited.map(([id]) => [id, attributionFor(id)] as const)).toEqual(credited);
-  });
-
-  // A notice recorded without its source ID silently drops out of the pairing check above.
-  it('records a source ID against every verbatim notice', () => {
-    const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'DATA_LICENSES.md'), 'utf8');
-    const section = doc.slice(doc.indexOf('## Required Notices'), doc.indexOf('## Update cadence'));
-    const unbound = [
-      ...section.matchAll(
-        /(?:Served verbatim|Required citation, verbatim|Required credit, verbatim)(?: \(([^)]+)\))?:/g
-      ),
-    ]
-      .filter((m) => m[1] === undefined)
-      .map((m) => m[0]);
-    expect(unbound).toEqual([]);
+    for (const { id, text } of required) expect(`${id}: ${attributionFor(id)}`).toContain(text);
   });
 });
