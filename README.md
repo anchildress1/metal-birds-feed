@@ -10,7 +10,7 @@
 </div>
 
 Maps national aviation registries into a normalized SQLite artifact in Cloudflare R2, and
-serves fast tail-number and ICAO hex lookups from a private [feed service](#feed-service) on
+serves fast tail-number and ICAO hex lookups from a private [feed service](#how-it-works) on
 Cloud Run. Inspired by [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch).
 
 **Distribution model:** source-available code (Polyform Shield) + private operator
