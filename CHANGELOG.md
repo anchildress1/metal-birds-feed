@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.0.0...v2.1.0) (2026-09-16)
+
+
+### Features
+
+* onboard hr-ccaa (Croatian Civil Aviation Agency register) ([#137](https://github.com/anchildress1/metal-birds-feed/issues/137)) ([303e762](https://github.com/anchildress1/metal-birds-feed/commit/303e76211ca63a1f60c6c1254fca9197cfe3e69c))
+* onboard the Hungarian aircraft register (hu-kh) ([#170](https://github.com/anchildress1/metal-birds-feed/issues/170)) ([14dd42d](https://github.com/anchildress1/metal-birds-feed/commit/14dd42dc33e51904e61b503667855a397703b6dd))
+
+
+### Bug Fixes
+
+* close the hu-kh mapping defects and cut the README ([#171](https://github.com/anchildress1/metal-birds-feed/issues/171)) ([71504ed](https://github.com/anchildress1/metal-birds-feed/commit/71504ed72969b67b171975ac616ef54ae4119b2d))
+* hold cadence to calendar days and escalate an overdue source ([#154](https://github.com/anchildress1/metal-birds-feed/issues/154)) ([1aa79a1](https://github.com/anchildress1/metal-birds-feed/commit/1aa79a11065bdab116affd2875e840ccb200f603))
+* null br-anac's "normal situation" code so PRALL resolves ([#157](https://github.com/anchildress1/metal-birds-feed/issues/157)) ([a30fdfc](https://github.com/anchildress1/metal-birds-feed/commit/a30fdfc50c72e728c4b557aed1b2c6ed409e9e3b))
+* read br-anac status from CD_INTERDICAO, not the cancellation date ([#156](https://github.com/anchildress1/metal-birds-feed/issues/156)) ([084bebc](https://github.com/anchildress1/metal-birds-feed/commit/084bebcc47a672df7bcf1616a930339650940b39))
+* restore the daily registry refresh ([#166](https://github.com/anchildress1/metal-birds-feed/issues/166)) ([64eb6e9](https://github.com/anchildress1/metal-birds-feed/commit/64eb6e90ac0519a50d0f517e6d8dabdd9840759b))
+* retry a translation run when only ambiguous duplicates failed ([#149](https://github.com/anchildress1/metal-birds-feed/issues/149)) ([68e3adf](https://github.com/anchildress1/metal-birds-feed/commit/68e3adf3b593b81fea8e6eb7bd7889323265f9d2))
+* retry discovery-pattern matching, not just the discovery fetch ([#141](https://github.com/anchildress1/metal-birds-feed/issues/141)) ([7609b17](https://github.com/anchildress1/metal-birds-feed/commit/7609b17d1cc8a645550cb6b08607243c9343c17a))
+
 ## [2.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v1.0.0...v2.0.0) (2026-08-21)
 
 
