@@ -5,12 +5,11 @@ language: lt
 encoding: utf8
 trim_all: true
 
-# Paused 2026-09-10: data.gov.lt answers every request — the register endpoints and the portal root
-# alike — with an Imperva-style "URL has been blocked" page carried on a 500, from GitHub runners and
-# unrelated residential IPs both. No URL form, User-Agent or header variant reaches the register, so
-# there is nothing to fix in this config. Feed assembly still merges the last good slice, so the
-# Lithuanian fleet keeps serving; clear this flag once access is restored, and run
-# `REFRESH_SOURCE=lt-tka make refresh` to test recovery without editing the file.
+# Paused 2026-09-10: data.gov.lt geoblocks GitHub runners and bare residential IPs with an
+# Imperva "URL has been blocked" page on a 500. No URL, User-Agent or header variant gets past it.
+# Reachable over VPN only, so refresh is manual: `REFRESH_SOURCE=lt-tka make refresh` on VPN writes
+# the slice, and any later deploy assembles it. The staleness issue will escalate and cannot clear
+# itself. Unpause only if CI gains an egress path.
 paused: true
 # Five publications in the eleven months to 2026-03-09. Polling weekly costs one 6 MB fetch and
 # content_hash gates the PUT.

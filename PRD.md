@@ -1,8 +1,8 @@
 # metal-birds-feed — Product Spec (v1)
 
-**Status:** Draft
+**Status:** v1–v3 shipped; v4 (Georgia) not started
 **Owner:** Ashley (anchildress1)
-**Last updated:** 2026-07-22 (live-source roster now points to the README to avoid drift)
+**Last updated:** 2026-09-15 (attribution record consolidated into `DATA_LICENSES.md`)
 **Consumes by:** Personal forked deployment of [metal-birds-watch](https://github.com/georgekobaidze/metal-birds-watch)
 
 ---
@@ -44,8 +44,8 @@ Stretch goal across all phases: the mapping engine itself stays generic. Adding 
 5. **Real-time refresh.** FAA publishes monthly. Transport Canada publishes monthly. National EU registries vary. The pipeline syncs at registry cadence, not on demand.
 6. **Account-management airframes (corporate jet ownership tracing across LLC shells).** Out of scope; this is a registry mirror, not an investigative tool.
 7. **Schema versioning / migration tooling.** v1 is a snapshot. If the schema changes, R2 gets rewritten from source on the next refresh. Acceptable because there is no `raw` blob to migrate independently.
-8. **Hosted public read API.** No _public_ read endpoint. Output is private operator R2 only. Forks self-host. (See CC.4.) An earlier draft included a rate-limited Workers proxy open to third parties; that public form stays dropped. The private, authenticated feed service — single authorized consumer, UUID bearer secret, rate-limited (CC.4) — is a different thing and is permitted; it is not public.
-9. **Commercial operator deployment.** The operator's `metal-birds-feed` deployment must remain non-commercial — ads, sponsorship, monetization, or sale on `metal-birds-watch` invalidates CC BY-NC and "personal-use" source licenses, requiring those sources to be removed. (See CC.3.)
+8. **Hosted public read API.** No _public_ read endpoint; output is private operator R2 only, forks self-host (CC.4). An earlier draft included a rate-limited Workers proxy open to third parties; that public form stays dropped.
+9. **Commercial operator deployment.** Out of scope for the lifetime of any Private-use source (CC.3).
 
 ---
 
@@ -125,7 +125,7 @@ GHA disables scheduled workflows after 60 days of repo inactivity. Mitigated by 
 
 **R0.9 Acceptance fixture.** A hand-curated set of ~10 FAA records covering edge cases (single-engine piston, twin turboprop, jet, helicopter, glider, balloon, experimental kit-built, fractional ownership, non-citizen corp, expired registration). Expected canonical output is committed. CI runs the engine against fixtures on every PR.
 
-**R0.10 R2 access model.** R2 bucket is **private** (no public URL). Operator's own consumers (`metal-birds-watch` on Cloudflare Pages) read via R2 binding inside the same Cloudflare account — direct, no proxy, no rate limit. Third-party consumers fork the repo, point a GHA workflow at their own R2 bucket, and read from there under their own per-source source-use assessment. A private, authenticated feed endpoint (the Cloud Run service, CC.4) additionally serves a point-lookup slice — keyed by `icao_hex` or by normalized registration — to an authorized consumer application over a UUID bearer secret, rate-limited — a private API, not a public one. There is no hosted _public_ read endpoint (see CC.4).
+**R0.10 R2 access model.** R2 bucket is **private** (no public URL). Operator's own consumers (`metal-birds-watch` on Cloudflare Pages) read via R2 binding inside the same Cloudflare account — direct, no proxy, no rate limit. Third-party consumers fork the repo, point a GHA workflow at their own R2 bucket, and read from there under their own per-source source-use assessment. The Cloud Run feed service additionally serves a point-lookup slice under the terms of CC.4.
 
 This is the deliberate trade: operator costs stay $0 and output stays private regardless of external interest, and anyone who needs access has a self-serve fork path that does not involve operator infrastructure.
 
@@ -165,7 +165,7 @@ v3 ships two parallel sources: **Netherlands ILT** (no-email, ships first, drive
 
 **R2.5 NL field-coverage parity.** Document fields ILT does not provide. Null-rather-than-invent rule unchanged.
 
-**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`; CAA Taiwan publishes legacy binary `.xls`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`, `xls`. Implementation uses `hucre` for ODS/XLSX and SheetJS for legacy XLS. The engine's row-mapping logic stays format-agnostic — only the parser dispatch is new.
+**R2.6 Spreadsheet parser path (engine extension).** ILT publishes `.ods`; IAA Ireland (Future R4.2) publishes `.xlsx`; CAA Taiwan publishes legacy binary `.xls`. Engine grows a pluggable parser layer keyed off `format:` in the source YAML — `csv` (existing), `ods`, `xlsx`, `xls`. The engine's row-mapping logic stays format-agnostic — only the parser dispatch is new.
 
 **R2.7 Filename discovery (NL-specific).** ILT's bulk download URL embeds the file's publication date (e.g. `luchtvaartuigregister-ilt-datas2-2026-04-28.ods`), which changes every refresh. Downloader gains a small "discovery" step for sources that declare `download.discover_url:` — fetch the index page, regex out the latest data-file URL, then download. NL is the first source to use this; future sources with the same pattern reuse it.
 
@@ -234,8 +234,6 @@ R2 storage cost. The whole point is that this fits in the free tier. If FAA + TC
 **ICAO type-code source (data, non-blocking).** FAA stores manufacturer + model strings but not always the ICAO type designator (e.g., `B738`). Mapping requires a separate ICAO type-code lookup table (~12k entries, available from ICAO Doc 8643 or community-maintained CSVs). Decision: bundle a lookup table in the repo, or skip `icao_type_code` for FAA records?
 
 **Georgia GCAA data accessibility (data, blocking R3.2 only — does not block v1, v2, or v3).** Does GCAA publish a bulk-downloadable aircraft register? If not, what's actually available — scrapeable web search, PDFs, FOIA-equivalent request, nothing? R3.1 is the time-boxed research to answer this. Outcome shapes whether v4 is "another easy config" or "build a scraper."
-
-**Per-source source-use terms (legal, settled framework).** Code license: Polyform Shield 1.0.0 (source-available, no commercial use by competitors). Source data use is tracked per-source under CC.1: FAA = Open (US public domain); TC-CA = Open (OGL-Canada, attribution); CAA NZ = Private-use candidate; CASA AU = Open (CC BY 4.0, no permission email required); UK CAA = Restrictive, excluded. Per-source attribution, storage/caching posture, and permission status are tracked in `DATA_LICENSES.md`.
 
 ---
 
