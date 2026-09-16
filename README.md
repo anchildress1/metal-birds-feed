@@ -131,7 +131,9 @@ Full correspondence/status detail: [DATA_LICENSES.md](DATA_LICENSES.md).
 
 ## Attribution
 
-Every aircraft record this project hands out comes with a credit line for the authority that published it. You do not have to attach it yourself — it travels with the record, so whatever displays the aircraft displays the credit too.
+Every aircraft record the feed service hands out comes with a credit line for the authority that published it, so whatever displays the aircraft displays the credit too.
+
+Reading the SQLite artifacts out of R2 directly does not go through that service, and those rows carry only a source ID. On that path, attaching the right credit is your job — `src/service/attributions.ts` holds the exact string for each source.
 
 Several authorities set conditions on that credit: exact wording they require, or limits on what the data may be used for. All of it is written down in [DATA_LICENSES.md](DATA_LICENSES.md) — who was asked, what they said, what each source requires, and which sources are non-commercial only.
 

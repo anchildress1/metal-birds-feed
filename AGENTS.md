@@ -20,13 +20,15 @@
 
 ## Code style
 
-Match the surrounding code; `eslint.config.js` and `tsconfig.json` enforce the rest. Two rules neither one catches:
+Match the surrounding code. `no-var` and `prefer-const` are lint-enforced; these are not:
 
+- `??`/`??=` over `||` for null/undefined, `?.` over guard clauses. No `as T` unless TS cannot narrow structurally — `no-unnecessary-type-assertion` only catches the no-op case.
 - A module-private helper called above its own definition stays a `function` declaration. `engine.ts` relies on hoisting; `const` is a TDZ crash. Read the call order first.
 - Never `await` inside `for`/`while` — `Promise.all`/`allSettled` + `.map()`. Exception: inherently sequential consumption (stream pumps, backoff chains); state the WHY inline.
 
 ## Tests
 
+- Live in `tests/` mirroring `src/`, never colocated: `coverageSkipTestFiles` hides a colocated `src/*.test.ts` from the coverage gate, so it lands green.
 - Keep `--isolate`: `mock.module` is process-global and leaks across files without it.
 - `bun test` thresholds line/function/statement only. Cover branches by intent; the gate does not.
 - Every engine function: positive + negative + edge cases.
