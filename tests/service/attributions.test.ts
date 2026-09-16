@@ -41,6 +41,25 @@ describe('attributionFor', () => {
     );
   });
 
+  // These three carry no agency-mandated wording, so the Required Notices pairing below says
+  // nothing about them — without an exact pin they could be reworded with the suite still green.
+  it.each([
+    [
+      'ch-foca',
+      'Source data from the Federal Office of Civil Aviation (FOCA / BAZL), Switzerland — https://app02.bazl.admin.ch/web/bazl/en/; redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'hr-ccaa',
+      'Source data from the Croatian Civil Aviation Agency (CCAA) — https://www.ccaa.hr/en/list-of-registered-aircraft-94674; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'hu-kh',
+      'Source data from the Közlekedési Hatóság (Hungarian Transport Authority), Magyarország Légijármű Lajstroma — https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+  ])('serves the unmandated %s notice exactly', (id, expected) => {
+    expect(attributionFor(id)).toBe(expected);
+  });
+
   it('never returns an empty credit for an unmapped source', () => {
     const line = attributionFor('zz-new');
     expect(line.length).toBeGreaterThan(0);
