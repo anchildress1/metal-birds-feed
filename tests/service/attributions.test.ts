@@ -41,6 +41,25 @@ describe('attributionFor', () => {
     );
   });
 
+  // These three carry no agency-mandated wording, so the Required Notices pairing below says
+  // nothing about them — without an exact pin they could be reworded with the suite still green.
+  it.each([
+    [
+      'ch-foca',
+      'Source data from the Federal Office of Civil Aviation (FOCA / BAZL), Switzerland — https://app02.bazl.admin.ch/web/bazl/en/; redistribution confirmed by FOCA, normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'hr-ccaa',
+      'Source data from the Croatian Civil Aviation Agency (CCAA) — https://www.ccaa.hr/en/list-of-registered-aircraft-94674; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'hu-kh',
+      'Source data from the Közlekedési Hatóság (Hungarian Transport Authority), Magyarország Légijármű Lajstroma — https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+  ])('serves the unmandated %s notice exactly', (id, expected) => {
+    expect(attributionFor(id)).toBe(expected);
+  });
+
   it('never returns an empty credit for an unmapped source', () => {
     const line = attributionFor('zz-new');
     expect(line.length).toBeGreaterThan(0);
@@ -51,7 +70,7 @@ describe('attributionFor', () => {
   // the served string still matches it — the two could drift silently, and the licence conditions
   // are the half that matters. Every recorded mandate is a substring the served notice must carry;
   // losing one (AESA's citation, NZ's credit) is a licence breach, not a cosmetic drift.
-  const RECORDED = /^- ([a-zA-Z0-9_-]+): "([^"]+)"$/gm;
+  const RECORDED = /^- ([a-zA-Z0-9_-]+): "([^"]+)"$/;
 
   const noticeSection = (): string => {
     const doc = readFileSync(resolve(import.meta.dirname, '..', '..', 'DATA_LICENSES.md'), 'utf8');
@@ -59,8 +78,18 @@ describe('attributionFor', () => {
     return doc.slice(start, doc.indexOf('\n## ', start + 1));
   };
 
+  // Throws rather than skips: a mandate that loses its source ID or a quote would match nothing,
+  // and the remaining notices keep `required.length` nonzero, so the check below would pass while
+  // that licence condition went unguarded.
   const recordedWording = (): Array<{ id: string; text: string }> =>
-    [...noticeSection().matchAll(RECORDED)].map((m) => ({ id: m[1], text: m[2] }));
+    noticeSection()
+      .split('\n')
+      .filter((line) => line.startsWith('- '))
+      .map((line) => {
+        const entry = RECORDED.exec(line);
+        if (!entry) throw new Error(`Malformed Required Notices entry: ${line}`);
+        return { id: entry[1], text: entry[2] };
+      });
 
   it('carries every mandated notice inside the served notice', () => {
     // The source ID is part of the recorded syntax so the pairing is asserted, not just the set of
