@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/anchildress1/metal-birds-feed/compare/v2.1.0...v2.1.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* correct the attribution claim and close the review findings from [#172](https://github.com/anchildress1/metal-birds-feed/issues/172) ([#175](https://github.com/anchildress1/metal-birds-feed/issues/175)) ([edf4b2d](https://github.com/anchildress1/metal-birds-feed/commit/edf4b2d7111e717652c4cc6aba5be5ef07b2e717))
+
 ## [2.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.0.0...v2.1.0) (2026-09-16)
 
 
