@@ -17,25 +17,25 @@
     "@commitlint/config-conventional": "^21.2.2",
     "@eslint/js": "^10.0.1",
     "@types/bun": "^1.4.2",
-    "@types/node": "^26.5.0",
+    "@types/node": "^26.6.1",
     "@types/unzipper": "^0.10.11",
     "eslint": "^10.10.0",
-    "eslint-plugin-sonarjs": "^4.2.0",
-    "lefthook": "^2.1.12",
-    "prettier": "^3.9.6",
+    "eslint-plugin-sonarjs": "^4.2.1",
+    "lefthook": "^2.1.14",
+    "prettier": "^3.9.7",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.70.0"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1127.0",
-    "@google/genai": "^2.21.0",
+    "@aws-sdk/client-s3": "^3.1134.0",
+    "@google/genai": "^2.22.0",
     "csv-parse": "^7.0.1",
     "hucre": "^1.1.0",
-    "js-yaml": "^5.4.1",
+    "js-yaml": "^5.4.2",
     "unpdf": "^1.8.1",
     "unzipper": "^0.12.5",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "overrides": {
     "js-yaml": "5.2.3"
