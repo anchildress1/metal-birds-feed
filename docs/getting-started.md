@@ -270,8 +270,9 @@ warnings apply:
   make ingest SOURCE=<id> FILE=drops/<file>
   ```
 
-  It checks that the file reads cleanly before storing it in your R2 bucket, then refreshes that one
-  source. Every later `make refresh` reuses the stored copy, so you repeat this only when the agency
+  It checks mapping and the refresh record-count guard before replacing the file in your R2 bucket,
+  then refreshes that one source; a rejected candidate leaves the previous stored file intact.
+  Every later `make refresh` reuses the stored copy, so you repeat this only when the agency
   publishes a new file. Until you do it once, `make refresh` reports that source as failed — or
   delete its YAML if you don't want it
 

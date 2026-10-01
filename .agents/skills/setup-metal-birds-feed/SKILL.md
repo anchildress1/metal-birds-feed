@@ -153,7 +153,7 @@ the user to look).
 - every `download.manual: true` source has a stored drop or its YAML is gone. Without one the
   refresh fails that source and Phase 6 cannot assemble. The user saves the file from
   `download.url` into `drops/`; then `make ingest SOURCE=<id> FILE=drops/<file>`. Ingest refuses a
-  file that does not map cleanly, so a failure there is the file, not the store
+  file that fails mapping or the refresh record-count guard before replacing the stored drop
 
 `DRY_RUN=true` in `.env` downloads, parses and diffs without writing to R2. It does **not**
 translate: `localize.ts` enters the Gemini call only when `!dryRun`, so a non-English source falls

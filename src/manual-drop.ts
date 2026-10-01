@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
 import { loadSourceConfig } from './config/loader.js';
 import { mapRows } from './engine.js';
-import { R2ArtifactWriter } from './writer.js';
+import { assertRecordCountForWrite, R2ArtifactWriter } from './writer.js';
 import { log } from './logger.js';
 import { requireEnv } from './env.js';
 
@@ -10,19 +11,25 @@ import { requireEnv } from './env.js';
 // directory keeps them out of anything git might stage.
 export const DROP_DIR = 'drops';
 
+function assertInsideDrop(sandbox: string, path: string, input: string): void {
+  const rel = relative(sandbox, path);
+  if (rel === '' || rel.startsWith('..') || isAbsolute(rel))
+    throw new Error(`Drop file must sit inside ${DROP_DIR}/: ${input}`);
+}
+
 export const resolveDropPath = (input: string, root = resolve('.')): string => {
   if (input.includes('..')) throw new Error(`Path traversal rejected: ${input}`);
   const sandbox = resolve(root, DROP_DIR);
   const abs = resolve(root, input);
-  const rel = relative(sandbox, abs);
-  if (rel === '' || rel.startsWith('..') || isAbsolute(rel))
-    throw new Error(`Drop file must sit inside ${DROP_DIR}/: ${input}`);
-  return abs;
+  assertInsideDrop(sandbox, abs, input);
+  const canonical = realpathSync(abs);
+  // Canonicalize the root, not drops/: a drops symlink must not move the sandbox elsewhere.
+  assertInsideDrop(resolve(realpathSync(root), DROP_DIR), canonical, input);
+  return canonical;
 };
 
 /**
- * Stores an operator-downloaded register file as the R2 drop for a `download.manual` source.
- * Maps the file first and refuses to store one that fails, since every later refresh reads it.
+ * Stores a manual register drop after mapping and refresh record-count validation.
  * @returns the number of records the file maps to.
  */
 export async function ingest(sourceId: string, file: string, dryRun: boolean): Promise<number> {
@@ -49,6 +56,7 @@ export async function ingest(sourceId: string, file: string, dryRun: boolean): P
     },
     dryRun
   );
+  assertRecordCountForWrite(records.size, sourceId, await writer.readState(sourceId));
   await writer.writeDrop(sourceId, bytes);
   log('info', 'drop_stored', { source: sourceId, bytes: bytes.byteLength, records: records.size });
   return records.size;
