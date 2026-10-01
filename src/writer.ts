@@ -37,11 +37,24 @@ const S3_RETRY: RetryOptions = {
 
 const S3_MAX_ATTEMPTS = 5;
 
-// A run yielding under this fraction of the prior record count is treated as a truncated/partial
-// upstream (an HTTP-success-but-short download that parses cleanly), not a real shrinkage —
-// aircraft registries don't lose half their fleet in a refresh. Refuse rather than overwrite the
-// good artifact with a partial one.
+// A reduction below this fraction requires operator review: counts alone cannot distinguish a
+// legitimate registry cleanup from a partial download.
 export const MIN_RETAIN_RATIO = 0.5;
+
+export function assertRecordCountForWrite(
+  count: number,
+  source: string,
+  priorState: SourceState | null
+): void {
+  if (count === 0)
+    throw new Error(`Refusing to write 0 records for "${source}" (suspected upstream data loss)`);
+
+  const priorCount = priorState?.record_count;
+  if (priorCount !== undefined && priorCount > 0 && count / priorCount < MIN_RETAIN_RATIO)
+    throw new Error(
+      `Refusing to write ${count} records for "${source}": ${Math.round((1 - count / priorCount) * 100)}% drop from prior ${priorCount} (suspected truncated upstream). Delete aircraft/_state/${source}.json to override.`
+    );
+}
 
 export interface WriteStats {
   // Upstream data changed. Drives last_content_change, and so staleness — never set by a
@@ -114,24 +127,7 @@ export class R2ArtifactWriter {
     // stored hash even when no row's serialized value actually changed — see db.ts.
     const content_hash = hashRecords(records, String(DB_SCHEMA_VERSION));
 
-    // Zero records is upstream data loss for an aircraft registry, never a legitimate dataset —
-    // refuse rather than publish an empty artifact. Unconditional (not gated on prior
-    // record_count): a source on its first migration run has no prior _state, so a count check
-    // alone would let a fresh source publish empty.
-    if (records.size === 0) {
-      throw new Error(`Refusing to write 0 records for "${source}" (suspected upstream data loss)`);
-    }
-
-    const priorCount = priorState?.record_count;
-    if (
-      priorCount !== undefined &&
-      priorCount > 0 &&
-      records.size / priorCount < MIN_RETAIN_RATIO
-    ) {
-      throw new Error(
-        `Refusing to write ${records.size} records for "${source}": ${Math.round((1 - records.size / priorCount) * 100)}% drop from prior ${priorCount} (suspected truncated upstream). Delete aircraft/_state/${source}.json to override.`
-      );
-    }
+    assertRecordCountForWrite(records.size, source, priorState);
 
     // No prior state (fresh source, or state that failed validation and self-healed to absent)
     // matches neither hash, so the artifact is rewritten. A schema migration lands the same way,
