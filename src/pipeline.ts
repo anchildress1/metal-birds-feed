@@ -185,7 +185,7 @@ const createStalenessIssue = async (
     `often than declared, raise \`cadence_days\` in \`sources/${entry.source}.yaml\` rather than`,
     'leaving it polling daily.',
     '',
-    '> Auto-opened by the Registry Refresh workflow. Closes automatically on next successful content change.',
+    '> Auto-opened by the Registry Refresh workflow. Closes automatically on the first run that finds the source back within its threshold.',
   ].join('\n');
 
   const createRes = await fetch(`${apiBase}/issues`, {
@@ -266,25 +266,23 @@ const resolvePausedSources = (): Set<string> =>
     )
   );
 
-const resolveSources = (): string[] => {
+interface ResolvedSources {
+  active: string[];
+  paused: string[];
+}
+
+const resolveSources = (): ResolvedSources => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
   // The refresh.yml guard only covers workflow_dispatch; `make refresh` reaches here directly with
   // whatever .env exports, and an unnamed force is a fleet-wide cadence bypass either way.
   if (sourceEnv === '' && process.env['FORCE_REFRESH'] === 'true')
     throw new Error('FORCE_REFRESH requires REFRESH_SOURCE to name a single source');
-  if (sourceEnv) return [sourceEnv];
+  if (sourceEnv) return { active: [sourceEnv], paused: [] };
   const paused = resolvePausedSources();
   const active = resolveAllSources().filter((id) => !paused.has(id));
   for (const id of paused) log('warn', 'source_paused', { source: id });
-  return active;
+  return { active, paused: [...paused] };
 };
-
-// Content just changed when this run's write stamped last_content_change to last_run.
-const justChanged = (value: RunResult, dryRun: boolean): boolean =>
-  !dryRun &&
-  !value.skipped &&
-  value.new_state !== null &&
-  value.new_state.last_content_change === value.new_state.last_run;
 
 const closeWithLogging = async (source: string, token: string, repo: string): Promise<void> => {
   try {
@@ -324,7 +322,6 @@ interface Failure {
 interface ProcessedResults {
   failures: Failure[];
   stalenessEntries: StalenessEntry[];
-  closePromises: Promise<void>[];
 }
 
 // A failed run still owes a staleness reading. Escalation makes an overdue source run instead of
@@ -349,18 +346,17 @@ const stalenessFromPriorState = async (
   }
 };
 
+// Paused sources are included from prior state: a run outside CI (a VPN refresh, a manual ingest)
+// moves their state with nobody reading it otherwise, so their issues would never open or close.
 const processResults = async (
   results: PromiseSettledResult<RunResult>[],
   sources: string[],
+  paused: string[],
   now: Date,
-  dryRun: boolean,
-  gh: GitHubCtx,
   writer: R2ArtifactWriter
 ): Promise<ProcessedResults> => {
-  const { token, repo } = gh;
   const failures: Failure[] = [];
   const stalenessEntries: StalenessEntry[] = [];
-  const closePromises: Promise<void>[] = [];
 
   const rejected: string[] = [];
 
@@ -376,13 +372,13 @@ const processResults = async (
     const { cadence_days, new_state, source } = result.value;
     if (cadence_days === undefined) continue;
     stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
-    if (token && repo && justChanged(result.value, dryRun))
-      closePromises.push(closeWithLogging(source, token, repo));
   }
-  const recovered = await Promise.all(rejected.map((s) => stalenessFromPriorState(s, writer, now)));
+  const recovered = await Promise.all(
+    [...rejected, ...paused].map((s) => stalenessFromPriorState(s, writer, now))
+  );
   stalenessEntries.push(...recovered.filter((e) => e !== null));
 
-  return { failures, stalenessEntries, closePromises };
+  return { failures, stalenessEntries };
 };
 
 const ESCAPED_PIPE = String.raw`\|`;
@@ -418,10 +414,14 @@ const emitStaleness = async (
   if (summaryPath) await writeFile(summaryPath, `\n${markdown}\n`, { flag: 'a' });
 
   const { token, repo } = gh;
-  if (!dryRun && token && repo)
-    await Promise.allSettled(
-      stalenessEntries.filter((e) => e.overdue).map((e) => createWithLogging(e, token, repo))
-    );
+  if (dryRun || !token || !repo) return;
+  // Level, not edge: closing only on the run that saw new content missed every change landed by a
+  // run without a GitHub token, leaving the issue open after the source had recovered.
+  await Promise.allSettled(
+    stalenessEntries.map((e) =>
+      e.overdue ? createWithLogging(e, token, repo) : closeWithLogging(e.source, token, repo)
+    )
+  );
 };
 
 export const resolveFeedOutputPath = (input: string, root = resolve('.')): string => {
@@ -507,7 +507,7 @@ export const markFeedDeployed = async (hash: string | undefined): Promise<void> 
 };
 
 export async function main(): Promise<void> {
-  const sources = resolveSources();
+  const { active: sources, paused } = resolveSources();
   // Wrapped rather than `sources.map(run)`: map passes (value, index, array) positionally, so any
   // second parameter `run` grows would silently receive the index.
   const results = await Promise.allSettled(sources.map((sourceId) => run(sourceId)));
@@ -518,15 +518,13 @@ export async function main(): Promise<void> {
     repo: process.env['GITHUB_REPOSITORY'],
   };
 
-  const { failures, stalenessEntries, closePromises } = await processResults(
+  const { failures, stalenessEntries } = await processResults(
     results,
     sources,
+    paused,
     now,
-    dryRun,
-    gh,
     new R2ArtifactWriter(r2ConfigFromEnv(), dryRun)
   );
-  await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
   await emitFailures(failures);
 

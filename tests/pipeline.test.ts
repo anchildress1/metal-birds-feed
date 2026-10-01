@@ -783,6 +783,39 @@ describe('main', () => {
     expect(mockDownload.mock.calls).toHaveLength(1);
   });
 
+  // The paused source's own state, not a fresh run, is the only reading anything takes of it.
+  it('opens a staleness issue for an overdue paused source from its stored state', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    const ids = readdirSync('sources')
+      .filter((f) => f.endsWith('.yaml'))
+      .map((f) => f.replace(/\.yaml$/, ''));
+    const parked = ids[0] ?? '';
+    mockLoadSourceConfig.mockImplementation((path: string) =>
+      path.includes(`${parked}.yaml`) ? { ...CONFIG, paused: true, cadence_days: 7 } : CONFIG
+    );
+    const stale = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    mockReadState.mockImplementation((source: string) =>
+      Promise.resolve(
+        source === parked
+          ? { last_run: stale, last_content_change: stale, content_hash: HASH64 }
+          : null
+      )
+    );
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockDownload.mock.calls).toHaveLength(ids.length - 1);
+    const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+    const body = JSON.parse(createCall.body as string) as { title: string };
+    expect(body.title).toStartWith(`[staleness] ${parked} `);
+  });
+
   // Escalation makes an overdue source run instead of skip, and a silent register is often silent
   // because its download broke — so a rejected run must still report a staleness reading.
   it('still opens a staleness issue when the run itself fails', async () => {
@@ -1032,6 +1065,63 @@ describe('main', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1][0])).toContain('/issues/7');
+  });
+
+  // A run without a GitHub token (local, VPN) moves state with nobody to close the issue, so the
+  // next CI tick that finds the source within threshold must close it even with no change of its own.
+  it('closes an open issue for a source within threshold whose content did not change this run', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const recent = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: recent,
+      last_content_change: recent,
+      content_hash: HASH64,
+    });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([{ number: 7, title: '[staleness] faa has not updated in 40 days' }]),
+      })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(mockR2Write).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/issues/7');
+  });
+
+  it('leaves an overdue source issue open', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const stale = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: stale,
+      last_content_change: stale,
+      content_hash: HASH64,
+    });
+    mockR2Write.mockResolvedValueOnce({ changed: false, record_count: 1, content_hash: 'h' });
+    const fetchMock = mock().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve([{ number: 7, title: '[staleness] faa has not updated in 60 days' }]),
+    });
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(
+      fetchMock.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')
+    ).toBe(false);
   });
 
   it('logs staleness_close_failed when the close PATCH call rejects', async () => {
