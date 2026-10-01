@@ -261,6 +261,20 @@ warnings apply:
   the first data load. That is an observed bill, not a guaranteed quote or a claim about which
   billing dimension caused it. Check current R2 pricing and your account usage before starting
 - Remaining non-English sources need `GEMINI_API_KEY` set or the run stops
+- **A few registers can't be downloaded by the pipeline at all.** Their agencies put the file behind
+  a browser check that automated requests cannot pass, and this project does not try to get around
+  one. Those configs say `manual: true`. Open the `url` from the YAML in your own browser, save the
+  file into a `drops/` folder in the project, then run:
+
+  ```bash
+  make ingest SOURCE=<id> FILE=drops/<file>
+  ```
+
+  It checks that the file reads cleanly before storing it in your R2 bucket, then refreshes that one
+  source. Every later `make refresh` reuses the stored copy, so you repeat this only when the agency
+  publishes a new file. Until you do it once, `make refresh` reports that source as failed — or
+  delete its YAML if you don't want it
+
 - **Re-read [DATA_LICENSES.md](../DATA_LICENSES.md) first, then delete what you're not covered
   for.** Some of these permissions were granted to Ashley personally and do not extend to you.
   Reading the file is not enough — a refresh with no `REFRESH_SOURCE` pulls **every** config that

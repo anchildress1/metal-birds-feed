@@ -150,3 +150,67 @@ fi
     expect(await Bun.file(join(workspace, 'feed.sqlite')).exists()).toBe(false);
   });
 });
+
+describe('Makefile ingest contract', () => {
+  beforeEach(async () => {
+    workspace = await mkdtemp(join(tmpdir(), 'metal-birds-feed-ingest-'));
+    binDir = join(workspace, 'bin');
+    logPath = join(workspace, 'commands.log');
+    await mkdir(binDir);
+    await copyFile(join(REPO_ROOT, 'Makefile'), join(workspace, 'Makefile'));
+    // A REFRESH_SOURCE left in .env must not redirect the forced run.
+    await writeFile(
+      join(workspace, '.env'),
+      'MBF_R2_ACCOUNT_ID=a\nMBF_R2_ACCESS_KEY_ID=b\nMBF_R2_SECRET_ACCESS_KEY=c\nMBF_R2_BUCKET_NAME=d\nREFRESH_SOURCE=faa\n'
+    );
+  });
+
+  afterEach(async () => {
+    if (workspace) await rm(workspace, { force: true, recursive: true });
+  });
+
+  const runIngest = async (args: string[], ingestExit = 0) => {
+    const bunx = await executable('fake-bunx', '#!/bin/sh\nexit 0\n');
+    const bun = await executable(
+      'fake-bun',
+      `#!/bin/sh\necho "$2 src=$INGEST_SOURCE file=$INGEST_FILE refresh=$REFRESH_SOURCE force=$FORCE_REFRESH dry=$DRY_RUN" >> "$TEST_LOG"\n[ "$2" = dist/ingest.js ] && exit ${ingestExit}\nexit 0\n`
+    );
+    return Bun.spawnSync({
+      cmd: ['make', '-f', 'Makefile', 'ingest', `BUN=${bun}`, `BUNX=${bunx}`, ...args],
+      cwd: workspace,
+      env: { ...process.env, PATH: `${binDir}:${process.env['PATH'] ?? ''}`, TEST_LOG: logPath },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+  };
+
+  it('stores the drop, then forces a refresh of that source only', async () => {
+    const result = await runIngest(['SOURCE=th-caat', 'FILE=drops/r.pdf']);
+
+    expect(result.exitCode).toBe(0);
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'dist/ingest.js src=th-caat file=drops/r.pdf refresh=faa force= dry=false\n' +
+        'dist/pipeline.js src= file= refresh=th-caat force=true dry=false\n'
+    );
+  });
+
+  it('skips the refresh when the drop is refused', async () => {
+    const result = await runIngest(['SOURCE=th-caat', 'FILE=drops/r.pdf'], 3);
+
+    expect(result.exitCode).not.toBe(0);
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'dist/ingest.js src=th-caat file=drops/r.pdf refresh=faa force= dry=false\n'
+    );
+  });
+
+  it.each([[['SOURCE=th-caat']], [['FILE=drops/r.pdf']]])(
+    'prints usage and runs nothing when an argument is missing (%p)',
+    async (args) => {
+      const result = await runIngest(args);
+
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stdout.toString('utf8')).toContain('usage: make ingest SOURCE=<id>');
+      expect(await Bun.file(logPath).exists()).toBe(false);
+    }
+  );
+});

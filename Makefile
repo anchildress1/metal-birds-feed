@@ -1,4 +1,4 @@
-.PHONY: help install check format format-check lint typecheck test build refresh secret-scan clean serve assemble-feed build-feed deploy-only deploy
+.PHONY: help install check format format-check lint typecheck test build refresh ingest secret-scan clean serve assemble-feed build-feed deploy-only deploy
 
 .DEFAULT_GOAL := help
 
@@ -71,6 +71,20 @@ refresh: build ## Pull every source: download, map, write artifacts + feed slice
 		echo "Bootstrap initial load — source=$${REFRESH_SOURCE:-<all>} dry_run=$$DRY_RUN"; \
 		export REFRESH_SOURCE DRY_RUN; \
 		$(BUN) run dist/pipeline.js
+
+# For a `download.manual` source: maps FILE (under drops/), stores it in R2 only when it maps
+# cleanly, then forces that one source's refresh. Assigned after .env loads so a REFRESH_SOURCE
+# left in .env cannot redirect the forced run at a different source.
+ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drops/<file>) and refresh it
+	@if [ -z "$(SOURCE)" ] || [ -z "$(FILE)" ]; then \
+			echo "usage: make ingest SOURCE=<id> FILE=drops/<file>"; exit 1; \
+		fi; \
+		if [ ! -f $(ENV_FILE) ]; then echo "$(ENV_FILE) not found. Create it with MBF_R2_*."; exit 1; fi; \
+		case "$(ENV_FILE)" in /*) src="$(ENV_FILE)" ;; *) src="./$(ENV_FILE)" ;; esac; \
+		set -a; . "$$src"; set +a; \
+		DRY_RUN=$${DRY_RUN:-false}; \
+		INGEST_SOURCE="$(SOURCE)" INGEST_FILE="$(FILE)" DRY_RUN=$$DRY_RUN $(BUN) run dist/ingest.js && \
+		REFRESH_SOURCE="$(SOURCE)" FORCE_REFRESH=true DRY_RUN=$$DRY_RUN $(BUN) run dist/pipeline.js
 
 
 

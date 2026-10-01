@@ -254,6 +254,8 @@ The skill hard-codes these. They are not suggestions the assistant may talk itse
   data load incurred approximately $6.50 USD in R2 charges — an observed bill, not a guaranteed
   quote or a claim about which billing dimension caused it
 - It confirms with you before any Cloud Run deploy, because that puts data on a server
+- It never downloads a register that sits behind a browser check. Those few sources say
+  `manual: true`; you save the file in your own browser, and it runs `make ingest` with it
 - It sends you to `DATA_LICENSES.md` rather than deciding a licensing question itself
 
 If your assistant does something off-script, stop it and fall back to

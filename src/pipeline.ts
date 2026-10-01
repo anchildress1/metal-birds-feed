@@ -31,6 +31,21 @@ function validateSourceId(sourceId: string): void {
     throw new Error(`Path traversal rejected: ${sourceId}`);
 }
 
+async function readDropFiles(
+  writer: R2ArtifactWriter,
+  sourceId: string,
+  entries: Record<string, string>
+): Promise<Map<string, Buffer>> {
+  const bytes = await writer.readDrop(sourceId);
+  if (bytes === null)
+    throw new Error(
+      `No manual drop stored for ${sourceId}. Download it in a browser, then run \`make ingest SOURCE=${sourceId} FILE=drops/<file>\`.`
+    );
+  // The loader holds a manual source to `format: file`, so there is exactly one alias.
+  const [alias] = Object.keys(entries);
+  return new Map([[alias, bytes]]);
+}
+
 interface RunResult {
   source: string;
   skipped: boolean;
@@ -77,7 +92,9 @@ export async function run(sourceId: string): Promise<RunResult> {
     };
   }
 
-  const files = await download(config.download);
+  const files = config.download.manual
+    ? await readDropFiles(writer, sourceId, config.download.entries)
+    : await download(config.download);
   const countUrl = config.record_count?.url;
   // After the register itself, so the two responses bracket as little publishing time as possible:
   // a publication landing between them reports a total the download predates, which fails the run.
