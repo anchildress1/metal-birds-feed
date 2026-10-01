@@ -170,7 +170,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | CAA Taiwan | Taiwan | gencaa@mail.caa.gov.tw | 2026-05-05 | confirmed | live |
 | Civil Aviation Agency (under Government of the Republic of Tajikistan) | Tajikistan | n/a | 2026-05-11 | pending | sent |
 | TCAA | Tanzania | n/a | 2026-05-05 | pending | sent |
-| CAAT | Thailand | registration@caat.or.th | 2026-05-10 | confirmed 2026-05-21 | cleared; blocked: cloudflare (datacenter-IP managed challenge) |
+| CAAT | Thailand | registration@caat.or.th | 2026-05-10 | confirmed 2026-05-21 | live: non-commercial with credit; manual browser drop (Cloudflare challenge), no ICAO hex |
 | ANATL | Timor-Leste | none | n/a | none | excluded: no register |
 | ANAC Togo | Togo | n/a | 2026-05-10 | pending | sent: no bulk |
 | n/a | Tonga | none | n/a | none | excluded: no register |
@@ -231,6 +231,7 @@ Clearance basis, conditions, and residual exposure per active source. The served
 - nz-caa: terms grant reproduction **for personal use**, conditioned (verbatim) on "the material being reproduced accurately and not being used in a misleading context" and on acknowledgement — "In all cases, the CAA must be acknowledged as the source." No storage/caching prohibition, so the §CC.5 gate passes; the open question is whether a private operator pipeline counts as "personal use." Shipped on the §CC.2 fallback (sent 2026-05-05, elapsed 2026-06-04, no reply) — the weakest fallback clearance held, since unlike Norway's silence CAA NZ actively directs non-personal reuse to a permission request. NZGOAL is not adopted on the CAA site. Revisit on any reply.
 - sg-caas: free to use with attribution to CAAS and a link to its register page, confirmed by CAAS.
 - tc-ca: the Government of Canada open licence mandates both the reproduction notice and the value-added notice; both must reach the consumer together.
+- th-caat: use and sharing permitted for a non-commercial project, on condition that CAAT is credited with a reference to its official website (Aircraft Registration Division, reply 2026-05-21). The whole caat.or.th host serves automated requests a Cloudflare managed challenge, so the PDF is downloaded in a browser and stored through `make ingest`; the pipeline never requests the host. CAAT prints private operators as "PRIVATE AIRCRAFT" and publishes no owner or address, so there is nothing to drop. Coverage cost: no ICAO 24-bit hex, so these rows answer tail-number lookups only.
 - tw-caa: redistribution permitted only for a non-commercial, source-available project and only under the Open Government Data License v1.0 (https://data.gov.tw/license), with a link back to the official register page (Nicholas Liaw, Flight Standards Division, reply 2026-05-15). CAA supplied the attribution wording and accepted it verbatim in reply.
 - A source with no mandated wording is still credited, by courtesy, from `src/service/attributions.ts`.
 
@@ -242,3 +243,4 @@ Where a source's observed publishing rhythm differs from a stated or assumed one
 - Transport Canada: **daily.** No cadence documented on the CCARCS download page; `ccarcsdb.zip` `Last-Modified` was observed same-day and mid-month, indicating a sub-daily refresh.
 - CAA New Zealand: **daily.** No published cadence and only one observation point (a 2026-07-31 publish against a 2026-08-06 fetch), so the "more frequent of the two" rule applies: polling daily costs one small bulk download and `content_hash` gates the PUT, while a weekly cadence would hide a mid-week publish for up to seven days and delay the staleness alarm to 10.5.
 - Közlekedési Hatóság Hungary: **weekly.** No declared cadence; the document library reported version 321 on 2026-09-11 against a 2020-08-14 creation date, which is near-weekly.
+- CAAT Thailand: **twice a year.** CAAT's reply states January and June publications; the July 2026 file was uploaded on 2026-08-04, so a publication can land weeks after its stated month. Each one needs a browser download and `make ingest`, prompted by the staleness issue.

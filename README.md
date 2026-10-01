@@ -123,6 +123,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `es-aesa` | AESA | Spain | ✅ Live |
 | `ch-foca` | FOCA / BAZL | Switzerland | ✅ Live |
 | `tw-caa` | CAA Taiwan | Taiwan | ✅ Live |
+| `th-caat` | CAAT | Thailand | ✅ Live — manual browser drop (`make ingest`) |
 | `faa` | FAA | United States | ✅ Live |
 <!-- prettier-ignore-end -->
 

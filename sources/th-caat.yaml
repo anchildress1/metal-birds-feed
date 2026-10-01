@@ -1,0 +1,208 @@
+id: th-caat
+label: CAAT Thailand Aircraft Register
+country: TH
+language: en
+encoding: utf8
+trim_all: true
+# CAAT's written reply (2026-05-21): published twice a year, normally January and June.
+cadence_days: 182
+
+download:
+  # The whole caat.or.th host answers automated requests with a Cloudflare managed challenge (403),
+  # datacenter and residential tooling alike. The register page links one dated PDF per
+  # publication; the operator saves it from this page and runs `make ingest`.
+  url: https://www.caat.or.th/certificates-licenses/aircraft/service-manual/aircraft-registration-application/
+  format: file
+  manual: true
+  entries:
+    register: register.pdf
+
+primary: register
+delimiter: ','
+format: pdf
+
+# Landscape positioned table, one aircraft per y-row. `HS-` is the national mark and `U-` the
+# ultralight register CAAT prints in the same table; both are full marks with their prefix.
+# Only the unrotated orientation has been observed. If CAAT ever republishes the table rotated the
+# parse fails naming the missing axis rather than reading it wrong; measure the new bands against the
+# live file and add a second layouts entry.
+pdf:
+  anchor_pattern: '^(?:HS|U)-[A-Z0-9]{3}$'
+  anchor_field: mark
+  layouts:
+    - field_axis: x
+      column_pos:
+        - 97 # status
+        - 165 # mark
+        - 215 # manufacturer
+        - 412 # model
+        - 510 # serial
+        - 560 # operator
+
+columns:
+  register:
+    - status
+    - mark
+    - mfr
+    - model
+    - serial
+    - operator
+
+# CAAT publishes no permanent per-aircraft id; the mark is unique within each publication.
+source_id: mark
+source_id_transform: trim_or_null
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: trim
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  status:
+    field: status
+    transform: trim
+    lookup:
+      Registered: valid
+
+  country:
+    constant: TH
+
+  manufacturer:
+    field: mfr
+    transform: collapse_ws_or_null
+
+  model:
+    field: model
+    transform: collapse_ws_or_null
+
+  # Kept verbatim, including values a spreadsheet mangled upstream (a Zenair serial printed as
+  # "Jul-32"): the register states it that way and nothing here can recover the original.
+  serial_number:
+    field: serial
+    transform: collapse_ws_or_null
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # The register publishes the operator only. Private operators are printed as "PRIVATE AIRCRAFT",
+  # CAAT's own redaction, kept verbatim like Estonia's "eraisik". No address is printed.
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: operator
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

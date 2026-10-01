@@ -49,6 +49,9 @@ const NOTICES: Record<string, string> = {
     'Source data from the Croatian Civil Aviation Agency (CCAA) — https://www.ccaa.hr/en/list-of-registered-aircraft-94674; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
   'hu-kh':
     'Source data from the Közlekedési Hatóság (Hungarian Transport Authority), Magyarország Légijármű Lajstroma — https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+  // CAAT's 2026-05-21 reply conditions use on crediting CAAT and referencing its official website.
+  'th-caat':
+    'Source data from the Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th; used and shared with permission for non-commercial use, normalized into this project schema without implying endorsement.',
 };
 
 // A source slug with no mapped notice still gets a credit rather than an empty string — a displayed

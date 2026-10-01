@@ -2895,6 +2895,59 @@ beforeAll(async () => {
   eeStats = result.stats;
 });
 
+describe('CAAT Thailand fixture mapping (PDF)', () => {
+  const TH_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'th-caat.yaml');
+  const TH_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'th-caat', 'input', 'register.pdf');
+  let thRecords: Map<string, Aircraft>;
+  let thStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(TH_CONFIG);
+    const result = await mapRows(config, new Map([['register', readFileSync(TH_PDF)]]));
+    thRecords = result.records;
+    thStats = result.stats;
+  });
+
+  // Three real pages: 53 + 53 + 53 rows.
+  it('maps all 159 real rows with no failures', () => {
+    expect(thStats).toEqual({ total: 159, ok: 159, failed: 0, skipped: 0, duplicateSkipped: 0 });
+  });
+
+  it('keys on the full HS- mark and maps the airframe columns', () => {
+    const r = thRecords.get('HS-SSP')!;
+    expect(r.source).toBe('th-caat');
+    expect(r.registration).toBe('HS-SSP');
+    expect(r.status).toBe('valid');
+    expect(r.country).toBe('TH');
+    expect(r.manufacturer).toBe('Textron Aviation Inc.');
+    expect(r.model).toBe('208B');
+    expect(r.serial_number).toBe('208B5076');
+    expect(r.operator.name).toBe('SIAM SEAPLANE COMPANY LIMITED');
+    expect(r.icao_hex).toBeNull();
+  });
+
+  // The ultralight register shares the table under a U- prefix; the anchor must take both.
+  it('anchors U- ultralight marks alongside HS- marks', () => {
+    const r = thRecords.get('U-C11')!;
+    expect(r.registration).toBe('U-C11');
+    expect(r.model).toBe('MX II Sprint');
+    expect(r.operator.name).toBe('MAE HONG SON AVIATION CLUB');
+  });
+
+  it('leaves a manufacturer the register printed blank as null, not the neighbouring cell', () => {
+    const r = thRecords.get('HS-CBR')!;
+    expect(r.manufacturer).toBeNull();
+    expect(r.model).toBe('A320-216');
+  });
+
+  it("keeps CAAT's own PRIVATE AIRCRAFT redaction and publishes no owner", () => {
+    const privates = [...thRecords.values()].filter((r) => r.operator.name === 'PRIVATE AIRCRAFT');
+    expect(privates.length).toBeGreaterThan(0);
+    for (const r of thRecords.values())
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+  });
+});
+
 describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
   it('maps all 10 fixture aircraft with no failures', () => {
     expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
