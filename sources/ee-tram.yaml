@@ -4,9 +4,9 @@ country: EE
 language: et
 encoding: utf8
 trim_all: true
-# Register updates a few times a year (the page stamps its own "updated" date); poll weekly so a
-# fresh publication is picked up promptly while conditional fetch keeps off-cadence runs cheap.
-cadence_days: 7
+# No declared cadence. Weekly polling tripped the staleness alarm on an ordinary quiet stretch; see
+# DATA_LICENSES.md "Update cadence" for the observed rhythm.
+cadence_days: 30
 
 download:
   # The full fleet is server-rendered as a single HTML <table> on the canonical register page —
