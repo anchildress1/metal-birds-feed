@@ -123,6 +123,7 @@ const SourceConfigSchema = z
         entries: z.record(z.string(), z.string()),
         headers: z.record(z.string(), z.string()).optional(),
         prime_url: z.url().optional(),
+        manual: z.boolean().optional(),
         discover_url: z.url().optional(),
         discover_pattern: z
           .string()
@@ -158,7 +159,22 @@ const SourceConfigSchema = z
       )
       .refine((d) => d.method === 'POST' || d.body === undefined, {
         message: 'download.body is only valid with method POST',
-      }),
+      })
+      // A manual drop is one file the operator saved; every request-shaping field would be dead
+      // config that reads as though the pipeline still fetches.
+      .refine(
+        (d) =>
+          d.manual !== true ||
+          (d.format === 'file' &&
+            d.method === 'GET' &&
+            d.prime_url === undefined &&
+            d.discover_url === undefined &&
+            d.headers === undefined),
+        {
+          message:
+            'download.manual requires format "file" and no method, headers, prime_url, or discover_url',
+        }
+      ),
     primary: z.string().min(1),
     delimiter: z.string().min(1),
     trim_all: z.boolean().default(false),
@@ -398,6 +414,11 @@ const SourceConfigSchema = z
   // data under both declared names with no error at any point.
   .refine((c) => new Set(c.joins.map((j) => j.name)).size === c.joins.length, {
     message: 'joins[].name values must be unique',
+  })
+  // The count endpoint is a live request to the same walled host the drop exists to avoid, and its
+  // total would describe today's register rather than the dropped file's.
+  .refine((c) => c.download.manual !== true || c.record_count?.url === undefined, {
+    message: 'record_count.url is not supported with download.manual',
   });
 
 const ROOT = resolve(import.meta.dirname, '..', '..');

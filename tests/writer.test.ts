@@ -997,3 +997,49 @@ describe('R2ArtifactWriter — deployed feed hash', () => {
     expect(String(put?.input.Body)).toContain(HASH64);
   });
 });
+
+describe('R2ArtifactWriter — manual drop', () => {
+  it('reads the drop bytes from aircraft/_drop/<source>', async () => {
+    mockSend.mockResolvedValue({
+      Body: { transformToByteArray: () => Promise.resolve(new Uint8Array([37, 80, 68, 70])) },
+    });
+    const bytes = await new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat');
+    expect(bytes?.toString('latin1')).toBe('%PDF');
+    const command = mockSend.mock.calls[0]?.[0] as { input: { Key: string } };
+    expect(command.input.Key).toBe('aircraft/_drop/th-caat');
+  });
+
+  it('returns null when nothing was ever ingested', async () => {
+    mockSend.mockRejectedValue(noSuchKey());
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).toBeNull();
+  });
+
+  it('returns null for a response with no body', async () => {
+    mockSend.mockResolvedValue({});
+    expect(await new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).toBeNull();
+  });
+
+  // Absent and unreadable must not collapse: an R2 outage reading as "never ingested" would point
+  // the operator at a re-download that fixes nothing.
+  it('rethrows a non-transient R2 error and logs it', async () => {
+    mockSend.mockRejectedValue(
+      Object.assign(new Error('denied'), { $metadata: { httpStatusCode: 403 } })
+    );
+    await expect(new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).rejects.toThrow(
+      'denied'
+    );
+  });
+
+  it('writes the drop as an octet stream', async () => {
+    mockSend.mockResolvedValue({});
+    await new R2ArtifactWriter(R2_CONFIG, false).writeDrop('th-caat', new Uint8Array([1, 2]));
+    const put = putCalls().find((c) => c.input.Key === 'aircraft/_drop/th-caat');
+    expect(put?.input.ContentType).toBe('application/octet-stream');
+    expect(put?.input.Body).toEqual(new Uint8Array([1, 2]));
+  });
+
+  it('writes nothing in dry-run', async () => {
+    await new R2ArtifactWriter(R2_CONFIG, true).writeDrop('th-caat', new Uint8Array([1]));
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+});

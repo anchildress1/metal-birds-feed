@@ -358,6 +358,30 @@ export class R2ArtifactWriter {
     });
   }
 
+  // Operator-supplied register bytes for a `download.manual` source. Null when nothing was ever
+  // ingested; a real R2 error rethrows rather than reading as absent.
+  async readDrop(source: string): Promise<Buffer | null> {
+    try {
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/_drop/${source}` })
+          ),
+        S3_RETRY
+      );
+      const bytes = await res.Body?.transformToByteArray();
+      return bytes ? Buffer.from(bytes) : null;
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      log('error', 'drop_load_failed', { source, msg: errorMessage(err) });
+      throw err;
+    }
+  }
+
+  async writeDrop(source: string, bytes: Uint8Array): Promise<void> {
+    await this.put(`aircraft/_drop/${source}`, bytes, 'application/octet-stream');
+  }
+
   // Content hash of the consolidated feed last deployed to Cloud Run. The scheduled deploy job reads
   // it to decide whether a redeploy is warranted, and advances it only after a successful deploy.
   async readDeployedFeedHash(): Promise<string | null> {

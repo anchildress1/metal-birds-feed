@@ -26,6 +26,7 @@ const mockFeedRowsExist = mock();
 const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
 const mockReadDeployedFeedHash = mock();
+const mockReadDrop = mock();
 const mockWriteDeployedFeedHash = mock();
 const mockLog = mock();
 const mockLocalizeRecords = mock();
@@ -55,6 +56,7 @@ void mock.module('../src/writer.js', () => ({
     writeFeedRows = mockWriteFeedRows;
     readFeedRows = mockReadFeedRows;
     readDeployedFeedHash = mockReadDeployedFeedHash;
+    readDrop = mockReadDrop;
     writeDeployedFeedHash = mockWriteDeployedFeedHash;
   },
   // pipeline.ts reads this to decide whether a run is trustworthy enough to prune the translation
@@ -166,6 +168,7 @@ beforeEach(() => {
   mockWriteFeedRows.mockReset();
   mockReadFeedRows.mockReset();
   mockReadDeployedFeedHash.mockReset();
+  mockReadDrop.mockReset();
   mockWriteDeployedFeedHash.mockReset();
   mockLog.mockReset();
   mockLocalizeRecords.mockReset();
@@ -242,6 +245,45 @@ describe('run', () => {
 
     expect(mockFetchPublishedTotal).not.toHaveBeenCalled();
     expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
+  });
+
+  it('maps the stored drop instead of fetching for a manual source', async () => {
+    const manual = {
+      ...CONFIG,
+      download: {
+        url: 'https://example.test/r.pdf',
+        format: 'file' as const,
+        manual: true,
+        entries: { register: 'r.pdf' },
+      },
+      primary: 'register',
+    };
+    mockLoadSourceConfig.mockReturnValue(manual);
+    mockReadDrop.mockResolvedValue(Buffer.from('%PDF'));
+
+    await run('th-caat');
+
+    expect(mockDownload).not.toHaveBeenCalled();
+    expect(mockReadDrop).toHaveBeenCalledWith('th-caat');
+    const files = mockMapRows.mock.calls[0]?.[1] as Map<string, Buffer>;
+    expect(files.get('register')?.toString()).toBe('%PDF');
+  });
+
+  it('names the ingest command when a manual source has no stored drop', async () => {
+    mockLoadSourceConfig.mockReturnValue({
+      ...CONFIG,
+      download: {
+        url: 'https://example.test/r.pdf',
+        format: 'file' as const,
+        manual: true,
+        entries: { register: 'r.pdf' },
+      },
+      primary: 'register',
+    });
+    mockReadDrop.mockResolvedValue(null);
+
+    await expect(run('th-caat')).rejects.toThrow(/make ingest SOURCE=th-caat/);
+    expect(mockMapRows).not.toHaveBeenCalled();
   });
 
   it('aborts write when any row fails mapping, without retrying', async () => {

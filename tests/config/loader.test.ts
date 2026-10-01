@@ -853,3 +853,76 @@ describe('loadSourceConfig — JSON + POST sources', () => {
     }
   });
 });
+
+describe('loadSourceConfig — download.manual', () => {
+  const manualYaml = (download: string, extra = ''): string =>
+    `id: t\nlabel: t\ncountry: TH\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/register.pdf\n${download}primary: register\ndelimiter: ','\nformat: csv\n${extra}source_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`;
+
+  const load = (body: string): ReturnType<typeof loadSourceConfig> => {
+    const tmp = tmpConfig('_test_manual.yaml');
+    writeFileSync(tmp, body);
+    try {
+      return loadSourceConfig(tmp);
+    } finally {
+      unlinkSync(tmp);
+    }
+  };
+
+  it('accepts a single-file manual source', () => {
+    const config = load(manualYaml('  manual: true\n  format: file\n  entries: { register: r }\n'));
+    expect(config.download.manual).toBe(true);
+  });
+
+  it('leaves manual unset on a fetched source', () => {
+    expect(loadSourceConfig(FAA_CONFIG).download.manual).toBeUndefined();
+  });
+
+  it.each([
+    {
+      label: 'zip format',
+      download: '  manual: true\n  format: zip\n  entries: { register: r }\n',
+    },
+    {
+      label: 'POST method',
+      download: '  manual: true\n  format: file\n  method: POST\n  entries: { register: r }\n',
+    },
+    {
+      label: 'headers',
+      download:
+        "  manual: true\n  format: file\n  entries: { register: r }\n  headers: { User-Agent: 'x' }\n",
+    },
+    {
+      label: 'prime_url',
+      download:
+        '  manual: true\n  format: file\n  entries: { register: r }\n  prime_url: https://example.com/\n',
+    },
+    {
+      label: 'discover_url',
+      download:
+        "  manual: true\n  format: file\n  entries: { register: r }\n  discover_url: https://example.com/i\n  discover_pattern: '(x)'\n",
+    },
+  ])('rejects a manual source carrying $label', ({ download }) => {
+    expect(() => load(manualYaml(download))).toThrow(/download\.manual requires format/);
+  });
+
+  it('rejects record_count.url on a manual source', () => {
+    expect(() =>
+      load(
+        manualYaml(
+          '  manual: true\n  format: file\n  entries: { register: r }\n',
+          "record_count:\n  pattern: '(\\d+)'\n  url: https://example.com/count\n"
+        )
+      )
+    ).toThrow(/record_count\.url is not supported with download\.manual/);
+  });
+
+  it('keeps an in-file record_count pattern on a manual source', () => {
+    const config = load(
+      manualYaml(
+        '  manual: true\n  format: file\n  entries: { register: r }\n',
+        "record_count:\n  pattern: '(\\d+)'\n"
+      )
+    );
+    expect(config.record_count?.pattern).toBe('(\\d+)');
+  });
+});
