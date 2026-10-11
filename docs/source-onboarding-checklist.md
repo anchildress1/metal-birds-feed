@@ -57,7 +57,7 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | ----------------------------------------- | ---------- | ---------- | ------- | -------- |
 | AAC Albania                               | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | ANAC Algeria                              | 2026-05-11 | 2026-06-10 | pending | No       |
-| ANAC Angola                               | 2026-05-11 | 2026-06-10 | pending | Yes      |
+| ANAC Angola                               | 2026-05-11 | 2026-06-10 | replied | Yes      |
 | ANAC Argentina                            | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | CAC Armenia                               | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | BCAA Bahamas                              | 2026-05-05 | 2026-06-04 | pending | Yes      |
@@ -79,13 +79,13 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | DGAC Costa Rica                           | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | ANAC CI Côte d'Ivoire                     | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | DCA Cyprus                                | 2026-05-05 | 2026-06-04 | pending | Yes      |
-| CAA CR Czech Republic                     | 2026-05-10 | 2026-06-09 | pending | Yes      |
+| CAA CR Czech Republic                     | 2026-05-10 | 2026-06-09 | replied | Yes      |
 | AAC RDC DRC                               | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | Trafikstyrelsen Denmark                   | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | IDAC Dominican Republic                   | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | ECCAA (regional) Eastern Caribbean (OECS) | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | DGAC Ecuador                              | 2026-05-10 | 2026-06-09 | pending | Yes      |
-| AAC El Salvador                           | 2026-05-10 | 2026-06-10 | pending | Yes      |
+| AAC El Salvador                           | 2026-05-10 | 2026-06-10 | replied | Yes      |
 | ESWACAA Eswatini                          | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | ECAA Ethiopia                             | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | CAAF Fiji                                 | 2026-05-05 | 2026-06-04 | pending | Yes      |
