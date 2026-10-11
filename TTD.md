@@ -36,12 +36,12 @@
 
 ## History in the per-source artifact
 
-- [ ] Columns `first_seen`, `removed_on`, `missing_since` (all nullable but `first_seen`); `DB_SCHEMA_VERSION` 14; PK `(source_id, first_seen)`; partial unique index on `source_id WHERE removed_on IS NULL`
-- [ ] Merge step: present → keep `first_seen`, clear `missing_since`; first miss → stamp `missing_since`, stay live; second consecutive miss → `removed_on = missing_since`; returns after close with the same `source_id` → reopen, keep `first_seen`
-- [ ] Reuse on mark-keyed sources: same `source_id` back with a different non-null `serial_number` → close the old row, open a new one
-- [ ] Writer reads the prior artifact; unreadable or no migration path → fail that source closed, never reset history; closed rows must be a superset of the prior closed rows
-- [ ] Only fetched runs count toward a miss: cadence skips and failed runs neither close nor clear
-- [ ] Migrations for closed rows: additive bump copies by column name with nulls; non-additive bump ships an explicit migration in the same commit
-- [ ] Feed slice takes live rows only; `FEED_SLICE_VERSION` stays put
-- [ ] `AGENTS.md`: rewrite the no-compat, no-older-shape and never-migrate rules to except closed rows; `PRD.md` non-goal 7 (schema versioning / migration tooling) changes
-- [ ] `lt-tka` backfill from `duomenu_sviezumas`: needs a config option naming the per-row publication date
+- [x] Columns `first_seen`, `removed_on`, `missing_since` (all nullable but `first_seen`); `DB_SCHEMA_VERSION` 14; PK `(source_id, first_seen)`; partial unique index on `source_id WHERE removed_on IS NULL`
+- [x] Merge step: present → keep `first_seen`, clear `missing_since`; first miss → stamp `missing_since`, stay live; second consecutive miss → `removed_on = missing_since`; returns after close with the same `source_id` → reopen, keep `first_seen`
+- [x] Reuse on mark-keyed sources: same `source_id` back with a different non-null `serial_number` → close the old row, open a new one
+- [x] Writer reads the prior artifact; unreadable or no migration path → fail that source closed, never reset history; closed rows must be a superset of the prior closed rows
+- [x] Only fetched runs count toward a miss: cadence skips and failed runs neither close nor clear
+- [x] Migrations for closed rows: additive bump copies by column name with nulls; non-additive bump ships an explicit migration in the same commit
+- [x] Feed slice takes live rows only; `FEED_SLICE_VERSION` stays put
+- [x] `AGENTS.md`: rewrite the no-compat, no-older-shape and never-migrate rules to except closed rows; `PRD.md` non-goal 7 (schema versioning / migration tooling) changes
+- [ ] `lt-tka` backfill from `duomenu_sviezumas`: needs a config option naming the per-row publication date; the 2025-04-29 and 2025-06-10 snapshots load nearly every row twice, so skip or special-case them
