@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { mapRows } from '../src/engine.js';
+import { mapRows, mapSnapshots } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { FieldMapping, SourceConfig } from '../src/types/config.js';
@@ -4499,5 +4499,61 @@ describe('list-valued source_id', () => {
       { mapping: { registration: { field: 'MARK' }, model: { field: 'MODEL' } } }
     );
     expect(stats.failed).toBe(1);
+  });
+});
+
+describe('mapSnapshots', () => {
+  const config = (extra: Partial<SourceConfig> = {}): SourceConfig => ({
+    id: 'synthetic-snapshots',
+    label: 'synthetic',
+    country: 'LT',
+    language: 'en',
+    encoding: 'utf8',
+    download: { url: 'https://example.com/x.csv', format: 'file', entries: { primary: 'p.csv' } },
+    primary: 'primary',
+    delimiter: ',',
+    trim_all: true,
+    format: 'csv',
+    joins: [],
+    source_id: 'MARK',
+    registration: 'MARK',
+    latest_snapshot_by: 'PUBLISHED',
+    mapping: { registration: { field: 'MARK' } },
+    ...extra,
+  });
+  const run = (csv: string, extra: Partial<SourceConfig> = {}) =>
+    mapSnapshots(config(extra), new Map([['primary', Buffer.from(csv, 'utf8')]]));
+
+  it('maps every publication separately, oldest first', async () => {
+    const snapshots = await run('MARK,PUBLISHED\nB,2025-10-21\nA,2025-07-21\nA,2025-10-21\n');
+
+    expect(snapshots.map((s) => s.snapshot)).toEqual(['2025-07-21', '2025-10-21']);
+    expect([...(snapshots[0]?.records.keys() ?? [])]).toEqual(['A']);
+    expect([...(snapshots[1]?.records.keys() ?? [])].sort()).toEqual(['A', 'B']);
+  });
+
+  // The bad loads in a real register double every row with different content; they must not hide
+  // behind a good publication or abort the replay.
+  it("counts a publication's colliding rows as its own failures", async () => {
+    const snapshots = await run(
+      'MARK,PUBLISHED,EXTRA\nA,2025-06-10,x\nA,2025-06-10,y\nA,2025-07-21,x\n',
+      { mapping: { registration: { field: 'MARK' }, model: { field: 'EXTRA' } } }
+    );
+
+    expect(snapshots.map((s) => s.stats.failed)).toEqual([1, 0]);
+  });
+
+  it('refuses a source that keeps no snapshots', async () => {
+    await expect(
+      run('MARK,PUBLISHED\nA,2025-07-21\n', { latest_snapshot_by: undefined })
+    ).rejects.toThrow(/no latest_snapshot_by/);
+  });
+
+  it('refuses a row with no publication value', async () => {
+    await expect(run('MARK,PUBLISHED\nA,\n')).rejects.toThrow(/has no PUBLISHED value/);
+  });
+
+  it('fails when the primary file is missing', async () => {
+    await expect(mapSnapshots(config(), new Map())).rejects.toThrow(/Primary file/);
   });
 });

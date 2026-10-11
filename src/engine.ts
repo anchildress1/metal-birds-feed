@@ -161,27 +161,12 @@ const keepLatestSnapshot = (config: SourceConfig, rows: Row[]): Row[] => {
   return kept;
 };
 
-export async function mapRows(
+function mapRowSet(
   config: SourceConfig,
-  files: Map<string, Buffer>,
-  // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
-  publishedTotal?: string
-): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
-  unmatchedLookups.delete(config.id);
-  const joinMaps = await buildJoinMaps(config, files);
+  joinMaps: Map<string, Map<string, Row>>,
+  rows: Row[]
+): { records: Map<string, Aircraft>; stats: EngineStats } {
   const missingSourceIdPolicy = buildMissingSourceIdPolicy(config);
-
-  const primaryBuf = files.get(config.primary);
-  if (!primaryBuf)
-    throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
-
-  // Before assertJoinHits and the mapping loop, so joins are checked against the rows that will
-  // actually be mapped and stats.total counts them rather than the whole accumulated history.
-  const parsedRows = await parsePrimary(primaryBuf, config);
-  const rows = keepLatestSnapshot(config, parsedRows);
-  assertJoinHits(config, joinMaps, rows);
-  assertSourceIdColumns(config, rows, joinMaps);
-
   const records = new Map<string, Aircraft>();
   // Raw merged row per source_id, used to detect a byte-identical re-publish.
   const seenRows = new Map<string, Row>();
@@ -219,6 +204,30 @@ export async function mapRows(
     skipped,
     duplicateSkipped,
   };
+  return { records, stats };
+}
+
+export async function mapRows(
+  config: SourceConfig,
+  files: Map<string, Buffer>,
+  // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
+  publishedTotal?: string
+): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
+  unmatchedLookups.delete(config.id);
+  const joinMaps = await buildJoinMaps(config, files);
+
+  const primaryBuf = files.get(config.primary);
+  if (!primaryBuf)
+    throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
+
+  // Before assertJoinHits and the mapping loop, so joins are checked against the rows that will
+  // actually be mapped and stats.total counts them rather than the whole accumulated history.
+  const parsedRows = await parsePrimary(primaryBuf, config);
+  const rows = keepLatestSnapshot(config, parsedRows);
+  assertJoinHits(config, joinMaps, rows);
+  assertSourceIdColumns(config, rows, joinMaps);
+
+  const { records, stats } = mapRowSet(config, joinMaps, rows);
   // Runs before the "complete" log and only when there are no row-level failures: pipeline.ts's
   // own `stats.failed > 0` abort path already handles that case with a specific per-row error, and
   // logging map_complete before a guard that can still throw would misreport the run as done.
@@ -226,7 +235,7 @@ export async function mapRows(
   // unrecognized values are the evidence for it — throwing first would withhold them from the only
   // run that needed them.
   reportUnmatchedLookups(config.id);
-  if (failed === 0)
+  if (stats.failed === 0)
     assertRecordCount(
       config,
       primaryBuf,
@@ -235,6 +244,49 @@ export async function mapRows(
     );
   log('info', 'map_complete', { source: config.id, ...stats });
   return { records, stats };
+}
+
+export interface Snapshot {
+  snapshot: string;
+  records: Map<string, Aircraft>;
+  stats: EngineStats;
+}
+
+/**
+ * Maps each publication of an accumulating register separately, oldest first, instead of keeping
+ * only the newest. A snapshot with failed rows is returned with its failures counted, not thrown:
+ * the caller decides whether a bad publication is skipped.
+ */
+export async function mapSnapshots(
+  config: SourceConfig,
+  files: Map<string, Buffer>
+): Promise<Snapshot[]> {
+  const column = config.latest_snapshot_by;
+  if (column === undefined)
+    throw new Error(`Source "${config.id}" has no latest_snapshot_by; there are no snapshots`);
+  unmatchedLookups.delete(config.id);
+  const joinMaps = await buildJoinMaps(config, files);
+  const primaryBuf = files.get(config.primary);
+  if (!primaryBuf)
+    throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
+  const rows = await parsePrimary(primaryBuf, config);
+  assertSourceIdColumns(config, rows, joinMaps);
+
+  const bySnapshot = new Map<string, Row[]>();
+  for (const row of rows) {
+    const value = row[column] ?? '';
+    if (value === '')
+      throw new Error(`Source "${config.id}": a row has no ${column} value; cannot place it`);
+    bySnapshot.set(value, [...(bySnapshot.get(value) ?? []), row]);
+  }
+  const snapshots = [...bySnapshot]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([snapshot, group]) => ({
+      snapshot,
+      ...mapRowSet(config, joinMaps, group),
+    }));
+  reportUnmatchedLookups(config.id);
+  return snapshots;
 }
 
 type RowOutcome =
