@@ -5,9 +5,7 @@
 - [x] Add stream path tests to `tests/downloader.test.ts` (below threshold, at threshold, absent `Content-Length`, unwanted entries autodrained, missing entry throws)
 - [x] **After the 1.0.0 release PR merges:** drop `"release-as": "1.0.0"` from `release-please-config.json`. The option is sticky — release-please keeps recomputing 1.0.0, the release PR tries to re-create an existing tag, `release_created` stays falsy and the deploy job is skipped, so releases stop working with nothing red to show for it.
 
-## Discovered sources — implementation queue (2026-10-11 sweep)
-
-Fetchable, mark-bearing, no data-specific terms found. Posture unverified until onboarding. Order = easiest first.
+## Discovered sources — implementation queue, easiest first
 
 - [ ] Jamaica JCAA — HTML table, `https://jcaa.gov.jm/aircraft-registry-page`; only source here with Mode S hex
 - [ ] Fiji CAAF — HTML table, `https://www.caaf.org.fj/aircraft-register-search/`; MSN/series columns misaligned on some rows
@@ -23,8 +21,6 @@ Fetchable, mark-bearing, no data-specific terms found. Posture unverified until 
 
 - [ ] Asia: shallow first pass, no bulk register found. Retry with local-language search + browser for India (eGCA), Korea, Indonesia, Philippines (FOI list), Malaysia, Vietnam, Pakistan, Bangladesh, Nepal
 - [ ] Uzbekistan UZCAA — `https://gov.uz/en/uzcaa/sections/reestrlar` "Registers" section unopened
-- [ ] Czech CAA — replied 2026-05-14: no license, no feed, suggests a source line; tracker still says pending
-- [ ] Reconcile tracker rows that have inbound Gmail replies but read `pending` (Angola, SACAA, Saudi GACA, Greece, Honduras, El Salvador, Uruguay, Madagascar, DRC, Turkey)
 
 ## Discovered sources — Europe (same sweep)
 
@@ -38,9 +34,7 @@ Fetchable, mark-bearing, no data-specific terms found. Posture unverified until 
 - [ ] Ireland IAA, Malta CAD — 403 on WebFetch; retest with a real client
 - [ ] Albania AAC — page says a "last revision" file sits under publications and forms; locate it
 
-## History in the per-source artifact (design agreed 2026-10-11)
-
-Decided: live rows regenerate, closed rows are carried forward; closing needs two consecutive fetched runs missing; `first_seen` is never served.
+## History in the per-source artifact
 
 - [ ] Columns `first_seen`, `removed_on`, `missing_since` (all nullable but `first_seen`); `DB_SCHEMA_VERSION` 14; PK `(source_id, first_seen)`; partial unique index on `source_id WHERE removed_on IS NULL`
 - [ ] Merge step: present → keep `first_seen`, clear `missing_since`; first miss → stamp `missing_since`, stay live; second consecutive miss → `removed_on = missing_since`; returns after close with the same `source_id` → reopen, keep `first_seen`
