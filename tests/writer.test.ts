@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { FeedRow } from '../src/feed-row.js';
 import type { SourceState } from '../src/cadence.js';
-import { hashRecords, readArtifactRows, DB_SCHEMA_VERSION } from '../src/db.js';
+import { hashRecords, readArtifactRows, toRow, DB_SCHEMA_VERSION } from '../src/db.js';
 
 const FEED_ROW: FeedRow = {
   icao_hex: 'a1b2c3',
@@ -542,6 +542,87 @@ describe('R2ArtifactWriter — write', () => {
     );
     expect(stats.changed).toBe(true);
     expect(puts).toBe(2);
+  });
+
+  describe('seedHistory', () => {
+    const seedRows = [
+      {
+        ...toRow(makeAircraft('A', 'N1', 'a4e294')),
+        first_seen: '2025-07-21',
+        removed_on: null,
+        missing_since: null,
+      },
+      {
+        ...toRow(makeAircraft('B', 'N2', 'b4e294')),
+        first_seen: '2025-07-21',
+        removed_on: '2025-10-21',
+        missing_since: null,
+      },
+    ];
+
+    it('writes the replayed rows as the artifact', async () => {
+      mockSend.mockResolvedValue({});
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await writer.seedHistory('faa', seedRows, TODAY);
+
+      const put = putCalls().find((c) => c.input.Key === 'aircraft/faa.sqlite');
+      expect(readArtifactRows(put?.input.Body as Uint8Array, TODAY)).toHaveLength(2);
+    });
+
+    it('refuses to replace an artifact that already carries closed history', async () => {
+      mockSend.mockReset();
+      mockSend.mockResolvedValueOnce({
+        Body: {
+          transformToByteArray: () =>
+            Promise.resolve(
+              (() => {
+                const db = new Database(':memory:');
+                db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
+                db.run(
+                  'CREATE TABLE aircraft (source_id TEXT, first_seen TEXT, removed_on TEXT, missing_since TEXT)'
+                );
+                db.run("INSERT INTO aircraft VALUES ('Z', '2025-01-01', '2025-02-01', NULL)");
+                return db.serialize();
+              })()
+            ),
+        },
+      });
+      mockSend.mockResolvedValue({});
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await expect(writer.seedHistory('faa', seedRows, TODAY)).rejects.toThrow(
+        /already carries closed history/
+      );
+      expect(putCalls()).toHaveLength(0);
+    });
+
+    it('seeds over a version-13 artifact, which has no history to lose', async () => {
+      mockSend.mockReset();
+      const old = new Database(':memory:');
+      old.run('PRAGMA user_version = 13');
+      old.run('CREATE TABLE aircraft (source_id TEXT PRIMARY KEY)');
+      old.run("INSERT INTO aircraft VALUES ('A')");
+      const bytes = old.serialize();
+      mockSend.mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(bytes) },
+      });
+      mockSend.mockResolvedValue({});
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await writer.seedHistory('faa', seedRows, TODAY);
+
+      expect(putCalls()).toHaveLength(1);
+    });
+
+    it('writes nothing in dry-run mode', async () => {
+      mockSend.mockResolvedValue({});
+      const writer = new R2ArtifactWriter(R2_CONFIG, true);
+
+      await writer.seedHistory('faa', seedRows, TODAY);
+
+      expect(putCalls()).toHaveLength(0);
+    });
   });
 
   describe('history', () => {

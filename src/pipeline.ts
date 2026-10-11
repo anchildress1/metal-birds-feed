@@ -19,14 +19,14 @@ import {
 } from './cadence.js';
 import type { SourceState, StalenessEntry } from './cadence.js';
 
-const r2ConfigFromEnv = (): R2Config => ({
+export const r2ConfigFromEnv = (): R2Config => ({
   accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
   accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
   secretAccessKey: requireEnv('MBF_R2_SECRET_ACCESS_KEY'),
   bucketName: requireEnv('MBF_R2_BUCKET_NAME'),
 });
 
-function validateSourceId(sourceId: string): void {
+export function validateSourceId(sourceId: string): void {
   if (sourceId.includes('..') || sourceId.includes('/') || sourceId.includes('\\'))
     throw new Error(`Path traversal rejected: ${sourceId}`);
 }

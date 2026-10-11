@@ -44,4 +44,4 @@
 - [x] Migrations for closed rows: additive bump copies by column name with nulls; non-additive bump ships an explicit migration in the same commit
 - [x] Feed slice takes live rows only; `FEED_SLICE_VERSION` stays put
 - [x] `AGENTS.md`: rewrite the no-compat, no-older-shape and never-migrate rules to except closed rows; `PRD.md` non-goal 7 (schema versioning / migration tooling) changes
-- [ ] `lt-tka` backfill from `duomenu_sviezumas`: needs a config option naming the per-row publication date; the 2025-04-29 and 2025-06-10 snapshots load nearly every row twice, so skip or special-case them
+- [ ] Run the `lt-tka` backfill once, after the first schema-14 refresh and over the VPN: `make build`, then `BACKFILL_SOURCE=lt-tka DRY_RUN=true bun run dist/backfill-history.js` with `.env` loaded, then again without `DRY_RUN`. It replays the clean publications through the live merge, skips the double-loaded 2025-04-29 and 2025-06-10 loads, and refuses an artifact that already has closed rows.

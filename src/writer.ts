@@ -184,6 +184,24 @@ export class R2ArtifactWriter {
     };
   }
 
+  /**
+   * Writes history replayed from a source's own publications as its artifact.
+   * @throws when the stored artifact already holds a closed row, which a replay would erase.
+   */
+  async seedHistory(source: string, rows: ArtifactRow[], today: string): Promise<void> {
+    const stored = await this.readStoredRows(source, today);
+    if (stored?.some((r) => r['removed_on'] !== null))
+      throw new Error(`Refusing to seed "${source}": its artifact already carries closed history`);
+    const bytes = buildSqlite(rows);
+    await this.put(`aircraft/${source}.sqlite`, bytes, 'application/vnd.sqlite3');
+    log('info', 'history_seeded', {
+      source,
+      dry_run: this.dryRun,
+      rows: rows.length,
+      bytes: bytes.byteLength,
+    });
+  }
+
   private async readStoredRows(source: string, today: string): Promise<ArtifactRow[] | null> {
     let bytes: Uint8Array | undefined;
     try {
