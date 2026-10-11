@@ -4396,6 +4396,19 @@ describe('list-valued source_id', () => {
     expect([...records.keys()].sort()).toEqual(['LY AXX|2011-04-05|1981-12-22', 'LY JVD||']);
   });
 
+  it('accepts an id column a join supplies, and still rejects a misspelled one', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('MARK,ID\nLY AXX,1\n', 'utf8')],
+      ['jf', Buffer.from('K,BUILT\n1,1981-12-22\n', 'utf8')],
+    ]);
+    const joined = { joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }] };
+    const ok = await mapRows(config({ ...joined, source_id: ['MARK', 'j.BUILT'] }), files);
+    expect([...ok.records.keys()]).toEqual(['LY AXX|1981-12-22']);
+    await expect(
+      mapRows(config({ ...joined, source_id: ['MARK', 'j.BUILD'] }), files)
+    ).rejects.toThrow(/source_id column\(s\) j\.BUILD not in the primary file/);
+  });
+
   it('applies the missing-id policy to a blank first column but not a blank later one', async () => {
     const policy = { field: 'REG', pattern: '^SKIP$', max: 1 };
     const { stats, records } = await run(

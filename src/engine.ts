@@ -180,7 +180,7 @@ export async function mapRows(
   const parsedRows = await parsePrimary(primaryBuf, config);
   const rows = keepLatestSnapshot(config, parsedRows);
   assertJoinHits(config, joinMaps, rows);
-  assertSourceIdColumns(config, rows);
+  assertSourceIdColumns(config, rows, joinMaps);
 
   const records = new Map<string, Aircraft>();
   // Raw merged row per source_id, used to detect a byte-identical re-publish.
@@ -671,9 +671,18 @@ async function buildJoinMaps(
 // A renamed trailing column would read as blank on every row and silently turn each id into
 // `mark||`, where a renamed single-column source_id fails every row loudly. JSON flattening omits
 // null properties, so absence from the first row proves nothing: check every row.
-const assertSourceIdColumns = (config: SourceConfig, rows: Row[]): void => {
+const assertSourceIdColumns = (
+  config: SourceConfig,
+  rows: Row[],
+  joinMaps: Map<string, Map<string, Row>>
+): void => {
   if (typeof config.source_id === 'string' || rows.length === 0) return;
-  const missing = config.source_id.filter((column) => !rows.some((row) => column in row));
+  // The id is resolved from the row after joins merge in, where a join column is `<join>.<column>`.
+  const known = new Set(rows.flatMap((row) => Object.keys(row)));
+  for (const [name, index] of joinMaps)
+    for (const joinRow of index.values())
+      for (const column of Object.keys(joinRow)) known.add(`${name}.${column}`);
+  const missing = config.source_id.filter((column) => !known.has(column));
   if (missing.length > 0)
     throw new Error(
       `Source "${config.id}": source_id column(s) ${missing.join(', ')} not in the primary file — renamed upstream?`
