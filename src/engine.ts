@@ -694,7 +694,7 @@ function buildSourceIdResolver(config: SourceConfig): (row: Row) => string | nul
   }));
   // Escaped so a value holding the separator cannot alias another row's id: ("A|B", "C") and
   // ("A", "B|C") would otherwise join to the same string and collide.
-  const escape = (value: string): string => value.replaceAll('\\', '\\\\').replaceAll('|', '\\|');
+  const escape = (value: string): string => value.replaceAll(/[\\|]/g, String.raw`\$&`);
   return (row) => {
     const head = resolveScalar(row, anchor, config.id);
     if (!head) return null;
