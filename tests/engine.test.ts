@@ -4380,6 +4380,22 @@ describe('list-valued source_id', () => {
     );
   });
 
+  // flattenRecord omits null properties, so the first record can lack a column later ones carry.
+  it('accepts a JSON id column the first record omits, when a later record carries it', async () => {
+    const json = JSON.stringify({
+      data: [
+        { MARK: 'LY JVD', FIRST: null, BUILT: null },
+        { MARK: 'LY AXX', FIRST: '2011-04-05', BUILT: '1981-12-22' },
+      ],
+    });
+    const { records, stats } = await mapRows(
+      config({ format: 'json', record_path: 'data' }),
+      new Map([['primary', Buffer.from(json, 'utf8')]])
+    );
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()].sort()).toEqual(['LY AXX|2011-04-05|1981-12-22', 'LY JVD||']);
+  });
+
   it('applies the missing-id policy to a blank first column but not a blank later one', async () => {
     const policy = { field: 'REG', pattern: '^SKIP$', max: 1 };
     const { stats, records } = await run(

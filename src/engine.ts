@@ -669,10 +669,11 @@ async function buildJoinMaps(
 }
 
 // A renamed trailing column would read as blank on every row and silently turn each id into
-// `mark||`, where a renamed single-column source_id fails every row loudly.
+// `mark||`, where a renamed single-column source_id fails every row loudly. JSON flattening omits
+// null properties, so absence from the first row proves nothing: check every row.
 const assertSourceIdColumns = (config: SourceConfig, rows: Row[]): void => {
   if (typeof config.source_id === 'string' || rows.length === 0) return;
-  const missing = config.source_id.filter((column) => !(column in rows[0]));
+  const missing = config.source_id.filter((column) => !rows.some((row) => column in row));
   if (missing.length > 0)
     throw new Error(
       `Source "${config.id}": source_id column(s) ${missing.join(', ')} not in the primary file — renamed upstream?`
