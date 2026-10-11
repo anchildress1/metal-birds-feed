@@ -3,7 +3,8 @@ import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
 import { FeedSliceSchema, serializeFeedSlice } from './feed.js';
-import { buildSqlite, hashRecords, DB_SCHEMA_VERSION } from './db.js';
+import { buildSqlite, hashArtifact, readArtifactRows, toRow, DB_SCHEMA_VERSION } from './db.js';
+import { assertHistoryPreserved, mergeHistory, type ArtifactRow } from './history.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
@@ -121,13 +122,23 @@ export class R2ArtifactWriter {
     records: Map<string, Aircraft>,
     source: string,
     priorState: SourceState | null,
-    upstreamHash: string
+    upstreamHash: string,
+    today: string
   ): Promise<WriteStats> {
-    // Salted with DB_SCHEMA_VERSION so a schema/DDL-only bump forces a mismatch against any prior
-    // stored hash even when no row's serialized value actually changed — see db.ts.
-    const content_hash = hashRecords(records, String(DB_SCHEMA_VERSION));
-
     assertRecordCountForWrite(records.size, source, priorState);
+
+    // The stored artifact is the only copy of a source's closed rows, so a read that fails for any
+    // reason but absence stops the run: writing over it would start the history over.
+    const stored = await this.readStoredRows(source, today);
+    if (stored === null && priorState !== null)
+      log('warn', 'history_reset_artifact_missing', { source });
+    const incoming = new Map([...records].map(([id, r]) => [id, toRow(r)]));
+    const rows = mergeHistory(stored, incoming, today);
+    assertHistoryPreserved(source, stored, rows);
+    // Salted with DB_SCHEMA_VERSION so a schema/DDL-only bump forces a mismatch against any prior
+    // stored hash even when no row's serialized value actually changed — see db.ts. Hashed over the
+    // merged rows: a second consecutive miss changes only history columns, and must still write.
+    const content_hash = hashArtifact(rows, String(DB_SCHEMA_VERSION));
 
     // No prior state (fresh source, or state that failed validation and self-healed to absent)
     // matches neither hash, so the artifact is rewritten. A schema migration lands the same way,
@@ -154,7 +165,7 @@ export class R2ArtifactWriter {
       };
     }
 
-    const bytes = buildSqlite(records);
+    const bytes = buildSqlite(rows);
     await this.put(`aircraft/${source}.sqlite`, bytes, 'application/vnd.sqlite3');
     log('info', 'artifact_written', {
       source,
@@ -171,6 +182,35 @@ export class R2ArtifactWriter {
       content_hash,
       upstream_hash: upstreamHash,
     };
+  }
+
+  private async readStoredRows(source: string, today: string): Promise<ArtifactRow[] | null> {
+    let bytes: Uint8Array | undefined;
+    try {
+      const res = await retry(
+        () =>
+          this.client.send(
+            new GetObjectCommand({ Bucket: this.bucket, Key: `aircraft/${source}.sqlite` })
+          ),
+        S3_RETRY
+      );
+      bytes = await res.Body?.transformToByteArray();
+    } catch (err) {
+      if (err instanceof NoSuchKey) return null;
+      throw new Error(
+        `Refusing to write "${source}": prior artifact unreadable: ${errorMessage(err)}`,
+        { cause: err }
+      );
+    }
+    if (!bytes || bytes.byteLength === 0) return null;
+    try {
+      return readArtifactRows(bytes, today);
+    } catch (err) {
+      throw new Error(
+        `Refusing to write "${source}": prior artifact unreadable: ${errorMessage(err)}`,
+        { cause: err }
+      );
+    }
   }
 
   // One range-read stands in for three separate checks that all need the same object: does the

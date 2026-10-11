@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite';
 import { createHash } from 'node:crypto';
 import type { Aircraft, Engine, Owner } from './schema.js';
+import type { ArtifactRow, Bind } from './history.js';
 
 // The producer shape marker written into PRAGMA user_version, and salted into the artifact's
 // content_hash below (writer.ts) so a schema/DDL-only change that happens not to alter any
@@ -9,7 +10,7 @@ import type { Aircraft, Engine, Owner } from './schema.js';
 // unrelated upstream data changes. Salting the hash rather than versioning the state envelope
 // keeps record_count/upstream_hash intact through the migration run, so the retain-ratio guard and
 // staleness tracking keep working off the real prior values instead of an invalidated null state.
-export const DB_SCHEMA_VERSION = 13;
+export const DB_SCHEMA_VERSION = 14;
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
@@ -32,7 +33,18 @@ export const hashRecords = (records: Map<string, Aircraft>, salt = ''): string =
   return hash.digest('hex');
 };
 
-type Bind = string | number | null;
+// Fingerprint of the artifact's rows, history columns included, so a run that changes only a
+// row's missing_since or removed_on still rewrites it. Salted by the caller with the schema version.
+export const hashArtifact = (rows: ArtifactRow[], salt = ''): string => {
+  const hash = createHash('sha256');
+  if (salt !== '') hash.update(`${salt}\0`);
+  const key = (row: ArtifactRow): string =>
+    `${String(row['source_id'])}\0${String(row['first_seen'])}`;
+  for (const row of [...rows].sort((a, b) => key(a).localeCompare(key(b)))) {
+    hash.update(`${key(row)}\0${JSON.stringify(row)}\n`);
+  }
+  return hash.digest('hex');
+};
 
 // Every column the artifact exposes, derived from the canonical schema: scalar fields keep their
 // name; nested objects flatten to `owner_*`/`operator_*`/`engine_*`. `toColumns` is typed against
@@ -107,12 +119,15 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   interdiction_code: r.interdiction_code,
 });
 
+// A record's columns without the history columns, which the writer adds when it merges a run.
+export const toRow = (r: Aircraft): ArtifactRow => toColumns(r);
+
 // Column SQL types. STRICT enforces them at insert; `INTEGER` columns back `z.number().int()`
 // fields, `REAL` columns back plain `z.number()`, the rest are `TEXT`. NOT NULL mirrors the
 // non-nullable schema fields (`operational_classes` serializes to "[]", never null).
 const DDL = `CREATE TABLE aircraft (
   source TEXT NOT NULL,
-  source_id TEXT PRIMARY KEY,
+  source_id TEXT NOT NULL,
   registration TEXT NOT NULL,
   icao_hex TEXT,
   icao_type_code TEXT,
@@ -166,11 +181,17 @@ const DDL = `CREATE TABLE aircraft (
   cancellation_reason_source_text TEXT,
   lien_status TEXT,
   lien_status_source_text TEXT,
-  interdiction_code TEXT
+  interdiction_code TEXT,
+  first_seen TEXT NOT NULL,
+  removed_on TEXT,
+  missing_since TEXT,
+  PRIMARY KEY (source_id, first_seen)
 ) STRICT`;
 
-// Indexed for the common consumer filters; `source_id` is already the PK.
+// Indexed for the common consumer filters. At most one live row per source_id, however many closed
+// rows a reused or reopened mark has accumulated.
 const INDEXES = [
+  'CREATE UNIQUE INDEX idx_live_source_id ON aircraft (source_id) WHERE removed_on IS NULL',
   'CREATE INDEX idx_icao_hex ON aircraft (icao_hex)',
   'CREATE INDEX idx_registration ON aircraft (registration)',
   'CREATE INDEX idx_status ON aircraft (status)',
@@ -178,9 +199,9 @@ const INDEXES = [
   'CREATE INDEX idx_owner_country ON aircraft (owner_country)',
 ];
 
-// One SQLite database per source: a row per aircraft with every canonical field as a typed column.
-// Built in memory and returned as bytes for a direct R2 PUT — no filesystem.
-export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
+// One SQLite database per source: a row per aircraft with every canonical field as a typed column,
+// plus the history columns. Built in memory and returned as bytes for a direct R2 PUT — no filesystem.
+export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
   const db = new Database(':memory:');
   try {
     // Producer shape marker — bump when the table layout or canonical record contract changes.
@@ -201,23 +222,65 @@ export const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => {
     // status and must not assume that here.
     // 13 adds year_manufactured_range for a register that publishes a span ("1957/58") the integer
     // year column cannot hold.
+    // 14 adds first_seen, removed_on and missing_since and keys rows on (source_id, first_seen):
+    // a source_id now repeats across closed rows, so a reader must filter `removed_on IS NULL` for
+    // the aircraft on the register today.
     db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
 
-    const rows = [...records.values()].sort(bySourceId);
-    if (rows.length > 0) {
-      const cols = Object.keys(toColumns(rows[0]));
-      const placeholders = cols.map(() => '?').join(', ');
-      const insert = db.prepare(
-        `INSERT INTO aircraft (${cols.join(', ')}) VALUES (${placeholders})`
-      );
-      const insertAll = db.transaction((rs: Aircraft[]) => {
-        for (const r of rs) insert.run(...Object.values(toColumns(r)));
-      });
-      insertAll(rows);
-    }
+    const columns = (db.query('PRAGMA table_info(aircraft)').all() as Array<{ name: string }>).map(
+      (c) => c.name
+    );
+    const known = new Set(columns);
+    const insert = db.prepare(
+      `INSERT INTO aircraft (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`
+    );
+    const insertAll = db.transaction((rs: ArtifactRow[]) => {
+      for (const r of rs) {
+        // A column the table lacks would be dropped silently; a column the row lacks is a carried
+        // row from before that column existed, and stores NULL.
+        const stray = Object.keys(r).filter((k) => !known.has(k));
+        if (stray.length > 0)
+          throw new Error(`Row carries columns the artifact lacks: ${stray.join(', ')}`);
+        insert.run(...columns.map((c) => r[c] ?? null));
+      }
+    });
+    insertAll(
+      [...rows].sort(
+        (a, b) =>
+          String(a['source_id']).localeCompare(String(b['source_id'])) ||
+          String(a['first_seen']).localeCompare(String(b['first_seen']))
+      )
+    );
     return db.serialize();
+  } finally {
+    db.close();
+  }
+};
+
+// Each entry lifts rows written at that schema version to the next. A version with no entry has no
+// path forward, and the writer fails that source closed rather than start its history over.
+const MIGRATIONS: Record<number, (rows: ArtifactRow[], today: string) => ArtifactRow[]> = {
+  // Before 14 an artifact kept no history: every row is live, first recorded by the run that migrates.
+  13: (rows, today) =>
+    rows.map((r) => ({ ...r, first_seen: today, removed_on: null, missing_since: null })),
+};
+
+/**
+ * Reads every row of a stored per-source artifact, migrating older shapes to the current one.
+ * @throws when the bytes are not SQLite, hold no aircraft table, or sit at a version with no path.
+ */
+export const readArtifactRows = (bytes: Uint8Array, today: string): ArtifactRow[] => {
+  const db = Database.deserialize(bytes, true);
+  try {
+    const version = (db.query('PRAGMA user_version').get() as { user_version: number })
+      .user_version;
+    const rows = db.query('SELECT * FROM aircraft').all() as ArtifactRow[];
+    if (version === DB_SCHEMA_VERSION) return rows;
+    const migrate = MIGRATIONS[version];
+    if (!migrate) throw new Error(`No migration from artifact schema version ${version}`);
+    return migrate(rows, today);
   } finally {
     db.close();
   }

@@ -135,7 +135,13 @@ export async function run(sourceId: string): Promise<RunResult> {
     log('warn', 'localize_partial_failure', { source: sourceId, failed: localizeStats.failed });
 
   // Hashed pre-localization: change detection must track the register, not our own enrichment.
-  const writeStats = await writer.write(localized, sourceId, priorState, hashRecords(records));
+  const writeStats = await writer.write(
+    localized,
+    sourceId,
+    priorState,
+    hashRecords(records),
+    new Date().toISOString().slice(0, 10)
+  );
 
   // State advances only after both durable outputs exist. Otherwise cadence gating could suppress
   // recovery from a missing feed slice for the full source cadence.

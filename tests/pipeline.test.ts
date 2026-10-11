@@ -227,7 +227,13 @@ describe('run', () => {
     await run('faa');
 
     expect(mockR2Constructor).toHaveBeenCalledTimes(1);
-    expect(mockR2Write).toHaveBeenCalledWith(expect.any(Map), 'faa', null, expect.any(String));
+    expect(mockR2Write).toHaveBeenCalledWith(
+      expect.any(Map),
+      'faa',
+      null,
+      expect.any(String),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    );
   });
 
   // The engine reads files, never the network, so the count body has to arrive as an argument.
@@ -356,7 +362,13 @@ describe('run', () => {
       // allowPrune: no prior state in this fixture, so there is no truncation to guard against
       true
     );
-    expect(mockR2Write).toHaveBeenCalledWith(localized, 'faa', null, expect.any(String));
+    expect(mockR2Write).toHaveBeenCalledWith(
+      localized,
+      'faa',
+      null,
+      expect.any(String),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    );
     expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', [
       expect.objectContaining({ cancellation_reason: 'AIRCRAFT EXPORTED' }),
     ]);
