@@ -37,3 +37,17 @@ Fetchable, mark-bearing, no data-specific terms found. Posture unverified until 
 - [ ] Ukraine SAAU — likely `https://avia.gov.ua/register_of_aircraft.xls` (daily, from a search snippet only); 403 on WebFetch, retest with a real client
 - [ ] Ireland IAA, Malta CAD — 403 on WebFetch; retest with a real client
 - [ ] Albania AAC — page says a "last revision" file sits under publications and forms; locate it
+
+## History in the per-source artifact (design agreed 2026-10-11)
+
+Decided: live rows regenerate, closed rows are carried forward; closing needs two consecutive fetched runs missing; `first_seen` is never served.
+
+- [ ] Columns `first_seen`, `removed_on`, `missing_since` (all nullable but `first_seen`); `DB_SCHEMA_VERSION` 14; PK `(source_id, first_seen)`; partial unique index on `source_id WHERE removed_on IS NULL`
+- [ ] Merge step: present → keep `first_seen`, clear `missing_since`; first miss → stamp `missing_since`, stay live; second consecutive miss → `removed_on = missing_since`; returns after close with the same `source_id` → reopen, keep `first_seen`
+- [ ] Reuse on mark-keyed sources: same `source_id` back with a different non-null `serial_number` → close the old row, open a new one
+- [ ] Writer reads the prior artifact; unreadable or no migration path → fail that source closed, never reset history; closed rows must be a superset of the prior closed rows
+- [ ] Only fetched runs count toward a miss: cadence skips and failed runs neither close nor clear
+- [ ] Migrations for closed rows: additive bump copies by column name with nulls; non-additive bump ships an explicit migration in the same commit
+- [ ] Feed slice takes live rows only; `FEED_SLICE_VERSION` stays put
+- [ ] `AGENTS.md`: rewrite the no-compat, no-older-shape and never-migrate rules to except closed rows; `PRD.md` non-goal 7 (schema versioning / migration tooling) changes
+- [ ] `lt-tka` backfill from `duomenu_sviezumas`: needs a config option naming the per-row publication date
