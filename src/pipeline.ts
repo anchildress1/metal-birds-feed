@@ -283,22 +283,17 @@ const resolvePausedSources = (): Set<string> =>
     )
   );
 
-interface ResolvedSources {
-  active: string[];
-  paused: string[];
-}
-
-const resolveSources = (): ResolvedSources => {
+const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
   // The refresh.yml guard only covers workflow_dispatch; `make refresh` reaches here directly with
   // whatever .env exports, and an unnamed force is a fleet-wide cadence bypass either way.
   if (sourceEnv === '' && process.env['FORCE_REFRESH'] === 'true')
     throw new Error('FORCE_REFRESH requires REFRESH_SOURCE to name a single source');
-  if (sourceEnv) return { active: [sourceEnv], paused: [] };
+  if (sourceEnv) return [sourceEnv];
   const paused = resolvePausedSources();
   const active = resolveAllSources().filter((id) => !paused.has(id));
   for (const id of paused) log('warn', 'source_paused', { source: id });
-  return { active, paused: [...paused] };
+  return active;
 };
 
 const closeWithLogging = async (source: string, token: string, repo: string): Promise<void> => {
@@ -363,12 +358,9 @@ const stalenessFromPriorState = async (
   }
 };
 
-// Paused sources are included from prior state: a run outside CI (a VPN refresh, a manual ingest)
-// moves their state with nobody reading it otherwise, so their issues would never open or close.
 const processResults = async (
   results: PromiseSettledResult<RunResult>[],
   sources: string[],
-  paused: string[],
   now: Date,
   writer: R2ArtifactWriter
 ): Promise<ProcessedResults> => {
@@ -390,9 +382,7 @@ const processResults = async (
     if (cadence_days === undefined) continue;
     stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
   }
-  const recovered = await Promise.all(
-    [...rejected, ...paused].map((s) => stalenessFromPriorState(s, writer, now))
-  );
+  const recovered = await Promise.all(rejected.map((s) => stalenessFromPriorState(s, writer, now)));
   stalenessEntries.push(...recovered.filter((e) => e !== null));
 
   return { failures, stalenessEntries };
@@ -523,8 +513,29 @@ export const markFeedDeployed = async (hash: string | undefined): Promise<void> 
   await new R2ArtifactWriter(r2ConfigFromEnv(), false).writeDeployedFeedHash(value);
 };
 
+// A paused source never runs in CI, so its own state is the only reading anything takes of it. A
+// run outside CI (a VPN refresh, a manual ingest) moves that state with nobody to open or close
+// the issue, so a dedicated job reads it daily without fetching.
+export const evaluatePausedStaleness = async (): Promise<void> => {
+  const dryRun = process.env['DRY_RUN'] === 'true';
+  const gh: GitHubCtx = {
+    token: process.env['GITHUB_TOKEN'],
+    repo: process.env['GITHUB_REPOSITORY'],
+  };
+  const writer = new R2ArtifactWriter(r2ConfigFromEnv(), dryRun);
+  const now = new Date();
+  const entries = await Promise.all(
+    [...resolvePausedSources()].map((source) => stalenessFromPriorState(source, writer, now))
+  );
+  await emitStaleness(
+    entries.filter((e) => e !== null),
+    dryRun,
+    gh
+  );
+};
+
 export async function main(): Promise<void> {
-  const { active: sources, paused } = resolveSources();
+  const sources = resolveSources();
   // Wrapped rather than `sources.map(run)`: map passes (value, index, array) positionally, so any
   // second parameter `run` grows would silently receive the index.
   const results = await Promise.allSettled(sources.map((sourceId) => run(sourceId)));
@@ -538,7 +549,6 @@ export async function main(): Promise<void> {
   const { failures, stalenessEntries } = await processResults(
     results,
     sources,
-    paused,
     now,
     new R2ArtifactWriter(r2ConfigFromEnv(), dryRun)
   );

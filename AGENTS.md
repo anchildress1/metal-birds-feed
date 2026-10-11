@@ -31,7 +31,7 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 - `tests/` mirrors `src/`; never colocate. `coverageSkipTestFiles` hides a colocated `src/*.test.ts` from the coverage gate and it lands green.
 - Keep `--isolate`: `mock.module` is process-global and leaks across files without it.
 - The gate thresholds line/function/statement only. Cover branches by intent.
-- A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`, `ingest.ts`). Logic left in an `isCliEntryPoint()` block is uncovered and fails the per-file threshold.
+- A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`, `paused-staleness.ts`, `ingest.ts`). Logic left in an `isCliEntryPoint()` block is uncovered and fails the per-file threshold.
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground truth: real upstream rows, changed only with a schema or config change.
   - Sanitize natural-person names and addresses. Keep organization names and every technical value verbatim.
@@ -167,7 +167,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 - Exactly three things bypass the cadence gate: `DRY_RUN`, `FORCE_REFRESH`, and overdue escalation. No fourth.
   - Overdue escalation uses the staleness issue's own threshold — one threshold, never two. A source stuck escalated means `cadence_days` is wrong.
   - `FORCE_REFRESH` without `REFRESH_SOURCE` throws at the pipeline boundary, since `make refresh` never passes through the workflow guard.
-- Staleness issues open and close on level, evaluated every CI run including paused sources from stored state. Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
+- Staleness issues open and close on level, evaluated every CI run. A paused source is outside the matrix, so the `paused-staleness` job reads its stored state without fetching; `main()` never evaluates one. Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
 
 ## GitHub Actions
 

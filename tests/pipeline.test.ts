@@ -67,8 +67,15 @@ void mock.module('../src/writer.js', () => ({
   isArtifactCaughtUp,
 }));
 
-const { main, publishFeed, publishFeedForDeploy, markFeedDeployed, resolveFeedOutputPath, run } =
-  await import('../src/pipeline.js');
+const {
+  main,
+  evaluatePausedStaleness,
+  publishFeed,
+  publishFeedForDeploy,
+  markFeedDeployed,
+  resolveFeedOutputPath,
+  run,
+} = await import('../src/pipeline.js');
 
 const CONFIG: SourceConfig = {
   id: 'faa',
@@ -850,12 +857,42 @@ describe('main', () => {
       .mockResolvedValueOnce({ ok: true });
     setFetch(fetchMock);
 
-    await main();
+    await evaluatePausedStaleness();
 
-    expect(mockDownload.mock.calls).toHaveLength(ids.length - 1);
+    expect(mockDownload.mock.calls).toHaveLength(0);
     const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
     const body = JSON.parse(createCall.body as string) as { title: string };
     expect(body.title).toStartWith(`[staleness] ${parked} `);
+  });
+
+  it('closes the issue of a paused source back within its threshold', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    mockLoadSourceConfig.mockImplementation((path: string) =>
+      path.includes('lt-tka.yaml') ? { ...CONFIG, paused: true, cadence_days: 7 } : CONFIG
+    );
+    const fresh = new Date().toISOString();
+    mockReadState.mockImplementation((source: string) =>
+      Promise.resolve(
+        source === 'lt-tka'
+          ? { last_run: fresh, last_content_change: fresh, content_hash: HASH64 }
+          : null
+      )
+    );
+    const fetchMock = mock()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([{ number: 9, title: '[staleness] lt-tka has not updated in 20 days' }]),
+      })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+
+    await evaluatePausedStaleness();
+
+    expect(mockDownload.mock.calls).toHaveLength(0);
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/issues/9');
   });
 
   // Escalation makes an overdue source run instead of skip, and a silent register is often silent
