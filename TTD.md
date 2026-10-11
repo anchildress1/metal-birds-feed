@@ -4,3 +4,36 @@
 - [x] Log download mode selection (`buffer` vs `stream`) with content length
 - [x] Add stream path tests to `tests/downloader.test.ts` (below threshold, at threshold, absent `Content-Length`, unwanted entries autodrained, missing entry throws)
 - [x] **After the 1.0.0 release PR merges:** drop `"release-as": "1.0.0"` from `release-please-config.json`. The option is sticky — release-please keeps recomputing 1.0.0, the release PR tries to re-create an existing tag, `release_created` stays falsy and the deploy job is skipped, so releases stop working with nothing red to show for it.
+
+## Discovered sources — implementation queue (2026-10-11 sweep)
+
+Fetchable, mark-bearing, no data-specific terms found. Posture unverified until onboarding. Order = easiest first.
+
+- [ ] Jamaica JCAA — HTML table, `https://jcaa.gov.jm/aircraft-registry-page`; only source here with Mode S hex
+- [ ] Fiji CAAF — HTML table, `https://www.caaf.org.fj/aircraft-register-search/`; MSN/series columns misaligned on some rows
+- [ ] Sri Lanka CAASL — PDF, `https://www.caa.lk/en/downloads/sl-aircraft-register`; dated filenames need `discover_url`; marks carry stray spaces
+- [ ] Papua New Guinea CASA — PDF, `https://casapng.gov.pg/safety-regulatory/airworthiness/Aircraft-Registers/`; no serial/status
+- [ ] Trinidad & Tobago TTCAA — PDF, `https://caa.gov.tt/wp-content/uploads/2024/10/2024-OCTOBER-14-AIRCRAFT-ON-TTCAA-REGISTER.pdf`; dated 2024-10, look for a fresher file first
+- [ ] Macao AACM — HTML, 22 rows, `https://www.aacm.gov.mo/zh-hant/industry-page/RegisteredAircraft`; site terms forbid modifying content, decide before onboarding
+- [ ] Uruguay URSEC — ODS, partial (radio-permit aircraft only), call-sign keyed; terms link 404
+- [ ] Tanzania TCAA — needs crawler: 34 list pages + per-record detail, `https://tcaa.go.tz/aircraft-documents`
+- [ ] Belize BDCA — register page 404'd on fetch; re-check in a browser
+
+## Second-pass recon
+
+- [ ] Asia: shallow first pass, no bulk register found. Retry with local-language search + browser for India (eGCA), Korea, Indonesia, Philippines (FOI list), Malaysia, Vietnam, Pakistan, Bangladesh, Nepal
+- [ ] Uzbekistan UZCAA — `https://gov.uz/en/uzcaa/sections/reestrlar` "Registers" section unopened
+- [ ] Czech CAA — replied 2026-05-14: no license, no feed, suggests a source line; tracker still says pending
+- [ ] Reconcile tracker rows that have inbound Gmail replies but read `pending` (Angola, SACAA, Saudi GACA, Greece, Honduras, El Salvador, Uruguay, Madagascar, DRC, Turkey)
+
+## Discovered sources — Europe (same sweep)
+
+- [ ] Luxembourg DAC — PDF, ODC-BY (stated), monthly; `https://data.public.lu/en/datasets/releve-luxembourgeois-des-immatriculations`; PII already excluded upstream
+- [ ] Moldova CAA — PDF, CC BY-SA 4.0 site-wide (ShareAlike: check effect on derived artifact); `https://www.caa.md/index.php/ro/aeronave-inmatriculate-rm`
+- [ ] Bulgaria CAA — xlsx (~400 rows, serial, no owner/status), dated filenames need `discover_url`; `https://www.caa.bg/bg/category/300/17238`
+- [ ] Cyprus DCA — PDF, half-yearly, Lotus Notes URL changes each edition; has owner/operator, MTOW, C of A
+- [ ] Slovakia Dopravný úrad — PDF, owner includes natural persons; `https://letectvo.nsat.sk/letova-sposobilost/register-lietadiel-slovenskej-republiky/zoznam-registra/`
+- [ ] Montenegro ACG — HTML table, 6 pages, deregistered filter; `https://caa.me/me/registri`
+- [ ] Ukraine SAAU — likely `https://avia.gov.ua/register_of_aircraft.xls` (daily, from a search snippet only); 403 on WebFetch, retest with a real client
+- [ ] Ireland IAA, Malta CAD — 403 on WebFetch; retest with a real client
+- [ ] Albania AAC — page says a "last revision" file sits under publications and forms; locate it
