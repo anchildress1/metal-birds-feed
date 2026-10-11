@@ -73,7 +73,8 @@ refresh: build ## Pull every source: download, map, write artifacts + feed slice
 		$(BUN) run dist/pipeline.js
 
 # For a `download.manual` source: maps FILE (under drops/), stores it in R2 only when it maps
-# cleanly, then forces that one source's refresh. Assigned after .env loads so a REFRESH_SOURCE
+# cleanly, then forces that one source's refresh. A dry run stores nothing, so it stops after the
+# mapping check: a chained refresh would read the previous stored drop instead of this file. Assigned after .env loads so a REFRESH_SOURCE
 # left in .env cannot redirect the forced run at a different source.
 ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drops/<file>) and refresh it
 	@if [ -z "$(SOURCE)" ] || [ -z "$(FILE)" ]; then \
@@ -83,7 +84,10 @@ ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drop
 		case "$(ENV_FILE)" in /*) src="$(ENV_FILE)" ;; *) src="./$(ENV_FILE)" ;; esac; \
 		set -a; . "$$src"; set +a; \
 		DRY_RUN=$${DRY_RUN:-false}; \
-		INGEST_SOURCE="$(SOURCE)" INGEST_FILE="$(FILE)" DRY_RUN=$$DRY_RUN $(BUN) run dist/ingest.js && \
+		INGEST_SOURCE="$(SOURCE)" INGEST_FILE="$(FILE)" DRY_RUN=$$DRY_RUN $(BUN) run dist/ingest.js || exit $$?; \
+		if [ "$$DRY_RUN" = true ]; then \
+			echo "DRY_RUN=true: the file maps cleanly; nothing was stored, so no refresh was run."; exit 0; \
+		fi; \
 		REFRESH_SOURCE="$(SOURCE)" FORCE_REFRESH=true DRY_RUN=$$DRY_RUN $(BUN) run dist/pipeline.js
 
 

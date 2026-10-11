@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  appendFile,
+  chmod,
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -191,6 +200,19 @@ describe('Makefile ingest contract', () => {
     expect(await readFile(logPath, 'utf8')).toBe(
       'dist/ingest.js src=th-caat file=drops/r.pdf refresh=faa force= dry=false\n' +
         'dist/pipeline.js src= file= refresh=th-caat force=true dry=false\n'
+    );
+  });
+
+  // A dry run stores nothing, so a chained refresh would map the previous stored drop (or fail on
+  // none) and report on the wrong file.
+  it('stops after the mapping check in a dry run, without a refresh', async () => {
+    await appendFile(join(workspace, '.env'), 'DRY_RUN=true\n');
+    const result = await runIngest(['SOURCE=th-caat', 'FILE=drops/r.pdf']);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.toString('utf8')).toContain('nothing was stored');
+    expect(await readFile(logPath, 'utf8')).toBe(
+      'dist/ingest.js src=th-caat file=drops/r.pdf refresh=faa force= dry=true\n'
     );
   });
 

@@ -58,6 +58,10 @@ export async function ingest(sourceId: string, file: string, dryRun: boolean): P
   );
   assertRecordCountForWrite(records.size, sourceId, await writer.readState(sourceId));
   await writer.writeDrop(sourceId, bytes);
-  log('info', 'drop_stored', { source: sourceId, bytes: bytes.byteLength, records: records.size });
+  log('info', dryRun ? 'drop_validated' : 'drop_stored', {
+    source: sourceId,
+    bytes: bytes.byteLength,
+    records: records.size,
+  });
   return records.size;
 }

@@ -14,7 +14,8 @@ const mockReadState = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/engine.js', () => ({ mapRows: mockMapRows }));
-void mock.module('../src/logger.js', () => ({ log: mock() }));
+const mockLog = mock<(level: string, event: string, ctx?: unknown) => void>();
+void mock.module('../src/logger.js', () => ({ log: mockLog }));
 void mock.module('../src/writer.js', () => ({
   assertRecordCountForWrite,
   R2ArtifactWriter: class {
@@ -174,6 +175,18 @@ describe('ingest', () => {
     expect(mockWriteDrop).toHaveBeenCalledWith('th-caat', expect.any(Buffer));
     expect(String(mockWriteDrop.mock.calls[0]?.[1])).toBe('%PDF-test');
     expect(mockReadState).toHaveBeenCalledWith('th-caat');
+  });
+
+  // A dry run writes nothing, so claiming the drop was stored would send the operator after a file
+  // that is not in R2.
+  it.each([
+    [true, 'drop_validated'],
+    [false, 'drop_stored'],
+  ])('logs a dry-run=%p ingest as %s', async (dryRun, event) => {
+    mockLog.mockClear();
+    await ingest('th-caat', FILE, dryRun);
+
+    expect(mockLog.mock.calls.map(([, name]) => name)).toContain(event);
   });
 
   it('hands dry-run to the writer', async () => {
