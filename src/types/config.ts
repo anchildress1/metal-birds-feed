@@ -292,7 +292,10 @@ export interface SourceConfig {
   // cancelled row and keeps the stale active one, answering a lookup with a wrong record.
   latest_snapshot_by?: string;
   joins: JoinConfig[];
-  source_id: string;
+  // A list joins its columns into one id, for a register with no single stable key. The first
+  // column is mandatory; a blank later one is an empty segment, since a reserved mark carries no
+  // dates and must still get an id.
+  source_id: string | string[];
   source_id_transform?: ScalarTransformName;
   registration: string;
   cadence_days?: number;

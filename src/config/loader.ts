@@ -261,7 +261,7 @@ const SourceConfigSchema = z
         })
       )
       .default([]),
-    source_id: z.string().min(1),
+    source_id: z.union([z.string().min(1), z.array(z.string().min(1)).min(2)]),
     source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
     registration: z.string().min(1),
     cadence_days: z.number().int().positive().optional(),
@@ -319,6 +319,10 @@ const SourceConfigSchema = z
   })
   .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
     message: 'format "pdf" requires a pdf config block',
+  })
+  // A list-valued source_id trims every column and joins them; a transform would be silently ignored.
+  .refine((c) => !Array.isArray(c.source_id) || c.source_id_transform === undefined, {
+    message: 'source_id_transform is not supported on a list-valued source_id',
   })
   // A merging join reduces each key's rows to one, taking row one's value for every column the
   // merge does not name. That is fine for columns nothing reads, and silent data loss for a mapped
