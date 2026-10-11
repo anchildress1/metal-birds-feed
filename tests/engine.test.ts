@@ -4091,6 +4091,13 @@ describe('TKA Lithuania fixture mapping', () => {
     expect([...r.values()].filter((a) => a.registration === 'LY AXX')).toHaveLength(2);
   });
 
+  it('keys on mark, first registration and build date, blank for a reserved mark', () => {
+    const ids = [...r.keys()];
+    expect(ids).toContain('LY AXX|2011-04-05|1981-12-22');
+    expect(ids).toContain('LY AXX|2011-04-05|2011-01-01');
+    expect(ids).toContain('LY JVD||');
+  });
+
   // TKA fills `tipas` on a reserved row with the intended model, so `other` would have served this
   // mark as a real aircraft. It stays in the artifact; toFeedRows is what keeps it off the feed.
   it('maps a reserved mark to reserved, not other', () => {
@@ -4310,5 +4317,134 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
       expect(anchor.test(mark)).toBe(true);
     for (const mark of ['HA-GZ', 'HA-GZABC', '9A-BTI', 'GZQ'])
       expect(anchor.test(mark)).toBe(false);
+  });
+});
+
+describe('list-valued source_id', () => {
+  const config = (extra: Partial<SourceConfig> = {}): SourceConfig => ({
+    id: 'synthetic-composite-id',
+    label: 'synthetic',
+    country: 'LT',
+    language: 'en',
+    encoding: 'utf8',
+    download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+    primary: 'primary',
+    delimiter: ',',
+    trim_all: true,
+    format: 'csv',
+    joins: [],
+    source_id: ['MARK', 'FIRST', 'BUILT'],
+    registration: 'MARK',
+    mapping: { registration: { field: 'MARK' } },
+    ...extra,
+  });
+  const run = (csv: string, extra: Partial<SourceConfig> = {}) =>
+    mapRows(config(extra), new Map([['primary', Buffer.from(csv, 'utf8')]]));
+
+  // TKA lists LY AXX twice with the same registration date and different build dates; the mark
+  // alone would collide and fail the run.
+  it('gives rows sharing a mark distinct ids when a later column differs', async () => {
+    const { records, stats } = await run(
+      'MARK,FIRST,BUILT\nLY AXX,2011-04-05,1981-12-22\nLY AXX,2011-04-05,2011-01-01\n'
+    );
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()].sort()).toEqual([
+      'LY AXX|2011-04-05|1981-12-22',
+      'LY AXX|2011-04-05|2011-01-01',
+    ]);
+  });
+
+  it('gives a reissued mark a new id when its first-registration date changes', async () => {
+    const { records } = await run(
+      'MARK,FIRST,BUILT\nLY AAA,2001-01-01,1990-01-01\nLY AAA,2020-06-01,1990-01-01\n'
+    );
+    expect(records.size).toBe(2);
+  });
+
+  // A reserved mark carries no dates; failing on the blanks would fail the run on every one.
+  it('keeps a row whose later columns are blank, as empty segments', async () => {
+    const { records, stats } = await run('MARK,FIRST,BUILT\nLY JVD,,\n');
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()]).toEqual(['LY JVD||']);
+  });
+
+  it('fails a row whose first column is blank, however full the rest are', async () => {
+    const { records, stats } = await run('MARK,FIRST,BUILT\n,2011-04-05,1981-12-22\n');
+    expect(stats.failed).toBe(1);
+    expect(records.size).toBe(0);
+  });
+
+  it('fails the run when an id column is missing from the file, not every id quietly', async () => {
+    await expect(run('MARK,BUILT\nLY AXX,1981-12-22\n')).rejects.toThrow(
+      /source_id column\(s\) FIRST not in the primary file/
+    );
+  });
+
+  // flattenRecord omits null properties, so the first record can lack a column later ones carry.
+  it('accepts a JSON id column the first record omits, when a later record carries it', async () => {
+    const json = JSON.stringify({
+      data: [
+        { MARK: 'LY JVD', FIRST: null, BUILT: null },
+        { MARK: 'LY AXX', FIRST: '2011-04-05', BUILT: '1981-12-22' },
+      ],
+    });
+    const { records, stats } = await mapRows(
+      config({ format: 'json', record_path: 'data' }),
+      new Map([['primary', Buffer.from(json, 'utf8')]])
+    );
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()].sort()).toEqual(['LY AXX|2011-04-05|1981-12-22', 'LY JVD||']);
+  });
+
+  it('accepts an id column a join supplies, and still rejects a misspelled one', async () => {
+    const files = new Map([
+      ['primary', Buffer.from('MARK,ID\nLY AXX,1\n', 'utf8')],
+      ['jf', Buffer.from('K,BUILT\n1,1981-12-22\n', 'utf8')],
+    ]);
+    const joined = { joins: [{ name: 'j', file: 'jf', key: 'K', on: 'ID' }] };
+    const ok = await mapRows(config({ ...joined, source_id: ['MARK', 'j.BUILT'] }), files);
+    expect([...ok.records.keys()]).toEqual(['LY AXX|1981-12-22']);
+    await expect(
+      mapRows(config({ ...joined, source_id: ['MARK', 'j.BUILD'] }), files)
+    ).rejects.toThrow(/source_id column\(s\) j\.BUILD not in the primary file/);
+  });
+
+  it('applies the missing-id policy to a blank first column but not a blank later one', async () => {
+    const policy = { field: 'REG', pattern: '^SKIP$', max: 1 };
+    const { stats, records } = await run(
+      'MARK,FIRST,BUILT,REG\n,2011-04-05,1981-12-22,SKIP\nLY JVD,,,OK\n',
+      { allowed_missing_source_id_rows: policy }
+    );
+    expect(stats.skipped).toBe(1);
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()]).toEqual(['LY JVD||']);
+  });
+
+  it('keeps a value holding the separator from aliasing another row', async () => {
+    const { records, stats } = await run('MARK,FIRST,BUILT\n"A|B",C,x\nA,"B|C",x\n');
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()].sort()).toEqual(['A\\|B|C|x', 'A|B\\|C|x']);
+  });
+
+  it('trims every column before joining', async () => {
+    const { records } = await run('MARK,FIRST,BUILT\n  LY AXX ,  2011-04-05,1981-12-22  \n');
+    expect([...records.keys()]).toEqual(['LY AXX|2011-04-05|1981-12-22']);
+  });
+
+  it('skips a byte-identical re-publish of the same composite id', async () => {
+    const { records, stats } = await run(
+      'MARK,FIRST,BUILT\nLY AXX,2011-04-05,1981-12-22\nLY AXX,2011-04-05,1981-12-22\n'
+    );
+    expect(records.size).toBe(1);
+    expect(stats.skipped).toBe(1);
+    expect(stats.failed).toBe(0);
+  });
+
+  it('still fails two rows that agree on every id column but differ elsewhere', async () => {
+    const { stats } = await run(
+      'MARK,FIRST,BUILT,MODEL\nLY AXX,2011-04-05,1981-12-22,AN-2\nLY AXX,2011-04-05,1981-12-22,AN-3\n',
+      { mapping: { registration: { field: 'MARK' }, model: { field: 'MODEL' } } }
+    );
+    expect(stats.failed).toBe(1);
   });
 });

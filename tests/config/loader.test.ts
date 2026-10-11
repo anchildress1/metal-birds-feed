@@ -853,3 +853,31 @@ describe('loadSourceConfig — JSON + POST sources', () => {
     }
   });
 });
+
+describe('loadSourceConfig — list-valued source_id', () => {
+  const head = `id: t\nlabel: t\ncountry: LT\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nregistration: A\nmapping:\n  registration: { field: A }\n`;
+  const load = (name: string, extra: string) => {
+    const tmp = tmpConfig(name);
+    writeFileSync(tmp, head + extra);
+    try {
+      return loadSourceConfig(tmp);
+    } finally {
+      unlinkSync(tmp);
+    }
+  };
+
+  it('accepts a list', () => {
+    const config = load('_test_sid_list.yaml', 'source_id: [A, B, C]\n');
+    expect(config.source_id).toEqual(['A', 'B', 'C']);
+  });
+
+  it('rejects a one-column list, which is just a string', () => {
+    expect(() => load('_test_sid_one.yaml', 'source_id: [A]\n')).toThrow(/source_id/);
+  });
+
+  it('rejects source_id_transform on a list, where it would be ignored', () => {
+    expect(() =>
+      load('_test_sid_tx.yaml', 'source_id: [A, B]\nsource_id_transform: trim_or_null\n')
+    ).toThrow(/source_id_transform is not supported on a list-valued source_id/);
+  });
+});

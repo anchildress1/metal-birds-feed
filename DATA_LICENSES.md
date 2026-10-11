@@ -19,7 +19,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | AAC (ACAA) | Albania | n/a | 2026-05-10 | pending | sent |
 | ANAC Algeria | Algeria | n/a | 2026-05-11 | pending | sent |
 | n/a | Andorra | none | n/a | none | excluded: no register |
-| ANAC Angola | Angola | n/a | 2026-05-11 | pending | sent |
+| ANAC Angola | Angola | anac@anac.ao | 2026-05-11 | replied 2026-06-12 | sent: asked for the repo, answered, no terms yet |
 | ANAC | Argentina | n/a | 2026-05-05 | pending | sent |
 | CAC / GDCA | Armenia | n/a | 2026-05-10 | pending | sent |
 | DCA Aruba | Aruba | none | n/a | none | excluded: commercial |
@@ -53,14 +53,14 @@ Single record of source for agency correspondence and source-use posture: every 
 | CCAA | Croatia | n/a | 2026-05-10 | none (30-day fallback elapsed 2026-06-09) | live: private-use via CC.2 fallback, no license stated; monthly pdf, no ICAO hex |
 | IACC | Cuba | none | n/a | none | excluded: sanctions |
 | DCA | Cyprus | n/a | 2026-05-05 | pending | sent |
-| CAA CR | Czech Republic | n/a | 2026-05-10 | pending | sent |
-| AAC RDC | Democratic Republic of the Congo | n/a | 2026-05-11 | pending | sent |
+| CAA CR | Czech Republic | podatelna@caa.gov.cz | 2026-05-10 | replied 2026-05-14 | sent: no license issued, no feed, source line suggested |
+| AAC RDC | Democratic Republic of the Congo | n/a | 2026-05-11 | pending (auto-ack only) | sent |
 | Trafikstyrelsen | Denmark | n/a | 2026-05-05 | pending | sent: no bulk |
 | IDAC | Dominican Republic | n/a | 2026-05-10 | pending | sent: no bulk |
 | ECCAA (regional) | Eastern Caribbean (OECS) | n/a | 2026-05-11 | pending | sent |
 | DGAC Ecuador | Ecuador | n/a | 2026-05-10 | pending | sent |
 | ECAA | Egypt | none | n/a | none | excluded |
-| AAC El Salvador | El Salvador | n/a | 2026-05-11 | pending | sent |
+| AAC El Salvador | El Salvador | rarevalo@aac.gob.sv | 2026-05-11 | replied 2026-05-12 | sent: meeting requested, no terms yet |
 | n/a | Eritrea | none | n/a | none | excluded |
 | Transpordiamet | Estonia | info@transpordiamet.ee | 2026-05-10 | confirmed 2026-05-13 | live |
 | ESWACAA | Eswatini | n/a | 2026-05-11 | pending | sent |
@@ -71,12 +71,12 @@ Single record of source for agency correspondence and source-use posture: every 
 | GCAA | Georgia | n/a | 2026-05-05 | pending | sent |
 | LBA | Germany | none | n/a | none | excluded |
 | GCAA Ghana | Ghana | none | n/a | none | excluded |
-| HCAA | Greece | n/a | 2026-05-10 | pending | sent |
+| HCAA | Greece | n/a | 2026-05-10 | pending (auto-ack only) | sent |
 | DGAC | Guatemala | n/a | 2026-05-10 | pending | sent: no bulk |
 | 2-REG | Guernsey | none | n/a | none | excluded: commercial |
 | GCAA | Guyana | n/a | 2026-05-11 | pending | sent |
 | OFNAC | Haiti | n/a | 2026-05-10 | pending | sent: no bulk |
-| AHAC | Honduras | n/a | 2026-05-10 | pending | sent |
+| AHAC | Honduras | n/a | 2026-05-10 | pending (verification challenge only) | sent |
 | CAD HK | Hong Kong | enquiry@cad.gov.hk | 2026-05-11 | not published | excluded: not published |
 | Közlekedési Hatóság | Hungary | n/a | 2026-05-10 | none (30-day fallback elapsed 2026-06-09) | live: private-use via CC.2 fallback, no license stated; ~weekly pdf, no ICAO hex |
 | ICETRA | Iceland | n/a | 2026-05-05 | pending | sent: no bulk |
@@ -108,7 +108,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | DAC | Luxembourg | n/a | 2026-05-10 | pending | sent |
 | AACM | Macao (SAR) | n/a | 2026-05-10 | pending | sent |
 | CAA Macedonia | Macedonia (North) | n/a | 2026-05-10 | pending | sent |
-| ACM | Madagascar | n/a | 2026-05-11 | pending | sent |
+| ACM | Madagascar | n/a | 2026-05-11 | pending (bounced) | sent |
 | CAAM | Malaysia | none | n/a | none | not contacted |
 | CAA Maldives | Maldives | airworthiness@caa.gov.mv | 2026-05-05 | open | live |
 | CAD Malta | Malta | n/a | 2026-05-05 | pending | sent |
@@ -150,7 +150,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | RCAA | Rwanda | none | n/a | none | excluded |
 | n/a (Ministry of Works, Transport and Infrastructure) | Samoa | none | n/a | none | excluded: no register |
 | INAC | São Tomé and Príncipe | n/a | 2026-05-11 | pending | sent |
-| GACA | Saudi Arabia | n/a | 2026-05-11 | pending | sent |
+| GACA | Saudi Arabia | n/a | 2026-05-11 | pending (auto-ack only) | sent |
 | ANACIM | Senegal | n/a | 2026-05-11 | pending | sent |
 | CAD Serbia | Serbia | n/a | 2026-05-10 | pending | sent |
 | SCAA | Seychelles | n/a | 2026-05-05 | pending | sent |
@@ -158,7 +158,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | CAAS | Singapore | caas_contact_centre@caas.gov.sg | 2026-05-06 | confirmed 2026-05-12 | live |
 | Dopravný úrad | Slovakia | n/a | 2026-05-10 | pending | sent |
 | CAA Slovenia | Slovenia | n/a | 2026-05-10 | pending | sent |
-| SACAA | South Africa | n/a | 2026-05-11 | pending | sent: leans excluded |
+| SACAA | South Africa | n/a | 2026-05-11 | pending (auto-ack only) | sent: leans excluded |
 | SSCAA | South Sudan | n/a | 2026-05-11 | pending | sent |
 | AESA | Spain | n/a | 2026-05-05 | pending | live: open via public reuse licence (RD 1495/2011 / Ley 37/2007), no reply needed |
 | CAASL | Sri Lanka | n/a | 2026-05-05 | pending | sent |
@@ -185,7 +185,7 @@ Single record of source for agency correspondence and source-use posture: every 
 | GCAA | United Arab Emirates | n/a | 2026-05-11 | pending | sent |
 | UK CAA (G-INFO) | United Kingdom | none | n/a | none | excluded: restrictive |
 | FAA | United States | none | n/a | open | live |
-| DINACIA | Uruguay | n/a | 2026-05-10 | pending | sent |
+| DINACIA | Uruguay | n/a | 2026-05-10 | pending (auto-ack only) | sent |
 | UZCAA (via parent Ministry of Transport) | Uzbekistan | n/a | 2026-05-11 | pending | sent |
 | n/a | Vatican | none | n/a | none | excluded: no register |
 | INAC | Venezuela | none | n/a | none | excluded: sanctions |

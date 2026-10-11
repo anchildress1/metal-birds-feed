@@ -180,6 +180,7 @@ export async function mapRows(
   const parsedRows = await parsePrimary(primaryBuf, config);
   const rows = keepLatestSnapshot(config, parsedRows);
   assertJoinHits(config, joinMaps, rows);
+  assertSourceIdColumns(config, rows, joinMaps);
 
   const records = new Map<string, Aircraft>();
   // Raw merged row per source_id, used to detect a byte-identical re-publish.
@@ -189,17 +190,13 @@ export async function mapRows(
   let missingIdSkipped = 0;
   let duplicateSkipped = 0;
 
-  const sourceIdMapping: FieldMapping = {
-    field: config.source_id,
-    transform: config.source_id_transform ?? 'trim_or_null',
-  };
   const ctx: MapRowContext = {
     config,
     joinMaps,
     missingSourceIdPolicy,
     seenRows,
     records,
-    sourceIdMapping,
+    resolveSourceId: buildSourceIdResolver(config),
   };
   for (let i = 0; i < rows.length; i++) {
     const outcome = mapRow(rows[i], i, missingIdSkipped, ctx);
@@ -438,9 +435,7 @@ interface MapRowContext {
   missingSourceIdPolicy: MissingSourceIdPolicy | null;
   seenRows: Map<string, Row>;
   records: Map<string, Aircraft>;
-  // config.source_id/source_id_transform never change across rows — built once per mapRows()
-  // call instead of allocating an identical FieldMapping object on every row.
-  sourceIdMapping: FieldMapping;
+  resolveSourceId: (row: Row) => string | null;
 }
 
 interface CollisionContext {
@@ -526,9 +521,9 @@ function resolveCollision(ctx: CollisionContext): RowOutcome {
 // owns the counters and the insert. `missingIdSkipped` is the running missing-id skip count, used
 // only for the missing-id bound — duplicate skips are counted separately so they can't consume it.
 function mapRow(row: Row, i: number, missingIdSkipped: number, ctx: MapRowContext): RowOutcome {
-  const { config, joinMaps, missingSourceIdPolicy, seenRows, records, sourceIdMapping } = ctx;
+  const { config, joinMaps, missingSourceIdPolicy, seenRows, records, resolveSourceId } = ctx;
   const merged = mergeJoins(row, config, joinMaps);
-  const rawId = resolveScalar(merged, sourceIdMapping, config.id);
+  const rawId = resolveSourceId(merged);
   if (!rawId) {
     if (isAllowedMissingSourceIdRow(merged, missingSourceIdPolicy, missingIdSkipped)) {
       log('warn', 'map_skip', {
@@ -671,6 +666,50 @@ async function buildJoinMaps(
     })
   );
   return new Map(entries);
+}
+
+// A renamed trailing column would read as blank on every row and silently turn each id into
+// `mark||`, where a renamed single-column source_id fails every row loudly. JSON flattening omits
+// null properties, so absence from the first row proves nothing: check every row.
+const assertSourceIdColumns = (
+  config: SourceConfig,
+  rows: Row[],
+  joinMaps: Map<string, Map<string, Row>>
+): void => {
+  if (typeof config.source_id === 'string' || rows.length === 0) return;
+  // The id is resolved from the row after joins merge in, where a join column is `<join>.<column>`.
+  const known = new Set(rows.flatMap((row) => Object.keys(row)));
+  for (const [name, index] of joinMaps)
+    for (const joinRow of index.values())
+      for (const column of Object.keys(joinRow)) known.add(`${name}.${column}`);
+  const missing = config.source_id.filter((column) => !known.has(column));
+  if (missing.length > 0)
+    throw new Error(
+      `Source "${config.id}": source_id column(s) ${missing.join(', ')} not in the primary file — renamed upstream?`
+    );
+};
+
+function buildSourceIdResolver(config: SourceConfig): (row: Row) => string | null {
+  if (typeof config.source_id === 'string') {
+    const mapping: FieldMapping = {
+      field: config.source_id,
+      transform: config.source_id_transform ?? 'trim_or_null',
+    };
+    return (row) => resolveScalar(row, mapping, config.id);
+  }
+  const [anchor, ...rest] = config.source_id.map((field): FieldMapping => ({
+    field,
+    transform: 'trim_or_null',
+  }));
+  // Escaped so a value holding the separator cannot alias another row's id: ("A|B", "C") and
+  // ("A", "B|C") would otherwise join to the same string and collide.
+  const escape = (value: string): string => value.replaceAll(/[\\|]/g, String.raw`\$&`);
+  return (row) => {
+    const head = resolveScalar(row, anchor, config.id);
+    if (!head) return null;
+    const tail = rest.map((mapping) => resolveScalar(row, mapping, config.id) ?? '');
+    return [head, ...tail].map(escape).join('|');
+  };
 }
 
 function buildMissingSourceIdPolicy(config: SourceConfig): MissingSourceIdPolicy | null {
