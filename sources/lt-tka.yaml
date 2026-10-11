@@ -36,14 +36,15 @@ record_count:
   pattern: '"count\(\)":\s*(\d+)'
   against: parsed
 
-# Not registracijos_nr: TKA loads duplicate rows for a mark, with conflicting airframe data and
-# identical registration dates that recency cannot resolve. LY AXX has been duplicated in all five
-# published snapshots, and the register is capable of far worse — its 2025-06-10 publication carried
-# 2,749 duplicated marks, 2,501 of them conflicting, against 2,841 distinct marks. Keying on the mark
-# fails the run on one row today and on thousands if that recurs. vda_id is unique per row but is
-# reissued each publication, so this register offers no stable per-aircraft key and the artifact is a
-# snapshot rather than a tracked history.
-source_id: vda_id
+# Not registracijos_nr alone: TKA loads duplicate rows for a mark, with conflicting airframe data
+# and identical registration dates that recency cannot resolve (LY AXX in every publication, 2,749
+# duplicated marks in 2025-06-10). Not vda_id or Spinta's _id: both are reissued every publication,
+# so neither survives to the next one. These three held across the 2025-07 to 2026-03 publications
+# for every mark that stayed on the register, and tell LY AXX's two rows apart. A reissued mark
+# arrives with a new first-registration date, so it keys as a new row. Not tipas, party kind, or
+# the base: TKA corrects or reformats those between publications. A reserved mark carries no dates
+# and keeps blank segments.
+source_id: [registracijos_nr, pirma_registracija, pagaminimas]
 registration: registracijos_nr
 
 mapping:
