@@ -691,11 +691,14 @@ function buildSourceIdResolver(config: SourceConfig): (row: Row) => string | nul
     field,
     transform: 'trim_or_null',
   }));
+  // Escaped so a value holding the separator cannot alias another row's id: ("A|B", "C") and
+  // ("A", "B|C") would otherwise join to the same string and collide.
+  const escape = (value: string): string => value.replaceAll('\\', '\\\\').replaceAll('|', '\\|');
   return (row) => {
     const head = resolveScalar(row, anchor, config.id);
     if (!head) return null;
     const tail = rest.map((mapping) => resolveScalar(row, mapping, config.id) ?? '');
-    return [head, ...tail].join('|');
+    return [head, ...tail].map(escape).join('|');
   };
 }
 

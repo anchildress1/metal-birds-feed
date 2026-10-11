@@ -4391,6 +4391,12 @@ describe('list-valued source_id', () => {
     expect([...records.keys()]).toEqual(['LY JVD||']);
   });
 
+  it('keeps a value holding the separator from aliasing another row', async () => {
+    const { records, stats } = await run('MARK,FIRST,BUILT\n"A|B",C,x\nA,"B|C",x\n');
+    expect(stats.failed).toBe(0);
+    expect([...records.keys()].sort()).toEqual(['A\\|B|C|x', 'A|B\\|C|x']);
+  });
+
   it('trims every column before joining', async () => {
     const { records } = await run('MARK,FIRST,BUILT\n  LY AXX ,  2011-04-05,1981-12-22  \n');
     expect([...records.keys()]).toEqual(['LY AXX|2011-04-05|1981-12-22']);
