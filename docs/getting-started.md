@@ -264,7 +264,7 @@ warnings apply:
 - **A few registers can't be downloaded by the pipeline at all.** Their agencies put the file behind
   a browser check that automated requests cannot pass, and this project does not try to get around
   one. Those configs say `manual: true`. Open the `url` from the YAML in your own browser, save the
-  file into a `drops/` folder in the project, then run:
+  register file that page links (the page itself is not the register) into a `drops/` folder in the project, then run:
 
   ```bash
   make ingest SOURCE=<id> FILE=drops/<file>

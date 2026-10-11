@@ -17,18 +17,18 @@ narrate as done.
 
 ## Hard stops
 
-| Never                                                         | Instead                                                        |
-| ------------------------------------------------------------- | -------------------------------------------------------------- |
-| Invent or placeholder an **externally issued** credential     | Stop; the user pastes real values into `.env`                  |
-| Print `.env` contents, or echo a secret to stdout             | Confirm a key is non-empty; never reveal it                    |
-| Accept a secret pasted into chat                              | Direct it to `.env`; a chat log is not gitignored              |
-| `git commit` anything during setup                            | Setup writes `.env`, `feed.sqlite`, `drops/` — all ignored     |
-| Fetch a `download.manual` register, or pass its browser check | The user saves `download.url` into `drops/`; run `make ingest` |
-| `--no-verify`, or uninstall a hook to get past gitleaks       | Install gitleaks                                               |
-| Run the full configured-source `make refresh` unprompted      | Confirm cost + time first (see Phase 5)                        |
-| `make deploy` / `make deploy-only` unprompted                 | Confirm; it publishes data to a server                         |
-| Answer whether a registry's license covers this user          | Route to `DATA_LICENSES.md`; not your call                     |
-| Skip a phase because the user seems in a hurry                | Phase 2 exists to fail before they spend money                 |
+| Never                                                         | Instead                                                                                          |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Invent or placeholder an **externally issued** credential     | Stop; the user pastes real values into `.env`                                                    |
+| Print `.env` contents, or echo a secret to stdout             | Confirm a key is non-empty; never reveal it                                                      |
+| Accept a secret pasted into chat                              | Direct it to `.env`; a chat log is not gitignored                                                |
+| `git commit` anything during setup                            | Setup writes `.env`, `feed.sqlite`, `drops/` — all ignored                                       |
+| Fetch a `download.manual` register, or pass its browser check | The user opens `download.url`, saves the register file it links into `drops/`; run `make ingest` |
+| `--no-verify`, or uninstall a hook to get past gitleaks       | Install gitleaks                                                                                 |
+| Run the full configured-source `make refresh` unprompted      | Confirm cost + time first (see Phase 5)                                                          |
+| `make deploy` / `make deploy-only` unprompted                 | Confirm; it publishes data to a server                                                           |
+| Answer whether a registry's license covers this user          | Route to `DATA_LICENSES.md`; not your call                                                       |
+| Skip a phase because the user seems in a hurry                | Phase 2 exists to fail before they spend money                                                   |
 
 `.env` is gitignored and `make check` needs no credentials. Both facts are load-bearing: they let
 the whole toolchain be proven correct before the user creates a single account.
@@ -151,8 +151,8 @@ the user to look).
   the loader only sees what is on disk. Do not decide coverage for them; make the step explicit
   and let them choose per source.
 - every `download.manual: true` source has a stored drop or its YAML is gone. Without one the
-  refresh fails that source and Phase 6 cannot assemble. The user saves the file from
-  `download.url` into `drops/`; then `make ingest SOURCE=<id> FILE=drops/<file>`. Ingest refuses a
+  refresh fails that source and Phase 6 cannot assemble. The user opens
+  `download.url`, saves the register file it links into `drops/`; then `make ingest SOURCE=<id> FILE=drops/<file>`. Ingest refuses a
   file that fails mapping or the refresh record-count guard before replacing the stored drop
 
 `DRY_RUN=true` in `.env` downloads, parses and diffs without writing to R2. It does **not**
