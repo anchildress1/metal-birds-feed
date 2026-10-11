@@ -31,6 +31,21 @@ function validateSourceId(sourceId: string): void {
     throw new Error(`Path traversal rejected: ${sourceId}`);
 }
 
+async function readDropFiles(
+  writer: R2ArtifactWriter,
+  sourceId: string,
+  entries: Record<string, string>
+): Promise<Map<string, Buffer>> {
+  const bytes = await writer.readDrop(sourceId);
+  if (bytes === null)
+    throw new Error(
+      `No manual drop stored for ${sourceId}. Download it in a browser, then run \`make ingest SOURCE=${sourceId} FILE=drops/<file>\`.`
+    );
+  // The loader holds a manual source to `format: file`, so there is exactly one alias.
+  const [alias] = Object.keys(entries);
+  return new Map([[alias, bytes]]);
+}
+
 interface RunResult {
   source: string;
   skipped: boolean;
@@ -77,7 +92,9 @@ export async function run(sourceId: string): Promise<RunResult> {
     };
   }
 
-  const files = await download(config.download);
+  const files = config.download.manual
+    ? await readDropFiles(writer, sourceId, config.download.entries)
+    : await download(config.download);
   const countUrl = config.record_count?.url;
   // After the register itself, so the two responses bracket as little publishing time as possible:
   // a publication landing between them reports a total the download predates, which fails the run.
@@ -185,7 +202,7 @@ const createStalenessIssue = async (
     `often than declared, raise \`cadence_days\` in \`sources/${entry.source}.yaml\` rather than`,
     'leaving it polling daily.',
     '',
-    '> Auto-opened by the Registry Refresh workflow. Closes automatically on next successful content change.',
+    '> Auto-opened by the Registry Refresh workflow. Closes automatically on the first run that finds the source back within its threshold.',
   ].join('\n');
 
   const createRes = await fetch(`${apiBase}/issues`, {
@@ -279,13 +296,6 @@ const resolveSources = (): string[] => {
   return active;
 };
 
-// Content just changed when this run's write stamped last_content_change to last_run.
-const justChanged = (value: RunResult, dryRun: boolean): boolean =>
-  !dryRun &&
-  !value.skipped &&
-  value.new_state !== null &&
-  value.new_state.last_content_change === value.new_state.last_run;
-
 const closeWithLogging = async (source: string, token: string, repo: string): Promise<void> => {
   try {
     await closeStalenessIssues(source, token, repo);
@@ -324,7 +334,6 @@ interface Failure {
 interface ProcessedResults {
   failures: Failure[];
   stalenessEntries: StalenessEntry[];
-  closePromises: Promise<void>[];
 }
 
 // A failed run still owes a staleness reading. Escalation makes an overdue source run instead of
@@ -353,14 +362,10 @@ const processResults = async (
   results: PromiseSettledResult<RunResult>[],
   sources: string[],
   now: Date,
-  dryRun: boolean,
-  gh: GitHubCtx,
   writer: R2ArtifactWriter
 ): Promise<ProcessedResults> => {
-  const { token, repo } = gh;
   const failures: Failure[] = [];
   const stalenessEntries: StalenessEntry[] = [];
-  const closePromises: Promise<void>[] = [];
 
   const rejected: string[] = [];
 
@@ -376,13 +381,11 @@ const processResults = async (
     const { cadence_days, new_state, source } = result.value;
     if (cadence_days === undefined) continue;
     stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
-    if (token && repo && justChanged(result.value, dryRun))
-      closePromises.push(closeWithLogging(source, token, repo));
   }
   const recovered = await Promise.all(rejected.map((s) => stalenessFromPriorState(s, writer, now)));
   stalenessEntries.push(...recovered.filter((e) => e !== null));
 
-  return { failures, stalenessEntries, closePromises };
+  return { failures, stalenessEntries };
 };
 
 const ESCAPED_PIPE = String.raw`\|`;
@@ -418,10 +421,14 @@ const emitStaleness = async (
   if (summaryPath) await writeFile(summaryPath, `\n${markdown}\n`, { flag: 'a' });
 
   const { token, repo } = gh;
-  if (!dryRun && token && repo)
-    await Promise.allSettled(
-      stalenessEntries.filter((e) => e.overdue).map((e) => createWithLogging(e, token, repo))
-    );
+  if (dryRun || !token || !repo) return;
+  // Level, not edge: closing only on the run that saw new content missed every change landed by a
+  // run without a GitHub token, leaving the issue open after the source had recovered.
+  await Promise.allSettled(
+    stalenessEntries.map((e) =>
+      e.overdue ? createWithLogging(e, token, repo) : closeWithLogging(e.source, token, repo)
+    )
+  );
 };
 
 export const resolveFeedOutputPath = (input: string, root = resolve('.')): string => {
@@ -506,6 +513,27 @@ export const markFeedDeployed = async (hash: string | undefined): Promise<void> 
   await new R2ArtifactWriter(r2ConfigFromEnv(), false).writeDeployedFeedHash(value);
 };
 
+// A paused source never runs in CI, so its own state is the only reading anything takes of it. A
+// run outside CI (a VPN refresh, a manual ingest) moves that state with nobody to open or close
+// the issue, so a dedicated job reads it daily without fetching.
+export const evaluatePausedStaleness = async (): Promise<void> => {
+  const dryRun = process.env['DRY_RUN'] === 'true';
+  const gh: GitHubCtx = {
+    token: process.env['GITHUB_TOKEN'],
+    repo: process.env['GITHUB_REPOSITORY'],
+  };
+  const writer = new R2ArtifactWriter(r2ConfigFromEnv(), dryRun);
+  const now = new Date();
+  const entries = await Promise.all(
+    [...resolvePausedSources()].map((source) => stalenessFromPriorState(source, writer, now))
+  );
+  await emitStaleness(
+    entries.filter((e) => e !== null),
+    dryRun,
+    gh
+  );
+};
+
 export async function main(): Promise<void> {
   const sources = resolveSources();
   // Wrapped rather than `sources.map(run)`: map passes (value, index, array) positionally, so any
@@ -518,15 +546,12 @@ export async function main(): Promise<void> {
     repo: process.env['GITHUB_REPOSITORY'],
   };
 
-  const { failures, stalenessEntries, closePromises } = await processResults(
+  const { failures, stalenessEntries } = await processResults(
     results,
     sources,
     now,
-    dryRun,
-    gh,
     new R2ArtifactWriter(r2ConfigFromEnv(), dryRun)
   );
-  await Promise.allSettled(closePromises);
   await emitStaleness(stalenessEntries, dryRun, gh);
   await emitFailures(failures);
 

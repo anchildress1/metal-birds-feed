@@ -69,16 +69,17 @@ Deeper mechanics — R2 key layout, version markers, duplicate resolution, the d
 
 ## Commands
 
-| Command              | Description                                         |
-| -------------------- | --------------------------------------------------- |
-| `make install`       | Install dependencies and git hooks                  |
-| `make check`         | format-check + lint + typecheck + test (CI gate)    |
-| `make refresh`       | Pull every source (reads `.env`)                    |
-| `make assemble-feed` | Build `feed.sqlite` from the R2 slices (no refresh) |
-| `make build-feed`    | Refresh every source, then assemble `feed.sqlite`   |
-| `make serve`         | Run the feed service locally (`MBF_FEED_DB_PATH`)   |
-| `make deploy`        | Rebuild and deploy the feed service to Cloud Run    |
-| `make secret-scan`   | Scan for accidentally committed secrets             |
+| Command              | Description                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| `make install`       | Install dependencies and git hooks                                                                     |
+| `make check`         | format-check + lint + typecheck + test (CI gate)                                                       |
+| `make refresh`       | Pull every source (reads `.env`)                                                                       |
+| `make ingest`        | Store a browser-downloaded file for a `manual` source and refresh it (`SOURCE=<id> FILE=drops/<file>`) |
+| `make assemble-feed` | Build `feed.sqlite` from the R2 slices (no refresh)                                                    |
+| `make build-feed`    | Refresh every source, then assemble `feed.sqlite`                                                      |
+| `make serve`         | Run the feed service locally (`MBF_FEED_DB_PATH`)                                                      |
+| `make deploy`        | Rebuild and deploy the feed service to Cloud Run                                                       |
+| `make secret-scan`   | Scan for accidentally committed secrets                                                                |
 
 `make help` is the default target and lists the rest (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`, `clean`).
 
@@ -122,6 +123,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `es-aesa` | AESA | Spain | ✅ Live |
 | `ch-foca` | FOCA / BAZL | Switzerland | ✅ Live |
 | `tw-caa` | CAA Taiwan | Taiwan | ✅ Live |
+| `th-caat` | CAAT | Thailand | ✅ Live — manual browser drop (`make ingest`) |
 | `faa` | FAA | United States | ✅ Live |
 <!-- prettier-ignore-end -->
 

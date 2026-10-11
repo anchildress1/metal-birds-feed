@@ -47,3 +47,19 @@ describe('refresh workflow source enumeration', () => {
     }
   });
 });
+
+// Paused sources are outside the matrix, so without this job nothing reads their stored state and
+// their staleness issue can never open or close in CI.
+describe('refresh workflow paused-source staleness', () => {
+  it('runs the paused-staleness entry point on the scheduled run, with issue write access', async () => {
+    const yaml = await readFile(REFRESH, 'utf8');
+    const job = yaml.slice(
+      yaml.indexOf('  paused-staleness:'),
+      yaml.indexOf('  # Ships a register')
+    );
+    expect(job).toContain('run: bun run dist/paused-staleness.js');
+    expect(job).toContain('issues: write');
+    expect(job).toContain("(inputs.source || '') == ''");
+    expect(job).toContain('timeout-minutes:');
+  });
+});

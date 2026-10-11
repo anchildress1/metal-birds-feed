@@ -167,6 +167,11 @@ export interface DownloadConfig {
   // 200 and a challenge page instead of the file — a success status carrying the wrong bytes.
   // Fetching this URL first and replaying the cookies it sets on the real request clears them.
   prime_url?: string;
+  // The register sits behind a challenge no request can pass without defeating it (a JS or CAPTCHA
+  // wall). The operator downloads `url` in a browser and `make ingest` stores those bytes in R2;
+  // every refresh, CI included, maps that stored copy instead of fetching. Keeping it in R2 rather
+  // than pausing the source is what lets a schema bump regenerate the slice with nobody present.
+  manual?: boolean;
   discover_url?: string;
   discover_pattern?: string;
 }

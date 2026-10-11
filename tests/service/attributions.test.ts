@@ -41,7 +41,7 @@ describe('attributionFor', () => {
     );
   });
 
-  // These three carry no agency-mandated wording, so the Required Notices pairing below says
+  // These carry no agency-mandated wording, so the Required Notices pairing below says
   // nothing about them — without an exact pin they could be reworded with the suite still green.
   it.each([
     [
@@ -55,6 +55,10 @@ describe('attributionFor', () => {
     [
       'hu-kh',
       'Source data from the Közlekedési Hatóság (Hungarian Transport Authority), Magyarország Légijármű Lajstroma — https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'th-caat',
+      'Source data from the Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th; used and shared with permission for non-commercial use, normalized into this project schema without implying endorsement.',
     ],
   ])('serves the unmandated %s notice exactly', (id, expected) => {
     expect(attributionFor(id)).toBe(expected);
