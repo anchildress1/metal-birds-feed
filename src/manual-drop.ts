@@ -41,7 +41,7 @@ export async function ingest(sourceId: string, file: string, dryRun: boolean): P
 
   const bytes = await readFile(resolveDropPath(file));
   const [alias] = Object.keys(config.download.entries);
-  const { records, stats } = await mapRows(config, new Map([[alias, bytes]]), undefined);
+  const { records, stats } = await mapRows(config, new Map([[alias, bytes]]));
   if (stats.failed > 0 || records.size === 0)
     throw new Error(
       `${file} mapped ${records.size} records with ${stats.failed} failures for ${sourceId}; not stored`
