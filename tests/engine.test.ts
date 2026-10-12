@@ -5,6 +5,7 @@ import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
 import { mapRows, mapSnapshots } from '../src/engine.js';
+import { applyScalar } from '../src/transforms.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { FieldMapping, SourceConfig } from '../src/types/config.js';
@@ -4370,6 +4371,25 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
       expect(anchor.test(mark)).toBe(true);
     for (const mark of ['HA-GZ', 'HA-GZABC', '9A-BTI', 'GZQ'])
       expect(anchor.test(mark)).toBe(false);
+  });
+
+  // The register prints "HU-16" inside HA-TWN's record. Unanchored it fused into that record and
+  // nulled its mark, which failed the whole run; anchored it is a separate record the budget skips.
+  it('anchors the HU-nn line apart from its neighbour and skips it as a non-HA mark', () => {
+    const config = loadSourceConfig(HU_CONFIG);
+    const anchor = new RegExp(config.pdf!.anchor_pattern);
+    const skipped = new RegExp(config.allowed_missing_source_id_rows!.pattern);
+
+    for (const mark of ['HU-16', 'HU -16', 'HU - 07']) {
+      expect(anchor.test(mark)).toBe(true);
+      expect(skipped.test(mark)).toBe(true);
+    }
+    for (const mark of ['HU-1', 'HU-161', 'HU-AB'] as const) {
+      expect(anchor.test(mark)).toBe(false);
+      expect(skipped.test(mark)).toBe(false);
+    }
+    expect(applyScalar('hu_kh_registration', 'HU-16')).toBeNull();
+    expect(config.allowed_missing_source_id_rows!.max).toBe(3);
   });
 });
 

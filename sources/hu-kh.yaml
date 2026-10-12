@@ -41,7 +41,10 @@ format: pdf
 # Only the unrotated orientation has been observed; measure the bands against a real file in the
 # other one before adding a second layout.
 pdf:
-  anchor_pattern: '^HA\s*-\s*[A-Z0-9]{3,4}$'
+  # The register also prints a second line, "HU-16" (an EC135 P3 whose serial and owner repeat HA-HUN's),
+  # inside HA-TWN's record. Unanchored it fused into HA-TWN and nulled that record's mark, failing
+  # the run; anchored it is its own record, skipped below because it is not an HA- mark.
+  anchor_pattern: '^(?:HA\s*-\s*[A-Z0-9]{3,4}|HU\s*-\s*\d{2})$'
   anchor_field: mark
   layouts:
     - field_axis: x
@@ -91,6 +94,12 @@ columns:
 # which resolves on the newer certification_date rather than needing `duplicate_conflict`.
 source_id: mark
 source_id_transform: hu_kh_registration
+# The HU-nn line is not an HA- registration, so the mark transform nulls it. A budget, not a blanket:
+# a new kind of line past three fails the run instead of dropping rows quietly.
+allowed_missing_source_id_rows:
+  max: 3
+  field: mark
+  pattern: '^HU\s*-\s*\d{2}$'
 registration: mark
 
 mapping:
