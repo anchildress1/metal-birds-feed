@@ -59,8 +59,21 @@ interface Outcome {
   reopened: Set<ArtifactRow>;
 }
 
-// What one present record does to the history: continue its live row, reopen the latest closed one,
-// or start a new row, closing the live one first when the serial says it is a different airframe.
+// The closed row a returning record resumes: the latest one carrying its own serial, else the latest
+// row when that one does not contradict it. An older airframe returning under a reused mark must
+// find its own row, not be judged against whichever holder closed last.
+const reopenTarget = (record: ArtifactRow, closedRows: ArtifactRow[]): ArtifactRow | undefined => {
+  const latestFirst = [...closedRows].sort(byRecency).reverse();
+  const serial = text(record, 'serial_number');
+  const own =
+    serial === null ? undefined : latestFirst.find((r) => text(r, 'serial_number') === serial);
+  if (own) return own;
+  const latest = latestFirst[0];
+  return latest && !isReuse(latest, record) ? latest : undefined;
+};
+
+// What one present record does to the history: continue its live row, reopen a closed one, or
+// start a new row, closing the live one first when the serial says it is a different airframe.
 const place = (
   record: ArtifactRow,
   liveRow: ArtifactRow | undefined,
@@ -75,10 +88,10 @@ const place = (
     } else outcome.open.push(live(record, text(liveRow, 'first_seen') ?? today));
     return;
   }
-  const latest = [...closedRows].sort(byRecency).at(-1);
-  if (latest && !isReuse(latest, record)) {
-    outcome.reopened.add(latest);
-    outcome.open.push(live(record, text(latest, 'first_seen') ?? today));
+  const target = reopenTarget(record, closedRows);
+  if (target) {
+    outcome.reopened.add(target);
+    outcome.open.push(live(record, text(target, 'first_seen') ?? today));
   } else outcome.open.push(live(record, today));
 };
 
@@ -86,7 +99,8 @@ const place = (
  * Folds one fetched run into the stored history and returns every row to write.
  * `incoming` is the run's records keyed by source_id, without history columns; `today` is a UTC date.
  * A live row absent from the run stays live with `missing_since` stamped, and closes on the second
- * consecutive miss at the date of the first. A return after close reopens the row with its original
+ * consecutive miss at the date of the first; a second miss on the same UTC day is the same fetch
+ * retried after a partial run, not a second one. A return after close reopens the row with its original
  * `first_seen`, unless the serial changed, which opens a new row beside the closed one.
  */
 export const mergeHistory = (
@@ -105,7 +119,8 @@ export const mergeHistory = (
     if (incoming.has(id)) continue;
     const since = text(row, 'missing_since');
     if (since === null) outcome.open.push({ ...row, missing_since: today });
-    else outcome.closedNow.push(closed(row, since));
+    else if (since < today) outcome.closedNow.push(closed(row, since));
+    else outcome.open.push(row);
   }
 
   const kept = prior.filter((row) => row['removed_on'] !== null && !outcome.reopened.has(row));
@@ -114,21 +129,29 @@ export const mergeHistory = (
 
 const rowKey = (row: ArtifactRow): string => `${sourceId(row)}\0${text(row, 'first_seen') ?? ''}`;
 
+const countByKey = (rows: ArtifactRow[]): Map<string, number> => {
+  const counts = new Map<string, number>();
+  for (const row of rows) counts.set(rowKey(row), (counts.get(rowKey(row)) ?? 0) + 1);
+  return counts;
+};
+
 /**
  * Throws when a closed row from `stored` is in neither the closed nor the live rows of `merged`.
  * A closed row may legitimately leave the closed set only by reopening, which keeps its first_seen.
+ * Same-day incarnations of one source_id share a key, so rows are counted per key.
  */
 export const assertHistoryPreserved = (
   source: string,
   stored: ArtifactRow[] | null,
   merged: ArtifactRow[]
 ): void => {
-  const present = new Set(merged.map(rowKey));
-  const lost = (stored ?? []).filter(
-    (row) => row['removed_on'] !== null && !present.has(rowKey(row))
-  );
-  if (lost.length > 0)
+  const present = countByKey(merged);
+  const kept = countByKey((stored ?? []).filter((row) => row['removed_on'] !== null));
+  const lost = [...kept].filter(([key, count]) => (present.get(key) ?? 0) < count);
+  if (lost.length > 0) {
+    const total = lost.reduce((n, [key, count]) => n + count - (present.get(key) ?? 0), 0);
     throw new Error(
-      `Refusing to write "${source}": ${lost.length} closed history row(s) would be dropped (first: ${rowKey(lost[0]).replace('\0', ' / ')})`
+      `Refusing to write "${source}": ${total} closed history row(s) would be dropped (first: ${lost[0][0].replace('\0', ' / ')})`
     );
+  }
 };

@@ -39,7 +39,7 @@ export const hashArtifact = (rows: ArtifactRow[], salt = ''): string => {
   const hash = createHash('sha256');
   if (salt !== '') hash.update(`${salt}\0`);
   const key = (row: ArtifactRow): string =>
-    `${String(row['source_id'])}\0${String(row['first_seen'])}`;
+    `${String(row['source_id'])}\0${String(row['first_seen'])}\0${String(row['serial_number'])}`;
   for (const row of [...rows].sort((a, b) => key(a).localeCompare(key(b)))) {
     hash.update(`${key(row)}\0${JSON.stringify(row)}\n`);
   }
@@ -184,13 +184,14 @@ const DDL = `CREATE TABLE aircraft (
   interdiction_code TEXT,
   first_seen TEXT NOT NULL,
   removed_on TEXT,
-  missing_since TEXT,
-  PRIMARY KEY (source_id, first_seen)
+  missing_since TEXT
 ) STRICT`;
 
 // Indexed for the common consumer filters. At most one live row per source_id, however many closed
-// rows a reused or reopened mark has accumulated.
+// rows a reused or reopened mark has accumulated. A mark reused on the day it was first seen opens
+// its replacement under the same first_seen, so the serial tells the incarnations apart.
 const INDEXES = [
+  "CREATE UNIQUE INDEX idx_incarnation ON aircraft (source_id, first_seen, COALESCE(serial_number, ''))",
   'CREATE UNIQUE INDEX idx_live_source_id ON aircraft (source_id) WHERE removed_on IS NULL',
   'CREATE INDEX idx_icao_hex ON aircraft (icao_hex)',
   'CREATE INDEX idx_registration ON aircraft (registration)',
@@ -222,7 +223,7 @@ export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
     // status and must not assume that here.
     // 13 adds year_manufactured_range for a register that publishes a span ("1957/58") the integer
     // year column cannot hold.
-    // 14 adds first_seen, removed_on and missing_since and keys rows on (source_id, first_seen):
+    // 14 adds first_seen, removed_on and missing_since and keys incarnations on (source_id, first_seen, serial_number):
     // a source_id now repeats across closed rows, so a reader must filter `removed_on IS NULL` for
     // the aircraft on the register today.
     db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);

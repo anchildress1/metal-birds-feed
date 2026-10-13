@@ -442,8 +442,16 @@ describe('artifact history columns', () => {
     expect(() => buildRows([openRow(), other])).toThrow(/UNIQUE/);
   });
 
-  it('rejects the same source_id and first_seen twice', () => {
+  it('rejects the same incarnation twice', () => {
     expect(() => buildRows([closedRow(), closedRow()])).toThrow(/UNIQUE/);
+  });
+
+  it('keeps two incarnations of a mark that share a first_seen day', () => {
+    const replaced = { ...closedRow(), first_seen: '2026-01-01', serial_number: 'S1' };
+
+    const db = Database.deserialize(buildRows([replaced, openRow()]));
+
+    expect(db.query('SELECT COUNT(*) AS n FROM aircraft').get()).toEqual({ n: 2 });
   });
 
   it('stores NULL for a column a carried row predates', () => {

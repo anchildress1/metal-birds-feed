@@ -85,6 +85,55 @@ describe('mergeHistory', () => {
     expect(rows).toContainEqual(older);
   });
 
+  it('counts a second miss on the same UTC day as the first fetch retried, not a second miss', () => {
+    const row = stored('A', '2026-01-01', { missing_since: '2026-10-12' });
+
+    const rows = mergeHistory([row], incoming(), '2026-10-12');
+
+    expect(rows).toEqual([row]);
+  });
+
+  it('reopens the closed row carrying the returning serial, not the latest holder', () => {
+    const own = stored('A', '2026-01-01', { serial_number: 'S1', removed_on: '2026-03-01' });
+    const later = stored('A', '2026-03-01', { serial_number: 'S2', removed_on: '2026-07-01' });
+
+    const rows = mergeHistory([own, later], incoming(rec('A', 'S1')), '2026-08-01');
+
+    expect(find(rows, 'A', (r) => r['removed_on'] === null)).toMatchObject({
+      first_seen: '2026-01-01',
+      serial_number: 'S1',
+    });
+    expect(rows).toContainEqual(later);
+    expect(rows).toHaveLength(2);
+  });
+
+  it('opens a new row when no closed incarnation carries the returning serial', () => {
+    const rows = mergeHistory(
+      [
+        stored('A', '2026-01-01', { serial_number: 'S1', removed_on: '2026-03-01' }),
+        stored('A', '2026-03-01', { serial_number: 'S2', removed_on: '2026-07-01' }),
+      ],
+      incoming(rec('A', 'S3')),
+      '2026-08-01'
+    );
+
+    expect(find(rows, 'A', (r) => r['removed_on'] === null)?.['first_seen']).toBe('2026-08-01');
+    expect(rows).toHaveLength(3);
+  });
+
+  it('closes and replaces a mark reused on the day it was first seen', () => {
+    const rows = mergeHistory(
+      [stored('A', '2026-10-12', { serial_number: 'S1' })],
+      incoming(rec('A', 'S2')),
+      '2026-10-12'
+    );
+
+    expect(rows.map((r) => [r['first_seen'], r['serial_number'], r['removed_on']])).toEqual([
+      ['2026-10-12', 'S2', null],
+      ['2026-10-12', 'S1', '2026-10-12'],
+    ]);
+  });
+
   it('closes a live row and opens a new one when the serial changes', () => {
     const rows = mergeHistory(
       [stored('A', '2026-01-01', { serial_number: 'S1' })],
@@ -165,6 +214,16 @@ describe('assertHistoryPreserved', () => {
   it('throws naming the first lost row', () => {
     expect(() => assertHistoryPreserved('x', [closedRow], [])).toThrow(
       /1 closed history row\(s\) would be dropped \(first: A \/ 2026-01-01\)/
+    );
+  });
+
+  it('counts same-day incarnations of one source_id separately', () => {
+    const first = stored('A', '2026-10-12', { serial_number: 'S1', removed_on: '2026-10-12' });
+    const second = stored('A', '2026-10-12', { serial_number: 'S2', removed_on: '2026-10-12' });
+
+    expect(() => assertHistoryPreserved('x', [first, second], [first, second])).not.toThrow();
+    expect(() => assertHistoryPreserved('x', [first, second], [first])).toThrow(
+      /1 closed history row\(s\) would be dropped/
     );
   });
 
