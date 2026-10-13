@@ -4229,10 +4229,21 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     huStats = result.stats;
   });
 
-  // The one skip is the HA-MEI self-contradiction below, not a parse failure.
-  it('maps all 168 fixture rows, skipping only the duplicated mark', () => {
-    expect(huStats).toEqual({ total: 168, ok: 167, failed: 0, skipped: 1, duplicateSkipped: 1 });
-    expect(huRecords.size).toBe(167);
+  // The two skips are the HA-MEI self-contradiction below and the HU-16 non-HA mark — neither is a
+  // parse failure.
+  it('maps all 186 fixture rows, skipping the duplicated mark and HU-16', () => {
+    expect(huStats).toEqual({ total: 186, ok: 184, failed: 0, skipped: 2, duplicateSkipped: 1 });
+    expect(huRecords.size).toBe(184);
+  });
+
+  // The page carrying "HU-16" is in the fixture: it anchors as its own record, budgets out under
+  // allowed_missing_source_id_rows, and HA-TWN maps whole instead of fusing with it.
+  it('keeps HA-TWN whole beside the HU-16 line it once fused with', () => {
+    const r = huRecords.get('HA-TWN')!;
+    expect(r.model).toBe('AS 355 F2');
+    expect(r.serial_number).toBe('5614');
+    expect(r.owner.name).toBe('HELIWORK LÉGI SZOLGÁLTATÓ KFT.');
+    expect(huRecords.has('HU-16')).toBe(false);
   });
 
   it('keys records on the mark and stamps source/country/status', () => {
