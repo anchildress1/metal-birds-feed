@@ -510,6 +510,41 @@ describe('readArtifactRows', () => {
     );
   });
 
+  // Entries are one hop each, so a two-behind artifact must walk both in version order.
+  it('chains each version hop in order to reach current', () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 12');
+    db.run('CREATE TABLE aircraft (source_id TEXT)');
+    db.run("INSERT INTO aircraft VALUES ('1')");
+    const hops: number[] = [];
+    const migrations = {
+      12: (rows: ArtifactRow[]): ArtifactRow[] => {
+        hops.push(12);
+        return rows.map((r) => ({ ...r, at12: 'x' }));
+      },
+      13: (rows: ArtifactRow[]): ArtifactRow[] => {
+        hops.push(13);
+        return rows.map((r) => ({ ...r, at13: 'y' }));
+      },
+    };
+
+    const rows = readArtifactRows(db.serialize(), '2026-10-12', migrations);
+
+    expect(hops).toEqual([12, 13]);
+    expect(rows).toEqual([{ source_id: '1', at12: 'x', at13: 'y' }]);
+  });
+
+  it('fails closed when a mid-chain version has no entry', () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 12');
+    db.run('CREATE TABLE aircraft (source_id TEXT)');
+    const migrations = { 12: (rows: ArtifactRow[]): ArtifactRow[] => rows };
+
+    expect(() => readArtifactRows(db.serialize(), '2026-10-12', migrations)).toThrow(
+      /No migration from artifact schema version 13/
+    );
+  });
+
   it('throws on bytes that are not an artifact', () => {
     expect(() => readArtifactRows(new TextEncoder().encode('not sqlite'), '2026-10-12')).toThrow();
   });

@@ -259,28 +259,39 @@ export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
   }
 };
 
-// Each entry lifts rows written at that schema version to the next. A version with no entry has no
-// path forward, and the writer fails that source closed rather than start its history over.
-const MIGRATIONS: Record<number, (rows: ArtifactRow[], today: string) => ArtifactRow[]> = {
+type Migration = (rows: ArtifactRow[], today: string) => ArtifactRow[];
+
+// Each entry lifts rows written at that schema version exactly one hop forward; readArtifactRows
+// chains them to current. A version with no entry has no path, and the writer fails that source
+// closed rather than start its history over — so even an additive bump ships the identity entry
+// (the new column stores NULL) in the same commit.
+const MIGRATIONS: Record<number, Migration> = {
   // Before 14 an artifact kept no history: every row is live, first recorded by the run that migrates.
   13: (rows, today) =>
     rows.map((r) => ({ ...r, first_seen: today, removed_on: null, missing_since: null })),
 };
 
 /**
- * Reads every row of a stored per-source artifact, migrating older shapes to the current one.
+ * Reads every row of a stored per-source artifact, migrating older shapes hop by hop to the
+ * current one.
  * @throws when the bytes are not SQLite, hold no aircraft table, or sit at a version with no path.
  */
-export const readArtifactRows = (bytes: Uint8Array, today: string): ArtifactRow[] => {
+export const readArtifactRows = (
+  bytes: Uint8Array,
+  today: string,
+  migrations: Record<number, Migration> = MIGRATIONS
+): ArtifactRow[] => {
   const db = Database.deserialize(bytes, true);
   try {
-    const version = (db.query('PRAGMA user_version').get() as { user_version: number })
-      .user_version;
-    const rows = db.query('SELECT * FROM aircraft').all() as ArtifactRow[];
-    if (version === DB_SCHEMA_VERSION) return rows;
-    const migrate = MIGRATIONS[version];
-    if (!migrate) throw new Error(`No migration from artifact schema version ${version}`);
-    return migrate(rows, today);
+    let version = (db.query('PRAGMA user_version').get() as { user_version: number }).user_version;
+    let rows = db.query('SELECT * FROM aircraft').all() as ArtifactRow[];
+    while (version !== DB_SCHEMA_VERSION) {
+      const migrate = migrations[version];
+      if (!migrate) throw new Error(`No migration from artifact schema version ${version}`);
+      rows = migrate(rows, today);
+      version++;
+    }
+    return rows;
   } finally {
     db.close();
   }

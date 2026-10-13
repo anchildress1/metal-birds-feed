@@ -127,7 +127,7 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 - A per-source artifact keeps its closed rows (`removed_on` set); live rows regenerate from source. This is the one exception to the no-compatibility rule: a closed row is data the register no longer holds, not cache.
   - A live row closes on the second consecutive fetched run that misses it, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. Never serve `first_seen`.
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
-  - A schema bump migrates closed rows by an entry in `db.ts` `MIGRATIONS`. A new nullable column needs no entry (it copies as NULL); any other change ships its migration in the same commit. A version with no entry fails closed.
+  - A schema bump migrates closed rows through `db.ts` `MIGRATIONS`, keyed by the version rows leave and chained hop by hop to current. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform. A version with no entry fails closed.
 - R2 is a build and intermediate store; nothing serves reads from it. The DB is baked into the Cloud Run image and served in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
 - Assembly always rebuilds from R2 slices, never an on-disk copy, and sequences through the recipe rather than prerequisites so `make -j` cannot assemble mid-refresh. Publish fails closed if any slice is missing.
 
