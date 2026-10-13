@@ -1,4 +1,4 @@
-import { download } from './downloader.js';
+import { download, fetchPublishedTotal } from './downloader.js';
 import { loadSourceConfig } from './config/loader.js';
 import { resolve } from 'node:path';
 import { toRow } from './db.js';
@@ -47,7 +47,13 @@ export async function backfillHistory(sourceId: string, dryRun: boolean): Promis
   const config = loadSourceConfig(resolve('sources', `${sourceId}.yaml`));
   if (config.download.manual === true)
     throw new Error(`${sourceId} is a manual source; it has no accumulated publications to replay`);
-  const snapshots = await mapSnapshots(config, await download(config.download));
+  const files = await download(config.download);
+  const countUrl = config.record_count?.url;
+  const publishedTotal =
+    countUrl === undefined
+      ? undefined
+      : await fetchPublishedTotal(countUrl, config.download.headers);
+  const snapshots = await mapSnapshots(config, files, publishedTotal);
   const { rows, skipped } = replayHistory(sourceId, snapshots);
   const closedRows = rows.filter((r) => r['removed_on'] !== null).length;
   log('info', 'history_replayed', {

@@ -4574,6 +4574,28 @@ describe('mapSnapshots', () => {
     expect(snapshots.map((s) => s.stats.failed)).toEqual([1, 0]);
   });
 
+  it('fails when the parsed rows differ from the published total', async () => {
+    const check = { pattern: '"count":\\s*(\\d+)', against: 'parsed' as const };
+
+    await expect(
+      mapSnapshots(
+        config({ record_count: check }),
+        new Map([['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\n', 'utf8')]]),
+        '{"count": 3}'
+      )
+    ).rejects.toThrow(/parsed 2 records but the source publishes 3/);
+  });
+
+  it('passes when the parsed rows match the published total, history included', async () => {
+    const snapshots = await mapSnapshots(
+      config({ record_count: { pattern: '"count":\\s*(\\d+)', against: 'parsed' } }),
+      new Map([['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\n', 'utf8')]]),
+      '{"count": 2}'
+    );
+
+    expect(snapshots).toHaveLength(2);
+  });
+
   it('refuses a source that keeps no snapshots', async () => {
     await expect(
       run('MARK,PUBLISHED\nA,2025-07-21\n', { latest_snapshot_by: undefined })

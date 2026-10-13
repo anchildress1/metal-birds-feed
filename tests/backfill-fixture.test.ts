@@ -8,7 +8,11 @@ import { replayHistory } from '../src/backfill.js';
 // Ground truth: the committed lt-tka rows, two publications of the accumulating register.
 describe('lt-tka history replay', () => {
   const replay = async () => {
-    const config = loadSourceConfig(resolve('sources', 'lt-tka.yaml'));
+    // The fixture is an excerpt, so the live register's published total cannot apply to it.
+    const config = {
+      ...loadSourceConfig(resolve('sources', 'lt-tka.yaml')),
+      record_count: undefined,
+    };
     const register = readFileSync(resolve('fixtures', 'lt-tka', 'input', 'register.csv'));
     return replayHistory('lt-tka', await mapSnapshots(config, new Map([['register', register]])));
   };

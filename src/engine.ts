@@ -259,7 +259,9 @@ export interface Snapshot {
  */
 export async function mapSnapshots(
   config: SourceConfig,
-  files: Map<string, Buffer>
+  files: Map<string, Buffer>,
+  // Body of `record_count.url`, fetched by the caller.
+  publishedTotal?: string
 ): Promise<Snapshot[]> {
   const column = config.latest_snapshot_by;
   if (column === undefined)
@@ -277,7 +279,9 @@ export async function mapSnapshots(
     const value = row[column] ?? '';
     if (value === '')
       throw new Error(`Source "${config.id}": a row has no ${column} value; cannot place it`);
-    bySnapshot.set(value, [...(bySnapshot.get(value) ?? []), row]);
+    const group = bySnapshot.get(value);
+    if (group) group.push(row);
+    else bySnapshot.set(value, [row]);
   }
   const snapshots = [...bySnapshot]
     .sort(([a], [b]) => a.localeCompare(b))
@@ -286,6 +290,14 @@ export async function mapSnapshots(
       ...mapRowSet(config, joinMaps, group),
     }));
   reportUnmatchedLookups(config.id);
+  // A truncated download is indistinguishable from a short publication history, and seeding from
+  // it would be permanent; the failed-row tolerance above does not extend to the count.
+  assertRecordCount(
+    config,
+    primaryBuf,
+    { parsed: rows.length, mapped: snapshots.at(-1)?.records.size ?? 0 },
+    publishedTotal
+  );
   return snapshots;
 }
 

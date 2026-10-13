@@ -5,12 +5,16 @@ import type { SourceConfig } from '../src/types/config.js';
 
 const mockLoadSourceConfig = mock();
 const mockDownload = mock();
+const mockFetchPublishedTotal = mock();
 const mockMapSnapshots = mock();
 const mockSeedHistory = mock();
 const mockR2Constructor = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
-void mock.module('../src/downloader.js', () => ({ download: mockDownload }));
+void mock.module('../src/downloader.js', () => ({
+  download: mockDownload,
+  fetchPublishedTotal: mockFetchPublishedTotal,
+}));
 void mock.module('../src/engine.js', () => ({ mapSnapshots: mockMapSnapshots }));
 void mock.module('../src/logger.js', () => ({ log: mock() }));
 void mock.module('../src/pipeline.js', () => ({
@@ -183,6 +187,7 @@ describe('backfillHistory', () => {
   beforeEach(() => {
     mockLoadSourceConfig.mockReset().mockReturnValue(config);
     mockDownload.mockReset().mockResolvedValue(new Map());
+    mockFetchPublishedTotal.mockReset().mockResolvedValue('{"count()": 3}');
     mockMapSnapshots
       .mockReset()
       .mockResolvedValue([snap('2025-07-21', ['A']), snap('2025-10-21', ['A', 'B'])]);
@@ -199,6 +204,28 @@ describe('backfillHistory', () => {
     expect(source).toBe('lt-tka');
     expect(rows).toHaveLength(2);
     expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('fetches the published total and hands it to the snapshot mapping', async () => {
+    mockLoadSourceConfig.mockReturnValue({
+      ...config,
+      download: { ...config.download, headers: { 'X-Key': 'k' } },
+      record_count: { url: 'https://example.com/count', pattern: '(\\d+)' },
+    });
+
+    await backfillHistory('lt-tka', false);
+
+    expect(mockFetchPublishedTotal).toHaveBeenCalledWith('https://example.com/count', {
+      'X-Key': 'k',
+    });
+    expect(mockMapSnapshots.mock.calls[0]?.[2]).toBe('{"count()": 3}');
+  });
+
+  it('fetches no total for a source that declares none', async () => {
+    await backfillHistory('lt-tka', false);
+
+    expect(mockFetchPublishedTotal).not.toHaveBeenCalled();
+    expect(mockMapSnapshots.mock.calls[0]?.[2]).toBeUndefined();
   });
 
   it('hands dry-run to the writer', async () => {
