@@ -192,10 +192,10 @@ beforeEach(() => {
       stats: { candidates: 0, cache_hits: 0, translated: 0, failed: 0 },
     })
   );
-  mockR2Write.mockResolvedValue({
-    changed: false,
-    record_count: 0,
-    content_hash: 'h0',
+  // The real writer runs the callback once its guards pass; the slice write rides on it.
+  mockR2Write.mockImplementation(async (...args: unknown[]) => {
+    await (args[5] as (() => Promise<void>) | undefined)?.();
+    return { changed: false, record_count: 0, content_hash: 'h0' };
   });
   mockReadState.mockResolvedValue(null);
   mockWriteState.mockResolvedValue(undefined);
@@ -232,11 +232,34 @@ describe('run', () => {
       'faa',
       null,
       expect.any(String),
-      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      expect.any(Function)
     );
   });
 
   // The engine reads files, never the network, so the count body has to arrive as an argument.
+  it('hands the writer the slice write as its pre-commit step, so history advances last', async () => {
+    process.env['DRY_RUN'] = 'false';
+    mockR2Write.mockResolvedValueOnce({ changed: false, record_count: 0, content_hash: 'h0' });
+
+    await run('faa');
+
+    expect(mockWriteFeedRows).not.toHaveBeenCalled();
+    const beforeCommit = mockR2Write.mock.calls[0]?.[5] as () => Promise<void>;
+    await beforeCommit();
+    expect(mockWriteFeedRows).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the slice unwritten from the pre-commit step in dry-run', async () => {
+    process.env['DRY_RUN'] = 'true';
+    mockR2Write.mockResolvedValueOnce({ changed: false, record_count: 0, content_hash: 'h0' });
+
+    await run('faa');
+
+    await (mockR2Write.mock.calls[0]?.[5] as () => Promise<void>)();
+    expect(mockWriteFeedRows).not.toHaveBeenCalled();
+  });
+
   it('fetches the published total and hands it to the engine when a source declares one', async () => {
     mockLoadSourceConfig.mockReturnValue({
       ...CONFIG,
@@ -367,7 +390,8 @@ describe('run', () => {
       'faa',
       null,
       expect.any(String),
-      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      expect.any(Function)
     );
     expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', [
       expect.objectContaining({ cancellation_reason: 'AIRCRAFT EXPORTED' }),

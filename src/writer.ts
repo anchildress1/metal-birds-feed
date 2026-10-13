@@ -118,12 +118,16 @@ export class R2ArtifactWriter {
   // `upstreamHash` is hashed over the pre-localization records. It is what `changed` reports, so a
   // translation landing later never counterfeits an upstream publication. The artifact hash still
   // gates the PUT — otherwise a translation-only improvement would never reach R2.
+  // `beforeCommit` runs once every guard has passed and ahead of the artifact PUT: the artifact
+  // carries the history, which must not advance until the run's other durable outputs exist, or a
+  // retry would count the same fetch as a second consecutive miss.
   async write(
     records: Map<string, Aircraft>,
     source: string,
     priorState: SourceState | null,
     upstreamHash: string,
-    today: string
+    today: string,
+    beforeCommit?: () => Promise<void>
   ): Promise<WriteStats> {
     assertRecordCountForWrite(records.size, source, priorState);
 
@@ -155,6 +159,7 @@ export class R2ArtifactWriter {
     // schema version — a hash match alone can't tell that apart from the real, untouched artifact.
     const artifactCurrent =
       artifactUnchanged && isArtifactCaughtUp(await this.readArtifactHeader(source), priorState);
+    await beforeCommit?.();
     if (artifactCurrent) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return {
@@ -220,7 +225,9 @@ export class R2ArtifactWriter {
         { cause: err }
       );
     }
-    if (!bytes || bytes.byteLength === 0) return null;
+    // The object exists, so an empty body is a corrupt artifact; only NoSuchKey means absent.
+    if (!bytes || bytes.byteLength === 0)
+      throw new Error(`Refusing to write "${source}": prior artifact unreadable: empty response`);
     try {
       return readArtifactRows(bytes, today);
     } catch (err) {

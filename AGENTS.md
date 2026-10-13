@@ -125,7 +125,7 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 - `mapRows()` (`map_*`) is column mapping; `localizeRecords()` (`localize_*`) is the Gemini pass. Never call mapping "translate", prose included.
 - Every state field is required. Never add an optional-field fallback for an older shape.
 - A per-source artifact keeps its closed rows (`removed_on` set); live rows regenerate from source. This is the one exception to the no-compatibility rule: a closed row is data the register no longer holds, not cache.
-  - A live row closes on the second consecutive fetched run that misses it, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. Never serve `first_seen`.
+  - A live row closes on the second consecutive fetched run that misses it, on a later UTC day, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. The artifact PUT is the last write before state, so a failed slice never advances history. Never serve `first_seen`.
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
 - R2 is a build and intermediate store; nothing serves reads from it. The DB is baked into the Cloud Run image and served in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.

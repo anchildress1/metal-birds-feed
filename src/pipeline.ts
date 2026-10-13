@@ -140,13 +140,15 @@ export async function run(sourceId: string): Promise<RunResult> {
     sourceId,
     priorState,
     hashRecords(records),
-    new Date().toISOString().slice(0, 10)
+    new Date().toISOString().slice(0, 10),
+    // The slice lands before the artifact so history advances last, and only past every guard.
+    async () => {
+      if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values()));
+    }
   );
 
   // State advances only after both durable outputs exist. Otherwise cadence gating could suppress
   // recovery from a missing feed slice for the full source cadence.
-  if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values()));
-
   let newState: SourceState | null = priorState;
   if (!dryRun) {
     const now = new Date().toISOString();
