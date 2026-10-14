@@ -81,13 +81,11 @@ const place = (
   today: string,
   outcome: Outcome
 ): void => {
-  if (liveRow) {
-    if (isReuse(liveRow, record)) {
-      outcome.closedNow.push(closed(liveRow, today));
-      outcome.open.push(live(record, today));
-    } else outcome.open.push(live(record, text(liveRow, 'first_seen') ?? today));
+  if (liveRow && !isReuse(liveRow, record)) {
+    outcome.open.push(live(record, text(liveRow, 'first_seen') ?? today));
     return;
   }
+  if (liveRow) outcome.closedNow.push(closed(liveRow, today));
   const target = reopenTarget(record, closedRows);
   if (target) {
     outcome.reopened.add(target);

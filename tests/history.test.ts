@@ -134,6 +134,22 @@ describe('mergeHistory', () => {
     ]);
   });
 
+  it('reopens the closed row of an older airframe returning while another holds the mark', () => {
+    const rows = mergeHistory(
+      [
+        stored('A', '2026-02-05', { serial_number: 'S1' }),
+        stored('A', '2026-01-01', { serial_number: 'S2', removed_on: '2026-02-01' }),
+      ],
+      incoming(rec('A', 'S2')),
+      '2026-10-12'
+    );
+
+    expect(rows.map((r) => [r['first_seen'], r['serial_number'], r['removed_on']])).toEqual([
+      ['2026-01-01', 'S2', null],
+      ['2026-02-05', 'S1', '2026-10-12'],
+    ]);
+  });
+
   it('closes a live row and opens a new one when the serial changes', () => {
     const rows = mergeHistory(
       [stored('A', '2026-01-01', { serial_number: 'S1' })],
