@@ -296,7 +296,9 @@ describe('onboarding contract', () => {
         expect(result.status).toBe(42);
         expect(result.log).not.toContain('make deploy');
       }
-    }
+    },
+    // Each case spawns several shells; the pre-push hook runs this beside tsc and gitleaks.
+    30_000
   );
 
   it.each<Surface>(['manual', 'skill'])(
@@ -329,6 +331,8 @@ describe('onboarding contract', () => {
       expect(shortToken.log).toContain('openssl rand -hex');
       expect(shortToken.log).not.toContain('gcloud secrets create');
       expect(shortToken.log).not.toContain('make deploy');
-    }
+    },
+    // Each case spawns several shells; the pre-push hook runs this beside tsc and gitleaks.
+    30_000
   );
 });
