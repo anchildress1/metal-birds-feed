@@ -124,10 +124,12 @@ describe('live source lookups', () => {
   // NÃO CERTIFICADA states "not certified" — not a category, but not nothing either. `category`
   // nulls it; this is where the fact has to survive.
   it('routes the br-anac not-certified statement to build_certification', () => {
-    const transform =
-      loadSourceConfig('sources/br-anac.yaml').mapping['build_certification']?.transform;
+    const { mapping } = loadSourceConfig('sources/br-anac.yaml');
+    const certification = mapping['build_certification'];
 
-    expect(transform).toBeDefined();
-    expect(applyScalar(transform!, 'NÃO CERTIFICADA')).toBe('not-type-certificated');
+    // The statement lives in the same column `category` reads; pointing elsewhere drops the fact.
+    expect(certification?.field).toBe(mapping['category']?.field);
+    expect(certification?.transform).toBeDefined();
+    expect(applyScalar(certification.transform!, 'NÃO CERTIFICADA')).toBe('not-type-certificated');
   });
 });
