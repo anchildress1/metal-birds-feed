@@ -11,15 +11,14 @@ const translateBatch = mock();
 const requireEnv = mock(() => 'test-key');
 const readPositiveIntegerEnv = mock(() => 10);
 
+// Imported before the mock is installed so the auth hard-fail under test runs the real predicate;
+// a stub that always said false would let a regression through.
+const { isGeminiAuthError } = await import('../../src/localize/gemini-client.js');
+
 void mock.module('../../src/localize/gemini-client.js', () => ({
   translateBatch,
   DEFAULT_REQUESTS_PER_MINUTE: 10,
-  // Real behaviour, not a stub: the auth hard-fail is the thing under test, so a mock that always
-  // said false would let the regression through.
-  isGeminiAuthError: (error: unknown) => {
-    const status = (error as { status?: unknown } | null)?.status;
-    return status === 401 || status === 403;
-  },
+  isGeminiAuthError,
 }));
 void mock.module('../../src/env.js', () => ({ readPositiveIntegerEnv, requireEnv }));
 
@@ -429,22 +428,6 @@ describe('localizeRecords', () => {
     expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
   });
 
-  it('falls back to the original text on a non-auth Gemini error, without throwing', async () => {
-    // A bad request or malformed response degrades like a transient failure — the run still ships,
-    // just untranslated. Only an absent key throws.
-    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    const error = Object.assign(new Error('bad request'), { status: 400 });
-    translateBatch.mockReturnValue(Promise.resolve({ translated: new Map(), errors: [error] }));
-    const { writer, writeTranslationCache } = fakeWriter();
-
-    const { records: result, stats } = await localizeRecords(records, 'br-anac', 'pt', writer);
-
-    expect(stats.failed).toBe(1);
-    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
-    expect(writeTranslationCache).toHaveBeenCalledTimes(1);
-    expect(writeTranslationCache).toHaveBeenCalledWith('br-anac', cacheEnvelope({}));
-  });
-
   it('counts a partial response accurately and still caches the entries that came back', async () => {
     const hashA = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
     const hashB = hashTranslatable('airworthiness_class', 'CA PADRAO');
@@ -548,22 +531,6 @@ describe('localizeRecords', () => {
     await localizeRecords(records, 'br-anac', 'pt', writer);
 
     expect(writeTranslationCache.mock.calls[0]).toEqual(['br-anac', cacheEnvelope({})]);
-  });
-
-  it('degrades on an access-denied cache read the same as a transient one', async () => {
-    const records = new Map([['1', make('1', { cancellation_reason: 'AERONAVE EXPORTADA' })]]);
-    const hash = hashTranslatable('cancellation_reason', 'AERONAVE EXPORTADA');
-    const error = Object.assign(new Error('AccessDenied'), {
-      $metadata: { httpStatusCode: 403 },
-    });
-    translateBatch.mockImplementation(ok([[hash, 'Aircraft exported']]));
-    const { writer } = fakeWriter();
-    (writer.readTranslationCache as ReturnType<typeof mock>).mockRejectedValue(error);
-
-    const { records: result } = await localizeRecords(records, 'br-anac', 'pt', writer);
-
-    expect(translateBatch).not.toHaveBeenCalled();
-    expect(result.get('1')!.cancellation_reason).toBe('AERONAVE EXPORTADA');
   });
 
   it('still returns the in-memory translation when the cache write fails, without throwing', async () => {

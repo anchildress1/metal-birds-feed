@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
 import { loadSourceConfig } from '../../src/config/loader.js';
 
+const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FAA_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'faa.yaml');
 const TC_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'tc-ca.yaml');
 const NZ_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'nz-caa.yaml');
@@ -38,6 +39,16 @@ describe('loadSourceConfig', () => {
     expect(() => loadSourceConfig('/etc/passwd')).toThrow(/sandbox/i);
   });
 
+  // A bare startsWith(ROOT) check would let a sibling directory that shares the repo's name prefix
+  // through.
+  it('rejects an absolute path in a sibling directory sharing the root as a prefix', () => {
+    expect(() => loadSourceConfig(`${REPO_ROOT}-evil/x.yaml`)).toThrow(/outside sandbox/i);
+  });
+
+  it('resolves a repo-relative path against the root', () => {
+    expect(loadSourceConfig('sources/faa.yaml').id).toBe('faa');
+  });
+
   it('throws on non-existent file', () => {
     expect(() => loadSourceConfig('sources/nonexistent.yaml')).toThrow();
   });
@@ -46,7 +57,9 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_invalid.yaml');
     writeFileSync(tmp, 'id: test\nlabel: test\n');
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /country[\s\S]*expected string, received undefined/
+      );
     } finally {
       unlinkSync(tmp);
     }
@@ -146,7 +159,7 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: CL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: []\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/expected array to have >=1 items/);
     } finally {
       unlinkSync(tmp);
     }
@@ -228,10 +241,23 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_bad_format.yaml');
     writeFileSync(
       tmp,
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: docx\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/Invalid option: expected one of/);
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects format pdf without a pdf config block', () => {
+    const tmp = tmpConfig('_test_pdf_no_block.yaml');
+    writeFileSync(
+      tmp,
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: pdf\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/requires a pdf config block/);
     } finally {
       unlinkSync(tmp);
     }
@@ -244,7 +270,7 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.ods }\nprimary: f\ndelimiter: ','\nformat: ods\nsheet: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/expected number to be >=0/);
     } finally {
       unlinkSync(tmp);
     }
@@ -420,7 +446,7 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nskiprows: 1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/Unrecognized key: .*skiprows/);
     } finally {
       unlinkSync(tmp);
     }
@@ -433,7 +459,7 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\n  discover_patern: 'x'\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/Unrecognized key: .*discover_patern/);
     } finally {
       unlinkSync(tmp);
     }
@@ -446,20 +472,22 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transfrom: trim_or_null }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/Unrecognized key: .*transfrom/);
     } finally {
       unlinkSync(tmp);
     }
   });
 
-  it('rejects constant combined with transform (silent precedence)', () => {
+  it('rejects constant combined with a lookup (silent precedence)', () => {
     const tmp = tmpConfig('_test_const_transform.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { constant: valid, transform: trim_or_null }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { constant: valid, lookup: { a: b } }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /constant cannot be combined with transform, array_transform, lookup, or default/
+      );
     } finally {
       unlinkSync(tmp);
     }
@@ -472,7 +500,9 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, constant: X }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /requires exactly one of field, fields, or constant/
+      );
     } finally {
       unlinkSync(tmp);
     }
@@ -482,10 +512,25 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_two_transforms.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transform: trim_or_null, array_transform: br_operational_classes }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID, transform: trim_or_null, array_transform: faa_cert_ops }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /transform and array_transform are mutually exclusive/
+      );
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a transform on a compound mapping (transform requires field)', () => {
+    const tmp = tmpConfig('_test_transform_requires_field.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n  status: { fields: [A, B], compound_transform: br_status, transform: trim_or_null }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(/transform requires field/);
     } finally {
       unlinkSync(tmp);
     }
@@ -498,7 +543,9 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\ncolumns:\n  f: [REG, REG]\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: REG }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /columns arrays must not contain duplicate names/
+      );
     } finally {
       unlinkSync(tmp);
     }
@@ -508,10 +555,10 @@ describe('loadSourceConfig', () => {
     const tmp = tmpConfig('_test_neg_ragged.yaml');
     writeFileSync(
       tmp,
-      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_ragged_rows: -1\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nallowed_ragged_rows: { f: -1 }\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(/expected number to be >=0/);
     } finally {
       unlinkSync(tmp);
     }
@@ -574,25 +621,94 @@ describe('loadSourceConfig', () => {
       'a negative allowed_anchorless_pages',
       '_test_pdf_neg_anchorless.yaml',
       '  allowed_anchorless_pages: -1\n',
+      '',
+      /expected number to be >=0/,
     ],
     [
       'a negative before_first_anchor_reach',
       '_test_pdf_neg_before_first_anchor.yaml',
-      '  before_first_anchor_reach: -1\n',
+      '',
+      '      before_first_anchor_reach: -1\n      before_first_anchor_pattern: "^x$"\n',
+      /expected number to be >=0/,
     ],
     [
       'a non-integer allowed_anchorless_pages',
       '_test_pdf_frac_anchorless.yaml',
       '  allowed_anchorless_pages: 1.5\n',
+      '',
+      /expected int, received number/,
     ],
-  ])('rejects %s', (_description, filename, field) => {
+  ])('rejects %s', (_description, filename, pdfLine, layoutLine, message) => {
     const tmp = tmpConfig(filename);
-    writeFileSync(tmp, pdfYaml(field));
+    writeFileSync(tmp, pdfYaml(pdfLine, layoutLine));
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/invalid source config/i);
+      expect(() => loadSourceConfig(tmp)).toThrow(message);
     } finally {
       unlinkSync(tmp);
     }
+  });
+
+  // Each guard below is the only thing standing between a mis-measured layout and a silently
+  // scrambled parse, so each is pinned by an input that trips exactly that rule.
+  const pdfGuardYaml = (opts: { layouts: string; anchorField?: string }): string =>
+    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${opts.anchorField === undefined ? '' : `  anchor_field: ${opts.anchorField}\n`}  layouts:\n${opts.layouts}columns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+
+  const withPdfGuard = <T>(name: string, yaml: string, run: (path: string) => T): T => {
+    const tmp = tmpConfig(name);
+    writeFileSync(tmp, yaml);
+    try {
+      return run(tmp);
+    } finally {
+      unlinkSync(tmp);
+    }
+  };
+
+  it('accepts one layout per axis and an anchor_field that names a primary column', () => {
+    const yaml = pdfGuardYaml({
+      layouts:
+        '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: x\n      column_pos: [10, null]\n',
+      anchorField: 'mark',
+    });
+    withPdfGuard('_test_pdf_two_axes.yaml', yaml, (path) => {
+      const config = loadSourceConfig(path);
+      expect(config.pdf?.layouts.map((l) => l.field_axis)).toEqual(['y', 'x']);
+      expect(config.pdf?.anchor_field).toBe('mark');
+    });
+  });
+
+  it.each([
+    [
+      'two layouts on one axis',
+      '_test_pdf_dup_axis.yaml',
+      '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: y\n      column_pos: [90, 40]\n',
+      undefined,
+      /at most one layout per field_axis/,
+    ],
+    [
+      'a layout whose column_pos prints no band at all',
+      '_test_pdf_all_null.yaml',
+      '    - field_axis: y\n      column_pos: [null, null]\n',
+      undefined,
+      /must declare at least one printed band/,
+    ],
+    [
+      'a column_pos whose length differs from columns[primary]',
+      '_test_pdf_len_mismatch.yaml',
+      '    - field_axis: y\n      column_pos: [100]\n',
+      undefined,
+      /column_pos length must match columns\[primary\] length/,
+    ],
+    [
+      'an anchor_field that is not a column of the primary file',
+      '_test_pdf_bad_anchor_field.yaml',
+      '    - field_axis: y\n      column_pos: [100, 50]\n',
+      'nope',
+      /anchor_field must name a column in columns\[primary\]/,
+    ],
+  ])('rejects %s', (_description, filename, layouts, anchorField, message) => {
+    withPdfGuard(filename, pdfGuardYaml({ layouts, anchorField }), (path) => {
+      expect(() => loadSourceConfig(path)).toThrow(message);
+    });
   });
 
   it('rejects pdf.before_first_anchor_pattern without a reach', () => {

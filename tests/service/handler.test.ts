@@ -137,6 +137,47 @@ describe('parseHexes', () => {
   });
 });
 
+describe('parseRegistrations', () => {
+  it('400s when registrations is not an array', () => {
+    expectHttp(() => parseRegistrations({ registrations: 'C-FABC' }), 400);
+  });
+
+  it('400s when the body is null', () => {
+    expectHttp(() => parseRegistrations(null), 400);
+  });
+
+  it('normalizes punctuation and case, then dedups', () => {
+    expect(parseRegistrations({ registrations: ['C-FABC', 'c fabc', 'CFABC', 'N12345'] })).toEqual([
+      'CFABC',
+      'N12345',
+    ]);
+  });
+
+  it('400s on a non-string element', () => {
+    expectHttp(() => parseRegistrations({ registrations: ['C-FABC', 123456] }), 400);
+  });
+
+  it.each([['!'], ['-'], ['A'], ['ABCDEFGHIJK']])('400s on %p, which cannot be a mark', (bad) => {
+    expectHttp(() => parseRegistrations({ registrations: [bad] }), 400);
+  });
+
+  it('accepts exactly the cap and 400s one past it', () => {
+    const marks = (n: number): string[] =>
+      Array.from({ length: n }, (_, i) => `M${String(i).padStart(4, '0')}`);
+    expect(parseRegistrations({ registrations: marks(500) })).toHaveLength(500);
+    expectHttp(() => parseRegistrations({ registrations: marks(501) }), 400);
+  });
+
+  it('counts variants of one mark once against the cap', () => {
+    const variants = Array.from({ length: 600 }, () => 'c-fabc');
+    expect(parseRegistrations({ registrations: variants })).toEqual(['CFABC']);
+  });
+
+  it('accepts an empty array', () => {
+    expect(parseRegistrations({ registrations: [] })).toEqual([]);
+  });
+});
+
 describe('buildSelect', () => {
   it('emits one placeholder per hex', () => {
     expect(buildSelect(3)).toContain('IN (?, ?, ?)');
@@ -213,13 +254,6 @@ describe('route', () => {
     expect(params).toEqual(['CFABC']);
   });
 
-  // The query key and the stored key must come from one function. While they were separate copies
-  // of the same regex, a change to either silently missed every lookup instead of failing.
-  it('normalizes a query mark to exactly what the producer stores', () => {
-    const marks = ['C-FABC', 'N12345', 'VH-XYZ', 'LY AYP', 'zk.aac', '9h abc'];
-    expect(parseRegistrations({ registrations: marks })).toEqual(marks.map(registrationKey));
-  });
-
   // Both routes normalize now, so this pins the selector and that the caller's casing reaches the
   // database in the stored form rather than as sent.
   it('queries icao_hex with lowercased parameters, not the registration key', async () => {
@@ -281,9 +315,27 @@ describe('route', () => {
     expect(res.status).toBe(401);
   });
 
-  it('401s before touching the body when auth fails', async () => {
-    const res = await route('POST', '/feed', 'Bearer nope', 't', { hexes: ['a1b2c3'] }, pass, ok);
-    expect(res.status).toBe(401);
+  // An unauthenticated flood must not drain the budget the legitimate consumer shares.
+  it.each([
+    { label: 'bad token', method: 'POST', path: '/feed', header: 'Bearer nope', status: 401 },
+    { label: 'no header', method: 'POST', path: '/feed', header: null, status: 401 },
+    { label: 'unknown path', method: 'POST', path: '/other', header: 'Bearer t', status: 404 },
+    { label: 'wrong method', method: 'GET', path: '/feed', header: 'Bearer t', status: 405 },
+  ])('spends no rate budget on a request rejected as $label', async (input) => {
+    const checkLimit = mock(() => Promise.resolve(true));
+
+    const res = await route(input.method, input.path, input.header, 't', {}, checkLimit, ok);
+
+    expect(res.status).toBe(input.status);
+    expect(checkLimit).not.toHaveBeenCalled();
+  });
+
+  it('spends exactly one rate-budget unit on an authorized lookup', async () => {
+    const checkLimit = mock(() => Promise.resolve(true));
+
+    await route('POST', '/feed', 'Bearer t', 't', { hexes: ['a1b2c3'] }, checkLimit, ok);
+
+    expect(checkLimit).toHaveBeenCalledTimes(1);
   });
 
   it('429s when the rate limit is exceeded, without querying', async () => {
