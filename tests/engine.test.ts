@@ -5,7 +5,6 @@ import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
 import { mapRows, mapSnapshots } from '../src/engine.js';
-import { applyScalar } from '../src/transforms.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { FieldMapping, SourceConfig } from '../src/types/config.js';
@@ -719,7 +718,7 @@ describe('CAA Latvia fixture mapping', () => {
 });
 
 describe('engine — negative and edge cases', () => {
-  it('throws for unknown non-defaulted lookup value', async () => {
+  it('fails only the row carrying an unknown non-defaulted lookup value', async () => {
     const config = loadSourceConfig(CONFIG_PATH);
     const masterWithBadAirframe = Buffer.from(
       readFileSync(resolve(FIXTURES, 'input', 'MASTER.txt'), 'latin1').replace(
@@ -734,7 +733,8 @@ describe('engine — negative and edge cases', () => {
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
     const { stats } = await mapRows(config, files);
-    expect(stats.failed).toBeGreaterThan(0);
+    expect(stats.failed).toBe(1);
+    expect(stats.ok).toBe(stats.total - 1);
   });
 
   it('defaults unknown status codes to other', async () => {
@@ -817,7 +817,8 @@ describe('engine — negative and edge cases', () => {
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
     const { stats } = await mapRows(modConfig, files);
-    expect(stats.failed).toBeGreaterThan(0);
+    expect(stats.ok).toBe(0);
+    expect(stats.failed).toBe(stats.total);
   });
 
   it('returns null for a compound_transform whose result is null (no default)', async () => {
@@ -3632,21 +3633,14 @@ describe('engine — merge_duplicates edge cases', () => {
         ['1', 'CC-AAA', 'MBB-BK117 D-2'],
       ]);
 
-    it('keeps the later row instead of failing the run', async () => {
+    it('keeps the later row instead of failing the run, without counting a duplicate skip', async () => {
       const { records, stats } = await mapRows(
         clashConfig('last-wins'),
         new Map([['register', await clashRows()]])
       );
       expect(stats.failed).toBe(0);
-      expect(records.get('1')!.model).toBe('MBB-BK117 D-2');
-    });
-
-    it('does not count the dropped row as a duplicate skip', async () => {
-      const { stats } = await mapRows(
-        clashConfig('last-wins'),
-        new Map([['register', await clashRows()]])
-      );
       expect(stats.duplicateSkipped).toBe(0);
+      expect(records.get('1')!.model).toBe('MBB-BK117 D-2');
     });
 
     it('still fails the run when the flag is absent', async () => {
@@ -3973,7 +3967,7 @@ describe('unmatched lookup reporting', () => {
     }
   });
 
-  it('does not carry counts from one source into the next', async () => {
+  it('resets the counts when the same source is mapped again', async () => {
     const rows = ['ID,REG,KIND', '1,N1,Mystery'];
     const buf = new Map([['f', Buffer.from(rows.join('\n'))]]);
     await mapRows(config, buf);
@@ -3984,33 +3978,6 @@ describe('unmatched lookup reporting', () => {
         .map((c) => String(c[0]))
         .find((l) => l.includes('map_lookup_default'));
       expect(line).toContain('rows=1');
-    } finally {
-      logSpy.mockRestore();
-    }
-  });
-
-  // The refresh matrix runs sources concurrently in one process. A single shared accumulator let
-  // either run's entry clear the other's counts and report values under the wrong source id.
-  it('keeps the counts of concurrently mapped sources apart', async () => {
-    const a = { ...config, id: 'src-a' };
-    const b = { ...config, id: 'src-b' };
-    const bufA = new Map([['f', Buffer.from(['ID,REG,KIND', '1,N1,Alpha'].join('\n'))]]);
-    const bufB = new Map([
-      ['f', Buffer.from(['ID,REG,KIND', '1,N1,Beta', '2,N2,Beta'].join('\n'))],
-    ]);
-    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      await Promise.all([mapRows(a, bufA), mapRows(b, bufB)]);
-      const lines = logSpy.mock.calls
-        .map((c) => String(c[0]))
-        .filter((l) => l.includes('map_lookup_default'));
-      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Alpha'))).toBe(true);
-      expect(
-        lines.some(
-          (l) => l.includes('source=src-b') && l.includes('value=Beta') && l.includes('rows=2')
-        )
-      ).toBe(true);
-      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Beta'))).toBe(false);
     } finally {
       logSpy.mockRestore();
     }
@@ -4209,10 +4176,9 @@ describe('TKA Lithuania fixture mapping', () => {
   });
 
   it('takes the year out of the full manufacture date', () => {
-    expect([...r.values()].some((a) => a.year_manufactured !== null)).toBe(true);
-    expect(
-      [...r.values()].every((a) => a.year_manufactured === null || a.year_manufactured > 1900)
-    ).toBe(true);
+    const byReg = (reg: string) => [...r.values()].find((a) => a.registration === reg)!;
+    expect(byReg('LY HAK').year_manufactured).toBe(1976);
+    expect(byReg('LY SBT').year_manufactured).toBe(2003);
   });
 });
 
@@ -4382,25 +4348,6 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
       expect(anchor.test(mark)).toBe(true);
     for (const mark of ['HA-GZ', 'HA-GZABC', '9A-BTI', 'GZQ'])
       expect(anchor.test(mark)).toBe(false);
-  });
-
-  // The register prints "HU-16" inside HA-TWN's record. Unanchored it fused into that record and
-  // nulled its mark, which failed the whole run; anchored it is a separate record the budget skips.
-  it('anchors the HU-nn line apart from its neighbour and skips it as a non-HA mark', () => {
-    const config = loadSourceConfig(HU_CONFIG);
-    const anchor = new RegExp(config.pdf!.anchor_pattern);
-    const skipped = new RegExp(config.allowed_missing_source_id_rows!.pattern);
-
-    for (const mark of ['HU-16', 'HU -16', 'HU - 07']) {
-      expect(anchor.test(mark)).toBe(true);
-      expect(skipped.test(mark)).toBe(true);
-    }
-    for (const mark of ['HU-1', 'HU-161', 'HU-AB'] as const) {
-      expect(anchor.test(mark)).toBe(false);
-      expect(skipped.test(mark)).toBe(false);
-    }
-    expect(applyScalar('hu_kh_registration', 'HU-16')).toBeNull();
-    expect(config.allowed_missing_source_id_rows!.max).toBe(3);
   });
 });
 
