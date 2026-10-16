@@ -184,7 +184,10 @@ const createStalenessIssue = async (
   const apiBase = `https://api.github.com/repos/${repo}`;
   const silence =
     entry.days_since_change === null ? 'an unknown number of' : String(entry.days_since_change);
-  const title = `[staleness] ${entry.source} has not updated in ${silence} days`;
+  const title =
+    entry.days_since_change === null
+      ? `[staleness] ${entry.source} has no readable last content change`
+      : `[staleness] ${entry.source} has not updated in ${silence} days`;
 
   const listRes = await fetch(`${apiBase}/issues?labels=data-staleness&state=open&per_page=100`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },

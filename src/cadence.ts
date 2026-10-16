@@ -66,11 +66,12 @@ export const buildStalenessEntry = (
   now: Date
 ): StalenessEntry => {
   const lastChange = state?.last_content_change ?? null;
-  const msSinceChange = lastChange ? now.getTime() - new Date(lastChange).getTime() : Number.NaN;
-  // A timestamp ahead of the clock is skew, not silence: clamp to 0 so it never reads as unknown.
-  const daysSinceChange = Number.isFinite(msSinceChange)
-    ? Math.max(0, Math.floor(msSinceChange / MS_PER_DAY))
-    : null;
+  const changedAt = lastChange === null ? Number.NaN : new Date(lastChange).getTime();
+  // Null covers both no timestamp and an unparseable one, the same two cases isOverdue treats as
+  // unknown; a future timestamp clamps to 0 rather than reading as unknown.
+  const daysSinceChange = Number.isNaN(changedAt)
+    ? null
+    : Math.max(0, Math.floor((now.getTime() - changedAt) / MS_PER_DAY));
   return {
     source,
     cadence_days: cadenceDays,

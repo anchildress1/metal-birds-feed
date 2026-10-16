@@ -1110,7 +1110,7 @@ describe('main', () => {
 
     const [, createCall] = fetchMock.mock.calls[1] as [string, RequestInit];
     const issue = JSON.parse(createCall.body as string) as { title: string; body: string };
-    expect(issue.title).toBe('[staleness] faa has not updated in an unknown number of days');
+    expect(issue.title).toBe('[staleness] faa has no readable last content change');
     expect(issue.body).toContain('**Days since change:** unknown');
     expect(issue.body).toContain('silent for an unknown number of days');
     expect(`${issue.title}${issue.body}`).not.toMatch(/-1|null/);
