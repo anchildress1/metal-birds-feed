@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'bun:test';
 import { resolve } from 'node:path';
-import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
+import { writeFileSync, unlinkSync, mkdirSync, readdirSync } from 'node:fs';
 import { loadSourceConfig } from '../../src/config/loader.js';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
-const FAA_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'faa.yaml');
-const TC_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'tc-ca.yaml');
-const NZ_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'nz-caa.yaml');
 
 // Throwaway configs stay out of sources/: `resolveAllSources()` and the runtime-attribution guard
 // both enumerate that directory, so one file left behind by an interrupted run becomes a phantom
@@ -17,18 +14,30 @@ const tmpConfig = (name: string): string => {
   return resolve(TMP_CONFIG_DIR, name);
 };
 
+const loadInline = (name: string, yaml: string): ReturnType<typeof loadSourceConfig> => {
+  const tmp = tmpConfig(name);
+  writeFileSync(tmp, yaml);
+  try {
+    return loadSourceConfig(tmp);
+  } finally {
+    unlinkSync(tmp);
+  }
+};
+
+const BASE = (country: string, extra: string, mapping = '  registration: { field: ID }\n') =>
+  `id: t\nlabel: t\ncountry: ${country}\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\n${extra}source_id: ID\nregistration: ID\nmapping:\n${mapping}`;
+
 describe('loadSourceConfig', () => {
-  it('loads valid FAA config', () => {
-    const config = loadSourceConfig(FAA_CONFIG);
-    expect(config.id).toBe('faa');
-    expect(config.country).toBe('US');
+  it('loads a multi-file config with joins, a non-utf8 encoding and request headers', () => {
+    const config = loadInline(
+      '_test_multi_file.yaml',
+      `id: t\nlabel: t\ncountry: US\nlanguage: en\nencoding: latin1\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  headers: { User-Agent: test-agent }\n  entries: { master: MASTER.txt, acft: ACFTREF.txt, eng: ENGINE.txt }\nprimary: master\ndelimiter: ','\njoins:\n  - name: acft\n    file: acft\n    key: CODE\n    on: MFR\n  - name: eng\n    file: eng\n    key: CODE\n    on: ENG\nsource_id: UNIQUE ID\nregistration: N-NUMBER\nmapping:\n  registration: { field: N-NUMBER }\n`
+    );
     expect(config.encoding).toBe('latin1');
     expect(config.primary).toBe('master');
     expect(config.source_id).toBe('UNIQUE ID');
-    expect(config.joins).toHaveLength(2);
-    expect(config.joins[0]?.name).toBe('acft');
-    expect(config.joins[1]?.name).toBe('eng');
-    expect(config.download.headers?.['User-Agent']).toBeDefined();
+    expect(config.joins.map((j) => j.name)).toEqual(['acft', 'eng']);
+    expect(config.download.headers).toEqual({ 'User-Agent': 'test-agent' });
   });
 
   it('rejects path traversal', () => {
@@ -45,8 +54,12 @@ describe('loadSourceConfig', () => {
     expect(() => loadSourceConfig(`${REPO_ROOT}-evil/x.yaml`)).toThrow(/outside sandbox/i);
   });
 
-  it('resolves a repo-relative path against the root', () => {
-    expect(loadSourceConfig('sources/faa.yaml').id).toBe('faa');
+  it('loads every shipped source config by repo-relative path with a unique id', () => {
+    const files = readdirSync(resolve(REPO_ROOT, 'sources')).filter((f) => f.endsWith('.yaml'));
+    const ids = files.map((f) => loadSourceConfig(`sources/${f}`).id);
+
+    expect(files.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it('throws on non-existent file', () => {
@@ -65,22 +78,22 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  it('loads valid TC-CA config with compound transforms and explicit columns', () => {
-    const config = loadSourceConfig(TC_CONFIG);
-    expect(config.id).toBe('tc-ca');
-    expect(config.country).toBe('CA');
-    expect(config.encoding).toBe('latin1');
-    expect(config.columns?.carscurr).toHaveLength(47);
-    expect(config.columns?.carsownr).toHaveLength(20);
+  it('loads explicit columns, row budgets and a compound mapping', () => {
+    const config = loadInline(
+      '_test_columns_budgets.yaml',
+      `id: t\nlabel: t\ncountry: CA\nlanguage: en\nencoding: latin1\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { primary: p.txt, side: s.txt }\nprimary: primary\ndelimiter: ','\ncolumns:\n  primary: [MARK, CATEGORY, ENGINES]\n  side: [MARK, NAME]\nallowed_missing_source_id_rows:\n  max: 1\n  field: MARK\n  pattern: '^\\d+ rows selected\\.$'\nallowed_ragged_rows: { primary: 1, side: 1 }\njoins:\n  - name: side\n    file: side\n    key: MARK\n    on: MARK\nsource_id: MARK\nregistration: MARK\nmapping:\n  registration: { field: MARK }\n  airframe_type: { compound_transform: tc_airframe, fields: [CATEGORY, ENGINES] }\n`
+    );
+    expect(config.columns?.primary).toEqual(['MARK', 'CATEGORY', 'ENGINES']);
+    expect(config.columns?.side).toEqual(['MARK', 'NAME']);
     expect(config.allowed_missing_source_id_rows).toEqual({
       max: 1,
       field: 'MARK',
       pattern: '^\\d+ rows selected\\.$',
     });
-    expect(config.allowed_ragged_rows).toEqual({ carscurr: 1, carsownr: 1 });
+    expect(config.allowed_ragged_rows).toEqual({ primary: 1, side: 1 });
     expect(config.mapping['airframe_type']).toMatchObject({
       compound_transform: 'tc_airframe',
-      fields: ['AIRCRAFT_CATEGORY_E', 'NUMBER_OF_ENGINES'],
+      fields: ['CATEGORY', 'ENGINES'],
     });
   });
 
@@ -141,9 +154,10 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  it('loads cl-dgac config with a merge_duplicates policy', () => {
-    const config = loadSourceConfig(
-      resolve(import.meta.dirname, '..', '..', 'sources', 'cl-dgac.yaml')
+  it('loads a merge_duplicates policy with separator and set_on_merge', () => {
+    const config = loadInline(
+      '_test_merge_policy.yaml',
+      `id: t\nlabel: t\ncountry: CL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmerge_duplicates:\n  fields: [operator.name]\n  separator: ' Y '\n  set_on_merge:\n    operator.kind: co-owner\nmapping:\n  registration: { field: ID }\n  operator.name: { field: OPERATOR }\n`
     );
     expect(config.merge_duplicates).toEqual({
       fields: ['operator.name'],
@@ -202,7 +216,7 @@ describe('loadSourceConfig', () => {
   });
 
   it('defaults format to csv when omitted', () => {
-    const config = loadSourceConfig(FAA_CONFIG);
+    const config = loadInline('_test_format_default.yaml', BASE('NL', ''));
     expect(config.format).toBe('csv');
     expect(config.sheet).toBeUndefined();
   });
@@ -787,17 +801,24 @@ describe('loadSourceConfig', () => {
   });
 
   it('accepts the canonical _source_text companion keys', () => {
-    const config = loadSourceConfig(
-      resolve(import.meta.dirname, '..', '..', 'sources', 'es-aesa.yaml')
+    const config = loadInline(
+      '_test_source_text_keys.yaml',
+      BASE(
+        'ES',
+        '',
+        '  registration: { field: ID }\n  airworthiness_class: { field: CLASS }\n  airworthiness_class_source_text: { field: CLASS }\n'
+      )
     );
-    expect(config.mapping['airworthiness_class_source_text']).toBeDefined();
+    expect(config.mapping['airworthiness_class_source_text']).toEqual({ field: 'CLASS' });
   });
 
   it('accepts prime_url when every cookie-bearing request shares its origin', () => {
-    const config = loadSourceConfig(NZ_CONFIG);
+    const config = loadInline(
+      '_test_prime_same_origin.yaml',
+      `id: t\nlabel: t\ncountry: NZ\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/register.csv\n  prime_url: https://example.com/\n  format: file\n  entries: { register: register.csv }\nprimary: register\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
 
-    expect(config.download.prime_url).toBe('https://www.aviation.govt.nz/');
-    expect(new URL(config.download.url).origin).toBe('https://www.aviation.govt.nz');
+    expect(config.download.prime_url).toBe('https://example.com/');
   });
 
   it.each([
@@ -925,20 +946,19 @@ describe('loadSourceConfig', () => {
 });
 
 describe('loadSourceConfig — JSON + POST sources', () => {
-  const CH_CONFIG = resolve(import.meta.dirname, '..', '..', 'sources', 'ch-foca.yaml');
-
-  it('loads the FOCA config with format json and a POST download', () => {
-    const config = loadSourceConfig(CH_CONFIG);
+  it('loads a json source with a POST download and an empty record path', () => {
+    const config = loadInline(
+      '_test_json_post_root.yaml',
+      `id: t\nlabel: t\ncountry: CH\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x\n  format: file\n  method: POST\n  body: { q: 1 }\n  entries: { aircraft: '.' }\nprimary: aircraft\ndelimiter: ','\nformat: json\nrecord_path: ''\nsource_id: lfrId\nregistration: registration\nmapping:\n  registration: { field: registration }\n`
+    );
     expect(config.format).toBe('json');
     expect(config.record_path).toBe('');
     expect(config.download.method).toBe('POST');
-    expect(config.download.body).toBeDefined();
-    expect(config.source_id).toBe('lfrId');
+    expect(config.download.body).toEqual({ q: 1 });
   });
 
   it('defaults download.method to GET when omitted', () => {
-    const config = loadSourceConfig(FAA_CONFIG);
-    expect(config.download.method).toBe('GET');
+    expect(loadInline('_test_method_default.yaml', BASE('NL', '')).download.method).toBe('GET');
   });
 
   it('rejects download.body without method POST', () => {
@@ -1018,7 +1038,9 @@ describe('loadSourceConfig — download.manual', () => {
   });
 
   it('leaves manual unset on a fetched source', () => {
-    expect(loadSourceConfig(FAA_CONFIG).download.manual).toBeUndefined();
+    expect(
+      load(manualYaml('  format: file\n  entries: { register: r }\n')).download.manual
+    ).toBeUndefined();
   });
 
   it.each([
