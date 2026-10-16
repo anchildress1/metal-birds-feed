@@ -31,7 +31,8 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 - `tests/` mirrors `src/`; never colocate — `coverageSkipTestFiles` hides a `src/*.test.ts` from the coverage gate and it lands green.
 - Keep `--isolate`: `mock.module` is process-global and leaks across files without it.
 - The gate thresholds line/function/statement only. Cover branches by intent.
-- A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`); logic left in `isCliEntryPoint()` is uncovered and fails the per-file threshold.
+- A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`) and carries no test; logic in the shell is untested logic.
+- No test exists to move a coverage number. A test must fail when the behavior it names breaks.
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground truth: real upstream rows, changed only with a schema or config change.
   - Sanitize natural-person names and addresses. Keep organization names and every technical value verbatim.
