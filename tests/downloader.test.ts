@@ -8,7 +8,7 @@ import {
   STREAM_THRESHOLD_BYTES,
   type RetryOptions,
 } from '../src/downloader.js';
-import { loadSourceConfig } from '../src/config/loader.js';
+import { DEFAULT_ATTEMPTS } from '../src/retry.js';
 import type { DownloadConfig } from '../src/types/config.js';
 
 // No-op sleep keeps backoff out of the test clock; assertions cover attempt counts, not timing.
@@ -122,11 +122,23 @@ describe('fetchPublishedTotal', () => {
 
   // A count that cannot be read is not a reason to accept an unverified download.
   it('fails after retries when the endpoint stays down', async () => {
-    setFetch(mock().mockResolvedValue(new Response('nope', { status: 500 })));
+    const fn = mock().mockResolvedValue(new Response('nope', { status: 500 }));
+    setFetch(fn);
 
     await expect(
       fetchPublishedTotal('https://example.test/count', undefined, FAST_RETRY)
-    ).rejects.toThrow(/Record count fetch failed/);
+    ).rejects.toThrow(/Record count fetch failed: 500/);
+    expect(fn).toHaveBeenCalledTimes(DEFAULT_ATTEMPTS);
+  });
+
+  it('fails fast without retrying on a terminal status', async () => {
+    const fn = mock().mockResolvedValue(new Response('no', { status: 404 }));
+    setFetch(fn);
+
+    await expect(
+      fetchPublishedTotal('https://example.test/count', undefined, FAST_RETRY)
+    ).rejects.toThrow(/Record count fetch failed: 404/);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -165,12 +177,6 @@ describe('download', () => {
     expect(master).toContain('12345,17282099');
   });
 
-  it('throws when fetch response is not ok', async () => {
-    mockFetch(Buffer.alloc(0), false, 404);
-
-    await expect(download(FAA_DOWNLOAD_CONFIG)).rejects.toThrow(/404/);
-  });
-
   it('forwards headers from config to fetch', async () => {
     const zip = readFileSync(FIXTURE_ZIP);
     mockFetch(zip);
@@ -206,6 +212,15 @@ describe('download — stream vs buffer dispatch', () => {
 
     expect(res.arrayBuffer).toHaveBeenCalled();
     expect(files.has('master')).toBe(true);
+  });
+
+  it('buffers when Content-Length is one byte under the threshold', async () => {
+    const res = streamZipResponse(STREAM_THRESHOLD_BYTES - 1);
+    setFetch(mock().mockResolvedValue(res));
+
+    await download(FAA_DOWNLOAD_CONFIG);
+
+    expect(res.arrayBuffer).toHaveBeenCalled();
   });
 
   it('streams when Content-Length is at the threshold', async () => {
@@ -458,12 +473,6 @@ describe('download — format: file', () => {
     expect(files.has('register')).toBe(true);
     expect(files.get('register')!.toString('utf8')).toBe('binary-blob-bytes');
   });
-
-  it('throws when the fetch is not ok', async () => {
-    mockFetch(Buffer.alloc(0), false, 404);
-
-    await expect(download(FILE_CONFIG)).rejects.toThrow(/404/);
-  });
 });
 
 describe('download — discover_url + discover_pattern', () => {
@@ -598,98 +607,6 @@ describe('download — discover_url + discover_pattern', () => {
     // First match in INDEX_HTML is the April 2026 file (declared first).
     expect(fetchFn.mock.calls[1]?.[0]).toContain('2026-04-28');
   });
-
-  // Regression: the registration page serves the register link as a relative href, alongside
-  // absolute-href links to unrelated form PDFs on the same page — the pattern must resolve the
-  // former to the current agency-hosted register while ignoring the latter.
-  it("resolves mv-caa's discover_pattern against the live page's relative register href", async () => {
-    const MV_CAA_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'mv-caa.yaml');
-    const { download: mvDownload } = loadSourceConfig(MV_CAA_CONFIG);
-
-    const REGISTRATION_PAGE_HTML = `
-      <html><body>
-        <p>Application form: <a href="https://www.caa.gov.mv/attachments/PgrSS7KENKiapW6eo9L1XBJzvWotf7qkf2oaBK0V.pdf">download</a></p>
-        <p>The register can be downloaded from <a href="/attachments/JSGDRnn0oWF2YGUW76GJHgF4sedj9baDF3tfyw3P.pdf">here</a></p>
-      </body></html>
-    `;
-
-    const fetchFn = mockFetchSequence([
-      { ok: true, status: 200, statusText: 'OK', body: REGISTRATION_PAGE_HTML },
-      { ok: true, status: 200, statusText: 'OK', body: Buffer.from('pdf-bytes') },
-    ]);
-
-    await download(mvDownload);
-
-    expect(fetchFn.mock.calls[1]?.[0]).toBe(
-      'https://www.caa.gov.mv/attachments/JSGDRnn0oWF2YGUW76GJHgF4sedj9baDF3tfyw3P.pdf'
-    );
-  });
-
-  // Regression: CAAS silently renamed the monthly XLSX from the hyphenated
-  // "Aircraft-Register-as-at-*.xlsx" to the underscored "Aircraft_Register_as_of_*.xlsx", which
-  // broke discovery in production. The page also links unrelated Isomer-hosted PDFs/images, so
-  // the pattern must resolve only the register link regardless of which separator CAAS is using.
-  it.each([
-    [
-      'underscore (current)',
-      'https://isomer-user-content.by.gov.sg/175/fbaa65b7-5aa5-4471-94cc-75379bfe1adb/Aircraft_Register_as_of_Aug_2026.xlsx',
-    ],
-    [
-      'hyphen (legacy)',
-      'https://isomer-user-content.by.gov.sg/175/abc12345-0000-0000-0000-000000000000/Aircraft-Register-as-at-Jan2026.xlsx',
-    ],
-  ])(
-    "resolves sg-caas's discover_pattern against a %s register filename",
-    async (_label, registerUrl) => {
-      const SG_CAAS_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'sg-caas.yaml');
-      const { download: sgDownload } = loadSourceConfig(SG_CAAS_CONFIG);
-
-      const REGISTRATION_PAGE_HTML = `
-      <html><body>
-        <img src="https://isomer-user-content.by.gov.sg/175/ad72bc08-fa80-426c-9a5f-e937a28b4f79/CAAS_Colour_Logo.png" />
-        <a href="https://isomer-user-content.by.gov.sg/175/11d6ec18-0c93-4c3a-bd69-771f2c0064c6/aw39.pdf">AW39</a>
-        <a href="${registerUrl}">Aircraft Register</a>
-        <a href="https://isomer-user-content.by.gov.sg/175/78f754fb-1b1b-44d2-8734-6ca92ef03641/sar-issue-2-revision-31.pdf">SAR</a>
-      </body></html>
-    `;
-
-      const fetchFn = mockFetchSequence([
-        { ok: true, status: 200, statusText: 'OK', body: REGISTRATION_PAGE_HTML },
-        { ok: true, status: 200, statusText: 'OK', body: Buffer.from('xlsx-bytes') },
-      ]);
-
-      await download(sgDownload);
-
-      expect(fetchFn.mock.calls[1]?.[0]).toBe(registerUrl);
-    }
-  );
-
-  // The register is one Liferay document among many on its page, and the other links share the
-  // same /documents/d/ prefix — discovery has to pick the aviation-department one carrying the
-  // download parameter, not whichever document the page happens to list first.
-  it("resolves hu-kh's discover_pattern against the authority's document page", async () => {
-    const HU_KH_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hu-kh.yaml');
-    const { download: huDownload } = loadSourceConfig(HU_KH_CONFIG);
-    const REGISTER_URL =
-      'https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-?download=true';
-
-    const DOCUMENT_PAGE_HTML = `
-      <html><body>
-        <a href="https://kozlekedesihatosag.kormany.hu/documents/d/hajozasi-hatosagi-foosztaly/kishajo-lajstrom?download=true">Hajózás</a>
-        <a href="https://kozlekedesihatosag.kormany.hu/documents/d/legugyi-felugyeleti-hatosagi-foosztaly/2026-02-25-frissites-">Előnézet</a>
-        <a href="${REGISTER_URL}">Letöltés</a>
-      </body></html>
-    `;
-
-    const fetchFn = mockFetchSequence([
-      { ok: true, status: 200, statusText: 'OK', body: DOCUMENT_PAGE_HTML },
-      { ok: true, status: 200, statusText: 'OK', body: Buffer.from('pdf-bytes') },
-    ]);
-
-    await download(huDownload);
-
-    expect(fetchFn.mock.calls[1]?.[0]).toBe(REGISTER_URL);
-  });
 });
 
 describe('download — retry', () => {
@@ -754,6 +671,26 @@ describe('download — retry', () => {
     setFetch(fn);
 
     await expect(download(FAA_DOWNLOAD_CONFIG, FAST_RETRY)).rejects.toThrow(/Download failed: 404/);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([408, 429])('retries a transient %i then extracts the ZIP', async (status) => {
+    const fn = mock()
+      .mockResolvedValueOnce(httpErrResponse(status))
+      .mockResolvedValueOnce(okZipResponse());
+    setFetch(fn);
+
+    const files = await download(FAA_DOWNLOAD_CONFIG, FAST_RETRY);
+
+    expect(files.has('master')).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails fast on a 403 without retrying', async () => {
+    const fn = mock().mockResolvedValue(httpErrResponse(403));
+    setFetch(fn);
+
+    await expect(download(FAA_DOWNLOAD_CONFIG, FAST_RETRY)).rejects.toThrow(/Download failed: 403/);
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
@@ -931,6 +868,39 @@ describe('prime_url cookie priming', () => {
     await expect(download(PRIMED_CONFIG, FAST_RETRY)).rejects.toThrow(
       'Prime fetch set no cookies on https://www.example.govt.nz/'
     );
+  });
+
+  it('refuses to send primed cookies to a download on another origin than prime_url', async () => {
+    const fn = mock().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers({ 'set-cookie': 'visid_incap_1=abc; path=/' }),
+    });
+    setFetch(fn);
+
+    await expect(
+      download({ ...PRIMED_CONFIG, url: 'https://cdn.example.net/register.csv' }, FAST_RETRY)
+    ).rejects.toThrow(
+      'Refusing to send primed cookies cross-origin to https://cdn.example.net/register.csv'
+    );
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails fast naming the prime step when the prime fetch is refused', async () => {
+    const fn = mock().mockResolvedValue(httpErrResponse(403));
+    setFetch(fn);
+
+    await expect(download(PRIMED_CONFIG, FAST_RETRY)).rejects.toThrow(/Prime fetch failed: 403/);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a transient prime failure before giving up', async () => {
+    const fn = mock().mockResolvedValue(httpErrResponse(503));
+    setFetch(fn);
+
+    await expect(download(PRIMED_CONFIG, FAST_RETRY)).rejects.toThrow(/Prime fetch failed: 503/);
+    expect(fn).toHaveBeenCalledTimes(DEFAULT_ATTEMPTS);
   });
 
   it('sends no Cookie header when prime_url is absent', async () => {

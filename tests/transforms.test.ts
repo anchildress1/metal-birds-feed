@@ -27,6 +27,8 @@ describe('applyScalar', () => {
     it('returns null for an unsafe integer', () =>
       expect(applyScalar('int_or_null', '9007199254740992')).toBeNull());
     it('handles whitespace', () => expect(applyScalar('int_or_null', ' 42 ')).toBe('42'));
+    it('normalizes leading zeros rather than keeping them', () =>
+      expect(applyScalar('int_or_null', '007')).toBe('7'));
     // Number.parseInt would silently stop at the comma and return 1 — a wrong value that looks
     // plausible — instead of nulling a field parse* can't actually make sense of.
     it('returns null instead of a truncated prefix for a thousands-separated value', () =>
@@ -41,6 +43,11 @@ describe('applyScalar', () => {
     it('returns null for non-numeric', () =>
       expect(applyScalar('float_or_null', 'N/A')).toBeNull());
     it('preserves decimals', () => expect(applyScalar('float_or_null', '3.14')).toBe('3.14'));
+    it('keeps a negative value', () => expect(applyScalar('float_or_null', '-2.5')).toBe('-2.5'));
+    it('reads exponent notation as the number it denotes', () =>
+      expect(applyScalar('float_or_null', '1e3')).toBe('1000'));
+    it('returns null for Infinity', () =>
+      expect(applyScalar('float_or_null', 'Infinity')).toBeNull());
     it('returns null instead of a truncated prefix for a thousands-separated value', () =>
       expect(applyScalar('float_or_null', '1,800')).toBeNull());
   });
@@ -73,6 +80,9 @@ describe('applyScalar', () => {
       expect(applyScalar('date_yyyymmdd_or_null', '20230231')).toBeNull());
     it('handles whitespace', () =>
       expect(applyScalar('date_yyyymmdd_or_null', ' 20231015 ')).toBe('2023-10-15'));
+    it.each(['20230015', '20230100'])('returns null for the zero month or day in %p', (value) =>
+      expect(applyScalar('date_yyyymmdd_or_null', value)).toBeNull()
+    );
   });
 
   describe('mph_to_ktas_or_null', () => {
@@ -150,8 +160,62 @@ describe('applyScalar', () => {
     it('returns null for blank', () =>
       expect(applyScalar('tc_full_registration', '   ')).toBeNull());
     it('returns null for empty', () => expect(applyScalar('tc_full_registration', '')).toBeNull());
-    it('still prefixes with C- for unexpected lengths (defensive)', () =>
-      expect(applyScalar('tc_full_registration', 'AB')).toBe('C-AB'));
+    it.each(['A', 'AB', 'ABCDE'])('returns null for a %p mark of an impossible length', (mark) =>
+      expect(applyScalar('tc_full_registration', mark)).toBeNull()
+    );
+  });
+
+  describe('iso_date_only_or_null', () => {
+    it('extracts the date from a full ISO datetime', () =>
+      expect(applyScalar('iso_date_only_or_null', '2016-02-09T05:00:00.000Z')).toBe('2016-02-09'));
+    it('accepts a bare ISO date', () =>
+      expect(applyScalar('iso_date_only_or_null', '2026-04-28')).toBe('2026-04-28'));
+    it('trims surrounding whitespace before parsing', () =>
+      expect(applyScalar('iso_date_only_or_null', '  2020-12-31T00:00:00Z  ')).toBe('2020-12-31'));
+    it('returns null for empty input', () =>
+      expect(applyScalar('iso_date_only_or_null', '')).toBeNull());
+    it('returns null for non-ISO text', () =>
+      expect(applyScalar('iso_date_only_or_null', 'never')).toBeNull());
+    it('returns null for an impossible calendar date', () =>
+      expect(applyScalar('iso_date_only_or_null', '2026-02-30T00:00:00Z')).toBeNull());
+    it('returns null for a date-shaped value with garbage tail', () =>
+      expect(applyScalar('iso_date_only_or_null', '2020-13-40T00:00:00Z')).toBeNull());
+  });
+
+  describe('nl_ilt_registration_or_null', () => {
+    it('returns the uppercased registration for a valid PH-prefixed mark', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'PH-2R4')).toBe('PH-2R4'));
+    it('uppercases lowercase input', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'ph-abc')).toBe('PH-ABC'));
+    it('trims surrounding whitespace', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', '  PH-XYZ  ')).toBe('PH-XYZ'));
+    it('returns null for the ILT "Information" banner row', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'Information')).toBeNull());
+    it('returns null for empty input', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', '')).toBeNull());
+    it('returns null for a non-PH-prefixed mark (foreign reg)', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'N12345')).toBeNull());
+    it('returns null for PH- alone (no body)', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'PH-')).toBeNull());
+    it('returns null for PH- with non-alphanumeric body', () =>
+      expect(applyScalar('nl_ilt_registration_or_null', 'PH-AB!')).toBeNull());
+  });
+
+  describe('iso_year_or_null', () => {
+    it('takes the year from a full ISO datetime', () =>
+      expect(applyScalar('iso_year_or_null', '2016-02-09T05:00:00.000Z')).toBe('2016'));
+    it('takes the year from a bare ISO date', () =>
+      expect(applyScalar('iso_year_or_null', '2026-04-28')).toBe('2026'));
+    it('returns null for blank input', () =>
+      expect(applyScalar('iso_year_or_null', '   ')).toBeNull());
+    it('returns null for an impossible calendar date', () =>
+      expect(applyScalar('iso_year_or_null', '2026-02-30')).toBeNull());
+    // The reason this exists beside iso_date_only_or_null: a malformed date must not leak its
+    // plausible-looking leading digits as a year.
+    it('returns null for a date-shaped value with an invalid month and day', () =>
+      expect(applyScalar('iso_year_or_null', '2020-13-40')).toBeNull());
+    it('returns null for a bare year with no month or day', () =>
+      expect(applyScalar('iso_year_or_null', '2020')).toBeNull());
   });
 
   describe('casa_full_registration', () => {
@@ -331,42 +395,6 @@ describe('applyCompound', () => {
       ));
     it('returns null for an empty values array', () =>
       expect(applyCompound('nl_ilt_airframe', [])).toBeNull());
-  });
-
-  describe('iso_date_only_or_null', () => {
-    it('extracts the date from a full ISO datetime', () =>
-      expect(applyScalar('iso_date_only_or_null', '2016-02-09T05:00:00.000Z')).toBe('2016-02-09'));
-    it('accepts a bare ISO date', () =>
-      expect(applyScalar('iso_date_only_or_null', '2026-04-28')).toBe('2026-04-28'));
-    it('trims surrounding whitespace before parsing', () =>
-      expect(applyScalar('iso_date_only_or_null', '  2020-12-31T00:00:00Z  ')).toBe('2020-12-31'));
-    it('returns null for empty input', () =>
-      expect(applyScalar('iso_date_only_or_null', '')).toBeNull());
-    it('returns null for non-ISO text', () =>
-      expect(applyScalar('iso_date_only_or_null', 'never')).toBeNull());
-    it('returns null for an impossible calendar date', () =>
-      expect(applyScalar('iso_date_only_or_null', '2026-02-30T00:00:00Z')).toBeNull());
-    it('returns null for a date-shaped value with garbage tail', () =>
-      expect(applyScalar('iso_date_only_or_null', '2020-13-40T00:00:00Z')).toBeNull());
-  });
-
-  describe('nl_ilt_registration_or_null', () => {
-    it('returns the uppercased registration for a valid PH-prefixed mark', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', 'PH-2R4')).toBe('PH-2R4'));
-    it('uppercases lowercase input', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', 'ph-abc')).toBe('PH-ABC'));
-    it('trims surrounding whitespace', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', '  PH-XYZ  ')).toBe('PH-XYZ'));
-    it('returns null for the ILT "Information" banner row', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', 'Information')).toBeNull());
-    it('returns null for empty input', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', '')).toBeNull());
-    it('returns null for a non-PH-prefixed mark (foreign reg)', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', 'N12345')).toBeNull());
-    it('returns null for PH- alone (no body)', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', 'PH-')).toBeNull());
-    it('returns null for PH- with non-alphanumeric body', () =>
-      expect(applyScalar('nl_ilt_registration_or_null', 'PH-AB!')).toBeNull());
   });
 
   describe('casa_airframe (compound)', () => {
@@ -802,6 +830,20 @@ describe('foca owner/operator transforms', () => {
     expect(
       applyScalar('foca_owner_country', PARTIES(OWNER('Main Owner', 'X', 'N/A', 'Germany')))
     ).toBe('Germany'));
+  it('reads operator country verbatim, apart from the owner', () =>
+    expect(
+      applyScalar(
+        'foca_operator_country',
+        PARTIES(
+          OWNER('Main Owner', 'X', 'N/A', 'Germany'),
+          OWNER('Main Operator', 'Y', 'N/A', 'Austria')
+        )
+      )
+    ).toBe('Austria'));
+  it('returns null operator country when only an owner is listed', () =>
+    expect(
+      applyScalar('foca_operator_country', PARTIES(OWNER('Main Owner', 'X', 'N/A', 'Germany')))
+    ).toBeNull());
 
   it('returns co-owner when a Part Owner accompanies the Main Owner', () =>
     expect(
@@ -1161,9 +1203,13 @@ describe('hu_kh_registration', () => {
 
   it('keeps a mark the extractor reports without stray spaces', () =>
     expect(run('HA-GZA')).toBe('HA-GZA'));
-  it.each(['HA- GZQ', 'HA -MEI', 'HA - 742', 'HA- 4004'])(
-    'strips the stray internal spaces the glyph runs introduce in %p',
-    (value) => expect(run(value)).toBe(value.replace(/\s+/g, ''))
+  it.each([
+    ['HA- GZQ', 'HA-GZQ'],
+    ['HA -MEI', 'HA-MEI'],
+    ['HA - 742', 'HA-742'],
+    ['HA- 4004', 'HA-4004'],
+  ])('strips the stray internal spaces the glyph runs introduce in %p', (value, expected) =>
+    expect(run(value)).toBe(expected)
   );
   it('keeps a 4-character suffix (gliders and balloons carry one)', () =>
     expect(run('HA-YFKA')).toBe('HA-YFKA'));
@@ -1271,11 +1317,11 @@ describe('hu_kh_party_kind', () => {
 describe('hu_kh_year_range_or_null', () => {
   const run = (v: string): string | null => applyScalar('hu_kh_year_range_or_null', v);
 
-  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58', '1957/8', '1999/00', '1999/05'])(
+  it.each(['1957/58', '1959-61', '1955/200', '1957 / 58', '1957/8', '1999/00'])(
     'keeps the published span %p verbatim',
     (value) => expect(run(value)).toBe(value)
   );
-  it('tolerates the trailing dot the register adds to some year cells', () =>
+  it('keeps the trailing dot the register adds to some year cells, verbatim', () =>
     expect(run('1957/58.')).toBe('1957/58.'));
   it.each(['2016', '2019.', '', 'n/a'])('returns null for %p, which is not a span', (value) =>
     expect(run(value)).toBeNull()

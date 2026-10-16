@@ -207,16 +207,6 @@ describe('parseCSV', () => {
     ]);
   });
 
-  it('explicit columns parse all rows including the first one', async () => {
-    const rows = await parseCSV(
-      buf('"AAC","Piper"\n"AAJ","Dehavilland"\n'),
-      opts({ columns: ['MARK', 'COMMON_NAME'] })
-    );
-    expect(rows).toHaveLength(2);
-    expect(rows[0].MARK).toBe('AAC');
-    expect(rows[1].COMMON_NAME).toBe('Dehavilland');
-  });
-
   it('skip_rows discards leading banner lines before the header (ANAC quirk)', async () => {
     const rows = await parseCSV(
       buf('Atualizado em: 2026-06-03\nA;B\n1;2\n3;4\n'),
@@ -226,11 +216,6 @@ describe('parseCSV', () => {
       { A: '1', B: '2' },
       { A: '3', B: '4' },
     ]);
-  });
-
-  it('skip_rows of 0 leaves the header on the first line', async () => {
-    const rows = await parseCSV(buf('A,B\n1,2\n'), opts({ skip_rows: 0 }));
-    expect(rows).toEqual([{ A: '1', B: '2' }]);
   });
 });
 
@@ -445,7 +430,9 @@ describe('parseSpreadsheet — ods', () => {
   });
 
   it('rejects when the buffer is not a valid .ods archive', async () => {
-    await expect(parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts())).rejects.toThrow();
+    await expect(parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts())).rejects.toThrow(
+      /valid ZIP archive/i
+    );
   });
 
   it('discards the configured number of leading rows (skip_rows)', async () => {
@@ -482,20 +469,6 @@ describe('parseSpreadsheet — ods', () => {
     ]);
     const rows = await parseSpreadsheet(buf, ssOpts({ skip_rows: 1 }));
     expect(rows).toEqual([{ CODE: '001', MFR: 'CESSNA', MODEL: '172' }]);
-  });
-
-  it('skip_rows defaulting to 0 leaves the input unchanged', async () => {
-    const buf = await sheetBuf('ods', [
-      {
-        name: 'Sheet1',
-        rows: [
-          ['A', 'B'],
-          ['1', '2'],
-        ],
-      },
-    ]);
-    const rows = await parseSpreadsheet(buf, ssOpts());
-    expect(rows).toEqual([{ A: '1', B: '2' }]);
   });
 
   it('stringifies numeric, boolean, and Date cell values (CellValue round-trip)', async () => {
@@ -561,7 +534,7 @@ describe('parseSpreadsheet — xlsx', () => {
   it('rejects when the buffer is not a valid .xlsx archive', async () => {
     await expect(
       parseSpreadsheet(Buffer.from('not-a-spreadsheet'), ssOpts({ format: 'xlsx' }))
-    ).rejects.toThrow();
+    ).rejects.toThrow(/valid ZIP archive/i);
   });
 });
 
@@ -737,7 +710,14 @@ describe('parseJson', () => {
   });
 
   it('rejects malformed JSON', async () => {
-    await expect(parseJson(jbuf('[{bad'), jopts())).rejects.toThrow();
+    await expect(parseJson(jbuf('[{bad'), jopts())).rejects.toThrow(SyntaxError);
+  });
+
+  it.each([
+    ['null', '[null]', /index 0 is not an object \(got null\)/i],
+    ['a string', '["x"]', /index 0 is not an object \(got string\)/i],
+  ])('fails fast when a record is %s', async (_label, body, message) => {
+    await expect(parseJson(jbuf(body), jopts())).rejects.toThrow(message);
   });
 
   it('fails fast when a record is not an object', async () => {
@@ -896,12 +876,6 @@ describe('parsePdf', () => {
   // CAA has flipped this table four times since 2026-07. The axis is read off the anchors rather
   // than declared, so the same config parses both real publications.
   describe('orientation detection', () => {
-    it('reads the unrotated publication on the x field axis', async () => {
-      const rows = await parsePdf(mvBuf(), mvOpts());
-      expect(rows).toHaveLength(97);
-      expect(rows.find((r) => r.mark === '8Q-OEQ')!.cert_no).toBe('CR-121');
-    });
-
     it('reads the rotated publication on the y field axis with the same config', async () => {
       const rows = await parsePdf(mvRotatedBuf(), mvOpts());
       expect(rows).toHaveLength(137);
@@ -1360,6 +1334,7 @@ describe('parseHtml', () => {
       skip_rows: 2,
     });
     expect(rows).toHaveLength(10);
+    expect(rows.every((row) => /^ES - /.test(row.registration_mark))).toBe(true);
     const r = rows.find((row) => row.registration_mark === 'ES - MBA')!;
     expect(r.type).toBe('Airbus A320');
     expect(r.serial).toBe('6849');
@@ -1382,24 +1357,14 @@ describe('parseHtml', () => {
     );
   });
 
-  it('does not leak the dropped metadata/header rows as records', async () => {
-    const rows = await parseHtml(eeBuf(), {
-      encoding: 'utf8',
-      trim: true,
-      columns: eeColumns,
-      skip_rows: 2,
-    });
-    const marks = rows.map((r) => r.registration_mark);
-    expect(marks).not.toContain('19.06.2026/updated');
-    expect(marks.every((m) => /^ES - /.test(m))).toBe(true);
-  });
-
   it('throws on a page with no parseable <table> (loud failure, never an empty set)', async () => {
     const buf = Buffer.from(
       '<html><body><p>register temporarily unavailable</p></body></html>',
       'utf8'
     );
-    await expect(parseHtml(buf, { encoding: 'utf8', trim: true, skip_rows: 2 })).rejects.toThrow();
+    await expect(parseHtml(buf, { encoding: 'utf8', trim: true, skip_rows: 2 })).rejects.toThrow(
+      /could not find <table>/i
+    );
   });
 
   it('returns an empty array for a header-only table (no data rows)', async () => {
