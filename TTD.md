@@ -100,4 +100,4 @@
 ### Decisions
 
 - `int_or_null` keeps accepting a negative: the schema rejects it loudly, and nulling would hide corrupt upstream data
-- `tests/service/handler.test.ts` and the `loader.test.ts` smoke test are the only tests that read live `sources/*.yaml`
+- Tests that deliberately read live `sources/*.yaml`: the `loader.test.ts` smoke test, `source-lookups.test.ts`, `attributions.test.ts`, and the fixture-driven engine, parser and backfill tests
