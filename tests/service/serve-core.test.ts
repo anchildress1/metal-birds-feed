@@ -114,6 +114,50 @@ describe('serveRequest', () => {
     expect(await res.json()).toMatchObject({ a1b2c3: { registration: 'N1' } });
   });
 
+  // The producer (toFeedRows) and the route must normalize a mark identically. Going through the
+  // real feed DB catches the two drifting apart, which comparing a function to itself cannot.
+  it('finds every stored registration by any punctuation of the same mark', async () => {
+    const stored = ['C-FABC', 'LY-AYP', 'N12345', 'VH-XYZ'];
+    const db = Database.deserialize(
+      buildFeedDb(
+        toFeedRows(
+          stored.map((registration, i) => ({ ...make(String(i), `a1b2c${i}`), registration }))
+        )
+      )
+    );
+    try {
+      const res = await serveRequest(
+        new Request('https://feed.local/feed/registration', {
+          method: 'POST',
+          headers: { authorization: 'Bearer secret' },
+          body: JSON.stringify({ registrations: ['c fabc', 'ly.ayp', 'n 12345', 'vh-xyz'] }),
+        }),
+        'secret',
+        pass,
+        makeRunQuery(db)
+      );
+
+      expect(res.status).toBe(200);
+      expect(Object.keys((await res.json()) as object).sort()).toEqual(
+        ['CFABC', 'LYAYP', 'N12345', 'VHXYZ'].sort()
+      );
+    } finally {
+      db.close();
+    }
+  });
+
+  it('omits a mark that is not in the feed rather than failing the request', async () => {
+    const res = await withDb(
+      new Request('https://feed.local/feed/registration', {
+        method: 'POST',
+        headers: { authorization: 'Bearer secret' },
+        body: JSON.stringify({ registrations: ['ZZ-NOPE'] }),
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({});
+  });
+
   it('401s a wrong token', async () => {
     const req = new Request('https://feed.local/feed', {
       method: 'POST',

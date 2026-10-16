@@ -214,8 +214,10 @@ const tcFullRegistration = (value: string): string | null => {
   const v = value.trim().toUpperCase();
   if (v.length === 0) return null;
   // 3-char marks are pre-1973 vintage, displayed as CF-XXX.
-  // 4-char marks are modern, displayed as C-XXXX.
-  return v.length === 3 ? `CF-${v}` : `C-${v}`;
+  // 4-char marks are modern, displayed as C-XXXX. Any other length is not a Canadian mark, and
+  // prefixing it would invent a registration.
+  if (v.length === 3) return `CF-${v}`;
+  return v.length === 4 ? `C-${v}` : null;
 };
 
 // Returns the ILT registration only when it looks like a real Dutch civil registration

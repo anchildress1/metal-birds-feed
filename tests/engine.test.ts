@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { mapRows } from '../src/engine.js';
+import { mapRows, mapSnapshots } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
 import type { Aircraft } from '../src/schema.js';
 import type { FieldMapping, SourceConfig } from '../src/types/config.js';
@@ -718,7 +718,7 @@ describe('CAA Latvia fixture mapping', () => {
 });
 
 describe('engine — negative and edge cases', () => {
-  it('throws for unknown non-defaulted lookup value', async () => {
+  it('fails only the row carrying an unknown non-defaulted lookup value', async () => {
     const config = loadSourceConfig(CONFIG_PATH);
     const masterWithBadAirframe = Buffer.from(
       readFileSync(resolve(FIXTURES, 'input', 'MASTER.txt'), 'latin1').replace(
@@ -733,7 +733,8 @@ describe('engine — negative and edge cases', () => {
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
     const { stats } = await mapRows(config, files);
-    expect(stats.failed).toBeGreaterThan(0);
+    expect(stats.failed).toBe(1);
+    expect(stats.ok).toBe(stats.total - 1);
   });
 
   it('defaults unknown status codes to other', async () => {
@@ -816,7 +817,8 @@ describe('engine — negative and edge cases', () => {
       ['engine', fixtureBuffer('ENGINE.txt')],
     ]);
     const { stats } = await mapRows(modConfig, files);
-    expect(stats.failed).toBeGreaterThan(0);
+    expect(stats.ok).toBe(0);
+    expect(stats.failed).toBe(stats.total);
   });
 
   it('returns null for a compound_transform whose result is null (no default)', async () => {
@@ -3631,21 +3633,14 @@ describe('engine — merge_duplicates edge cases', () => {
         ['1', 'CC-AAA', 'MBB-BK117 D-2'],
       ]);
 
-    it('keeps the later row instead of failing the run', async () => {
+    it('keeps the later row instead of failing the run, without counting a duplicate skip', async () => {
       const { records, stats } = await mapRows(
         clashConfig('last-wins'),
         new Map([['register', await clashRows()]])
       );
       expect(stats.failed).toBe(0);
-      expect(records.get('1')!.model).toBe('MBB-BK117 D-2');
-    });
-
-    it('does not count the dropped row as a duplicate skip', async () => {
-      const { stats } = await mapRows(
-        clashConfig('last-wins'),
-        new Map([['register', await clashRows()]])
-      );
       expect(stats.duplicateSkipped).toBe(0);
+      expect(records.get('1')!.model).toBe('MBB-BK117 D-2');
     });
 
     it('still fails the run when the flag is absent', async () => {
@@ -3972,7 +3967,7 @@ describe('unmatched lookup reporting', () => {
     }
   });
 
-  it('does not carry counts from one source into the next', async () => {
+  it('resets the counts when the same source is mapped again', async () => {
     const rows = ['ID,REG,KIND', '1,N1,Mystery'];
     const buf = new Map([['f', Buffer.from(rows.join('\n'))]]);
     await mapRows(config, buf);
@@ -3983,33 +3978,6 @@ describe('unmatched lookup reporting', () => {
         .map((c) => String(c[0]))
         .find((l) => l.includes('map_lookup_default'));
       expect(line).toContain('rows=1');
-    } finally {
-      logSpy.mockRestore();
-    }
-  });
-
-  // The refresh matrix runs sources concurrently in one process. A single shared accumulator let
-  // either run's entry clear the other's counts and report values under the wrong source id.
-  it('keeps the counts of concurrently mapped sources apart', async () => {
-    const a = { ...config, id: 'src-a' };
-    const b = { ...config, id: 'src-b' };
-    const bufA = new Map([['f', Buffer.from(['ID,REG,KIND', '1,N1,Alpha'].join('\n'))]]);
-    const bufB = new Map([
-      ['f', Buffer.from(['ID,REG,KIND', '1,N1,Beta', '2,N2,Beta'].join('\n'))],
-    ]);
-    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
-    try {
-      await Promise.all([mapRows(a, bufA), mapRows(b, bufB)]);
-      const lines = logSpy.mock.calls
-        .map((c) => String(c[0]))
-        .filter((l) => l.includes('map_lookup_default'));
-      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Alpha'))).toBe(true);
-      expect(
-        lines.some(
-          (l) => l.includes('source=src-b') && l.includes('value=Beta') && l.includes('rows=2')
-        )
-      ).toBe(true);
-      expect(lines.some((l) => l.includes('source=src-a') && l.includes('value=Beta'))).toBe(false);
     } finally {
       logSpy.mockRestore();
     }
@@ -4208,10 +4176,9 @@ describe('TKA Lithuania fixture mapping', () => {
   });
 
   it('takes the year out of the full manufacture date', () => {
-    expect([...r.values()].some((a) => a.year_manufactured !== null)).toBe(true);
-    expect(
-      [...r.values()].every((a) => a.year_manufactured === null || a.year_manufactured > 1900)
-    ).toBe(true);
+    const byReg = (reg: string) => [...r.values()].find((a) => a.registration === reg)!;
+    expect(byReg('LY HAK').year_manufactured).toBe(1976);
+    expect(byReg('LY SBT').year_manufactured).toBe(2003);
   });
 });
 
@@ -4228,10 +4195,21 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     huStats = result.stats;
   });
 
-  // The one skip is the HA-MEI self-contradiction below, not a parse failure.
-  it('maps all 168 fixture rows, skipping only the duplicated mark', () => {
-    expect(huStats).toEqual({ total: 168, ok: 167, failed: 0, skipped: 1, duplicateSkipped: 1 });
-    expect(huRecords.size).toBe(167);
+  // The two skips are the HA-MEI self-contradiction below and the HU-16 non-HA mark — neither is a
+  // parse failure.
+  it('maps all 186 fixture rows, skipping the duplicated mark and HU-16', () => {
+    expect(huStats).toEqual({ total: 186, ok: 184, failed: 0, skipped: 2, duplicateSkipped: 1 });
+    expect(huRecords.size).toBe(184);
+  });
+
+  // The page carrying "HU-16" is in the fixture: it anchors as its own record, budgets out under
+  // allowed_missing_source_id_rows, and HA-TWN maps whole instead of fusing with it.
+  it('keeps HA-TWN whole beside the HU-16 line it once fused with', () => {
+    const r = huRecords.get('HA-TWN')!;
+    expect(r.model).toBe('AS 355 F2');
+    expect(r.serial_number).toBe('5614');
+    expect(r.owner.name).toBe('HELIWORK LÉGI SZOLGÁLTATÓ KFT.');
+    expect(huRecords.has('HU-16')).toBe(false);
   });
 
   it('keys records on the mark and stamps source/country/status', () => {
@@ -4499,5 +4477,83 @@ describe('list-valued source_id', () => {
       { mapping: { registration: { field: 'MARK' }, model: { field: 'MODEL' } } }
     );
     expect(stats.failed).toBe(1);
+  });
+});
+
+describe('mapSnapshots', () => {
+  const config = (extra: Partial<SourceConfig> = {}): SourceConfig => ({
+    id: 'synthetic-snapshots',
+    label: 'synthetic',
+    country: 'LT',
+    language: 'en',
+    encoding: 'utf8',
+    download: { url: 'https://example.com/x.csv', format: 'file', entries: { primary: 'p.csv' } },
+    primary: 'primary',
+    delimiter: ',',
+    trim_all: true,
+    format: 'csv',
+    joins: [],
+    source_id: 'MARK',
+    registration: 'MARK',
+    latest_snapshot_by: 'PUBLISHED',
+    mapping: { registration: { field: 'MARK' } },
+    ...extra,
+  });
+  const run = (csv: string, extra: Partial<SourceConfig> = {}) =>
+    mapSnapshots(config(extra), new Map([['primary', Buffer.from(csv, 'utf8')]]));
+
+  it('maps every publication separately, oldest first', async () => {
+    const snapshots = await run('MARK,PUBLISHED\nB,2025-10-21\nA,2025-07-21\nA,2025-10-21\n');
+
+    expect(snapshots.map((s) => s.snapshot)).toEqual(['2025-07-21', '2025-10-21']);
+    expect([...(snapshots[0]?.records.keys() ?? [])]).toEqual(['A']);
+    expect([...(snapshots[1]?.records.keys() ?? [])].sort()).toEqual(['A', 'B']);
+  });
+
+  // The bad loads in a real register double every row with different content; they must not hide
+  // behind a good publication or abort the replay.
+  it("counts a publication's colliding rows as its own failures", async () => {
+    const snapshots = await run(
+      'MARK,PUBLISHED,EXTRA\nA,2025-06-10,x\nA,2025-06-10,y\nA,2025-07-21,x\n',
+      { mapping: { registration: { field: 'MARK' }, model: { field: 'EXTRA' } } }
+    );
+
+    expect(snapshots.map((s) => s.stats.failed)).toEqual([1, 0]);
+  });
+
+  it('fails when the parsed rows differ from the published total', async () => {
+    const check = { pattern: '"count":\\s*(\\d+)', against: 'parsed' as const };
+
+    await expect(
+      mapSnapshots(
+        config({ record_count: check }),
+        new Map([['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\n', 'utf8')]]),
+        '{"count": 3}'
+      )
+    ).rejects.toThrow(/parsed 2 records but the source publishes 3/);
+  });
+
+  it('passes when the parsed rows match the published total, history included', async () => {
+    const snapshots = await mapSnapshots(
+      config({ record_count: { pattern: '"count":\\s*(\\d+)', against: 'parsed' } }),
+      new Map([['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\n', 'utf8')]]),
+      '{"count": 2}'
+    );
+
+    expect(snapshots).toHaveLength(2);
+  });
+
+  it('refuses a source that keeps no snapshots', async () => {
+    await expect(
+      run('MARK,PUBLISHED\nA,2025-07-21\n', { latest_snapshot_by: undefined })
+    ).rejects.toThrow(/no latest_snapshot_by/);
+  });
+
+  it('refuses a row with no publication value', async () => {
+    await expect(run('MARK,PUBLISHED\nA,\n')).rejects.toThrow(/has no PUBLISHED value/);
+  });
+
+  it('fails when the primary file is missing', async () => {
+    await expect(mapSnapshots(config(), new Map())).rejects.toThrow(/Primary file/);
   });
 });

@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { FeedRow } from '../src/feed-row.js';
 import type { SourceState } from '../src/cadence.js';
-import { hashRecords, DB_SCHEMA_VERSION } from '../src/db.js';
+import { hashRecords, readArtifactRows, toRow, DB_SCHEMA_VERSION } from '../src/db.js';
 
 const FEED_ROW: FeedRow = {
   icao_hex: 'a1b2c3',
@@ -41,6 +41,8 @@ const FEED_ROW: FeedRow = {
   source: 'faa',
 };
 
+const TODAY = '2026-10-12';
+
 const mockSend = mock();
 const s3ClientConfig: { value: unknown } = { value: undefined };
 
@@ -75,7 +77,8 @@ void mock.module('@aws-sdk/client-s3', () => ({
   },
 }));
 
-const { R2ArtifactWriter, isTransientS3Error } = await import('../src/writer.js');
+const { R2ArtifactWriter, isArtifactCaughtUp, isTransientS3Error } =
+  await import('../src/writer.js');
 const { FEED_SLICE_VERSION } = await import('../src/feed.js');
 const { NoSuchKey } = await import('@aws-sdk/client-s3');
 
@@ -96,6 +99,22 @@ const artifactHeaderResponse = (
     Body: { transformToByteArray: () => Promise.resolve(bytes) },
     LastModified: lastModified,
   };
+};
+
+// What the next run reads back as the stored artifact: the bytes the last write() PUT.
+const storedArtifactResponse = (): {
+  Body: { transformToByteArray: () => Promise<Uint8Array> };
+} => {
+  const put = putCalls().find((c) => c.input.Key === 'aircraft/faa.sqlite');
+  const bytes = put?.input.Body as Uint8Array;
+  return { Body: { transformToByteArray: () => Promise.resolve(bytes) } };
+};
+
+// No stored artifact: GETs report NoSuchKey, since an empty 200 body now reads as a corrupt object.
+const mockAbsentArtifact = (): void => {
+  mockSend.mockImplementation((cmd: { _kind: string }) =>
+    cmd._kind === 'put' ? Promise.resolve({}) : Promise.reject(noSuchKey())
+  );
 };
 
 const R2_CONFIG = {
@@ -200,11 +219,11 @@ describe('R2ArtifactWriter — client config', () => {
 
 describe('R2ArtifactWriter — write', () => {
   it('builds and writes a SQLite artifact on a fresh source (no prior state)', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
 
-    const stats = await writer.write(records, 'faa', null, HASH_UP);
+    const stats = await writer.write(records, 'faa', null, HASH_UP, TODAY);
 
     expect(stats.changed).toBe(true);
     expect(stats.record_count).toBe(1);
@@ -224,7 +243,7 @@ describe('R2ArtifactWriter — write', () => {
   // exactly one rewrite — while record_count/upstream_hash on that same prior state stay fully
   // usable, so the retain-ratio guard and upstream-change detection are not disabled by the bump.
   it('forces a rewrite on a schema-version salt mismatch, preserving the retain-ratio guard', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([
       ['00001', makeAircraft('00001', 'N1', 'a4e294')],
@@ -239,7 +258,7 @@ describe('R2ArtifactWriter — write', () => {
       upstream_hash: HASH_UP,
     };
 
-    const result = await writer.write(records, 'faa', prior, HASH_UP);
+    const result = await writer.write(records, 'faa', prior, HASH_UP, TODAY);
 
     expect(result.content_hash).not.toBe(prior.content_hash);
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
@@ -247,19 +266,19 @@ describe('R2ArtifactWriter — write', () => {
     // The retain-ratio guard still fires off the preserved record_count, even though this run's
     // content_hash already differs from prior for an unrelated reason (the salt).
     mockSend.mockReset();
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const truncated = new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]);
-    await expect(writer.write(truncated, 'faa', prior, HASH_UP)).rejects.toThrow(
+    await expect(writer.write(truncated, 'faa', prior, HASH_UP, TODAY)).rejects.toThrow(
       /suspected truncated/i
     );
   });
 
   it('skips the PUT when the content hash matches prior state (unchanged)', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
 
-    const first = await writer.write(records, 'faa', null, HASH_UP);
+    const first = await writer.write(records, 'faa', null, HASH_UP, TODAY);
     const prior: SourceState = {
       last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
@@ -267,11 +286,13 @@ describe('R2ArtifactWriter — write', () => {
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
     };
+    const stored = storedArtifactResponse();
     mockSend.mockReset();
+    mockSend.mockResolvedValueOnce(stored);
     mockSend.mockResolvedValueOnce(artifactHeaderResponse());
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
 
-    const second = await writer.write(records, 'faa', prior, HASH_UP);
+    const second = await writer.write(records, 'faa', prior, HASH_UP, TODAY);
 
     expect(second.changed).toBe(false);
     expect(putCalls()).toHaveLength(0);
@@ -281,11 +302,11 @@ describe('R2ArtifactWriter — write', () => {
   // an older-schema one (manual restore, rollback), the hash comparison can't see that — only the
   // artifact's own embedded version can. Complements the state-side salt mismatch test above.
   it('rewrites when the hash matches but the artifact carries an older schema version', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
 
-    const first = await writer.write(records, 'faa', null, HASH_UP);
+    const first = await writer.write(records, 'faa', null, HASH_UP, TODAY);
     const prior: SourceState = {
       last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
@@ -293,11 +314,13 @@ describe('R2ArtifactWriter — write', () => {
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
     };
+    const stored = storedArtifactResponse();
     mockSend.mockReset();
+    mockSend.mockResolvedValueOnce(stored);
     mockSend.mockResolvedValueOnce(artifactHeaderResponse(DB_SCHEMA_VERSION - 1));
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
 
-    const second = await writer.write(records, 'faa', prior, HASH_UP);
+    const second = await writer.write(records, 'faa', prior, HASH_UP, TODAY);
 
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
     expect(second.content_hash).toBe(first.content_hash);
@@ -309,11 +332,11 @@ describe('R2ArtifactWriter — write', () => {
   // same freshness signal pipeline.ts's cadence gate uses, applied here so write()'s own skip can't
   // permanently bless a stale object once state catches up to it.
   it('rewrites when the hash and schema version match but the artifact was modified after last_run', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
 
-    const first = await writer.write(records, 'faa', null, HASH_UP);
+    const first = await writer.write(records, 'faa', null, HASH_UP, TODAY);
     const prior: SourceState = {
       last_run: '2026-01-01T00:00:00.000Z',
       last_content_change: 'x',
@@ -321,13 +344,15 @@ describe('R2ArtifactWriter — write', () => {
       content_hash: first.content_hash,
       upstream_hash: HASH_UP,
     };
+    const stored = storedArtifactResponse();
     mockSend.mockReset();
+    mockSend.mockResolvedValueOnce(stored);
     mockSend.mockResolvedValueOnce(
       artifactHeaderResponse(DB_SCHEMA_VERSION, new Date('2026-06-01T00:00:00.000Z'))
     );
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
 
-    const second = await writer.write(records, 'faa', prior, HASH_UP);
+    const second = await writer.write(records, 'faa', prior, HASH_UP, TODAY);
 
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
     expect(second.content_hash).toBe(first.content_hash);
@@ -337,10 +362,10 @@ describe('R2ArtifactWriter — write', () => {
   // unchanged register would otherwise stamp last_content_change and close the staleness issue for
   // a source that has published nothing for months — defeating the monitor entirely.
   it('writes a translation-only change without reporting an upstream change', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const untranslated = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
-    const first = await writer.write(untranslated, 'faa', null, HASH_UP);
+    const first = await writer.write(untranslated, 'faa', null, HASH_UP, TODAY);
 
     const prior: SourceState = {
       last_run: '2026-06-01T00:00:00.000Z',
@@ -350,13 +375,13 @@ describe('R2ArtifactWriter — write', () => {
       upstream_hash: HASH_UP,
     };
     mockSend.mockReset();
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
 
     // Same upstream rows, now carrying English — the artifact differs, the register does not.
     const translated = new Map([
       ['00001', { ...makeAircraft('00001', 'N12345', 'a4e294'), airworthiness_class: 'Standard' }],
     ]);
-    const second = await writer.write(translated, 'faa', prior, HASH_UP);
+    const second = await writer.write(translated, 'faa', prior, HASH_UP, TODAY);
 
     expect(second.changed).toBe(false);
     expect(second.content_hash).not.toBe(first.content_hash);
@@ -369,10 +394,10 @@ describe('R2ArtifactWriter — write', () => {
     // unchanged while consumers 404 indefinitely. The re-PUT still reports changed: false — the
     // DATA is identical, so last_content_change must not be stamped and staleness issues must
     // not close just because the object was rewritten.
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const records = new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]);
-    const first = await writer.write(records, 'faa', null, HASH_UP);
+    const first = await writer.write(records, 'faa', null, HASH_UP, TODAY);
     const prior: SourceState = {
       last_run: '2026-06-01T00:00:00.000Z',
       last_content_change: 'x',
@@ -382,17 +407,17 @@ describe('R2ArtifactWriter — write', () => {
     };
     mockSend.mockReset();
     mockSend.mockImplementation((cmd: { _kind: string }) =>
-      cmd._kind === 'head' ? Promise.reject(s3Error('NotFound', 404)) : Promise.resolve({})
+      cmd._kind === 'put' ? Promise.resolve({}) : Promise.reject(noSuchKey())
     );
 
-    const second = await writer.write(records, 'faa', prior, HASH_UP);
+    const second = await writer.write(records, 'faa', prior, HASH_UP, TODAY);
 
     expect(second.changed).toBe(false);
     expect(putCalls().some((c) => c.input.Key === 'aircraft/faa.sqlite')).toBe(true);
   });
 
   it('rewrites the artifact and reports a change when the register published new data', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
       last_run: '2026-06-01T00:00:00.000Z',
@@ -406,7 +431,8 @@ describe('R2ArtifactWriter — write', () => {
       new Map([['00001', makeAircraft('00001', 'N12345', 'a4e294')]]),
       'faa',
       prior,
-      HASH_UP
+      HASH_UP,
+      TODAY
     );
 
     expect(stats.changed).toBe(true);
@@ -422,14 +448,14 @@ describe('R2ArtifactWriter — write', () => {
       content_hash: 'h',
       upstream_hash: HASH_UP,
     };
-    await expect(writer.write(new Map(), 'faa', prior, HASH_UP)).rejects.toThrow(
+    await expect(writer.write(new Map(), 'faa', prior, HASH_UP, TODAY)).rejects.toThrow(
       /Refusing to write 0 records/
     );
   });
 
   it('refuses zero records even on a fresh source with no prior state', async () => {
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    await expect(writer.write(new Map(), 'faa', null, HASH_UP)).rejects.toThrow(
+    await expect(writer.write(new Map(), 'faa', null, HASH_UP, TODAY)).rejects.toThrow(
       /Refusing to write 0 records/
     );
   });
@@ -445,14 +471,14 @@ describe('R2ArtifactWriter — write', () => {
     };
     // 1 record vs prior 100 = 99% drop → suspected truncation.
     await expect(
-      writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior, HASH_UP)
+      writer.write(new Map([['00001', makeAircraft('00001', 'N1')]]), 'faa', prior, HASH_UP, TODAY)
     ).rejects.toThrow(/drop from prior 100/);
   });
 
   it('accepts a shrink at exactly the 50% retain floor (strict comparison)', async () => {
     // Legitimate registry cleanups land here; if threshold drift ever rejects this, every such
     // cleanup bricks the source's daily refresh until someone deletes its state by hand.
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const prior: SourceState = {
       last_run: '2026-06-01T00:00:00.000Z',
@@ -466,7 +492,7 @@ describe('R2ArtifactWriter — write', () => {
       ['00002', makeAircraft('00002', 'N2')],
     ]);
 
-    const stats = await writer.write(records, 'faa', prior, HASH_UP);
+    const stats = await writer.write(records, 'faa', prior, HASH_UP, TODAY);
 
     expect(stats.changed).toBe(true);
     expect(stats.record_count).toBe(2);
@@ -486,54 +512,394 @@ describe('R2ArtifactWriter — write', () => {
       ['00002', makeAircraft('00002', 'N2')],
     ]);
 
-    await expect(writer.write(records, 'faa', prior, HASH_UP)).rejects.toThrow(/drop from prior 5/);
+    await expect(writer.write(records, 'faa', prior, HASH_UP, TODAY)).rejects.toThrow(
+      /drop from prior 5/
+    );
   });
 
   it('bypasses the truncation guard when prior state is absent (the documented override)', async () => {
     // Deleting _state/<source>.json is how an operator accepts a legitimate mass shrink; with no
     // prior record_count there is nothing to compare against, so the guard cannot fire.
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
 
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N1')]]),
       'faa',
       null,
-      HASH_UP
+      HASH_UP,
+      TODAY
     );
 
     expect(stats.changed).toBe(true);
   });
 
   it('retries a transient error on the artifact PUT', async () => {
-    mockSend.mockRejectedValueOnce(s3Error('internal', 500)).mockResolvedValueOnce({});
+    let puts = 0;
+    mockSend.mockImplementation((cmd: { _kind: string }) => {
+      if (cmd._kind === 'put' && puts++ === 0) return Promise.reject(s3Error('internal', 500));
+      return cmd._kind === 'put' ? Promise.resolve({}) : Promise.reject(noSuchKey());
+    });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]),
       'faa',
       null,
-      HASH_UP
+      HASH_UP,
+      TODAY
     );
     expect(stats.changed).toBe(true);
-    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(puts).toBe(2);
   });
 
-  it('does not call S3 in dry-run mode', async () => {
+  it('fails the run once the artifact PUT keeps failing transiently', async () => {
+    let puts = 0;
+    mockSend.mockImplementation((cmd: { _kind: string }) => {
+      if (cmd._kind !== 'put') return Promise.reject(noSuchKey());
+      puts++;
+      return Promise.reject(s3Error('internal', 500));
+    });
+    const timeoutSpy = spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void) => {
+      fn();
+      return 0;
+    }) as unknown as typeof setTimeout);
+    try {
+      await expect(
+        new R2ArtifactWriter(R2_CONFIG, false).write(
+          new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]),
+          'faa',
+          null,
+          HASH_UP,
+          TODAY
+        )
+      ).rejects.toThrow('internal');
+      expect(puts).toBe(4);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+
+  describe('seedHistory', () => {
+    const seedRows = [
+      {
+        ...toRow(makeAircraft('A', 'N1', 'a4e294')),
+        first_seen: '2025-07-21',
+        removed_on: null,
+        missing_since: null,
+      },
+      {
+        ...toRow(makeAircraft('B', 'N2', 'b4e294')),
+        first_seen: '2025-07-21',
+        removed_on: '2025-10-21',
+        missing_since: null,
+      },
+    ];
+
+    it('writes the replayed rows as the artifact', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await writer.seedHistory('faa', seedRows, TODAY);
+
+      const put = putCalls().find((c) => c.input.Key === 'aircraft/faa.sqlite');
+      expect(readArtifactRows(put?.input.Body as Uint8Array, TODAY)).toHaveLength(2);
+    });
+
+    it('refuses to replace an artifact that already carries closed history', async () => {
+      mockSend.mockReset();
+      mockSend.mockResolvedValueOnce({
+        Body: {
+          transformToByteArray: () =>
+            Promise.resolve(
+              (() => {
+                const db = new Database(':memory:');
+                db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
+                db.run(
+                  'CREATE TABLE aircraft (source_id TEXT, first_seen TEXT, removed_on TEXT, missing_since TEXT)'
+                );
+                db.run("INSERT INTO aircraft VALUES ('Z', '2025-01-01', '2025-02-01', NULL)");
+                return db.serialize();
+              })()
+            ),
+        },
+      });
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await expect(writer.seedHistory('faa', seedRows, TODAY)).rejects.toThrow(
+        /already carries closed history/
+      );
+      expect(putCalls()).toHaveLength(0);
+    });
+
+    it('seeds over a version-13 artifact, which has no history to lose', async () => {
+      mockSend.mockReset();
+      const old = new Database(':memory:');
+      old.run('PRAGMA user_version = 13');
+      old.run('CREATE TABLE aircraft (source_id TEXT PRIMARY KEY)');
+      old.run("INSERT INTO aircraft VALUES ('A')");
+      const bytes = old.serialize();
+      mockSend.mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(bytes) },
+      });
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await writer.seedHistory('faa', seedRows, TODAY);
+
+      expect(putCalls()).toHaveLength(1);
+    });
+
+    it('writes nothing in dry-run mode', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, true);
+
+      await writer.seedHistory('faa', seedRows, TODAY);
+
+      expect(putCalls()).toHaveLength(0);
+    });
+  });
+
+  describe('history', () => {
+    const artifactRows = () => {
+      const put = putCalls().find((c) => c.input.Key === 'aircraft/faa.sqlite');
+      return readArtifactRows(put?.input.Body as Uint8Array, TODAY);
+    };
+    const serve = (bytes: Uint8Array): void => {
+      mockSend.mockReset();
+      mockSend.mockResolvedValueOnce({
+        Body: { transformToByteArray: () => Promise.resolve(bytes) },
+      });
+      mockAbsentArtifact();
+    };
+    const both = new Map([
+      ['00001', makeAircraft('00001', 'N1', 'a4e294')],
+      ['00002', makeAircraft('00002', 'N2', 'b4e294')],
+    ]);
+    const onlyFirst = new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]);
+    const priorFor = (hash: string): SourceState => ({
+      last_run: '2026-06-01T00:00:00.000Z',
+      last_content_change: 'x',
+      record_count: 2,
+      content_hash: hash,
+      upstream_hash: HASH_UP,
+    });
+    const writtenBytes = (): Uint8Array =>
+      putCalls().find((c) => c.input.Key === 'aircraft/faa.sqlite')?.input.Body as Uint8Array;
+
+    it('stamps missing_since on a first miss and keeps the row', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const first = await writer.write(both, 'faa', null, HASH_UP, '2026-10-01');
+      serve(writtenBytes());
+
+      await writer.write(onlyFirst, 'faa', priorFor(first.content_hash), 'b'.repeat(64), TODAY);
+
+      const gone = artifactRows().find((r) => r['source_id'] === '00002');
+      expect(gone).toMatchObject({
+        first_seen: '2026-10-01',
+        removed_on: null,
+        missing_since: TODAY,
+      });
+    });
+
+    // Upstream is byte-identical on the second run, so only the history columns move. A hash over
+    // the records alone would skip this write and the row would never close.
+    it('closes a row on the second consecutive miss even though upstream did not change', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const first = await writer.write(both, 'faa', null, HASH_UP, '2026-10-01');
+      serve(writtenBytes());
+      const missed = await writer.write(
+        onlyFirst,
+        'faa',
+        priorFor(first.content_hash),
+        'b'.repeat(64),
+        '2026-10-08'
+      );
+      const afterMiss = writtenBytes();
+      serve(afterMiss);
+      mockSend.mockResolvedValueOnce(artifactHeaderResponse());
+
+      const closed = await writer.write(
+        onlyFirst,
+        'faa',
+        priorFor(missed.content_hash),
+        'b'.repeat(64),
+        '2026-10-15'
+      );
+
+      expect(closed.changed).toBe(false);
+      expect(artifactRows().find((r) => r['source_id'] === '00002')).toMatchObject({
+        first_seen: '2026-10-01',
+        removed_on: '2026-10-08',
+        missing_since: null,
+      });
+    });
+
+    it('carries a closed row forward untouched', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const first = await writer.write(both, 'faa', null, HASH_UP, '2026-10-01');
+      serve(writtenBytes());
+      const missed = await writer.write(
+        onlyFirst,
+        'faa',
+        priorFor(first.content_hash),
+        'b'.repeat(64),
+        '2026-10-08'
+      );
+      serve(writtenBytes());
+      await writer.write(
+        onlyFirst,
+        'faa',
+        priorFor(missed.content_hash),
+        'b'.repeat(64),
+        '2026-10-15'
+      );
+      serve(writtenBytes());
+
+      await writer.write(
+        new Map([
+          ['00001', makeAircraft('00001', 'N1', 'a4e294')],
+          ['00003', makeAircraft('00003', 'N3', 'c4e294')],
+        ]),
+        'faa',
+        priorFor('stale'),
+        'c'.repeat(64),
+        '2026-10-22'
+      );
+
+      expect(artifactRows().find((r) => r['source_id'] === '00002')).toMatchObject({
+        removed_on: '2026-10-08',
+      });
+    });
+
+    it('fails the source closed when the stored artifact is unreadable', async () => {
+      serve(new TextEncoder().encode('not a database'));
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await expect(writer.write(both, 'faa', priorFor('x'), HASH_UP, TODAY)).rejects.toThrow(
+        /prior artifact unreadable/
+      );
+      expect(putCalls()).toHaveLength(0);
+    });
+
+    it('fails the source closed when the stored artifact cannot be fetched', async () => {
+      mockSend.mockReset();
+      mockSend.mockRejectedValue(s3Error('denied', 403));
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await expect(writer.write(both, 'faa', priorFor('x'), HASH_UP, TODAY)).rejects.toThrow(
+        /prior artifact unreadable/
+      );
+      expect(putCalls()).toHaveLength(0);
+    });
+
+    it.each([
+      [
+        'an empty body',
+        { Body: { transformToByteArray: () => Promise.resolve(new Uint8Array()) } },
+      ],
+      ['no body', {}],
+    ])('fails the source closed on %s from an artifact that exists', async (_label, response) => {
+      mockSend.mockReset();
+      mockSend.mockResolvedValue(response);
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await expect(writer.write(both, 'faa', priorFor('x'), HASH_UP, TODAY)).rejects.toThrow(
+        /prior artifact unreadable: empty response/
+      );
+      expect(putCalls()).toHaveLength(0);
+    });
+
+    it('runs beforeCommit ahead of the artifact PUT', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      let putsSeen = -1;
+
+      await writer.write(both, 'faa', null, HASH_UP, TODAY, () => {
+        putsSeen = putCalls().length;
+        return Promise.resolve();
+      });
+
+      expect(putsSeen).toBe(0);
+      expect(putCalls()).toHaveLength(1);
+    });
+
+    it('leaves history untouched when beforeCommit fails', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+
+      await expect(
+        writer.write(both, 'faa', null, HASH_UP, TODAY, () => Promise.reject(new Error('slice')))
+      ).rejects.toThrow('slice');
+
+      expect(putCalls()).toHaveLength(0);
+    });
+
+    it('does not run beforeCommit when a guard rejects the write', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const beforeCommit = mock(() => Promise.resolve());
+
+      await expect(
+        writer.write(new Map(), 'faa', null, HASH_UP, TODAY, beforeCommit)
+      ).rejects.toThrow(/0 records/);
+
+      expect(beforeCommit).not.toHaveBeenCalled();
+    });
+
+    it('runs beforeCommit on the unchanged-skip path too', async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const first = await writer.write(both, 'faa', null, HASH_UP, TODAY);
+      serve(writtenBytes());
+      mockSend.mockResolvedValueOnce(artifactHeaderResponse());
+      const beforeCommit = mock(() => Promise.resolve());
+
+      await writer.write(both, 'faa', priorFor(first.content_hash), HASH_UP, TODAY, beforeCommit);
+
+      expect(beforeCommit).toHaveBeenCalledTimes(1);
+    });
+
+    it('starts fresh, and says so, when state exists but the artifact is gone', async () => {
+      mockSend.mockReset();
+      mockSend.mockRejectedValueOnce(noSuchKey());
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+
+      try {
+        await writer.write(both, 'faa', priorFor('x'), HASH_UP, TODAY);
+
+        expect(artifactRows().every((r) => r['first_seen'] === TODAY)).toBe(true);
+        const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+        expect(logged).toContain('level=warn event=history_reset_artifact_missing source=faa');
+      } finally {
+        logSpy.mockRestore();
+      }
+    });
+  });
+
+  it('reads but never writes to S3 in dry-run mode', async () => {
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, true);
     const stats = await writer.write(
       new Map([['00001', makeAircraft('00001', 'N12345')]]),
       'faa',
       null,
-      HASH_UP
+      HASH_UP,
+      TODAY
     );
     expect(stats.changed).toBe(true);
-    expect(mockSend).not.toHaveBeenCalled();
+    expect(putCalls()).toHaveLength(0);
   });
 });
 
 describe('R2ArtifactWriter — state', () => {
   it('writes state to aircraft/_state/<source>.json as JSON', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     const state: SourceState = {
       last_run: '2026-06-21T00:00:00Z',
@@ -643,7 +1009,7 @@ describe('R2ArtifactWriter — translation cache', () => {
   });
 
   it('writes the cache to aircraft/_translation_cache/<source>.json as JSON', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     await writer.writeTranslationCache('faa', cache);
 
@@ -805,6 +1171,37 @@ describe('R2ArtifactWriter — readArtifactHeader', () => {
   });
 });
 
+describe('isArtifactCaughtUp', () => {
+  const lastRun = '2026-06-21T00:00:00.000Z';
+  const state = (last_run = lastRun): SourceState => ({
+    last_run,
+    last_content_change: last_run,
+    record_count: 1,
+    content_hash: HASH64,
+    upstream_hash: HASH64,
+  });
+  const header = (iso: string, schemaVersion = DB_SCHEMA_VERSION) => ({
+    schemaVersion,
+    lastModified: new Date(iso),
+  });
+
+  it.each([
+    ['modified at the recorded run', header(lastRun), state(), true],
+    ['modified before the recorded run', header('2026-06-20T23:59:59.999Z'), state(), true],
+    ['modified after the recorded run', header('2026-06-21T00:00:00.001Z'), state(), false],
+    [
+      'written under another schema version',
+      header(lastRun, DB_SCHEMA_VERSION - 1),
+      state(),
+      false,
+    ],
+    ['has no artifact header', null, state(), false],
+    ['has no recorded state', header(lastRun), null, false],
+  ])('an artifact %s is caught up', (_label, h, s, expected) => {
+    expect(isArtifactCaughtUp(h, s)).toBe(expected);
+  });
+});
+
 describe('isTransientS3Error', () => {
   it('classifies 5xx, 429, and unknown as transient; 4xx and NoSuchKey as permanent', () => {
     expect(isTransientS3Error(s3Error('e', 500))).toBe(true);
@@ -902,7 +1299,7 @@ describe('R2ArtifactWriter — feed intermediates', () => {
   });
 
   it('writes the per-source slice JSON to aircraft/_feed/<source>.json', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
     await writer.writeFeedRows('faa', [FEED_ROW]);
     const put = putCalls().find((c) => c.input.Key === 'aircraft/_feed/faa.json');
@@ -989,8 +1386,24 @@ describe('R2ArtifactWriter — deployed feed hash', () => {
     expect(await new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).toBeNull();
   });
 
+  // Absent and unreadable must not collapse: a failed read treated as "never deployed" would
+  // republish an unchanged feed.
+  it('rethrows a non-NoSuchKey error and logs it', async () => {
+    mockSend.mockRejectedValue(s3Error('denied', 403));
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).rejects.toThrow(
+        'denied'
+      );
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=deployed_feed_hash_load_failed');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
   it('writes the marker JSON to aircraft/_feed/_deployed.json', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     await new R2ArtifactWriter(R2_CONFIG, false).writeDeployedFeedHash(HASH64);
     const put = putCalls().find((c) => c.input.Key === 'aircraft/_feed/_deployed.json');
     expect(put?.input.ContentType).toBe('application/json');
@@ -1015,7 +1428,7 @@ describe('R2ArtifactWriter — manual drop', () => {
   });
 
   it('returns null for a response with no body', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     expect(await new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).toBeNull();
   });
 
@@ -1025,13 +1438,21 @@ describe('R2ArtifactWriter — manual drop', () => {
     mockSend.mockRejectedValue(
       Object.assign(new Error('denied'), { $metadata: { httpStatusCode: 403 } })
     );
-    await expect(new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).rejects.toThrow(
-      'denied'
-    );
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).rejects.toThrow(
+        'denied'
+      );
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=drop_load_failed');
+      expect(logged).toContain('source=th-caat');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('writes the drop as an octet stream', async () => {
-    mockSend.mockResolvedValue({});
+    mockAbsentArtifact();
     await new R2ArtifactWriter(R2_CONFIG, false).writeDrop('th-caat', new Uint8Array([1, 2]));
     const put = putCalls().find((c) => c.input.Key === 'aircraft/_drop/th-caat');
     expect(put?.input.ContentType).toBe('application/octet-stream');

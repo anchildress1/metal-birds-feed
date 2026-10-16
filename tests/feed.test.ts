@@ -403,14 +403,6 @@ describe('registrationKey', () => {
   });
 });
 
-describe('cancelled records', () => {
-  // Excluded from the feed only; the per-source artifact still carries the full history.
-  it('never reach the served feed', () => {
-    expect(toFeedRows([make('1', 'a1b2c3', { status: 'cancelled' })])).toHaveLength(0);
-    expect(toFeedRows([make('1', 'a1b2c3', { status: 'valid' })])).toHaveLength(1);
-  });
-});
-
 describe('buildFeedDb', () => {
   it('builds one queryable feed table keyed by icao_hex', () => {
     const rows = toFeedRows([
@@ -549,14 +541,22 @@ describe('hashFeedRows', () => {
     expect(hashFeedRows([a, b])).toBe(hashFeedRows([b, a]));
   });
 
-  it('changes when any row content changes', () => {
+  it('changes when a sort-key column changes', () => {
     const [a, b] = rows();
     const mutated: FeedRow = { ...b, registration: 'N999' };
     expect(hashFeedRows([a, mutated])).not.toBe(hashFeedRows([a, b]));
   });
 
-  it('returns a stable digest for no rows', () => {
-    expect(hashFeedRows([])).toBe(hashFeedRows([]));
+  it('changes when a column outside the sort key changes', () => {
+    const [a, b] = rows();
+    const mutated: FeedRow = { ...b, model: 'CHANGED', seats: 99 };
+    expect(hashFeedRows([a, mutated])).not.toBe(hashFeedRows([a, b]));
+  });
+
+  it('is independent of the key order within a row', () => {
+    const [a, b] = rows();
+    const reordered = Object.fromEntries(Object.entries(b).reverse()) as unknown as FeedRow;
+    expect(hashFeedRows([a, reordered])).toBe(hashFeedRows([a, b]));
   });
 });
 

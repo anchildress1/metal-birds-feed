@@ -43,7 +43,7 @@ Stretch goal across all phases: the mapping engine itself stays generic. Adding 
 4. **A hosted query API or search.** metal-birds-feed ships a per-source SQLite artifact (every canonical field is a queryable column — point lookups by `icao_hex` / `registration`, plus filter/sort on any indexed field) but hosts no query endpoint — no full-text search, no filtering service, no list API. Consumers query the artifact themselves (R2 binding, HTTP range reads, or a local copy). The private feed service (CC.4) is two exact point lookups — by `icao_hex` and by normalized registration — not a query surface.
 5. **Real-time refresh.** FAA publishes monthly. Transport Canada publishes monthly. National EU registries vary. The pipeline syncs at registry cadence, not on demand.
 6. **Account-management airframes (corporate jet ownership tracing across LLC shells).** Out of scope; this is a registry mirror, not an investigative tool.
-7. **Schema versioning / migration tooling.** v1 is a snapshot. If the schema changes, R2 gets rewritten from source on the next refresh. Acceptable because there is no `raw` blob to migrate independently.
+7. **Standalone migration tooling.** Live rows are rewritten from source on the next refresh after a schema change. Closed rows (`removed_on` set) exist nowhere else, so each schema bump carries them across through a per-version migration in the writer, not a separate tool.
 8. **Hosted public read API.** No _public_ read endpoint; output is private operator R2 only, forks self-host (CC.4). An earlier draft included a rate-limited Workers proxy open to third parties; that public form stays dropped.
 9. **Commercial operator deployment.** Out of scope for the lifetime of any Private-use source (CC.3).
 

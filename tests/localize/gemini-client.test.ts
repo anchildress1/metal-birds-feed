@@ -5,6 +5,10 @@ import type { TranslationItem } from '../../src/localize/gemini-client.js';
 // No-op sleep keeps backoff out of the test clock, mirroring tests/downloader.test.ts's FAST_RETRY.
 const FAST_RETRY: RetryOptions = { baseDelayMs: 0, sleep: async () => {} };
 const NO_RETRY: RetryOptions = { attempts: 1 };
+type ChunkCallback = (
+  translated: Map<string, string>,
+  requested: TranslationItem[]
+) => Promise<void>;
 
 const generateContent = mock();
 
@@ -22,7 +26,7 @@ void mock.module('@google/genai', () => ({
   ThinkingLevel: { MINIMAL: 'MINIMAL', LOW: 'LOW' },
 }));
 
-const { translateBatch, isRetryableGeminiError } =
+const { translateBatch, isRetryableGeminiError, isGeminiAuthError } =
   await import('../../src/localize/gemini-client.js');
 
 const textResponse = (body: unknown) => ({ text: JSON.stringify(body) });
@@ -48,6 +52,26 @@ describe('isRetryableGeminiError', () => {
 
   it('treats a non-numeric status as terminal', () => {
     expect(isRetryableGeminiError({ status: 'nope' })).toBe(false);
+  });
+});
+
+describe('isGeminiAuthError', () => {
+  it.each([401, 403])('treats %i as an auth failure', (status) => {
+    expect(isGeminiAuthError(new MockApiError(status))).toBe(true);
+  });
+
+  it.each([400, 404, 429, 500, 503])('does not treat %i as an auth failure', (status) => {
+    expect(isGeminiAuthError(new MockApiError(status))).toBe(false);
+  });
+
+  it.each([
+    ['undefined', undefined],
+    ['null', null],
+    ['a string', 'boom'],
+    ['a network error with no status', new TypeError('fetch failed')],
+    ['a non-numeric status', { status: '401' }],
+  ])('does not treat %s as an auth failure', (_label, value) => {
+    expect(isGeminiAuthError(value)).toBe(false);
   });
 });
 
@@ -138,6 +162,89 @@ describe('translateBatch', () => {
     expect(errors).toHaveLength(1);
     expect(translated.get('ok')).toBe('EN:x');
     expect(translated.has('fails')).toBe(false);
+  });
+
+  it('exhausts its attempts on a persistent 503 and reports the chunk as an error', async () => {
+    generateContent.mockImplementation(() => Promise.reject(new MockApiError(503)));
+
+    const { translated, errors } = await translateBatch(
+      [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
+      { apiKey: 'k', retryOptions: { ...FAST_RETRY, attempts: 3 }, rateLimitSleep: async () => {} }
+    );
+
+    expect(translated.size).toBe(0);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(MockApiError);
+    expect(generateContent).toHaveBeenCalledTimes(3);
+  });
+
+  describe('onChunkTranslated', () => {
+    const echo = (args: { contents: string }) => {
+      const items = JSON.parse(args.contents) as { id: string; text: string }[];
+      return Promise.resolve(textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` }))));
+    };
+    const manyItems = (n: number): TranslationItem[] =>
+      Array.from({ length: n }, (_, i) => ({
+        id: `id${i}`,
+        field: 'cancellation_reason' as const,
+        text: `text${i}`,
+      }));
+
+    it("fires once per successful chunk with that chunk's translations and requested items", async () => {
+      generateContent.mockImplementation(echo);
+      const onChunkTranslated = mock<ChunkCallback>(() => Promise.resolve());
+
+      await translateBatch(manyItems(201), {
+        apiKey: 'k',
+        rateLimitSleep: async () => {},
+        onChunkTranslated,
+      });
+
+      expect(onChunkTranslated).toHaveBeenCalledTimes(2);
+      const [firstMap, firstItems] = onChunkTranslated.mock.calls[0];
+      const [secondMap, secondItems] = onChunkTranslated.mock.calls[1];
+      expect(firstItems).toHaveLength(200);
+      expect(firstMap.size).toBe(200);
+      expect(firstMap.get('id0')).toBe('EN:text0');
+      expect(secondItems.map((i) => i.id)).toEqual(['id200']);
+      expect([...secondMap]).toEqual([['id200', 'EN:text200']]);
+    });
+
+    it('does not fire for a chunk that failed', async () => {
+      generateContent.mockImplementation((args: { contents: string }) => {
+        const items = JSON.parse(args.contents) as { id: string }[];
+        return items.some((i) => i.id === 'id0')
+          ? Promise.reject(new MockApiError(401))
+          : echo(args);
+      });
+      const onChunkTranslated = mock<ChunkCallback>(() => Promise.resolve());
+
+      const { errors } = await translateBatch(manyItems(201), {
+        apiKey: 'k',
+        retryOptions: FAST_RETRY,
+        rateLimitSleep: async () => {},
+        onChunkTranslated,
+      });
+
+      expect(errors).toHaveLength(1);
+      expect(onChunkTranslated).toHaveBeenCalledTimes(1);
+      expect(onChunkTranslated.mock.calls[0][1].map((i) => i.id)).toEqual(['id200']);
+    });
+
+    it('swallows a throwing callback so no chunk result is lost or double-recorded', async () => {
+      generateContent.mockImplementation(echo);
+      const onChunkTranslated = mock(() => Promise.reject(new Error('cache write failed')));
+
+      const { translated, errors } = await translateBatch(manyItems(201), {
+        apiKey: 'k',
+        rateLimitSleep: async () => {},
+        onChunkTranslated,
+      });
+
+      expect(errors).toEqual([]);
+      expect(translated.size).toBe(201);
+      expect(onChunkTranslated).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('retries a retryable failure then succeeds', async () => {

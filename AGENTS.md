@@ -14,8 +14,8 @@
 - No `.skip` on tests — fix or delete. Never lower coverage thresholds.
 - No silent loss of upstream information. Extend `src/schema.ts` rather than drop a structurally meaningful field at mapping config. PII is the only allowed drop. A field restating a type-level property derivable from mapped fields is not structurally meaningful.
 - No invented data. Null beats a plausible guess.
-- Human prose only in `README.md`, `docs/*.md`, `PRD.md`, `DATA_LICENSES.md`, `CHANGELOG.md`, commit/PR bodies. Everywhere else — this file, `SKILL.md`, `references/*`, `src/`, `tests/`, `sources/*.yaml`, workflows — no overview, purpose, introduction, summary, transition, or status sentence, and no paragraph where a bullet states the same rule.
-- Comments: WHY only — a constraint, an invariant, or a failure mode a reader would reintroduce. Never restate WHAT. Never narrate a change, ticket, or PR.
+- Human prose only in `README.md`, `docs/*.md`, `PRD.md`, `DATA_LICENSES.md`, `CHANGELOG.md`, commit/PR bodies. Elsewhere — this file, `SKILL.md`, `references/*`, `src/`, `tests/`, `sources/*.yaml`, workflows — no overview/purpose/introduction/summary/transition/status sentence, no paragraph where a bullet states the rule.
+- Comments: WHY only — a constraint, an invariant, or a failure mode a reader would reintroduce. Never WHAT. Never narrate a change, ticket, or PR.
 
 ## Code style
 
@@ -23,15 +23,16 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 
 - `??`/`??=` over `||` for null/undefined; `?.` over guard clauses.
 - No `as T` unless TS cannot narrow structurally. `no-unnecessary-type-assertion` catches only the no-op case.
-- A module-private helper called above its definition stays a `function` declaration. `engine.ts` relies on hoisting; a `const` is a TDZ crash. Read the call order first.
+- A module-private helper called above its definition stays a `function` declaration: `engine.ts` relies on hoisting and `const` is a TDZ crash.
 - Never `await` inside `for`/`while`; use `Promise.all`/`allSettled` + `.map()`. Exception: inherently sequential consumption (stream pumps, backoff chains), with the WHY inline.
 
 ## Tests
 
-- `tests/` mirrors `src/`; never colocate. `coverageSkipTestFiles` hides a colocated `src/*.test.ts` from the coverage gate and it lands green.
+- `tests/` mirrors `src/`; never colocate — `coverageSkipTestFiles` hides a `src/*.test.ts` from the coverage gate and it lands green.
 - Keep `--isolate`: `mock.module` is process-global and leaks across files without it.
 - The gate thresholds line/function/statement only. Cover branches by intent.
-- A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`, `paused-staleness.ts`, `ingest.ts`). Logic left in an `isCliEntryPoint()` block is uncovered and fails the per-file threshold.
+- A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`) and carries no test; logic in the shell is untested logic.
+- No test exists to move a coverage number. A test must fail when the behavior it names breaks.
 - Every engine function: positive + negative + edge cases.
 - `fixtures/<source>/` is CI ground truth: real upstream rows, changed only with a schema or config change.
   - Sanitize natural-person names and addresses. Keep organization names and every technical value verbatim.
@@ -40,12 +41,12 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 
 ## Source onboarding
 
-- A missing ICAO 24-bit hex is not a disqualifier: hex-less rows reach the feed on `registration_key`. Record the coverage cost (tail-number lookups only). No join path recovers a hex.
+- A missing ICAO 24-bit hex is not a disqualifier: hex-less rows reach the feed on `registration_key`, and no join path recovers a hex. Record the coverage cost (tail-number lookups only).
 - A registration mark is mandatory. A mark normalizing to nothing costs that row both keys.
 - Classify posture per CC.1: Open / Private-use / Restrictive / Unknown.
 - Private-use or Unknown: research storage/caching/automation terms first. Email via `docs/agency-permission-request.md` only when private caching is still unclear.
 - Restrictive = paid single-PC, no-copy, no-storage, no-scraping, view-only, no-redistribute with storage implications, or active denial (PRD §CC.5). Exclude and record the reason. Do not email absent a new material fact.
-- CC.2 fallback: no reply in 30 days + no terms prohibiting private caching → proceed for private operator use.
+- CC.2 fallback: no reply in 30 days + no terms prohibiting private caching → proceed for private operator use. Never follow up inside the window.
   - Verify in Gmail that no reply landed. `PRD.md` is authoritative, not the checklist's `Fallback` column.
   - Record residual exposure where terms are narrower than the intended use.
 - A new source is complete only with all six surfaces:
@@ -62,15 +63,14 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 ### Research-first
 
 - Exhaust research before the first email: open-data portals (CKAN/Aporta/data.gov.\*), register pages, ToS/disclaimer, robots policy, license declarations.
-- Never follow up before the 30-day window expires.
 - Record in lockstep: `DATA_LICENSES.md` (correspondence row + posture, storage/cache restrictions) + `docs/source-onboarding-checklist.md` (in-flight row). Add the `README.md` row only once active.
 - Keep an agency email in `DATA_LICENSES.md` only if that agency replied — a recorded non-replier address reads as verified. `Email` is `n/a` wherever `Reply` is `pending`. Gmail is the record of who was written to.
-- After recon on an already-emailed agency: update docs, move on. Re-contact only when a new fact materially changes the ask.
+- After recon on an already-emailed agency: update docs, move on; re-contact only on a materially new fact.
 
 ## Engine
 
 - Use existing extension points; never edit row-mapping logic for one source. A new registry is a new YAML, plus a transform or parser path when needed.
-- Never retry a mapping failure: it is deterministic on the same bytes. Fix the mapping so a signal exists.
+- Never retry a mapping failure — deterministic on the same bytes; fix the mapping so a signal exists.
 
 ### Fetching
 
@@ -78,7 +78,8 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 - `download.manual`: for a register behind a JS or CAPTCHA challenge. Never defeat the challenge (solver, proxy pool, fingerprint spoofing) — that is the CC.5 no-scraping case. The operator's browser download goes through `make ingest` into R2; every refresh maps that copy.
   - Never also set `paused`: the stored copy is what lets a `FEED_SLICE_VERSION` bump regenerate the slice unattended.
   - Its staleness issue means a new file is due from the agency, not a broken fetch. Set `cadence_days` to the agency's publication rhythm.
-- `paused: true`: for an upstream no config change can reach (a geoblock or WAF CI cannot route around). It leaves the scheduled refresh but stays in feed assembly, so the last good slice keeps serving. Naming it in `REFRESH_SOURCE` still runs it; that is how recovery is tested. It cannot regenerate its slice, so a later `FEED_SLICE_VERSION` bump fails publish closed until it is unpaused or removed.
+- `paused: true`: for an upstream no config change can reach (a geoblock or WAF CI cannot route around). It leaves the scheduled refresh but stays in feed assembly, so the last good slice keeps serving; naming it in `REFRESH_SOURCE` still runs it — that is how recovery is tested.
+- A paused source cannot regenerate its slice, so a `FEED_SLICE_VERSION` bump fails publish closed until it is unpaused or removed.
 
 ### Record integrity
 
@@ -124,6 +125,10 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 
 - `mapRows()` (`map_*`) is column mapping; `localizeRecords()` (`localize_*`) is the Gemini pass. Never call mapping "translate", prose included.
 - Every state field is required. Never add an optional-field fallback for an older shape.
+- A per-source artifact keeps its closed rows (`removed_on` set); live rows regenerate from source. This is the one exception to the no-compatibility rule: a closed row is data the register no longer holds, not cache.
+  - A live row closes on the second consecutive fetched run that misses it, on a later UTC day, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. The artifact PUT is the last write before state, so a failed slice never advances history. Never serve `first_seen`.
+  - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
+  - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
 - R2 is a build and intermediate store; nothing serves reads from it. The DB is baked into the Cloud Run image and served in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
 - Assembly always rebuilds from R2 slices, never an on-disk copy, and sequences through the recipe rather than prerequisites so `make -j` cannot assemble mid-refresh. Publish fails closed if any slice is missing.
 
@@ -141,7 +146,7 @@ Bumped independently; check all three on every schema change. Coinciding numbers
 
 ### Feed collapse
 
-Collapse keys on `icao_hex` where published and on `registration_key` where not; keying on hex alone excludes every hex-less source. Mechanics are `src/feed.ts`. Rules it does not show:
+Collapse keys on `icao_hex` where published and on `registration_key` where not; keying on hex alone excludes every hex-less source. Beyond `src/feed.ts` mechanics:
 
 - Both key columns stay nullable — the unique indexes rely on SQLite not treating NULLs as equal.
 - No `source_id` tiebreak: it may be reissued every publication, flipping the served answer with no upstream change.
@@ -152,7 +157,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 ### Hashes and translation
 
 - `content_hash` covers the written artifact and gates the PUT, so a translation-only improvement still ships. `upstream_hash` covers the pre-localization records and drives `changed`, so a late translation never stamps `last_content_change`.
-- `language:` is required, never defaulted: it decides whether a source is billed to Gemini. `language: en` skips the pass — rendering English as English rewords curated labels and invents meaning for bare codes. The per-field exclusion guards both collection and application, so an older cache entry cannot overwrite the mapping.
+- `language:` is required, never defaulted: it decides whether a source is billed to Gemini. `language: en` skips the pass — rendering English as English rewords curated labels and invents meaning for bare codes. The per-field exclusion guards collection and application alike, so an older cache entry cannot overwrite the mapping.
 - `<field>_source_text` is captured at parse time, before any English rendering, satisfying licenses that forbid distorting source meaning. A field already rendered English by a parse-time transform must declare its source-text mapping explicitly, or the raw value is lost. A cache miss falls back to source text, never null.
 - The translation cache persists independently of the content-hash gate; a contract-version mismatch invalidates the whole prior generation.
 - A translating run writes the cache back before calling Gemini and skips the batch when that write fails. An unwritable cache re-bills the identical delta every run; that PUT guards spend — never remove it as redundant.
@@ -171,7 +176,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 ## GitHub Actions
 
-- One deploy job, reached only by `workflow_call`. Never give it its own trigger, never add deploy steps to a caller — a test scans every workflow and fails on a second deploy.
+- One deploy job, reached only by `workflow_call`. Never give it its own trigger, never add deploy steps to a caller.
 - Its concurrency group is a constant, queued at maximum, never cancelled.
   - Inside a called workflow `${{ github.workflow }}` resolves to the caller's name: an interpolated group files release and refresh deploys separately and can cancel the caller.
   - The default queue keeps one pending run and replaces it on a third, silently discarding a forced release deploy.
@@ -216,7 +221,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 ## Documentation
 
-- Never restate what `sources/*.yaml`, `src/schema.ts`, or other code states — link. Per-source mechanics, field mappings, and schema field lists live in the YAML/schema.
+- Never restate what `sources/*.yaml` or `src/schema.ts` states — link. Per-source mechanics, field mappings, and schema field lists live there.
 - Never create a new top-level doc file unilaterally; ask. Exception: source-onboarding artifacts.
 - `PRD.md` changes only when goals, requirements, or constraints shift. It is planning, not a shipped-implementation log.
 - Never put a literal registration, hex, or record in onboarding docs. Read one out of the built artifact at runtime.

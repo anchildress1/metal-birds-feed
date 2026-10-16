@@ -10,7 +10,7 @@ void mock.module('node:fs', () => ({
   mkdirSync: mockMkdirSync,
 }));
 
-const { log } = await import('../src/logger.js');
+const { log, errorMessage } = await import('../src/logger.js');
 
 afterEach(() => {
   mock.restore();
@@ -90,10 +90,12 @@ describe('log', () => {
     expect(output).not.toMatch(/[\r\n\t]/);
   });
 
-  it('handles undefined field values without throwing', () => {
+  it('serializes an undefined field value as empty, never the word undefined', () => {
     const spy = spyOn(console, 'log').mockImplementation(() => {});
     log('info', 'test_event', { missing: undefined });
-    expect(spy).toHaveBeenCalled();
+    const output = spy.mock.calls[0]?.[0] as string;
+    expect(output).toMatch(/ missing=$/);
+    expect(output).not.toContain('undefined');
   });
 
   it('serializes circular-reference objects without throwing', () => {
@@ -104,12 +106,13 @@ describe('log', () => {
     expect(spy.mock.calls[0]?.[0]).toContain('obj=[Unserializable]');
   });
 
-  it('does not throw when appendFileSync fails', () => {
-    spyOn(console, 'log').mockImplementation(() => {});
+  it('still prints the line when the log file cannot be written', () => {
+    const spy = spyOn(console, 'log').mockImplementation(() => {});
     mockAppendFileSync.mockImplementationOnce(() => {
       throw new Error('EACCES');
     });
     expect(() => log('info', 'test_event')).not.toThrow();
+    expect(spy.mock.calls[0]?.[0]).toContain('event=test_event');
   });
 
   // Guards the refresh log against fixture noise: this suite itself must never append to
@@ -120,5 +123,20 @@ describe('log', () => {
     const path = mockAppendFileSync.mock.calls[0]?.[0] as string;
     expect(path).toEndWith('/logs/test.log');
     expect(path).not.toContain('pipeline.log');
+  });
+});
+
+describe('errorMessage', () => {
+  it('returns the message of an Error', () => {
+    expect(errorMessage(new Error('boom'))).toBe('boom');
+  });
+
+  it.each([
+    ['a thrown string', 'denied', 'denied'],
+    ['a thrown number', 42, '42'],
+    ['null', null, 'null'],
+    ['undefined', undefined, 'undefined'],
+  ])('stringifies %s', (_label, value, expected) => {
+    expect(errorMessage(value)).toBe(expected);
   });
 });

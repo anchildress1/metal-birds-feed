@@ -1,7 +1,25 @@
 import { describe, it, expect } from 'bun:test';
 import { Database } from 'bun:sqlite';
-import { buildSqlite, hashRecords } from '../src/db.js';
+import {
+  DB_SCHEMA_VERSION,
+  buildSqlite as buildRows,
+  hashArtifact,
+  hashRecords,
+  readArtifactRows,
+  toRow,
+} from '../src/db.js';
+import type { ArtifactRow } from '../src/history.js';
 import type { Aircraft } from '../src/schema.js';
+
+const liveRows = (records: Map<string, Aircraft>, firstSeen = '2026-10-12'): ArtifactRow[] =>
+  [...records.values()].map((r) => ({
+    ...toRow(r),
+    first_seen: firstSeen,
+    removed_on: null,
+    missing_since: null,
+  }));
+
+const buildSqlite = (records: Map<string, Aircraft>): Uint8Array => buildRows(liveRows(records));
 
 const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   source: 'faa',
@@ -69,7 +87,7 @@ const populated: Aircraft = {
   model: 'L 33 SÓLO',
   serial_number: '960404',
   year_manufactured: 1996,
-  year_manufactured_range: null,
+  year_manufactured_range: '1996/97',
   airframe_type: 'glider',
   category: 'standard',
   build_certification: 'type-certificated',
@@ -88,9 +106,9 @@ const populated: Aircraft = {
   },
   owner: { name: 'Beispiel, Anna', kind: 'co-owner', state: 'SO', country: 'Switzerland' },
   operator: { name: 'Betrieb AG', kind: 'corporation', state: 'BE', country: 'Germany' },
-  legal_owner: { name: 'Leasing Trust Ltd', kind: 'corporation', state: null, country: 'Ireland' },
-  propeller: null,
-  home_base: null,
+  legal_owner: { name: 'Leasing Trust Ltd', kind: 'corporation', state: 'ZH', country: 'Ireland' },
+  propeller: 'Hartzell 2-blade',
+  home_base: 'LSZK',
   idera_authorised_party: 'IDERA Bank AG',
   certification_date: '2025-08-15',
   airworthiness_date: '2024-01-02',
@@ -172,6 +190,7 @@ describe('buildSqlite', () => {
       model: 'L 33 SÓLO',
       serial_number: '960404',
       year_manufactured: 1996,
+      year_manufactured_range: '1996/97',
       airframe_type: 'glider',
       category: 'standard',
       build_certification: 'type-certificated',
@@ -194,10 +213,10 @@ describe('buildSqlite', () => {
       operator_country: 'Germany',
       legal_owner_name: 'Leasing Trust Ltd',
       legal_owner_kind: 'corporation',
-      legal_owner_state: null,
+      legal_owner_state: 'ZH',
       legal_owner_country: 'Ireland',
-      propeller: null,
-      home_base: null,
+      propeller: 'Hartzell 2-blade',
+      home_base: 'LSZK',
       idera_authorised_party: 'IDERA Bank AG',
       certification_date: '2025-08-15',
       airworthiness_date: '2024-01-02',
@@ -262,7 +281,7 @@ describe('buildSqlite', () => {
     const count = db.query('SELECT COUNT(*) AS n FROM aircraft').get() as { n: number };
     expect(count.n).toBe(0);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(13);
+    expect(version.user_version).toBe(DB_SCHEMA_VERSION);
   });
 
   it('locks the aircraft table shape to the user_version pin', () => {
@@ -330,9 +349,12 @@ describe('buildSqlite', () => {
       'lien_status',
       'lien_status_source_text',
       'interdiction_code',
+      'first_seen',
+      'removed_on',
+      'missing_since',
     ]);
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(13);
+    expect(version.user_version).toBe(DB_SCHEMA_VERSION);
   });
 
   it('indexes the common filter columns and stamps the schema version', () => {
@@ -347,12 +369,13 @@ describe('buildSqlite', () => {
       'idx_status',
       'idx_airframe_type',
       'idx_owner_country',
+      'idx_live_source_id',
     ]) {
       expect(names).toContain(idx);
     }
 
     const version = db.query('PRAGMA user_version').get() as { user_version: number };
-    expect(version.user_version).toBe(13);
+    expect(version.user_version).toBe(DB_SCHEMA_VERSION);
   });
 });
 
@@ -381,5 +404,179 @@ describe('hashRecords', () => {
 
   it('defaults to no salt', () => {
     expect(hashRecords(records)).toBe(hashRecords(records, ''));
+  });
+});
+
+describe('artifact history columns', () => {
+  const closedRow = (): ArtifactRow => ({
+    ...toRow(make('1', 'a1b2c3', 'N1')),
+    first_seen: '2025-01-01',
+    removed_on: '2025-06-01',
+    missing_since: null,
+  });
+  const openRow = (): ArtifactRow => ({
+    ...toRow(make('1', 'a1b2c3', 'N1')),
+    first_seen: '2026-01-01',
+    removed_on: null,
+    missing_since: null,
+  });
+
+  it('pins the schema version at 14', () => {
+    expect(DB_SCHEMA_VERSION).toBe(14);
+  });
+
+  it('keeps a closed and a live row for the same source_id', () => {
+    const db = Database.deserialize(buildRows([closedRow(), openRow()]));
+
+    const rows = db
+      .query('SELECT first_seen, removed_on FROM aircraft WHERE source_id = ? ORDER BY first_seen')
+      .all('1');
+    expect(rows).toEqual([
+      { first_seen: '2025-01-01', removed_on: '2025-06-01' },
+      { first_seen: '2026-01-01', removed_on: null },
+    ]);
+  });
+
+  it('rejects a second live row for one source_id', () => {
+    const other = { ...openRow(), first_seen: '2026-02-01' };
+
+    expect(() => buildRows([openRow(), other])).toThrow(/UNIQUE/);
+  });
+
+  it('rejects the same incarnation twice', () => {
+    expect(() => buildRows([closedRow(), closedRow()])).toThrow(/UNIQUE/);
+  });
+
+  it('keeps two incarnations of a mark that share a first_seen day', () => {
+    const replaced = { ...closedRow(), first_seen: '2026-01-01', serial_number: 'S1' };
+
+    const db = Database.deserialize(buildRows([replaced, openRow()]));
+
+    expect(db.query('SELECT COUNT(*) AS n FROM aircraft').get()).toEqual({ n: 2 });
+  });
+
+  it('stores NULL for a column a carried row predates', () => {
+    const carried = closedRow();
+    delete carried['home_base'];
+
+    const db = Database.deserialize(buildRows([carried]));
+
+    expect(db.query('SELECT home_base FROM aircraft').get()).toEqual({ home_base: null });
+  });
+
+  it('refuses a row carrying a column the table lacks', () => {
+    expect(() => buildRows([{ ...openRow(), surprise: 'x' }])).toThrow(/surprise/);
+  });
+});
+
+describe('readArtifactRows', () => {
+  it('round-trips the rows it was built from', () => {
+    const rows: ArtifactRow[] = [
+      {
+        ...toRow(make('1', 'a1b2c3', 'N1')),
+        first_seen: '2026-01-01',
+        removed_on: null,
+        missing_since: null,
+      },
+      {
+        ...toRow(make('2', null, 'N2')),
+        first_seen: '2025-01-01',
+        removed_on: '2025-06-01',
+        missing_since: null,
+      },
+    ];
+
+    expect(readArtifactRows(buildRows(rows), '2026-10-12')).toEqual(rows);
+  });
+
+  // Before 14 an artifact kept no history, so a migrating run starts every row's clock.
+  it('lifts a version-13 artifact to live rows first seen on the migrating run', () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 13');
+    db.run('CREATE TABLE aircraft (source_id TEXT PRIMARY KEY, registration TEXT NOT NULL)');
+    db.run("INSERT INTO aircraft VALUES ('1', 'N1')");
+
+    const rows = readArtifactRows(db.serialize(), '2026-10-12');
+
+    expect(rows).toEqual([
+      {
+        source_id: '1',
+        registration: 'N1',
+        first_seen: '2026-10-12',
+        removed_on: null,
+        missing_since: null,
+      },
+    ]);
+  });
+
+  it.each([12, 15])('has no path from version %p, so it fails closed', (version) => {
+    const db = new Database(':memory:');
+    db.run(`PRAGMA user_version = ${version}`);
+    db.run('CREATE TABLE aircraft (source_id TEXT)');
+
+    expect(() => readArtifactRows(db.serialize(), '2026-10-12')).toThrow(
+      new RegExp(`No migration from artifact schema version ${version}`)
+    );
+  });
+
+  // Entries are one hop each, so a two-behind artifact must walk both in version order.
+  it('chains each version hop in order to reach current', () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 12');
+    db.run('CREATE TABLE aircraft (source_id TEXT)');
+    db.run("INSERT INTO aircraft VALUES ('1')");
+    const hops: number[] = [];
+    const migrations = {
+      12: (rows: ArtifactRow[]): ArtifactRow[] => {
+        hops.push(12);
+        return rows.map((r) => ({ ...r, at12: 'x' }));
+      },
+      13: (rows: ArtifactRow[]): ArtifactRow[] => {
+        hops.push(13);
+        return rows.map((r) => ({ ...r, at13: 'y' }));
+      },
+    };
+
+    const rows = readArtifactRows(db.serialize(), '2026-10-12', migrations);
+
+    expect(hops).toEqual([12, 13]);
+    expect(rows).toEqual([{ source_id: '1', at12: 'x', at13: 'y' }]);
+  });
+
+  it('fails closed when a mid-chain version has no entry', () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 12');
+    db.run('CREATE TABLE aircraft (source_id TEXT)');
+    const migrations = { 12: (rows: ArtifactRow[]): ArtifactRow[] => rows };
+
+    expect(() => readArtifactRows(db.serialize(), '2026-10-12', migrations)).toThrow(
+      /No migration from artifact schema version 13/
+    );
+  });
+
+  it('throws on bytes that are not an artifact', () => {
+    expect(() => readArtifactRows(new TextEncoder().encode('not sqlite'), '2026-10-12')).toThrow();
+  });
+});
+
+describe('hashArtifact', () => {
+  const base = (): ArtifactRow[] => [
+    { source_id: 'A', first_seen: '2026-01-01', removed_on: null, missing_since: null },
+    { source_id: 'B', first_seen: '2026-01-01', removed_on: null, missing_since: null },
+  ];
+
+  it('is stable regardless of row order', () => {
+    expect(hashArtifact([...base()].reverse())).toBe(hashArtifact(base()));
+  });
+
+  it('changes when only a history column changes', () => {
+    const missing = base();
+    missing[0] = { ...missing[0], missing_since: '2026-10-12' };
+
+    expect(hashArtifact(missing)).not.toBe(hashArtifact(base()));
+  });
+
+  it('changes with the salt', () => {
+    expect(hashArtifact(base(), '14')).not.toBe(hashArtifact(base(), '13'));
   });
 });

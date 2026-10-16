@@ -57,11 +57,14 @@ describe('loadServiceConfig', () => {
     }
   );
 
-  it.each(['/tmp/feed.sqlite', '/app'])('rejects database path escape %s', (value) => {
-    expect(() => loadServiceConfig({ FEED_TOKEN: TOKEN, MBF_FEED_DB_PATH: value }, '/app')).toThrow(
-      'MBF_FEED_DB_PATH must stay within the service root'
-    );
-  });
+  it.each(['/tmp/feed.sqlite', '/app', '/app-evil/feed.sqlite'])(
+    'rejects database path escape %s',
+    (value) => {
+      expect(() =>
+        loadServiceConfig({ FEED_TOKEN: TOKEN, MBF_FEED_DB_PATH: value }, '/app')
+      ).toThrow('MBF_FEED_DB_PATH must stay within the service root');
+    }
+  );
 
   it.each([
     { label: 'missing', token: undefined },
@@ -70,6 +73,19 @@ describe('loadServiceConfig', () => {
     { label: 'too short', token: 'deadbeef' },
   ])('rejects a $label token', ({ token }) => {
     expect(() => loadServiceConfig({ FEED_TOKEN: token })).toThrow('FEED_TOKEN must be set');
+  });
+
+  it('rejects a 15-character token and accepts a 16-character one', () => {
+    expect(() => loadServiceConfig({ FEED_TOKEN: 'a'.repeat(15) })).toThrow(
+      'FEED_TOKEN must be set'
+    );
+    expect(loadServiceConfig({ FEED_TOKEN: 'a'.repeat(16) }).token).toBe('a'.repeat(16));
+  });
+
+  it('measures the token length after trimming', () => {
+    expect(() => loadServiceConfig({ FEED_TOKEN: `  ${'a'.repeat(15)}  ` })).toThrow(
+      'FEED_TOKEN must be set'
+    );
   });
 
   it('accepts any sufficiently long secret, not only a UUID', () => {

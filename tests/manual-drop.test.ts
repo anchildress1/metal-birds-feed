@@ -214,16 +214,9 @@ describe('ingest', () => {
   });
 
   it('preserves the previous drop when refresh would reject the replacement count', async () => {
-    const previous = Buffer.from('previous good drop');
-    let stored: Buffer = previous;
     mockReadState.mockResolvedValue(PRIOR);
-    mockWriteDrop.mockImplementation((_source: string, bytes: Buffer) => {
-      stored = bytes;
-      return Promise.resolve();
-    });
 
     await expect(ingest('th-caat', FILE, false)).rejects.toThrow(/drop from prior 1000/);
-    expect(stored).toBe(previous);
     expect(mockWriteDrop).not.toHaveBeenCalled();
   });
 

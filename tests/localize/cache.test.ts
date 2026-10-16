@@ -89,6 +89,7 @@ describe('TranslationCacheSchema', () => {
       TranslationCacheSchema.safeParse({
         version: TRANSLATION_CACHE_VERSION,
         entries: { 'not-a-hash': 'x' },
+        failures: {},
       }).success
     ).toBe(false);
   });
@@ -98,6 +99,7 @@ describe('TranslationCacheSchema', () => {
       TranslationCacheSchema.safeParse({
         version: TRANSLATION_CACHE_VERSION,
         entries: { [hash]: 42 },
+        failures: {},
       }).success
     ).toBe(false);
   });
@@ -109,6 +111,27 @@ describe('TranslationCacheSchema', () => {
       TranslationCacheSchema.safeParse({
         version: TRANSLATION_CACHE_VERSION,
         entries: { [hash]: blank },
+        failures: {},
+      }).success
+    ).toBe(false);
+  });
+
+  it.each([0, -1, 1.5])('rejects a failure count of %p', (count) => {
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: {},
+        failures: { [hash]: count },
+      }).success
+    ).toBe(false);
+  });
+
+  it('rejects a failure keyed by something that is not a hash', () => {
+    expect(
+      TranslationCacheSchema.safeParse({
+        version: TRANSLATION_CACHE_VERSION,
+        entries: {},
+        failures: { 'not-a-hash': 1 },
       }).success
     ).toBe(false);
   });

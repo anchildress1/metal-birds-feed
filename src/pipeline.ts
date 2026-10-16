@@ -19,14 +19,14 @@ import {
 } from './cadence.js';
 import type { SourceState, StalenessEntry } from './cadence.js';
 
-const r2ConfigFromEnv = (): R2Config => ({
+export const r2ConfigFromEnv = (): R2Config => ({
   accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
   accessKeyId: requireEnv('MBF_R2_ACCESS_KEY_ID'),
   secretAccessKey: requireEnv('MBF_R2_SECRET_ACCESS_KEY'),
   bucketName: requireEnv('MBF_R2_BUCKET_NAME'),
 });
 
-function validateSourceId(sourceId: string): void {
+export function validateSourceId(sourceId: string): void {
   if (sourceId.includes('..') || sourceId.includes('/') || sourceId.includes('\\'))
     throw new Error(`Path traversal rejected: ${sourceId}`);
 }
@@ -135,12 +135,20 @@ export async function run(sourceId: string): Promise<RunResult> {
     log('warn', 'localize_partial_failure', { source: sourceId, failed: localizeStats.failed });
 
   // Hashed pre-localization: change detection must track the register, not our own enrichment.
-  const writeStats = await writer.write(localized, sourceId, priorState, hashRecords(records));
+  const writeStats = await writer.write(
+    localized,
+    sourceId,
+    priorState,
+    hashRecords(records),
+    new Date().toISOString().slice(0, 10),
+    // The slice lands before the artifact so history advances last, and only past every guard.
+    async () => {
+      if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values()));
+    }
+  );
 
   // State advances only after both durable outputs exist. Otherwise cadence gating could suppress
   // recovery from a missing feed slice for the full source cadence.
-  if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values()));
-
   let newState: SourceState | null = priorState;
   if (!dryRun) {
     const now = new Date().toISOString();

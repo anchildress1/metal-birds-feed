@@ -144,4 +144,45 @@ describe('AircraftSchema', () => {
   it('accepts a registration containing a slash (no longer an R2 key segment)', () => {
     expect(AircraftSchema.safeParse({ ...base, registration: 'A/B' }).success).toBe(true);
   });
+
+  it.each([null, 'reserved'] as const)('accepts status %p', (status) => {
+    expect(AircraftSchema.safeParse({ ...base, status }).success).toBe(true);
+  });
+
+  const withEngineType = (type: string) => ({ ...base, engine: { ...base.engine, type } });
+  const withParty = (kind: string) => ({ ...base, owner: { ...base.owner, kind } });
+  it.each([
+    ['status', { ...base, status: 'bogus' }],
+    ['airframe_type', { ...base, airframe_type: 'bogus' }],
+    ['category', { ...base, category: 'bogus' }],
+    ['build_certification', { ...base, build_certification: 'bogus' }],
+    ['operating_environment', { ...base, operating_environment: 'bogus' }],
+    ['engine.type', withEngineType('bogus')],
+    ['owner.kind', withParty('bogus')],
+  ])('rejects a value outside the %s enum', (_field, record) => {
+    expect(AircraftSchema.safeParse(record).success).toBe(false);
+  });
+
+  it.each([
+    ['year_manufactured', { ...base, year_manufactured: 1979.5 }],
+    ['seats', { ...base, seats: 1.5 }],
+    ['max_passengers', { ...base, max_passengers: 3.2 }],
+    ['min_crew', { ...base, min_crew: 0.5 }],
+    ['engine.count', { ...base, engine: { ...base.engine, count: 1.5 } }],
+  ])('rejects a fractional %s', (_field, record) => {
+    expect(AircraftSchema.safeParse(record).success).toBe(false);
+  });
+
+  it.each([
+    ['cruise_speed_ktas', { ...base, cruise_speed_ktas: 118.5 }],
+    ['max_takeoff_weight_kg', { ...base, max_takeoff_weight_kg: 1043.5 }],
+    ['engine.horsepower', { ...base, engine: { ...base.engine, horsepower: 180.5 } }],
+  ])('accepts a fractional %s', (_field, record) => {
+    expect(AircraftSchema.safeParse(record).success).toBe(true);
+  });
+
+  it.each(Object.keys(base) as (keyof Aircraft)[])('rejects a record missing %s', (field) => {
+    const rest = Object.fromEntries(Object.entries(base).filter(([key]) => key !== field));
+    expect(AircraftSchema.safeParse(rest).success).toBe(false);
+  });
 });
