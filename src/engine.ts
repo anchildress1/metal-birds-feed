@@ -272,6 +272,7 @@ export async function mapSnapshots(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
   const rows = await parsePrimary(primaryBuf, config);
+  assertJoinHits(config, joinMaps, rows);
   assertSourceIdColumns(config, rows, joinMaps);
 
   const bySnapshot = new Map<string, Row[]>();
