@@ -77,7 +77,8 @@ void mock.module('@aws-sdk/client-s3', () => ({
   },
 }));
 
-const { R2ArtifactWriter, isTransientS3Error } = await import('../src/writer.js');
+const { R2ArtifactWriter, isArtifactCaughtUp, isTransientS3Error } =
+  await import('../src/writer.js');
 const { FEED_SLICE_VERSION } = await import('../src/feed.js');
 const { NoSuchKey } = await import('@aws-sdk/client-s3');
 
@@ -551,6 +552,33 @@ describe('R2ArtifactWriter — write', () => {
     expect(puts).toBe(2);
   });
 
+  it('fails the run once the artifact PUT keeps failing transiently', async () => {
+    let puts = 0;
+    mockSend.mockImplementation((cmd: { _kind: string }) => {
+      if (cmd._kind !== 'put') return Promise.reject(noSuchKey());
+      puts++;
+      return Promise.reject(s3Error('internal', 500));
+    });
+    const timeoutSpy = spyOn(globalThis, 'setTimeout').mockImplementation(((fn: () => void) => {
+      fn();
+      return 0;
+    }) as unknown as typeof setTimeout);
+    try {
+      await expect(
+        new R2ArtifactWriter(R2_CONFIG, false).write(
+          new Map([['00001', makeAircraft('00001', 'N1', 'a4e294')]]),
+          'faa',
+          null,
+          HASH_UP,
+          TODAY
+        )
+      ).rejects.toThrow('internal');
+      expect(puts).toBe(4);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
+  });
+
   describe('seedHistory', () => {
     const seedRows = [
       {
@@ -840,10 +868,17 @@ describe('R2ArtifactWriter — write', () => {
       mockSend.mockRejectedValueOnce(noSuchKey());
       mockAbsentArtifact();
       const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const logSpy = spyOn(console, 'log').mockImplementation(() => {});
 
-      await writer.write(both, 'faa', priorFor('x'), HASH_UP, TODAY);
+      try {
+        await writer.write(both, 'faa', priorFor('x'), HASH_UP, TODAY);
 
-      expect(artifactRows().every((r) => r['first_seen'] === TODAY)).toBe(true);
+        expect(artifactRows().every((r) => r['first_seen'] === TODAY)).toBe(true);
+        const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+        expect(logged).toContain('level=warn event=history_reset_artifact_missing source=faa');
+      } finally {
+        logSpy.mockRestore();
+      }
     });
   });
 
@@ -1136,6 +1171,37 @@ describe('R2ArtifactWriter — readArtifactHeader', () => {
   });
 });
 
+describe('isArtifactCaughtUp', () => {
+  const lastRun = '2026-06-21T00:00:00.000Z';
+  const state = (last_run = lastRun): SourceState => ({
+    last_run,
+    last_content_change: last_run,
+    record_count: 1,
+    content_hash: HASH64,
+    upstream_hash: HASH64,
+  });
+  const header = (iso: string, schemaVersion = DB_SCHEMA_VERSION) => ({
+    schemaVersion,
+    lastModified: new Date(iso),
+  });
+
+  it.each([
+    ['modified at the recorded run', header(lastRun), state(), true],
+    ['modified before the recorded run', header('2026-06-20T23:59:59.999Z'), state(), true],
+    ['modified after the recorded run', header('2026-06-21T00:00:00.001Z'), state(), false],
+    [
+      'written under another schema version',
+      header(lastRun, DB_SCHEMA_VERSION - 1),
+      state(),
+      false,
+    ],
+    ['has no artifact header', null, state(), false],
+    ['has no recorded state', header(lastRun), null, false],
+  ])('an artifact %s is caught up', (_label, h, s, expected) => {
+    expect(isArtifactCaughtUp(h, s)).toBe(expected);
+  });
+});
+
 describe('isTransientS3Error', () => {
   it('classifies 5xx, 429, and unknown as transient; 4xx and NoSuchKey as permanent', () => {
     expect(isTransientS3Error(s3Error('e', 500))).toBe(true);
@@ -1320,6 +1386,22 @@ describe('R2ArtifactWriter — deployed feed hash', () => {
     expect(await new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).toBeNull();
   });
 
+  // Absent and unreadable must not collapse: a failed read treated as "never deployed" would
+  // republish an unchanged feed.
+  it('rethrows a non-NoSuchKey error and logs it', async () => {
+    mockSend.mockRejectedValue(s3Error('denied', 403));
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(new R2ArtifactWriter(R2_CONFIG, false).readDeployedFeedHash()).rejects.toThrow(
+        'denied'
+      );
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=deployed_feed_hash_load_failed');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
   it('writes the marker JSON to aircraft/_feed/_deployed.json', async () => {
     mockAbsentArtifact();
     await new R2ArtifactWriter(R2_CONFIG, false).writeDeployedFeedHash(HASH64);
@@ -1356,9 +1438,17 @@ describe('R2ArtifactWriter — manual drop', () => {
     mockSend.mockRejectedValue(
       Object.assign(new Error('denied'), { $metadata: { httpStatusCode: 403 } })
     );
-    await expect(new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).rejects.toThrow(
-      'denied'
-    );
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(new R2ArtifactWriter(R2_CONFIG, false).readDrop('th-caat')).rejects.toThrow(
+        'denied'
+      );
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=drop_load_failed');
+      expect(logged).toContain('source=th-caat');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('writes the drop as an octet stream', async () => {

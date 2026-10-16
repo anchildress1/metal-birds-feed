@@ -112,7 +112,7 @@ describe('shouldSkip', () => {
     expect(shouldSkip(state, 7, now)).toBe(true);
   });
 
-  it('returns true when last_run is in the future (clock skew permanently suppresses until that date passes)', () => {
+  it('skips while last_run is in the future and the content is not overdue', () => {
     const state: SourceState = {
       last_run: new Date(Date.now() + 10 * DAY_MS).toISOString(),
       last_content_change: new Date().toISOString(),
@@ -120,6 +120,31 @@ describe('shouldSkip', () => {
       content_hash: HASH64,
       upstream_hash: HASH_UP,
     };
+    expect(shouldSkip(state, 30, new Date())).toBe(true);
+  });
+
+  it('does not let a future last_run suppress an overdue source', () => {
+    const state: SourceState = {
+      last_run: new Date(Date.now() + 10 * DAY_MS).toISOString(),
+      last_content_change: new Date(Date.now() - 60 * DAY_MS).toISOString(),
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
+    expect(shouldSkip(state, 30, new Date())).toBe(false);
+  });
+
+  // isOverdue fails open on an unparseable timestamp to keep the alarm armed; the gate must not
+  // follow it, or a value that never heals would refetch the register on every tick forever.
+  it('keeps skipping inside the window when last_content_change cannot be parsed', () => {
+    const state: SourceState = {
+      last_run: new Date(Date.now() - 1 * DAY_MS).toISOString(),
+      last_content_change: 'not-a-date',
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
+    expect(isOverdue(state, 30, new Date())).toBe(true);
     expect(shouldSkip(state, 30, new Date())).toBe(true);
   });
 });

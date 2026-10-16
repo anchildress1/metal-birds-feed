@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { SourceConfig } from '../src/types/config.js';
 import type { Aircraft } from '../src/schema.js';
+import type { SourceState } from '../src/cadence.js';
 import { hashFeedRows } from '../src/feed.js';
 import { DB_SCHEMA_VERSION } from '../src/db.js';
 import { isArtifactCaughtUp } from '../src/writer.js';
@@ -154,7 +155,10 @@ const aircraft = (overrides: Partial<Aircraft> = {}): Aircraft => ({
   ...overrides,
 });
 
+const ENV_SNAPSHOT = { ...process.env };
+
 beforeEach(() => {
+  delete process.env['GITHUB_STEP_SUMMARY'];
   process.env['MBF_R2_ACCOUNT_ID'] = 'account';
   process.env['MBF_R2_ACCESS_KEY_ID'] = 'key';
   process.env['MBF_R2_SECRET_ACCESS_KEY'] = 'secret';
@@ -209,16 +213,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete process.env['MBF_R2_ACCOUNT_ID'];
-  delete process.env['MBF_R2_ACCESS_KEY_ID'];
-  delete process.env['MBF_R2_SECRET_ACCESS_KEY'];
-  delete process.env['MBF_R2_BUCKET_NAME'];
-  delete process.env['DRY_RUN'];
-  delete process.env['FORCE_REFRESH'];
-  delete process.env['GITHUB_TOKEN'];
-  delete process.env['GITHUB_REPOSITORY'];
-  delete process.env['REFRESH_SOURCE'];
-  delete process.env['MBF_FEED_DB_OUT'];
+  for (const key of Object.keys(process.env)) if (!(key in ENV_SNAPSHOT)) delete process.env[key];
+  Object.assign(process.env, ENV_SNAPSHOT);
   globalThis.fetch = REAL_FETCH;
 });
 
@@ -338,18 +334,27 @@ describe('run', () => {
   // The two maps must differ structurally: toHaveBeenCalledWith is deep equality, so
   // interchangeable-looking maps let a `localized` -> `records` regression pass silently and ship
   // untranslated text to both durable outputs.
-  it('withholds cache pruning when the run is short enough to be a truncated upstream', async () => {
-    // localizeRecords runs before writer.write can reject a truncated download, so the same
-    // retain-ratio decides whether pruning is safe. Below it, paid translations must survive.
+  // localizeRecords runs before writer.write can reject a truncated download, so the retain-ratio
+  // decides whether pruning paid translations is safe. 0.5 is the boundary and is allowed.
+  it.each([
+    { label: 'at the retain boundary', prior: 4, now: 2, allow: true },
+    { label: 'just below the retain boundary', prior: 100, now: 49, allow: false },
+    { label: 'a prior run that kept nothing', prior: 0, now: 0, allow: true },
+    { label: 'an emptied run against real history', prior: 4, now: 0, allow: false },
+  ])('allows cache pruning: $allow when $label', async ({ prior, now, allow }) => {
     mockReadState.mockResolvedValueOnce({
       last_run: '2020-01-01T00:00:00.000Z',
       last_content_change: '2020-01-01T00:00:00.000Z',
-      record_count: 100,
+      record_count: prior,
       content_hash: 'a'.repeat(64),
       upstream_hash: 'b'.repeat(64),
     });
+    mockMapRows.mockResolvedValueOnce({
+      records: new Map(Array.from({ length: now }, (_, i) => [String(i), aircraft()])),
+      stats: { total: now, ok: now, failed: 0 },
+    });
 
-    await run('faa').catch(() => undefined);
+    await run('faa');
 
     expect(mockLocalizeRecords).toHaveBeenCalledWith(
       expect.anything(),
@@ -357,7 +362,7 @@ describe('run', () => {
       'en',
       expect.anything(),
       expect.any(Boolean),
-      false
+      allow
     );
   });
 
@@ -637,13 +642,50 @@ describe('run', () => {
 
   it('reads and writes state even without cadence_days (for content-hash skip)', async () => {
     process.env['DRY_RUN'] = 'false';
+    mockR2Write.mockResolvedValueOnce({
+      changed: false,
+      record_count: 7,
+      content_hash: 'h0',
+      upstream_hash: 'u0',
+    });
 
     await run('faa');
 
     expect(mockReadState).toHaveBeenCalledTimes(1);
     expect(mockWriteState).toHaveBeenCalledTimes(1);
-    const [, state] = mockWriteState.mock.calls[0] as [string, { content_hash: string }];
-    expect(state.content_hash).toBe('h0');
+    const [source, state] = mockWriteState.mock.calls[0] as [string, SourceState];
+    expect(source).toBe('faa');
+    expect(state.last_run).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(state).toEqual({
+      last_run: state.last_run,
+      last_content_change: state.last_run,
+      record_count: 7,
+      content_hash: 'h0',
+      upstream_hash: 'u0',
+    });
+  });
+
+  it('keeps the prior last_content_change when nothing changed', async () => {
+    process.env['DRY_RUN'] = 'false';
+    mockReadState.mockResolvedValueOnce({
+      last_run: '2020-01-01T00:00:00.000Z',
+      last_content_change: '2019-06-01T00:00:00.000Z',
+      record_count: 7,
+      content_hash: 'h0',
+      upstream_hash: 'u0',
+    });
+    mockR2Write.mockResolvedValueOnce({
+      changed: false,
+      record_count: 7,
+      content_hash: 'h0',
+      upstream_hash: 'u0',
+    });
+
+    await run('faa');
+
+    const [, state] = mockWriteState.mock.calls[0] as [string, SourceState];
+    expect(state.last_content_change).toBe('2019-06-01T00:00:00.000Z');
+    expect(state.last_run).not.toBe('2020-01-01T00:00:00.000Z');
   });
 
   it.each(['../etc/passwd', 'faa/../secret', 'dir/faa'])(
@@ -716,7 +758,7 @@ describe('feed publication', () => {
     expect(resolveFeedOutputPath(join(root, 'feed.sqlite'), root)).toBe(join(root, 'feed.sqlite'));
   });
 
-  it.each(['../feed.sqlite', '/tmp/feed.sqlite'])(
+  it.each(['../feed.sqlite', '/tmp/feed.sqlite', '.'])(
     'rejects output path outside the sandbox: %s',
     (path) => {
       expect(() => resolveFeedOutputPath(path, resolve('tests'))).toThrow(/path/i);
@@ -905,13 +947,17 @@ describe('main', () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    const parked =
+      readdirSync('sources')
+        .find((f) => f.endsWith('.yaml'))
+        ?.replace(/\.yaml$/, '') ?? '';
     mockLoadSourceConfig.mockImplementation((path: string) =>
-      path.includes('lt-tka.yaml') ? { ...CONFIG, paused: true, cadence_days: 7 } : CONFIG
+      path.includes(`${parked}.yaml`) ? { ...CONFIG, paused: true, cadence_days: 7 } : CONFIG
     );
     const fresh = new Date().toISOString();
     mockReadState.mockImplementation((source: string) =>
       Promise.resolve(
-        source === 'lt-tka'
+        source === parked
           ? { last_run: fresh, last_content_change: fresh, content_hash: HASH64 }
           : null
       )
@@ -920,7 +966,9 @@ describe('main', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
-          Promise.resolve([{ number: 9, title: '[staleness] lt-tka has not updated in 20 days' }]),
+          Promise.resolve([
+            { number: 9, title: `[staleness] ${parked} has not updated in 20 days` },
+          ]),
       })
       .mockResolvedValueOnce({ ok: true });
     setFetch(fetchMock);
@@ -1353,15 +1401,18 @@ describe('main', () => {
     mockDownload.mockRejectedValueOnce(new Error('network timeout'));
     const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
-    await main();
+    try {
+      await main();
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(mockLog).toHaveBeenCalledWith(
-      'error',
-      'pipeline_failed',
-      expect.objectContaining({ msg: 'network timeout' })
-    );
-    exitSpy.mockRestore();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(mockLog).toHaveBeenCalledWith(
+        'error',
+        'pipeline_failed',
+        expect.objectContaining({ msg: 'network timeout' })
+      );
+    } finally {
+      exitSpy.mockRestore();
+    }
   });
 
   it('writes a failure table to the job summary when a source fails', async () => {
@@ -1383,6 +1434,50 @@ describe('main', () => {
       exitSpy.mockRestore();
       rmSync(summaryPath, { force: true });
       delete process.env['GITHUB_STEP_SUMMARY'];
+    }
+  });
+
+  it('keeps a failure message inside its table cell', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const summaryPath = join(tmpdir(), `mbf-summary-escape-${process.pid}.md`);
+    process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
+    mockDownload.mockRejectedValueOnce(new Error('a|b\nc'));
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+
+      expect(readFileSync(summaryPath, 'utf8')).toContain('| faa | a\\|b c |');
+    } finally {
+      exitSpy.mockRestore();
+      rmSync(summaryPath, { force: true });
+    }
+  });
+
+  it('appends the staleness table to the job summary for an overdue source', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const summaryPath = join(tmpdir(), `mbf-summary-stale-${process.pid}.md`);
+    writeFileSync(summaryPath, 'existing\n');
+    process.env['GITHUB_STEP_SUMMARY'] = summaryPath;
+    const stale = new Date(Date.now() - 60 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValue({
+      last_run: stale,
+      last_content_change: stale,
+      content_hash: HASH64,
+    });
+    mockR2Write.mockResolvedValueOnce({ changed: false, record_count: 1, content_hash: 'h' });
+
+    try {
+      await main();
+
+      const summary = readFileSync(summaryPath, 'utf8');
+      expect(summary.startsWith('existing\n')).toBe(true);
+      expect(summary).toContain('faa');
+    } finally {
+      rmSync(summaryPath, { force: true });
     }
   });
 

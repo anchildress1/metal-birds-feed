@@ -10,6 +10,9 @@ const mockMapSnapshots = mock();
 const mockSeedHistory = mock();
 const mockR2Constructor = mock();
 
+// Captured before the mock so the sandbox check under test is the production one.
+const { validateSourceId } = await import('../src/pipeline.js');
+
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/downloader.js', () => ({
   download: mockDownload,
@@ -19,9 +22,7 @@ void mock.module('../src/engine.js', () => ({ mapSnapshots: mockMapSnapshots }))
 void mock.module('../src/logger.js', () => ({ log: mock() }));
 void mock.module('../src/pipeline.js', () => ({
   r2ConfigFromEnv: () => ({}),
-  validateSourceId: (id: string) => {
-    if (id.includes('..')) throw new Error(`Path traversal rejected: ${id}`);
-  },
+  validateSourceId,
 }));
 void mock.module('../src/writer.js', () => ({
   R2ArtifactWriter: class {
@@ -157,12 +158,6 @@ describe('replayHistory', () => {
     expect(byId(rows, 'A')[0]?.['first_seen']).toBe('2025-07-21');
   });
 
-  it('applies publications oldest first however they arrive', () => {
-    const { rows } = replayHistory('x', [snap('2025-07-21', ['A']), snap('2025-10-21', ['A'])]);
-
-    expect(byId(rows, 'A')[0]?.['first_seen']).toBe('2025-07-21');
-  });
-
   it('refuses a snapshot value that is not a date', () => {
     expect(() => replayHistory('x', [snap('2025-07', ['A'])])).toThrow(/not a YYYY-MM-DD date/);
   });
@@ -241,8 +236,26 @@ describe('backfillHistory', () => {
     expect(mockSeedHistory).not.toHaveBeenCalled();
   });
 
-  it('rejects a traversal-bearing source id before touching anything', async () => {
-    await expect(backfillHistory('../x', false)).rejects.toThrow(/Path traversal/);
-    expect(mockDownload).not.toHaveBeenCalled();
+  it.each(['../x', 'a/b', 'a\\b'])(
+    'rejects a traversal-bearing source id before touching anything: %s',
+    async (id) => {
+      await expect(backfillHistory(id, false)).rejects.toThrow(/Path traversal/);
+      expect(mockDownload).not.toHaveBeenCalled();
+    }
+  );
+
+  it('seeds nothing when the newest publication is unusable', async () => {
+    mockMapSnapshots.mockResolvedValue([snap('2025-07-21', ['A']), snap('2025-10-21', ['A'], 2)]);
+
+    await expect(backfillHistory('lt-tka', false)).rejects.toThrow(
+      /newest publication is unusable/
+    );
+    expect(mockSeedHistory).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a seed failure rather than reporting a count', async () => {
+    mockSeedHistory.mockRejectedValue(new Error('artifact already carries closed history'));
+
+    await expect(backfillHistory('lt-tka', false)).rejects.toThrow(/already carries closed/);
   });
 });
