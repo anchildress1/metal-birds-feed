@@ -272,7 +272,6 @@ export async function mapSnapshots(
   if (!primaryBuf)
     throw new Error(`Primary file "${config.primary}" not found in downloaded files`);
   const rows = await parsePrimary(primaryBuf, config);
-  assertJoinHits(config, joinMaps, rows);
   assertSourceIdColumns(config, rows, joinMaps);
 
   const bySnapshot = new Map<string, Row[]>();
@@ -286,10 +285,11 @@ export async function mapSnapshots(
   }
   const snapshots = [...bySnapshot]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([snapshot, group]) => ({
-      snapshot,
-      ...mapRowSet(config, joinMaps, group),
-    }));
+    .map(([snapshot, group]) => {
+      // Per publication: a match in an older one must not mask a join that missed every row of this one.
+      assertJoinHits(config, joinMaps, group, `publication ${snapshot}`);
+      return { snapshot, ...mapRowSet(config, joinMaps, group) };
+    });
   reportUnmatchedLookups(config.id);
   // A truncated download is indistinguishable from a short publication history, and seeding from
   // it would be permanent; the failed-row tolerance above does not extend to the count.
@@ -806,7 +806,8 @@ function isAllowedMissingSourceIdRow(
 const assertJoinHits = (
   config: SourceConfig,
   joinMaps: Map<string, Map<string, Row>>,
-  rows: Row[]
+  rows: Row[],
+  scope = 'the file'
 ): void => {
   if (rows.length === 0) return;
   for (const join of config.joins) {
@@ -815,7 +816,7 @@ const assertJoinHits = (
     const anyHit = rows.some((row) => map?.has(row[join.on] ?? ''));
     if (!anyHit)
       throw new Error(
-        `Source "${config.id}": join "${join.name}" matched 0 of ${rows.length} rows — join key drifted upstream or the join file is broken`
+        `Source "${config.id}": join "${join.name}" matched 0 of ${rows.length} rows in ${scope} — join key drifted upstream or the join file is broken`
       );
   }
 };

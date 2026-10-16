@@ -4715,7 +4715,25 @@ describe('mapSnapshots', () => {
           ['jf', Buffer.from('K,EXTRA\nZ,C172\n', 'utf8')],
         ])
       )
-    ).rejects.toThrow(/join "j" matched 0 of 2 rows/);
+    ).rejects.toThrow(/join "j" matched 0 of 1 rows in publication 2025-07-21/);
+  });
+
+  it('fails when only an older publication matches the join', async () => {
+    await expect(
+      mapSnapshots(
+        config({
+          joins: [{ name: 'j', file: 'jf', key: 'K', on: 'MARK' }],
+          mapping: {
+            registration: { field: 'MARK' },
+            model: { field: 'j.EXTRA', transform: 'trim_or_null' },
+          },
+        }),
+        new Map([
+          ['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nB,2025-10-21\n', 'utf8')],
+          ['jf', Buffer.from('K,EXTRA\nA,C172\n', 'utf8')],
+        ])
+      )
+    ).rejects.toThrow(/join "j" matched 0 of 1 rows in publication 2025-10-21/);
   });
 
   it('checks a mapped total against the newest publication only', async () => {
