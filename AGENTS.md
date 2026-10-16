@@ -175,7 +175,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 ## GitHub Actions
 
-- One deploy job, reached only by `workflow_call`. Never give it its own trigger, never add deploy steps to a caller — a test scans every workflow and fails on a second deploy.
+- One deploy job, reached only by `workflow_call`. Never give it its own trigger, never add deploy steps to a caller.
 - Its concurrency group is a constant, queued at maximum, never cancelled.
   - Inside a called workflow `${{ github.workflow }}` resolves to the caller's name: an interpolated group files release and refresh deploys separately and can cancel the caller.
   - The default queue keeps one pending run and replaces it on a third, silently discarding a forced release deploy.
