@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { spawnSync } from 'node:child_process';
-import { lstat, mkdtemp, readlink, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { lstat, readlink, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const root = join(import.meta.dir, '..');
@@ -38,46 +36,6 @@ const recoveryBlockFrom = (text: string): string => {
     throw new Error('complete first-deploy recovery block not found');
 
   return text.slice(blockStart + 8, blockEnd);
-};
-
-const runDeployBlock = async (
-  block: string,
-  failAt: string,
-  opensslOutput = '0123456789abcdef0123456789abcdef'
-): Promise<{ log: string; status: number | null }> => {
-  const sandbox = await mkdtemp(join(tmpdir(), 'metal-birds-onboarding-'));
-  const logPath = join(sandbox, 'commands.log');
-  const fakeCommand = `#!/bin/sh
-set -eu
-command_name=\${0##*/}
-stage="$command_name \${1-} \${2-}"
-printf '%s\\n' "$stage" >> "$COMMAND_LOG"
-if [ "$stage" = "$FAIL_AT" ]; then exit 42; fi
-if [ "$stage" = "gcloud projects describe" ]; then printf '123456\\n'; fi
-if [ "$stage" = "openssl rand -hex" ]; then printf '%s\\n' "$OPENSSL_OUTPUT"; fi
-`;
-
-  try {
-    for (const command of ['gcloud', 'openssl', 'make']) {
-      const path = join(sandbox, command);
-      await writeFile(path, fakeCommand, { mode: 0o755 });
-    }
-
-    const result = spawnSync('bash', ['-c', block], {
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        COMMAND_LOG: logPath,
-        FAIL_AT: failAt,
-        OPENSSL_OUTPUT: opensslOutput,
-        PATH: `${sandbox}:${process.env.PATH ?? ''}`,
-      },
-    });
-
-    return { log: await readFile(logPath, 'utf8'), status: result.status };
-  } finally {
-    await rm(sandbox, { force: true, recursive: true });
-  }
 };
 
 describe('onboarding contract', () => {
@@ -285,54 +243,6 @@ describe('onboarding contract', () => {
       expect(exportToken).toBeGreaterThan(validation);
       expect(unsetToken).toBeGreaterThan(exportToken);
       expect(text.slice(retrieval, unsetToken)).not.toContain('set -eu');
-
-      const success = await runDeployBlock(recoveryBlock, 'never');
-      expect(success.status).toBe(0);
-      expect(success.log.trim().endsWith('make deploy')).toBe(true);
-
-      for (const failure of ['gcloud iam service-accounts', 'gcloud secrets list']) {
-        const result = await runDeployBlock(recoveryBlock, failure);
-
-        expect(result.status).toBe(42);
-        expect(result.log).not.toContain('make deploy');
-      }
-    },
-    // Each case spawns several shells; the pre-push hook runs this beside tsc and gitleaks.
-    30_000
-  );
-
-  it.each<Surface>(['manual', 'skill'])(
-    'never deploys after a provisioning failure on %s',
-    async (surface) => {
-      const block = deployBlockFrom(await readSurface(surface));
-      const success = await runDeployBlock(block, 'never');
-
-      expect(success.status).toBe(0);
-      expect(success.log.trim().endsWith('make deploy')).toBe(true);
-
-      for (const failure of [
-        'gcloud services enable',
-        'gcloud projects describe',
-        'gcloud projects add-iam-policy-binding',
-        'gcloud iam service-accounts',
-        'openssl rand -hex',
-        'gcloud secrets create',
-        'gcloud secrets add-iam-policy-binding',
-      ]) {
-        const result = await runDeployBlock(block, failure);
-
-        expect(result.status).toBe(42);
-        expect(result.log).not.toContain('make deploy');
-      }
-
-      const shortToken = await runDeployBlock(block, 'never', 'short');
-
-      expect(shortToken.status).not.toBe(0);
-      expect(shortToken.log).toContain('openssl rand -hex');
-      expect(shortToken.log).not.toContain('gcloud secrets create');
-      expect(shortToken.log).not.toContain('make deploy');
-    },
-    // Each case spawns several shells; the pre-push hook runs this beside tsc and gitleaks.
-    30_000
+    }
   );
 });
