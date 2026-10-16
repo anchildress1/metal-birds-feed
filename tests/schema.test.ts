@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { AircraftSchema, type Aircraft } from '../src/schema.js';
+import { AircraftSchema, CANONICAL_PATHS, type Aircraft } from '../src/schema.js';
 
 const base: Aircraft = {
   source: 'faa',
@@ -184,5 +184,36 @@ describe('AircraftSchema', () => {
   it.each(Object.keys(base) as (keyof Aircraft)[])('rejects a record missing %s', (field) => {
     const rest = Object.fromEntries(Object.entries(base).filter(([key]) => key !== field));
     expect(AircraftSchema.safeParse(rest).success).toBe(false);
+  });
+});
+
+describe('CANONICAL_PATHS', () => {
+  it('lists nested leaf paths and scalar fields', () => {
+    for (const path of ['owner.name', 'engine.type', 'registration', 'operational_classes'])
+      expect(CANONICAL_PATHS.has(path)).toBe(true);
+  });
+
+  it('omits the bare parent objects and array indexes', () => {
+    for (const path of ['owner', 'engine', 'operational_classes.0', 'owner.knd'])
+      expect(CANONICAL_PATHS.has(path)).toBe(false);
+  });
+});
+
+describe('ISO date fields', () => {
+  it.each(['2026-13-45', '2026-02-30', '2026-00-10', '2026-04-31'])(
+    'rejects the impossible calendar date %s',
+    (value) => {
+      expect(AircraftSchema.safeParse({ ...base, certification_date: value }).success).toBe(false);
+    }
+  );
+
+  it.each(['2026-02-28', '2024-02-29', '2026-12-31'])('accepts the real date %s', (value) => {
+    expect(AircraftSchema.safeParse({ ...base, certification_date: value }).success).toBe(true);
+  });
+
+  it('rejects a leap day in a non-leap year', () => {
+    expect(AircraftSchema.safeParse({ ...base, certification_date: '2025-02-29' }).success).toBe(
+      false
+    );
   });
 });
