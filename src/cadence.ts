@@ -23,7 +23,8 @@ export interface StalenessEntry {
   source: string;
   cadence_days: number;
   last_content_change: string | null;
-  days_since_change: number;
+  // null: no usable last-change timestamp (none recorded, or unparseable).
+  days_since_change: number | null;
   overdue: boolean;
 }
 
@@ -65,10 +66,11 @@ export const buildStalenessEntry = (
   now: Date
 ): StalenessEntry => {
   const lastChange = state?.last_content_change ?? null;
-  const msSinceChange = lastChange ? now.getTime() - new Date(lastChange).getTime() : Infinity;
+  const msSinceChange = lastChange ? now.getTime() - new Date(lastChange).getTime() : Number.NaN;
+  // A timestamp ahead of the clock is skew, not silence: clamp to 0 so it never reads as unknown.
   const daysSinceChange = Number.isFinite(msSinceChange)
-    ? Math.floor(msSinceChange / MS_PER_DAY)
-    : -1;
+    ? Math.max(0, Math.floor(msSinceChange / MS_PER_DAY))
+    : null;
   return {
     source,
     cadence_days: cadenceDays,
@@ -85,7 +87,7 @@ export const buildSummaryMarkdown = (entries: StalenessEntry[]): string => {
     .map((e) => {
       const status = e.overdue ? '⚠️ overdue' : '✅ ok';
       const lastChange = e.last_content_change ?? 'never';
-      const days = e.days_since_change >= 0 ? String(e.days_since_change) : 'unknown';
+      const days = e.days_since_change === null ? 'unknown' : String(e.days_since_change);
       return `| ${e.source} | ${e.cadence_days} | ${lastChange} | ${days} | ${status} |`;
     });
   return [

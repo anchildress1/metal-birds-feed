@@ -225,14 +225,14 @@ describe('buildStalenessEntry', () => {
     expect(entry.days_since_change).toBeGreaterThanOrEqual(15);
   });
 
-  it('returns last_content_change: null and days_since_change: -1 when state is null', () => {
+  it('returns last_content_change: null and days_since_change: null when state is null', () => {
     const entry = buildStalenessEntry('nl-ilt', 30, null, new Date());
     expect(entry.last_content_change).toBeNull();
-    expect(entry.days_since_change).toBe(-1);
+    expect(entry.days_since_change).toBeNull();
     expect(entry.overdue).toBe(false);
   });
 
-  it('returns days_since_change: -1 when state has an invalid last_content_change date', () => {
+  it('returns days_since_change: null and overdue when last_content_change is unparseable', () => {
     const state: SourceState = {
       last_run: new Date().toISOString(),
       last_content_change: 'not-a-valid-date',
@@ -241,8 +241,24 @@ describe('buildStalenessEntry', () => {
       upstream_hash: HASH_UP,
     };
     const entry = buildStalenessEntry('faa', 30, state, new Date());
-    expect(entry.days_since_change).toBe(-1);
+    expect(entry.days_since_change).toBeNull();
     expect(entry.last_content_change).toBe('not-a-valid-date');
+    expect(entry.overdue).toBe(true);
+  });
+
+  it('clamps a last_content_change ahead of the clock to 0 days, not overdue', () => {
+    const entry = buildStalenessEntry('faa', 30, makeState(1, -3), new Date());
+    expect(entry.days_since_change).toBe(0);
+    expect(entry.overdue).toBe(false);
+  });
+
+  it('floors whole days since the last change', () => {
+    const now = new Date('2026-10-16T12:00:00.000Z');
+    const state: SourceState = {
+      ...makeState(1, 0),
+      last_content_change: '2026-10-13T18:00:00.000Z',
+    };
+    expect(buildStalenessEntry('faa', 30, state, now).days_since_change).toBe(2);
   });
 });
 
