@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.1.0...v2.2.0) (2026-10-17)
+
+
+### Features
+
+* ingest browser-downloaded registers and onboard th-caat ([#197](https://github.com/anchildress1/metal-birds-feed/issues/197)) ([4949963](https://github.com/anchildress1/metal-birds-feed/commit/4949963f859b13c38e6219aca487fb692d17ae01))
+* keep per-source artifact history across refreshes ([#202](https://github.com/anchildress1/metal-birds-feed/issues/202)) ([0b71ea0](https://github.com/anchildress1/metal-birds-feed/commit/0b71ea02ccfd50be43bd8ab79e3c873fcd849f02))
+* key lt-tka on mark, first registration and build date ([#196](https://github.com/anchildress1/metal-birds-feed/issues/196)) ([728c105](https://github.com/anchildress1/metal-birds-feed/commit/728c1058ac186e7838f5f846a0a3ba494f07f38c))
+
+
+### Bug Fixes
+
+* close the defects found by the test-quality review ([#204](https://github.com/anchildress1/metal-birds-feed/issues/204)) ([a711135](https://github.com/anchildress1/metal-birds-feed/commit/a71113587fbeb99d0cc10f71e75a7cd9818f3c58))
+* correct the attribution claim and close the review findings from [#172](https://github.com/anchildress1/metal-birds-feed/issues/172) ([#175](https://github.com/anchildress1/metal-birds-feed/issues/175)) ([edf4b2d](https://github.com/anchildress1/metal-birds-feed/commit/edf4b2d7111e717652c4cc6aba5be5ef07b2e717))
+
 ## [2.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.0.0...v2.1.0) (2026-09-16)
 
 
