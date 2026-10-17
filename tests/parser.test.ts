@@ -1538,6 +1538,30 @@ describe('parsePdf ignore_pattern', () => {
     expect(rows[1]?.owner).toBe('Second owner\nLimited\nStranica 4 od 20');
   });
 
+  it('matches the whole printed line, so fragments split across bands drop together', async () => {
+    const disclaimer: SynthItem[] = [
+      ...page.slice(0, 5),
+      { str: 'Podaci iz registra', x: 145.36, y: 40 },
+      { str: 'c', x: 145.36, y: 139 },
+      { str: 'objavljeni u tablici', x: 145.36, y: 143 },
+    ];
+    const rows = await parsePdf(buildPdf([disclaimer]), opts('^Podaci iz registra'));
+
+    expect(rows[1]?.owner).toBe('Second owner\nLimited');
+  });
+
+  it('keeps a lone diacritic fragment that belongs to a real cell', async () => {
+    const cell: SynthItem[] = [
+      ...page.slice(0, 4),
+      { str: 'Fizi', x: 141.16, y: 300 },
+      { str: 'c', x: 141.16, y: 311 },
+      { str: 'ka osoba', x: 141.16, y: 316 },
+    ];
+    const rows = await parsePdf(buildPdf([cell]), opts('^Stranica \\d+ od \\d+$'));
+
+    expect(rows[1]?.owner).toBe('Second owner\nFizi\nc\nka osoba');
+  });
+
   it('keeps text that merely resembles furniture when the pattern is anchored', async () => {
     const withLookalike: SynthItem[] = [
       ...page.slice(0, 4),

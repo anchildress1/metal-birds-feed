@@ -494,13 +494,45 @@ const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x'
   return i === -1 ? anchorCoords.length - 1 : i;
 };
 
+// Items sharing a record-axis coordinate are one printed line, however the renderer split them into
+// fragments (a diacritic often becomes its own item). Matching the joined line is what lets one
+// pattern recognize a footer or disclaimer paragraph without also matching a lone "č" in a real cell.
+const LINE_GAP_PT = 1;
+
+const dropIgnoredLines = (
+  page: PdfItem[],
+  recordAxis: 'x' | 'y',
+  fieldAxis: 'x' | 'y',
+  ignoreRe: RegExp
+): PdfItem[] => {
+  const sorted = [...page].sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
+  const lines: PdfItem[][] = [];
+  for (const it of sorted) {
+    const line = lines.at(-1);
+    if (line && axisCoord(it, recordAxis) - axisCoord(line.at(-1)!, recordAxis) <= LINE_GAP_PT)
+      line.push(it);
+    else lines.push([it]);
+  }
+  return lines
+    .filter((line) => {
+      const text = [...line]
+        .sort((a, b) => axisCoord(a, fieldAxis) - axisCoord(b, fieldAxis))
+        .map((it) => it.str.trim())
+        .join(' ');
+      return !ignoreRe.test(text);
+    })
+    .flat();
+};
+
 const parsePdfPage = (
   page: PdfItem[],
   options: ResolvedPdfOptions,
   anchorRe: RegExp,
-  beforeFirstAnchorRe: RegExp | undefined
+  beforeFirstAnchorRe: RegExp | undefined,
+  ignoreRe: RegExp | undefined
 ): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
+  if (ignoreRe) page = dropIgnoredLines(page, recordAxis, options.field_axis, ignoreRe);
   const fieldIndexAt = bandIndexer(options.column_pos);
   const anchors = page
     .filter((it) => anchorRe.test(it.str.trim()))
@@ -687,15 +719,13 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
-  // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const ignoreRe = options.ignore_pattern ? new RegExp(options.ignore_pattern) : undefined;
-  const pages = items
-    .map(toPdfItems)
-    .map((page) => (ignoreRe ? page.filter((it) => !ignoreRe.test(it.str.trim())) : page));
+  const pages = items.map(toPdfItems);
   // Before the page walk: the layout decides which axis every page is read on, and a register that
   // flipped must fail here rather than per page, where the failure reads as template drift.
   const resolved = resolveLayout(options, pages, anchorRe);
+  // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const ignoreRe = options.ignore_pattern ? new RegExp(options.ignore_pattern) : undefined;
   // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const beforeFirstAnchorRe = resolved.before_first_anchor_pattern
@@ -713,7 +743,7 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
     // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
     // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
     if (page.length === 0) continue;
-    const pageRows = parsePdfPage(page, resolved, anchorRe, beforeFirstAnchorRe);
+    const pageRows = parsePdfPage(page, resolved, anchorRe, beforeFirstAnchorRe, ignoreRe);
     if (pageRows.length === 0) anchorlessPages.push(i + 1);
     else rows.push(...pageRows);
   }
