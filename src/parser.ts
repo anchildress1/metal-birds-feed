@@ -293,6 +293,8 @@ export interface PdfLayoutOptions {
   // other end. Opt in when the outermost record's own cell runs taller than half the page's
   // tightest row pitch, which is all the default reach allows. Bound it below the column headers.
   after_last_anchor_reach?: number;
+  wrap_after_anchor?: boolean;
+  drop_margin_lines?: boolean;
 }
 
 export interface ParsePdfOptions {
@@ -477,6 +479,76 @@ const recordIndex = (perPair: number[] | undefined, anchorCoords: number[], rc: 
   return i;
 };
 
+// The record a wrapped line trails: the anchor on the reading-start side of the item, allowing
+// same-row jitter so a record's own first-line fields still resolve to it. Reading runs ascending
+// along x and descending along y, so the start side is the lower coordinate on x and the higher on y.
+// Assumes cells hang from their anchor and a record's pitch covers its tallest cell, so a tail never
+// reaches the next anchor; a layout that breaks that must keep nearest-anchor snapping instead.
+const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x' | 'y'): number => {
+  if (recordAxis === 'x')
+    return Math.max(
+      0,
+      anchorCoords.findLastIndex((c) => c <= rc + SAME_ROW_TOLERANCE_PT)
+    );
+  const i = anchorCoords.findIndex((c) => c >= rc - SAME_ROW_TOLERANCE_PT);
+  return i === -1 ? anchorCoords.length - 1 : i;
+};
+
+// Items on one printed line share a record-axis coordinate to within the same-row jitter measured on
+// CCAA Croatia (2.16pt); set just above it so a line the renderer split into fragments is still one
+// line, and far below the ~13pt leading that separates adjacent lines.
+const LINE_GAP_PT = 2.5;
+
+// A paragraph set in the page margin (a trailing disclaimer, a repeated page header) starts to the
+// near side of the first printed band, where no table cell does. Judging the printed line by where it
+// starts, not by what it says, keeps the rule independent of the agency's wording. Applies to a line
+// as a whole because the renderer scatters its later fragments across the bands. A line carrying an
+// anchor is a record's own row and is never dropped.
+const dropMarginLines = (
+  page: PdfItem[],
+  recordAxis: 'x' | 'y',
+  fieldAxis: 'x' | 'y',
+  firstBand: number,
+  isAnchor: (it: PdfItem) => boolean
+): PdfItem[] => {
+  const sorted = [...page].sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
+  const lines: PdfItem[][] = [];
+  for (const it of sorted) {
+    const line = lines.at(-1);
+    if (line && axisCoord(it, recordAxis) - axisCoord(line.at(-1)!, recordAxis) <= LINE_GAP_PT)
+      line.push(it);
+    else lines.push([it]);
+  }
+  return lines
+    .filter(
+      (line) =>
+        line.some(isAnchor) ||
+        Math.min(...line.map((it) => axisCoord(it, fieldAxis))) >= firstBand - SAME_ROW_TOLERANCE_PT
+    )
+    .flat();
+};
+
+// Distributes items to their records. A layout that sets wrap_after_anchor trusts the reading-order
+// rule and never needs the per-column outlier-gap boundaries, so they are not computed for it.
+const bucketByRecord = (
+  inRange: { it: PdfItem; rc: number; fi: number }[],
+  anchorCoords: number[],
+  options: ResolvedPdfOptions,
+  recordAxis: 'x' | 'y'
+): Map<number, PdfItem[]>[] => {
+  const buckets = anchorCoords.map(() => new Map<number, PdfItem[]>());
+  const boundaries = options.wrap_after_anchor
+    ? undefined
+    : columnBoundaries(inRange, anchorCoords);
+  for (const { it, rc, fi } of inRange) {
+    const index = boundaries
+      ? recordIndex(boundaries.get(fi), anchorCoords, rc)
+      : trailingRecordIndex(anchorCoords, rc, recordAxis);
+    pushTo(buckets[index], fi, it);
+  }
+  return buckets;
+};
+
 const parsePdfPage = (
   page: PdfItem[],
   options: ResolvedPdfOptions,
@@ -485,13 +557,15 @@ const parsePdfPage = (
 ): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
   const fieldIndexAt = bandIndexer(options.column_pos);
+  const isAnchor = (it: PdfItem): boolean =>
+    anchorRe.test(it.str.trim()) &&
+    (options.anchor_column === undefined ||
+      fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column);
+  const firstBand = options.column_pos.find((pos): pos is number => pos !== null);
+  if (options.drop_margin_lines && firstBand !== undefined)
+    page = dropMarginLines(page, recordAxis, options.field_axis, firstBand, isAnchor);
   const anchors = page
-    .filter((it) => anchorRe.test(it.str.trim()))
-    .filter(
-      (it) =>
-        options.anchor_column === undefined ||
-        fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column
-    )
+    .filter(isAnchor)
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   if (anchors.length === 0) return [];
 
@@ -533,11 +607,7 @@ const parsePdfPage = (
     inRange.push({ it, rc, fi: fieldIndexAt(axisCoord(it, options.field_axis)) });
   }
 
-  const boundaries = columnBoundaries(inRange, anchorCoords);
-  const buckets = anchors.map(() => new Map<number, PdfItem[]>());
-  for (const { it, rc, fi } of inRange) {
-    pushTo(buckets[recordIndex(boundaries.get(fi), anchorCoords, rc)], fi, it);
-  }
+  const buckets = bucketByRecord(inRange, anchorCoords, options, recordAxis);
   return buckets.map((cells) => buildPdfRow(cells, options, recordAxis));
 };
 
@@ -658,6 +728,13 @@ const resolveLayout = (
 };
 
 export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<Row[]> {
+  // A register behind a maintenance or error page answers 200 with HTML; unpdf's own message for
+  // that ("Invalid PDF structure.") names neither the file nor what arrived instead.
+  // The header may follow leading bytes: readers accept it anywhere in the first 1024.
+  if (!buf.subarray(0, 1024).includes('%PDF-'))
+    throw new Error(
+      `Downloaded file is not a PDF (starts with "${buf.subarray(0, 40).toString('latin1').replace(/\s+/g, ' ').trim()}")`
+    );
   // unpdf ships canvas/DOM-typed declarations our tsconfig cannot resolve (masked by skipLibCheck),
   // so its exports surface as untyped at this call boundary. The runtime values are correct; cast
   // the result to the structurally-known item shape to contain the untyped surface to this line.

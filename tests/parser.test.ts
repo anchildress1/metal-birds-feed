@@ -1419,3 +1419,222 @@ describe('parseHtml', () => {
     expect(rows).toEqual([{ mark: 'second' }]);
   });
 });
+
+// Leading of 13.8 against a record pitch of 27.36 puts a two-line cell's second line 0.12pt past the
+// midpoint to the next anchor, which is what CCAA Croatia's rotated scan prints.
+describe('parsePdf wrap_after_anchor', () => {
+  const rotatedPage: SynthItem[] = [
+    { str: 'AAA', x: 100, y: 50 },
+    { str: 'First owner', x: 100, y: 300 },
+    { str: 'Limited', x: 113.8, y: 300 },
+    { str: 'BBB', x: 127.36, y: 50 },
+    { str: 'Second owner', x: 127.36, y: 300 },
+  ];
+  const rotatedOpts = (wrap?: boolean): ParsePdfOptions =>
+    synthOpts({
+      anchor_pattern: '^[A-Z]{3}$',
+      anchor_column: 0,
+      columns: ['mark', 'owner'],
+      layouts: [{ field_axis: 'y', column_pos: [50, 300], wrap_after_anchor: wrap }],
+    });
+
+  it('keeps a line past the midpoint with the record it trails when records run along x', async () => {
+    const rows = await parsePdf(buildPdf([rotatedPage]), rotatedOpts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner\nLimited' },
+      { mark: 'BBB', owner: 'Second owner' },
+    ]);
+  });
+
+  it('hands that line to the next record by nearest-anchor snapping when the option is off', async () => {
+    const rows = await parsePdf(buildPdf([rotatedPage]), rotatedOpts());
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Limited\nSecond owner' },
+    ]);
+  });
+
+  it('keeps a line short of the midpoint with the record it trails when records run along y', async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'First owner', x: 300, y: 500 },
+      { str: 'Limited', x: 300, y: 486.2 },
+      { str: 'BBB', x: 50, y: 472.64 },
+      { str: 'Second owner', x: 300, y: 472.64 },
+    ];
+    const rows = await parsePdf(
+      buildPdf([page]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        columns: ['mark', 'owner'],
+        layouts: [{ field_axis: 'x', column_pos: [50, 300], wrap_after_anchor: true }],
+      })
+    );
+
+    expect(rows).toEqual([
+      { mark: 'BBB', owner: 'Second owner' },
+      { mark: 'AAA', owner: 'First owner\nLimited' },
+    ]);
+  });
+
+  it('keeps a three-line cell whole when the next anchor sits a full record pitch on', async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 50 },
+      { str: 'First', x: 100, y: 300 },
+      { str: 'owner', x: 113.8, y: 300 },
+      { str: 'Limited', x: 127.6, y: 300 },
+      { str: 'BBB', x: 141.04, y: 50 },
+      { str: 'Second owner', x: 141.04, y: 300 },
+    ];
+    const rows = await parsePdf(buildPdf([page]), rotatedOpts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First\nowner\nLimited' },
+      { mark: 'BBB', owner: 'Second owner' },
+    ]);
+  });
+
+  it("leaves a record's own first-line fields on its anchor despite same-row jitter", async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 50 },
+      { str: 'First owner', x: 100, y: 300 },
+      { str: 'BBB', x: 127.36, y: 50 },
+      { str: 'Second owner', x: 125.5, y: 300 },
+    ];
+    const rows = await parsePdf(buildPdf([page]), rotatedOpts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Second owner' },
+    ]);
+  });
+});
+
+describe('parsePdf drop_margin_lines', () => {
+  // Records run along x with the mark band at y=50. The last record's own second line sits 13.8pt past
+  // its mark; the margin paragraph begins in the page margin (y=37) 4pt after that, in the same reach.
+  const base: SynthItem[] = [
+    { str: 'AAA', x: 100, y: 50 },
+    { str: 'First owner', x: 100, y: 300 },
+    { str: 'BBB', x: 127.36, y: 50 },
+    { str: 'Second owner', x: 127.36, y: 300 },
+    { str: 'Limited', x: 141.16, y: 300 },
+  ];
+  const margin: SynthItem[] = [
+    { str: 'Disclaimer text', x: 145.36, y: 37 },
+    { str: 'c', x: 145.36, y: 139 },
+    { str: 'continues here', x: 145.36, y: 143 },
+  ];
+  const opts = (drop?: boolean): ParsePdfOptions =>
+    synthOpts({
+      anchor_pattern: '^[A-Z]{3}$',
+      anchor_column: 0,
+      columns: ['mark', 'owner'],
+      layouts: [
+        {
+          field_axis: 'y',
+          column_pos: [50, 300],
+          wrap_after_anchor: true,
+          after_last_anchor_reach: 20,
+          drop_margin_lines: drop,
+        },
+      ],
+    });
+
+  it('drops a paragraph set in the margin however its fragments scatter across the bands', async () => {
+    const rows = await parsePdf(buildPdf([[...base, ...margin]]), opts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Second owner\nLimited' },
+    ]);
+  });
+
+  it('judges the line by where it starts, not by what it says', async () => {
+    const reworded = margin.map((m) => ({ ...m, str: m.str.replace('Disclaimer', 'Notice') }));
+    const rows = await parsePdf(buildPdf([[...base, ...reworded]]), opts(true));
+
+    expect(rows[1]?.owner).toBe('Second owner\nLimited');
+  });
+
+  it('pulls the margin paragraph into the last record when the option is off', async () => {
+    const rows = await parsePdf(buildPdf([[...base, ...margin]]), opts());
+
+    expect(rows[1]?.mark).toContain('Disclaimer text');
+  });
+
+  it("keeps a line that starts on a band, such as a real cell's wrapped tail", async () => {
+    const tail: SynthItem[] = [
+      { str: 'Fizi', x: 141.16, y: 300 },
+      { str: 'c', x: 141.16, y: 311 },
+      { str: 'ka osoba', x: 141.16, y: 316 },
+    ];
+    const rows = await parsePdf(buildPdf([[...base.slice(0, 4), ...tail]]), opts(true));
+
+    expect(rows[1]?.owner).toBe('Second owner\nFizi\nc\nka osoba');
+  });
+
+  it('keeps a line within the same-row jitter of the first band', async () => {
+    const jittered: SynthItem[] = [
+      { str: 'Limited', x: 141.16, y: 300 },
+      { str: 'x', x: 141.16, y: 46 },
+    ];
+    const rows = await parsePdf(buildPdf([[...base.slice(0, 4), ...jittered]]), opts(true));
+
+    expect(rows[1]?.mark).toBe('BBB\nx');
+  });
+
+  it('never drops a record row that carries an anchor', async () => {
+    const early: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 30 },
+      { str: 'First owner', x: 100, y: 300 },
+      { str: 'BBB', x: 127.36, y: 50 },
+    ];
+    const rows = await parsePdf(
+      buildPdf([early]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        columns: ['mark', 'owner'],
+        layouts: [{ field_axis: 'y', column_pos: [50, 300], drop_margin_lines: true }],
+      })
+    );
+
+    expect(rows.map((r) => r.mark)).toEqual(['AAA', 'BBB']);
+  });
+});
+
+describe('parsePdf non-PDF download', () => {
+  it('names an HTML maintenance page instead of reporting an invalid PDF structure', async () => {
+    const html = Buffer.from('<!DOCTYPE html>\n<html><title>En mantenimiento</title></html>');
+
+    await expect(parsePdf(html, synthOpts())).rejects.toThrow(
+      /not a PDF \(starts with "<!DOCTYPE html> <html><title>/
+    );
+  });
+
+  it('rejects an empty download', async () => {
+    await expect(parsePdf(Buffer.alloc(0), synthOpts())).rejects.toThrow(/not a PDF/);
+  });
+
+  it('accepts a PDF whose header follows leading bytes', async () => {
+    const pdf = buildPdf([[{ str: '8Q-AAA', x: 100, y: 50 }]]);
+    const rows = await parsePdf(
+      Buffer.concat([Buffer.from('\r\n  '), pdf]),
+      synthOpts({ anchor_pattern: '^8Q-[A-Z]{3}$' })
+    );
+
+    expect(rows).toHaveLength(1);
+  });
+
+  it('accepts a real PDF header', async () => {
+    const rows = await parsePdf(
+      buildPdf([[{ str: '8Q-AAA', x: 100, y: 50 }]]),
+      synthOpts({ anchor_pattern: '^8Q-[A-Z]{3}$' })
+    );
+
+    expect(rows).toHaveLength(1);
+  });
+});

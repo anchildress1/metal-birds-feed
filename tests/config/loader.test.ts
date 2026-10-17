@@ -677,6 +677,23 @@ describe('loadSourceConfig', () => {
     }
   };
 
+  it('accepts wrap_after_anchor and drop_margin_lines per layout and rejects a non-boolean value', () => {
+    const layouts = (value: string): string =>
+      `    - field_axis: y\n      column_pos: [100, 50]\n      wrap_after_anchor: ${value}\n      drop_margin_lines: ${value}\n    - field_axis: x\n      column_pos: [10, 20]\n`;
+    withPdfGuard('_test_pdf_wrap_ok.yaml', pdfGuardYaml({ layouts: layouts('true') }), (path) => {
+      const config = loadSourceConfig(path);
+      expect(config.pdf?.layouts.map((l) => l.wrap_after_anchor)).toEqual([true, undefined]);
+      expect(config.pdf?.layouts.map((l) => l.drop_margin_lines)).toEqual([true, undefined]);
+    });
+    withPdfGuard(
+      '_test_pdf_wrap_bad.yaml',
+      pdfGuardYaml({ layouts: layouts('yes please') }),
+      (path) => {
+        expect(() => loadSourceConfig(path)).toThrow(/invalid source config/i);
+      }
+    );
+  });
+
   it('accepts one layout per axis and an anchor_field that names a primary column', () => {
     const yaml = pdfGuardYaml({
       layouts:

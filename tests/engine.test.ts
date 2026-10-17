@@ -3009,6 +3009,66 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
     expect([...hrRecords.values()].every((r) => r.status === 'valid')).toBe(true));
 });
 
+describe('CCAA Croatia rotated publication, same config', () => {
+  const HR_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'hr-ccaa.yaml');
+  const fixture = (name: string): Buffer =>
+    readFileSync(resolve(import.meta.dirname, '..', 'fixtures', 'hr-ccaa', 'input', name));
+  let rotated: Map<string, Aircraft>;
+  let rotatedStats: EngineStats;
+  let upright: Map<string, Aircraft>;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(HR_CONFIG);
+    const rot = await mapRows(config, new Map([['register', fixture('register-rotated.pdf')]]));
+    rotated = rot.records;
+    rotatedStats = rot.stats;
+    upright = (await mapRows(config, new Map([['register', fixture('register.pdf')]]))).records;
+  });
+
+  it('maps every row of the rotated scan with no failures', () => {
+    expect(rotatedStats).toEqual({ total: 37, ok: 37, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(rotated.size).toBe(37);
+  });
+
+  // The second line of a two-line cell sits 0.12pt past the midpoint to the next mark; nearest-anchor
+  // snapping handed it to the following record (ADV read "Limited Adventure Driven Vacations").
+  it('keeps a wrapped owner line with the record it trails', () => {
+    expect(rotated.get('ABC')!.owner.name).toBe('ILFC Aircraft 73B-30667 Limited');
+    expect(rotated.get('ADV')!.owner.name).toBe('Adventure Driven Vacations d.o.o.');
+    expect(rotated.get('ATR')!.owner.name).toBe('Avation Pacific Leasing III PTE. LTD.');
+  });
+
+  it('keeps the tail of the last record on the page past the default reach', () =>
+    expect(rotated.get('CAU')!.owner.name).toBe('Key Issuer Designated Activity Company'));
+
+  // The last data page ends on a three-line disclaimer that begins one wrapped line after the last
+  // mark, inside the reach that keeps a last record's own tail; the page after it holds only the
+  // repeated column header and the footer.
+  it('drops the trailing disclaimer and tolerates the header-only last page', async () => {
+    const tail = await mapRows(
+      loadSourceConfig(HR_CONFIG),
+      new Map([['register', fixture('register-rotated-tail.pdf')]])
+    );
+
+    expect(tail.stats).toEqual({ total: 20, ok: 20, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    expect(tail.records.get('ZYZ')!.source_id).toBe('ZYZ');
+  });
+
+  it('restores the 9A- prefix and keys on the bare mark in both orientations', () => {
+    for (const records of [rotated, upright])
+      for (const [key, r] of records) {
+        expect(key).toMatch(/^[A-Z]{3}$/);
+        expect(r.registration).toBe(`9A-${key}`);
+      }
+  });
+
+  it('yields the same record shape as the upright scan', () => {
+    const shape = (m: Map<string, Aircraft>): string[] =>
+      Object.keys([...m.values()][0] ?? {}).sort();
+    expect(shape(rotated)).toEqual(shape(upright));
+  });
+});
+
 const EE_FIXTURES = resolve(import.meta.dirname, '..', 'fixtures', 'ee-tram');
 const EE_CONFIG_PATH = resolve(import.meta.dirname, '..', 'sources', 'ee-tram.yaml');
 
