@@ -664,8 +664,8 @@ describe('loadSourceConfig', () => {
 
   // Each guard below is the only thing standing between a mis-measured layout and a silently
   // scrambled parse, so each is pinned by an input that trips exactly that rule.
-  const pdfGuardYaml = (opts: { layouts: string; anchorField?: string }): string =>
-    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${opts.anchorField === undefined ? '' : `  anchor_field: ${opts.anchorField}\n`}  layouts:\n${opts.layouts}columns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+  const pdfGuardYaml = (opts: { layouts: string; anchorField?: string; ignore?: string }): string =>
+    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${opts.anchorField === undefined ? '' : `  anchor_field: ${opts.anchorField}\n`}${opts.ignore === undefined ? '' : `  ignore_pattern: ${opts.ignore}\n`}  layouts:\n${opts.layouts}columns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
 
   const withPdfGuard = <T>(name: string, yaml: string, run: (path: string) => T): T => {
     const tmp = tmpConfig(name);
@@ -676,6 +676,22 @@ describe('loadSourceConfig', () => {
       unlinkSync(tmp);
     }
   };
+
+  it('accepts a valid pdf.ignore_pattern and rejects an invalid regex', () => {
+    const layouts = '    - field_axis: y\n      column_pos: [100, 50]\n';
+    withPdfGuard(
+      '_test_pdf_ignore_ok.yaml',
+      pdfGuardYaml({ layouts, ignore: "'^Stranica \\d+$'" }),
+      (path) => {
+        expect(loadSourceConfig(path).pdf?.ignore_pattern).toBe('^Stranica \\d+$');
+      }
+    );
+    withPdfGuard('_test_pdf_ignore_bad.yaml', pdfGuardYaml({ layouts, ignore: "'('" }), (path) => {
+      expect(() => loadSourceConfig(path)).toThrow(
+        /ignore_pattern must be a valid regular expression/
+      );
+    });
+  });
 
   it('accepts wrap_after_anchor per layout and rejects a non-boolean value', () => {
     const layouts = (value: string): string =>

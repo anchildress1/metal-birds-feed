@@ -1495,3 +1495,56 @@ describe('parsePdf wrap_after_anchor', () => {
     ]);
   });
 });
+
+describe('parsePdf ignore_pattern', () => {
+  // The last record's second line sits 13.8pt past its anchor, beyond the default half-pitch reach,
+  // and the page footer sits 18pt past it: a reach wide enough for the line also reaches the footer.
+  const page: SynthItem[] = [
+    { str: 'AAA', x: 100, y: 50 },
+    { str: 'First owner', x: 100, y: 300 },
+    { str: 'BBB', x: 127.36, y: 50 },
+    { str: 'Second owner', x: 127.36, y: 300 },
+    { str: 'Limited', x: 141.16, y: 300 },
+    { str: 'Stranica 4 od 20', x: 145.36, y: 300 },
+  ];
+  const opts = (ignore?: string): ParsePdfOptions =>
+    synthOpts({
+      anchor_pattern: '^[A-Z]{3}$',
+      anchor_column: 0,
+      columns: ['mark', 'owner'],
+      ignore_pattern: ignore,
+      layouts: [
+        {
+          field_axis: 'y',
+          column_pos: [50, 300],
+          wrap_after_anchor: true,
+          after_last_anchor_reach: 20,
+        },
+      ],
+    });
+
+  it('drops page furniture the widened reach would otherwise append to the last record', async () => {
+    const rows = await parsePdf(buildPdf([page]), opts('^Stranica \\d+ od \\d+$'));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Second owner\nLimited' },
+    ]);
+  });
+
+  it('appends the footer to the last record without the pattern', async () => {
+    const rows = await parsePdf(buildPdf([page]), opts());
+
+    expect(rows[1]?.owner).toBe('Second owner\nLimited\nStranica 4 od 20');
+  });
+
+  it('keeps text that merely resembles furniture when the pattern is anchored', async () => {
+    const withLookalike: SynthItem[] = [
+      ...page.slice(0, 4),
+      { str: 'Stranica d.o.o.', x: 141.16, y: 300 },
+    ];
+    const rows = await parsePdf(buildPdf([withLookalike]), opts('^Stranica \\d+ od \\d+$'));
+
+    expect(rows[1]?.owner).toBe('Second owner\nStranica d.o.o.');
+  });
+});

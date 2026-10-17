@@ -230,6 +230,13 @@ const SourceConfigSchema = z
           }),
         allowed_anchorless_pages: z.number().int().nonnegative().optional(),
         anchor_field: z.string().min(1).optional(),
+        ignore_pattern: z
+          .string()
+          .min(1)
+          .refine(isValidRegex, {
+            message: 'pdf.ignore_pattern must be a valid regular expression',
+          })
+          .optional(),
       })
       .optional(),
     record_count: z

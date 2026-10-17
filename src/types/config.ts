@@ -256,6 +256,11 @@ export interface PdfConfig {
   // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
   // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
   anchor_field?: string;
+  // Text items matching this are page furniture (a running footer) and are dropped before layout
+  // detection. Declare it when a layout widens `after_last_anchor_reach` or
+  // `before_first_anchor_reach` far enough to reach the footer, which would otherwise be appended
+  // to the outermost record's cell.
+  ignore_pattern?: string;
 }
 
 export interface SourceConfig {

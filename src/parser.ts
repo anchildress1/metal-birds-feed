@@ -316,6 +316,8 @@ export interface ParsePdfOptions {
   // its real row. Restricting anchors to one column band closes that off at the source. The index is
   // shared across layouts: a flip reorders neither `columns` nor `column_pos`.
   anchor_column?: number;
+  // See PdfConfig.ignore_pattern in src/types/config.ts.
+  ignore_pattern?: string;
 }
 
 // Per-page options after the orientation is resolved — the selected layout flattened onto the
@@ -685,7 +687,12 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const anchorRe = new RegExp(options.anchor_pattern);
-  const pages = items.map(toPdfItems);
+  // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const ignoreRe = options.ignore_pattern ? new RegExp(options.ignore_pattern) : undefined;
+  const pages = items
+    .map(toPdfItems)
+    .map((page) => (ignoreRe ? page.filter((it) => !ignoreRe.test(it.str.trim())) : page));
   // Before the page walk: the layout decides which axis every page is read on, and a register that
   // flipped must fail here rather than per page, where the failure reads as template drift.
   const resolved = resolveLayout(options, pages, anchorRe);
