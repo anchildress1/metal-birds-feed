@@ -38,8 +38,9 @@ format: pdf
 # fails the parse naming the missing axis rather than reading it wrong.
 pdf:
   # The register ends on a page holding only the repeated column header and the page footer when
-  # its record count lands exactly on a page boundary; a budget of one covers that and no drifted
-  # data page.
+  # its record count lands exactly on a page boundary. A budget of one covers that page. Residual
+  # exposure: in a month without it, one data page that loses its anchors would also pass, dropping
+  # about 20 rows with nothing else to catch it, since PDF sources cannot use record_count.
   allowed_anchorless_pages: 1
   # Page furniture the rotated layout's reach past the last mark would otherwise pull into a cell:
   # the running footer ("Stranica 4 od 20") and, on the final data page, the three-line disclaimer
