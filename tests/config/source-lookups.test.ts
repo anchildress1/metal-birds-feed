@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { loadSourceConfig } from '../../src/config/loader.js';
+import { applyScalar } from '../../src/transforms.js';
 import {
   AircraftCategorySchema,
   BuildCertificationSchema,
@@ -123,8 +124,12 @@ describe('live source lookups', () => {
   // NÃO CERTIFICADA states "not certified" — not a category, but not nothing either. `category`
   // nulls it; this is where the fact has to survive.
   it('routes the br-anac not-certified statement to build_certification', () => {
-    const mapping = loadSourceConfig('sources/br-anac.yaml').mapping['build_certification'];
-    expect(mapping?.field).toBe('DS_CATEGORIA_HOMOLOGACAO');
-    expect(mapping?.transform).toBe('br_build_certification');
+    const { mapping } = loadSourceConfig('sources/br-anac.yaml');
+    const certification = mapping['build_certification'];
+
+    // The statement lives in the same column `category` reads; pointing elsewhere drops the fact.
+    expect(certification?.field).toBe(mapping['category']?.field);
+    expect(certification?.transform).toBeDefined();
+    expect(applyScalar(certification.transform!, 'NÃO CERTIFICADA')).toBe('not-type-certificated');
   });
 });

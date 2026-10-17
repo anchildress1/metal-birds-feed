@@ -182,7 +182,12 @@ const createStalenessIssue = async (
   repo: string
 ): Promise<void> => {
   const apiBase = `https://api.github.com/repos/${repo}`;
-  const title = `[staleness] ${entry.source} has not updated in ${entry.days_since_change} days`;
+  const silence =
+    entry.days_since_change === null ? 'an unknown number of' : String(entry.days_since_change);
+  const title =
+    entry.days_since_change === null
+      ? `[staleness] ${entry.source} has no readable last content change`
+      : `[staleness] ${entry.source} has not updated in ${silence} days`;
 
   const listRes = await fetch(`${apiBase}/issues?labels=data-staleness&state=open&per_page=100`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
@@ -201,9 +206,9 @@ const createStalenessIssue = async (
     `- **Source:** ${entry.source}`,
     `- **Cadence:** ${entry.cadence_days} days`,
     `- **Last content change:** ${entry.last_content_change ?? 'never'}`,
-    `- **Days since change:** ${entry.days_since_change}`,
+    `- **Days since change:** ${entry.days_since_change ?? 'unknown'}`,
     '',
-    `The register has been silent for ${entry.days_since_change} days (threshold: ${threshold} days).`,
+    `The register has been silent for ${silence} days (threshold: ${threshold} days).`,
     '',
     `While this is open the cadence gate is bypassed: \`${entry.source}\` refreshes on every daily`,
     `cron tick instead of every ${entry.cadence_days} days. If the register genuinely publishes less`,

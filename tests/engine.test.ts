@@ -1367,7 +1367,16 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
-  it('replaces a duplicate with the row that has the more recent known date', async () => {
+  it.each([
+    [
+      'first-listed date field',
+      'ID,REG,CERT,ACTION\n1,N1,2022-01-01,2018-01-01\n1,N2,2021-06-01,2021-06-01\n',
+    ],
+    [
+      'last-listed date field',
+      'ID,REG,CERT,ACTION\n1,N1,2018-01-01,2022-01-01\n1,N2,2021-06-01,2021-06-01\n',
+    ],
+  ])('keeps the duplicate whose single newest date sits in the %s', async (_label, csv) => {
     const config: SourceConfig = {
       id: 'synthetic-dup-date',
       label: 'synthetic',
@@ -1388,18 +1397,10 @@ describe('engine — negative and edge cases', () => {
         last_action_date: { field: 'ACTION' },
       },
     };
-    // Each row has two known dates, so picking the "latest known date" must compare within a
-    // record as well as across records. Older pair is listed second (file order can't be trusted).
-    const files = new Map([
-      [
-        'primary',
-        Buffer.from(
-          'ID,REG,CERT,ACTION\n1,N1,2021-06-01,2019-01-01\n1,N2,2020-01-01,2018-01-01\n',
-          'utf8'
-        ),
-      ],
-    ]);
-    const { records, stats } = await mapRows(config, files);
+    const { records, stats } = await mapRows(
+      config,
+      new Map([['primary', Buffer.from(csv, 'utf8')]])
+    );
     expect(stats.failed).toBe(0);
     expect(records.size).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
@@ -1561,6 +1562,134 @@ describe('engine — negative and edge cases', () => {
     const { records, stats } = await mapRows(config, files);
     expect(stats.failed).toBe(1);
     expect(records.get('1')?.registration).toBe('N1');
+  });
+
+  it('does not let a cancelled duplicate outrank a null-status one that comes first', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-status-null-first',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', valid: 'valid' } },
+      },
+    };
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,STATUS\n1,N1,\n1,N2,cancelled\n', 'utf8')],
+    ]);
+    const { records, stats } = await mapRows(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
+
+  it('falls back to the source country when the mapping declares none', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-country-fallback',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+      },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG\n1,N1\n', 'utf8')]]);
+    const { records } = await mapRows(config, files);
+    expect(records.get('1')?.country).toBe('US');
+  });
+
+  it('prefers a mapped country over the source country', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-country-mapped',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        country: { field: 'CTRY' },
+      },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG,CTRY\n1,N1,DE\n', 'utf8')]]);
+    const { records } = await mapRows(config, files);
+    expect(records.get('1')?.country).toBe('DE');
+  });
+
+  it('keeps the duplicate carrying operational classes over one that carries none', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-classes-superset',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        operational_classes: { field: 'CLS' },
+      },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG,CLS\n1,N1,\n1,N1,4\n', 'utf8')]]);
+    const { records, stats } = await mapRows(config, files);
+    expect(stats.failed).toBe(0);
+    expect(records.get('1')?.operational_classes).toEqual(['4']);
+  });
+
+  it('fails duplicates whose operational classes conflict', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-classes-conflict',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        operational_classes: { field: 'CLS' },
+      },
+    };
+    const files = new Map([['primary', Buffer.from('ID,REG,CLS\n1,N1,2\n1,N1,4\n', 'utf8')]]);
+    const { stats } = await mapRows(config, files);
+    expect(stats.failed).toBe(1);
   });
 
   it('fails a duplicate source_id with no distinguishing signal', async () => {
@@ -4551,6 +4680,97 @@ describe('mapSnapshots', () => {
 
   it('refuses a row with no publication value', async () => {
     await expect(run('MARK,PUBLISHED\nA,\n')).rejects.toThrow(/has no PUBLISHED value/);
+  });
+
+  it('resolves a join per publication', async () => {
+    const snapshots = await mapSnapshots(
+      config({
+        joins: [{ name: 'j', file: 'jf', key: 'K', on: 'MARK' }],
+        mapping: {
+          registration: { field: 'MARK' },
+          model: { field: 'j.EXTRA', transform: 'trim_or_null' },
+        },
+      }),
+      new Map([
+        ['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\n', 'utf8')],
+        ['jf', Buffer.from('K,EXTRA\nA,C172\n', 'utf8')],
+      ])
+    );
+
+    expect(snapshots.map((s) => s.records.get('A')?.model)).toEqual(['C172', 'C172']);
+  });
+
+  it('fails when a join matches no row of any publication', async () => {
+    await expect(
+      mapSnapshots(
+        config({
+          joins: [{ name: 'j', file: 'jf', key: 'K', on: 'MARK' }],
+          mapping: {
+            registration: { field: 'MARK' },
+            model: { field: 'j.EXTRA', transform: 'trim_or_null' },
+          },
+        }),
+        new Map([
+          ['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\n', 'utf8')],
+          ['jf', Buffer.from('K,EXTRA\nZ,C172\n', 'utf8')],
+        ])
+      )
+    ).rejects.toThrow(/join "j" matched 0 of 1 rows in publication 2025-10-21/);
+  });
+
+  it('fails when only an older publication matches the join', async () => {
+    await expect(
+      mapSnapshots(
+        config({
+          joins: [{ name: 'j', file: 'jf', key: 'K', on: 'MARK' }],
+          mapping: {
+            registration: { field: 'MARK' },
+            model: { field: 'j.EXTRA', transform: 'trim_or_null' },
+          },
+        }),
+        new Map([
+          ['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nB,2025-10-21\n', 'utf8')],
+          ['jf', Buffer.from('K,EXTRA\nA,C172\n', 'utf8')],
+        ])
+      )
+    ).rejects.toThrow(/join "j" matched 0 of 1 rows in publication 2025-10-21/);
+  });
+
+  it('tolerates an older publication the join file does not cover', async () => {
+    const snapshots = await mapSnapshots(
+      config({
+        joins: [{ name: 'j', file: 'jf', key: 'K', on: 'MARK' }],
+        mapping: {
+          registration: { field: 'MARK' },
+          model: { field: 'j.EXTRA', transform: 'trim_or_null' },
+        },
+      }),
+      new Map([
+        ['primary', Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nB,2025-10-21\n', 'utf8')],
+        ['jf', Buffer.from('K,EXTRA\nB,C172\n', 'utf8')],
+      ])
+    );
+
+    expect(
+      snapshots.map((s) => s.records.get(s.snapshot === '2025-07-21' ? 'A' : 'B')?.model)
+    ).toEqual([null, 'C172']);
+  });
+
+  it('checks a mapped total against the newest publication only', async () => {
+    const files = new Map([
+      [
+        'primary',
+        Buffer.from('MARK,PUBLISHED\nA,2025-07-21\nA,2025-10-21\nB,2025-10-21\n', 'utf8'),
+      ],
+    ]);
+    const check = { pattern: '"count":\\s*(\\d+)', against: 'mapped' as const };
+
+    await expect(
+      mapSnapshots(config({ record_count: check }), files, '{"count": 2}')
+    ).resolves.toHaveLength(2);
+    await expect(
+      mapSnapshots(config({ record_count: check }), files, '{"count": 3}')
+    ).rejects.toThrow(/mapped 2 records but the source publishes 3/);
   });
 
   it('fails when the primary file is missing', async () => {
