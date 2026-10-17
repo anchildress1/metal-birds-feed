@@ -293,7 +293,6 @@ export interface PdfLayoutOptions {
   // other end. Opt in when the outermost record's own cell runs taller than half the page's
   // tightest row pitch, which is all the default reach allows. Bound it below the column headers.
   after_last_anchor_reach?: number;
-  // See PdfLayout.wrap_after_anchor in src/types/config.ts.
   wrap_after_anchor?: boolean;
 }
 
@@ -316,7 +315,6 @@ export interface ParsePdfOptions {
   // its real row. Restricting anchors to one column band closes that off at the source. The index is
   // shared across layouts: a flip reorders neither `columns` nor `column_pos`.
   anchor_column?: number;
-  // See PdfConfig.ignore_pattern in src/types/config.ts.
   ignore_pattern?: string;
 }
 
@@ -484,6 +482,8 @@ const recordIndex = (perPair: number[] | undefined, anchorCoords: number[], rc: 
 // The record a wrapped line trails: the anchor on the reading-start side of the item, allowing
 // same-row jitter so a record's own first-line fields still resolve to it. Reading runs ascending
 // along x and descending along y, so the start side is the lower coordinate on x and the higher on y.
+// Assumes cells hang from their anchor and a record's pitch covers its tallest cell, so a tail never
+// reaches the next anchor; a layout that breaks that must keep nearest-anchor snapping instead.
 const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x' | 'y'): number => {
   if (recordAxis === 'x')
     return Math.max(
@@ -494,16 +494,21 @@ const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x'
   return i === -1 ? anchorCoords.length - 1 : i;
 };
 
-// Items sharing a record-axis coordinate are one printed line, however the renderer split them into
-// fragments (a diacritic often becomes its own item). Matching the joined line is what lets one
-// pattern recognize a footer or disclaimer paragraph without also matching a lone "č" in a real cell.
-const LINE_GAP_PT = 1;
+// Items on one printed line share a record-axis coordinate to within the same-row jitter measured on
+// CCAA Croatia (2.16pt); set just above it so a footer split into fragments still reads as one line,
+// and far below the ~13pt leading that separates adjacent lines.
+const LINE_GAP_PT = 2.5;
 
+// Matching the joined line is what lets one pattern recognize a footer or disclaimer paragraph that
+// the renderer split at every diacritic, without also matching a lone "č" in a real cell. A line
+// carrying an anchor is a record's own row and is never dropped, so a cell that happens to contain
+// a matched phrase cannot delete its record.
 const dropIgnoredLines = (
   page: PdfItem[],
   recordAxis: 'x' | 'y',
   fieldAxis: 'x' | 'y',
-  ignoreRe: RegExp
+  ignoreRe: RegExp,
+  isAnchor: (it: PdfItem) => boolean
 ): PdfItem[] => {
   const sorted = [...page].sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   const lines: PdfItem[][] = [];
@@ -515,6 +520,7 @@ const dropIgnoredLines = (
   }
   return lines
     .filter((line) => {
+      if (line.some(isAnchor)) return true;
       const text = [...line]
         .sort((a, b) => axisCoord(a, fieldAxis) - axisCoord(b, fieldAxis))
         .map((it) => it.str.trim())
@@ -522,6 +528,27 @@ const dropIgnoredLines = (
       return !ignoreRe.test(text);
     })
     .flat();
+};
+
+// Distributes items to their records. A layout that sets wrap_after_anchor trusts the reading-order
+// rule and never needs the per-column outlier-gap boundaries, so they are not computed for it.
+const bucketByRecord = (
+  inRange: { it: PdfItem; rc: number; fi: number }[],
+  anchorCoords: number[],
+  options: ResolvedPdfOptions,
+  recordAxis: 'x' | 'y'
+): Map<number, PdfItem[]>[] => {
+  const buckets = anchorCoords.map(() => new Map<number, PdfItem[]>());
+  const boundaries = options.wrap_after_anchor
+    ? undefined
+    : columnBoundaries(inRange, anchorCoords);
+  for (const { it, rc, fi } of inRange) {
+    const index = boundaries
+      ? recordIndex(boundaries.get(fi), anchorCoords, rc)
+      : trailingRecordIndex(anchorCoords, rc, recordAxis);
+    pushTo(buckets[index], fi, it);
+  }
+  return buckets;
 };
 
 const parsePdfPage = (
@@ -532,15 +559,14 @@ const parsePdfPage = (
   ignoreRe: RegExp | undefined
 ): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
-  if (ignoreRe) page = dropIgnoredLines(page, recordAxis, options.field_axis, ignoreRe);
   const fieldIndexAt = bandIndexer(options.column_pos);
+  const isAnchor = (it: PdfItem): boolean =>
+    anchorRe.test(it.str.trim()) &&
+    (options.anchor_column === undefined ||
+      fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column);
+  if (ignoreRe) page = dropIgnoredLines(page, recordAxis, options.field_axis, ignoreRe, isAnchor);
   const anchors = page
-    .filter((it) => anchorRe.test(it.str.trim()))
-    .filter(
-      (it) =>
-        options.anchor_column === undefined ||
-        fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column
-    )
+    .filter(isAnchor)
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   if (anchors.length === 0) return [];
 
@@ -582,14 +608,7 @@ const parsePdfPage = (
     inRange.push({ it, rc, fi: fieldIndexAt(axisCoord(it, options.field_axis)) });
   }
 
-  const boundaries = columnBoundaries(inRange, anchorCoords);
-  const buckets = anchors.map(() => new Map<number, PdfItem[]>());
-  for (const { it, rc, fi } of inRange) {
-    const index = options.wrap_after_anchor
-      ? trailingRecordIndex(anchorCoords, rc, recordAxis)
-      : recordIndex(boundaries.get(fi), anchorCoords, rc);
-    pushTo(buckets[index], fi, it);
-  }
+  const buckets = bucketByRecord(inRange, anchorCoords, options, recordAxis);
   return buckets.map((cells) => buildPdfRow(cells, options, recordAxis));
 };
 
@@ -712,7 +731,8 @@ const resolveLayout = (
 export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<Row[]> {
   // A register behind a maintenance or error page answers 200 with HTML; unpdf's own message for
   // that ("Invalid PDF structure.") names neither the file nor what arrived instead.
-  if (buf.subarray(0, 5).toString('latin1') !== '%PDF-')
+  // The header may follow leading bytes: readers accept it anywhere in the first 1024.
+  if (!buf.subarray(0, 1024).includes('%PDF-'))
     throw new Error(
       `Downloaded file is not a PDF (starts with "${buf.subarray(0, 40).toString('latin1').replace(/\s+/g, ' ').trim()}")`
     );

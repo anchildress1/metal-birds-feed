@@ -1480,6 +1480,23 @@ describe('parsePdf wrap_after_anchor', () => {
     ]);
   });
 
+  it('keeps a three-line cell whole when the next anchor sits a full record pitch on', async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 50 },
+      { str: 'First', x: 100, y: 300 },
+      { str: 'owner', x: 113.8, y: 300 },
+      { str: 'Limited', x: 127.6, y: 300 },
+      { str: 'BBB', x: 141.04, y: 50 },
+      { str: 'Second owner', x: 141.04, y: 300 },
+    ];
+    const rows = await parsePdf(buildPdf([page]), rotatedOpts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First\nowner\nLimited' },
+      { mark: 'BBB', owner: 'Second owner' },
+    ]);
+  });
+
   it("leaves a record's own first-line fields on its anchor despite same-row jitter", async () => {
     const page: SynthItem[] = [
       { str: 'AAA', x: 100, y: 50 },
@@ -1562,6 +1579,23 @@ describe('parsePdf ignore_pattern', () => {
     expect(rows[1]?.owner).toBe('Second owner\nFizi\nc\nka osoba');
   });
 
+  it('never drops a record row that carries an anchor, even when a cell matches the pattern', async () => {
+    const rows = await parsePdf(buildPdf([page]), opts('First owner'));
+
+    expect(rows[0]).toEqual({ mark: 'AAA', owner: 'First owner' });
+  });
+
+  it('reads footer fragments up to the same-row jitter apart as one line', async () => {
+    const split: SynthItem[] = [
+      ...page.slice(0, 5),
+      { str: 'Stranica', x: 145.36, y: 300 },
+      { str: '4 od 20', x: 147.36, y: 340 },
+    ];
+    const rows = await parsePdf(buildPdf([split]), opts('^Stranica 4 od 20$'));
+
+    expect(rows[1]?.owner).toBe('Second owner\nLimited');
+  });
+
   it('keeps text that merely resembles furniture when the pattern is anchored', async () => {
     const withLookalike: SynthItem[] = [
       ...page.slice(0, 4),
@@ -1584,6 +1618,16 @@ describe('parsePdf non-PDF download', () => {
 
   it('rejects an empty download', async () => {
     await expect(parsePdf(Buffer.alloc(0), synthOpts())).rejects.toThrow(/not a PDF/);
+  });
+
+  it('accepts a PDF whose header follows leading bytes', async () => {
+    const pdf = buildPdf([[{ str: '8Q-AAA', x: 100, y: 50 }]]);
+    const rows = await parsePdf(
+      Buffer.concat([Buffer.from('\r\n  '), pdf]),
+      synthOpts({ anchor_pattern: '^8Q-[A-Z]{3}$' })
+    );
+
+    expect(rows).toHaveLength(1);
   });
 
   it('accepts a real PDF header', async () => {
