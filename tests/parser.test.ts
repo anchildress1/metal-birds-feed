@@ -1572,3 +1572,26 @@ describe('parsePdf ignore_pattern', () => {
     expect(rows[1]?.owner).toBe('Second owner\nStranica d.o.o.');
   });
 });
+
+describe('parsePdf non-PDF download', () => {
+  it('names an HTML maintenance page instead of reporting an invalid PDF structure', async () => {
+    const html = Buffer.from('<!DOCTYPE html>\n<html><title>En mantenimiento</title></html>');
+
+    await expect(parsePdf(html, synthOpts())).rejects.toThrow(
+      /not a PDF \(starts with "<!DOCTYPE html> <html><title>/
+    );
+  });
+
+  it('rejects an empty download', async () => {
+    await expect(parsePdf(Buffer.alloc(0), synthOpts())).rejects.toThrow(/not a PDF/);
+  });
+
+  it('accepts a real PDF header', async () => {
+    const rows = await parsePdf(
+      buildPdf([[{ str: '8Q-AAA', x: 100, y: 50 }]]),
+      synthOpts({ anchor_pattern: '^8Q-[A-Z]{3}$' })
+    );
+
+    expect(rows).toHaveLength(1);
+  });
+});

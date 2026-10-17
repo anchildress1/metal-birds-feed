@@ -710,6 +710,12 @@ const resolveLayout = (
 };
 
 export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<Row[]> {
+  // A register behind a maintenance or error page answers 200 with HTML; unpdf's own message for
+  // that ("Invalid PDF structure.") names neither the file nor what arrived instead.
+  if (buf.subarray(0, 5).toString('latin1') !== '%PDF-')
+    throw new Error(
+      `Downloaded file is not a PDF (starts with "${buf.subarray(0, 40).toString('latin1').replace(/\s+/g, ' ').trim()}")`
+    );
   // unpdf ships canvas/DOM-typed declarations our tsconfig cannot resolve (masked by skipLibCheck),
   // so its exports surface as untyped at this call boundary. The runtime values are correct; cast
   // the result to the structurally-known item shape to contain the untyped surface to this line.
