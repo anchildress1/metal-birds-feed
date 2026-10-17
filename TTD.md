@@ -45,3 +45,9 @@
 - [x] Feed slice takes live rows only; `FEED_SLICE_VERSION` stays put
 - [x] `AGENTS.md`: rewrite the no-compat, no-older-shape and never-migrate rules to except closed rows; `PRD.md` non-goal 7 (schema versioning / migration tooling) changes
 - [x] Run the `lt-tka` backfill once, after the first schema-14 refresh and over the VPN: `make build`, then `BACKFILL_SOURCE=lt-tka DRY_RUN=true bun run dist/backfill-history.js` with `.env` loaded, then again without `DRY_RUN`. It replays the clean publications through the live merge, skips the double-loaded 2025-04-29 and 2025-06-10 loads, and refuses an artifact that already has closed rows.
+
+## PDF orientation
+
+- [ ] hr-ccaa: replace the wording-matched disclaimer entries in `ignore_pattern` with a geometry rule. The disclaimer's lines start before the first column band (field coordinate 37 against a band at 48); no record line does. Opt-in per layout, then drop the three phrases and keep only the `Stranica` footer pattern
+- [ ] hr-ccaa footer: bound the last record by the table's end along the record axis instead of matching `Stranica N od N`
+- [ ] es-aesa, hu-kh, th-caat declare only the `x` layout; the other orientation is unmeasured and cannot be derived. Declare it from the first real file that arrives flipped, using the measurements the flip error reports
