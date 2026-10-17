@@ -823,6 +823,23 @@ describe('prime_url cookie priming', () => {
     );
   });
 
+  it('sends the primed cookie, JSON content type and body together on a POST', async () => {
+    const fn = primeThenFile(['visid_incap_1=abc; path=/'], 'a\n1\n');
+    await download(
+      { ...PRIMED_CONFIG, method: 'POST', body: { status: ['registered'] } },
+      FAST_RETRY
+    );
+
+    expect(fn.mock.calls[0]?.[0]).toBe('https://www.example.govt.nz/');
+    const init = fn.mock.calls[1]?.[1] as RequestInit;
+    expect(init.method).toBe('POST');
+    expect(init.headers).toEqual({
+      'Content-Type': 'application/json',
+      Cookie: 'visid_incap_1=abc',
+    });
+    expect(init.body).toBe('{"status":["registered"]}');
+  });
+
   it('preserves configured headers alongside the cookie', async () => {
     const fn = primeThenFile(['visid_incap_1=abc; path=/'], 'a\n1\n');
     await download({ ...PRIMED_CONFIG, headers: { 'User-Agent': 'test-agent' } }, FAST_RETRY);

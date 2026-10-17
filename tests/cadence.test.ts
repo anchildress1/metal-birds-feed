@@ -191,15 +191,34 @@ describe('isOverdue', () => {
     expect(isOverdue(state, 30, new Date())).toBe(true);
   });
 
-  it('returns false when last_content_change is in the future', () => {
+  it.each([
+    ['within the skew tolerance', 5 * 60_000, false],
+    ['exactly at the skew tolerance', 10 * 60_000, false],
+    ['beyond the skew tolerance', 10 * 60_000 + 1, true],
+    ['far in the future', 10 * DAY_MS, true],
+  ])('treats a last_content_change %s ahead of the clock correctly', (_label, ahead, expected) => {
+    const now = new Date('2026-10-16T12:00:00.000Z');
     const state: SourceState = {
-      last_run: new Date().toISOString(),
-      last_content_change: new Date(Date.now() + 10 * DAY_MS).toISOString(),
+      last_run: now.toISOString(),
+      last_content_change: new Date(now.getTime() + ahead).toISOString(),
       record_count: 1,
       content_hash: HASH64,
       upstream_hash: HASH_UP,
     };
-    expect(isOverdue(state, 30, new Date())).toBe(false);
+    expect(isOverdue(state, 30, now)).toBe(expected);
+  });
+
+  it('does not escalate the cadence gate on a last_content_change beyond the skew tolerance', () => {
+    const now = new Date('2026-10-16T12:00:00.000Z');
+    const state: SourceState = {
+      last_run: now.toISOString(),
+      last_content_change: new Date(now.getTime() + 10 * DAY_MS).toISOString(),
+      record_count: 1,
+      content_hash: HASH64,
+      upstream_hash: HASH_UP,
+    };
+    expect(isOverdue(state, 1, now)).toBe(true);
+    expect(shouldSkip(state, 1, new Date(now.getTime() + 0))).toBe(true);
   });
 
   it('returns true for an annual source silent for two years', () => {
@@ -225,14 +244,14 @@ describe('buildStalenessEntry', () => {
     expect(entry.days_since_change).toBeGreaterThanOrEqual(15);
   });
 
-  it('returns last_content_change: null and days_since_change: -1 when state is null', () => {
+  it('returns last_content_change: null and days_since_change: null when state is null', () => {
     const entry = buildStalenessEntry('nl-ilt', 30, null, new Date());
     expect(entry.last_content_change).toBeNull();
-    expect(entry.days_since_change).toBe(-1);
+    expect(entry.days_since_change).toBeNull();
     expect(entry.overdue).toBe(false);
   });
 
-  it('returns days_since_change: -1 when state has an invalid last_content_change date', () => {
+  it('returns days_since_change: null and overdue when last_content_change is unparseable', () => {
     const state: SourceState = {
       last_run: new Date().toISOString(),
       last_content_change: 'not-a-valid-date',
@@ -241,8 +260,40 @@ describe('buildStalenessEntry', () => {
       upstream_hash: HASH_UP,
     };
     const entry = buildStalenessEntry('faa', 30, state, new Date());
-    expect(entry.days_since_change).toBe(-1);
+    expect(entry.days_since_change).toBeNull();
     expect(entry.last_content_change).toBe('not-a-valid-date');
+    expect(entry.overdue).toBe(true);
+  });
+
+  it('clamps skew within the tolerance to 0 days, not overdue', () => {
+    const now = new Date('2026-10-16T12:00:00.000Z');
+    const state: SourceState = {
+      ...makeState(1, 0),
+      last_content_change: new Date(now.getTime() + 5 * 60_000).toISOString(),
+    };
+    const entry = buildStalenessEntry('faa', 30, state, now);
+    expect(entry.days_since_change).toBe(0);
+    expect(entry.overdue).toBe(false);
+  });
+
+  it('reports a last_content_change beyond the skew tolerance as unknown and overdue', () => {
+    const now = new Date('2026-10-16T12:00:00.000Z');
+    const state: SourceState = {
+      ...makeState(1, 0),
+      last_content_change: new Date(now.getTime() + 3 * DAY_MS).toISOString(),
+    };
+    const entry = buildStalenessEntry('faa', 30, state, now);
+    expect(entry.days_since_change).toBeNull();
+    expect(entry.overdue).toBe(true);
+  });
+
+  it('floors whole days since the last change', () => {
+    const now = new Date('2026-10-16T12:00:00.000Z');
+    const state: SourceState = {
+      ...makeState(1, 0),
+      last_content_change: '2026-10-13T18:00:00.000Z',
+    };
+    expect(buildStalenessEntry('faa', 30, state, now).days_since_change).toBe(2);
   });
 });
 
