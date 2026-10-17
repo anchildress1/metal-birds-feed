@@ -108,6 +108,7 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - A null band marks a field that orientation does not print — one shared `columns` order, no orientation branches. A placeholder coordinate competes for nearby items.
   - No axis reading on any page → first layout, so the anchorless-page and zero-row guards report the real cause. Do not pre-empt them.
 - Set `anchor_field` whenever `anchor_pattern` could match a wrapped continuation line in another column.
+- A refresh failing with a missing `field_axis` means the register flipped: declare the new layout from that file's own measurements, add its fixture, and update `.agents/memory/pdf-orientation.md`.
 - Set `wrap_after_anchor: true` on a layout whose line leading exceeds half the record pitch: a two-line cell's second line then sits past the midpoint and nearest-anchor snapping hands it to the next record. Per layout; a centred-cell layout keeps nearest-anchor.
 - `ignore_pattern` drops whole printed lines (a footer, a trailing disclaimer) that a widened `after_last_anchor_reach` or `before_first_anchor_reach` would pull into a cell. Match the joined line, never a fragment: the renderer splits at diacritics.
 - Records snap per column at the outlier gap between adjacent anchors, anchor midpoint when no gap stands out. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
