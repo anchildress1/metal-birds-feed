@@ -109,6 +109,10 @@ export const LegalOwnerSchema = OwnerSchema;
 const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'must be an ISO YYYY-MM-DD date')
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v);
+  }, 'must be a real date')
   .nullable();
 
 export const EngineSchema = z.object({

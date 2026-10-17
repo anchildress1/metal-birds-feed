@@ -1089,6 +1089,33 @@ describe('main', () => {
     expect(body.title).toContain('[staleness] faa');
   });
 
+  it('says the silence is unknown, never -1 or null, when the last change is unparseable', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    const recentRun = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, cadence_days: 30 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: recentRun,
+      last_content_change: 'not-a-valid-date',
+    });
+    mockR2Write.mockResolvedValueOnce({ changed: false, record_count: 0, content_hash: 'h' });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+
+    await main();
+
+    const [, createCall] = fetchMock.mock.calls[1] as [string, RequestInit];
+    const issue = JSON.parse(createCall.body as string) as { title: string; body: string };
+    expect(issue.title).toBe('[staleness] faa has no readable last content change');
+    expect(issue.body).toContain('**Days since change:** unknown');
+    expect(issue.body).toContain('silent for an unknown number of days');
+    expect(`${issue.title}${issue.body}`).not.toMatch(/-1|null/);
+  });
+
   it('escalates an overdue source to a real run and opens its staleness issue', async () => {
     // Overdue and cadence-skipped are mutually exclusive; both halves asserted because a change
     // that decouples them breaks this.

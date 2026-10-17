@@ -23,24 +23,32 @@ export interface StalenessEntry {
   source: string;
   cadence_days: number;
   last_content_change: string | null;
-  days_since_change: number;
+  // null: no usable last-change timestamp (none recorded, or unparseable).
+  days_since_change: number | null;
   overdue: boolean;
 }
 
 const MS_PER_DAY = 86_400_000;
+// Runs on different machines stamp last_content_change against their own clocks, so a timestamp a
+// few minutes ahead is skew; beyond this it is corrupt state and must not silence the alarm.
+const FUTURE_TOLERANCE_MS = 10 * 60_000;
 // A source is considered overdue once it has been silent for 1.5× its declared cadence.
 export const STALENESS_MULTIPLIER = 1.5;
 
 // Epoch 0 is a UTC midnight, so flooring ms to days yields the UTC day number.
 const utcDay = (d: Date): number => Math.floor(d.getTime() / MS_PER_DAY);
 
+// A timestamp that is unparseable, or further ahead of the clock than skew explains, can never be
+// trusted to age into correctness on a useful timescale.
+const unusable = (changedAt: number, now: Date): boolean =>
+  Number.isNaN(changedAt) || changedAt - now.getTime() > FUTURE_TOLERANCE_MS;
+
 export const isOverdue = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
   if (!state) return false;
-  const lastChange = new Date(state.last_content_change);
-  // Fail open: an unparseable timestamp can never become parseable on its own, so returning
-  // false here would disarm the staleness alarm for that source forever.
-  if (Number.isNaN(lastChange.getTime())) return true;
-  return now.getTime() - lastChange.getTime() > cadenceDays * STALENESS_MULTIPLIER * MS_PER_DAY;
+  const changedAt = new Date(state.last_content_change).getTime();
+  // Fail open: returning false here would disarm the staleness alarm for that source.
+  if (unusable(changedAt, now)) return true;
+  return now.getTime() - changedAt > cadenceDays * STALENESS_MULTIPLIER * MS_PER_DAY;
 };
 
 export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
@@ -48,11 +56,11 @@ export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: 
   const lastRun = new Date(state.last_run);
   if (Number.isNaN(lastRun.getTime())) return false;
   // Shares the staleness issue's threshold so the open issue and the daily polling stay one
-  // condition rather than two knobs. Guarded on a parseable timestamp: isOverdue fails open to keep
-  // the alarm armed, but that value never heals, so escalating on it would disable the gate for
-  // good and refetch the whole register every tick forever.
-  const lastChange = new Date(state.last_content_change);
-  if (!Number.isNaN(lastChange.getTime()) && isOverdue(state, cadenceDays, now)) return false;
+  // condition rather than two knobs. Guarded on a usable timestamp: isOverdue fails open to keep
+  // the alarm armed, but that value does not heal on its own, so escalating on it would disable
+  // the gate and refetch the whole register every tick.
+  const changedAt = new Date(state.last_content_change).getTime();
+  if (!unusable(changedAt, now) && isOverdue(state, cadenceDays, now)) return false;
   // last_run is stamped at run completion, so a strict ms window falls short on the next cron tick
   // and pushes every cycle a day later.
   return utcDay(now) - utcDay(lastRun) < cadenceDays;
@@ -65,10 +73,11 @@ export const buildStalenessEntry = (
   now: Date
 ): StalenessEntry => {
   const lastChange = state?.last_content_change ?? null;
-  const msSinceChange = lastChange ? now.getTime() - new Date(lastChange).getTime() : Infinity;
-  const daysSinceChange = Number.isFinite(msSinceChange)
-    ? Math.floor(msSinceChange / MS_PER_DAY)
-    : -1;
+  const changedAt = lastChange === null ? Number.NaN : new Date(lastChange).getTime();
+  // Null is exactly the cases isOverdue treats as unknown; skew within the tolerance clamps to 0.
+  const daysSinceChange = unusable(changedAt, now)
+    ? null
+    : Math.max(0, Math.floor((now.getTime() - changedAt) / MS_PER_DAY));
   return {
     source,
     cadence_days: cadenceDays,
@@ -85,7 +94,7 @@ export const buildSummaryMarkdown = (entries: StalenessEntry[]): string => {
     .map((e) => {
       const status = e.overdue ? '⚠️ overdue' : '✅ ok';
       const lastChange = e.last_content_change ?? 'never';
-      const days = e.days_since_change >= 0 ? String(e.days_since_change) : 'unknown';
+      const days = e.days_since_change === null ? 'unknown' : String(e.days_since_change);
       return `| ${e.source} | ${e.cadence_days} | ${lastChange} | ${days} | ${status} |`;
     });
   return [

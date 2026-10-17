@@ -224,7 +224,7 @@ export async function mapRows(
   // actually be mapped and stats.total counts them rather than the whole accumulated history.
   const parsedRows = await parsePrimary(primaryBuf, config);
   const rows = keepLatestSnapshot(config, parsedRows);
-  assertJoinHits(config, joinMaps, rows);
+  assertJoinHits(config, joinMaps, rows, 'the file');
   assertSourceIdColumns(config, rows, joinMaps);
 
   const { records, stats } = mapRowSet(config, joinMaps, rows);
@@ -283,12 +283,17 @@ export async function mapSnapshots(
     if (group) group.push(row);
     else bySnapshot.set(value, [row]);
   }
-  const snapshots = [...bySnapshot]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([snapshot, group]) => ({
-      snapshot,
-      ...mapRowSet(config, joinMaps, group),
-    }));
+  const ordered = [...bySnapshot].sort(([a], [b]) => a.localeCompare(b));
+  // Only the newest publication is checked: an older one can legitimately predate keys the join file
+  // holds, but a join that missed every row of the newest would seed an incomplete latest fleet,
+  // and a match in an older publication must not mask that.
+  const [newest, newestRows] = ordered.at(-1) ?? [];
+  if (newest !== undefined && newestRows)
+    assertJoinHits(config, joinMaps, newestRows, `publication ${newest}`);
+  const snapshots = ordered.map(([snapshot, group]) => ({
+    snapshot,
+    ...mapRowSet(config, joinMaps, group),
+  }));
   reportUnmatchedLookups(config.id);
   // A truncated download is indistinguishable from a short publication history, and seeding from
   // it would be permanent; the failed-row tolerance above does not extend to the count.
@@ -805,7 +810,8 @@ function isAllowedMissingSourceIdRow(
 const assertJoinHits = (
   config: SourceConfig,
   joinMaps: Map<string, Map<string, Row>>,
-  rows: Row[]
+  rows: Row[],
+  scope: string
 ): void => {
   if (rows.length === 0) return;
   for (const join of config.joins) {
@@ -814,7 +820,7 @@ const assertJoinHits = (
     const anyHit = rows.some((row) => map?.has(row[join.on] ?? ''));
     if (!anyHit)
       throw new Error(
-        `Source "${config.id}": join "${join.name}" matched 0 of ${rows.length} rows — join key drifted upstream or the join file is broken`
+        `Source "${config.id}": join "${join.name}" matched 0 of ${rows.length} rows in ${scope} — join key drifted upstream or the join file is broken`
       );
   }
 };
