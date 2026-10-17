@@ -33,10 +33,19 @@ format: pdf
 # read as three capital letters — verified against the live document: a VLASNIK (owner) cell wraps
 # onto its own line reading exactly "PZO" (continuing "MORH Zapovjedništvo HRZ I", a military unit
 # name), which would otherwise mint a phantom record and steal that line from its real row.
-# Only the unrotated orientation has been observed. If CCAA ever republishes the table rotated the
-# parse fails naming the missing axis rather than reading it wrong; measure the new bands against the
-# live file and add a second layouts entry.
+# CCAA scans the table in either orientation between publications; each orientation is declared as
+# its own layout, with bands measured against a real file in that orientation. A third orientation
+# fails the parse naming the missing axis rather than reading it wrong.
 pdf:
+  # The register ends on a page holding only the repeated column header and the page footer when
+  # its record count lands exactly on a page boundary; a budget of one covers that and no drifted
+  # data page.
+  allowed_anchorless_pages: 1
+  # Page furniture the rotated layout's reach past the last mark would otherwise pull into a cell:
+  # the running footer ("Stranica 4 od 20") and, on the final data page, the three-line disclaimer
+  # that begins 13.8pt after the last record. Matched on whole printed lines because the renderer
+  # splits the disclaimer at every diacritic.
+  ignore_pattern: '^Stranica \d+ od \d+$|Podaci iz Hrvatskog registra|Agencija ne jam|stanje podataka u Hrvatskom'
   anchor_pattern: '^[A-Z]{3}$'
   anchor_field: mark
   layouts:
@@ -53,6 +62,25 @@ pdf:
         - 449 # serial
         - 506 # owner
         - 638 # address
+    # The same table scanned rotated: records run along x, one aircraft per x-column, each field a
+    # fixed y-band. Bands measured against the live 2026-10 publication, on the first line of each
+    # cell; the order of `columns` is unchanged.
+    - field_axis: y
+      # Line leading (13.8pt) is a hair over half the record pitch (27.36pt), so a two-line cell's
+      # second line lands past the midpoint to the next mark and nearest-anchor snapping steals it.
+      wrap_after_anchor: true
+      # A last record's own wrapped lines run up to 27.5pt past its mark across the live document
+      # (two continuation lines at 13.8pt leading); the default reach is half the tightest row pitch,
+      # 6.75pt. The disclaimer past it is dropped by ignore_pattern.
+      after_last_anchor_reach: 42
+      column_pos:
+        - 48 # mark
+        - 106 # seq
+        - 154 # manufacturer
+        - 289 # model
+        - 424 # serial
+        - 480 # owner
+        - 608 # address
 
 columns:
   register:
