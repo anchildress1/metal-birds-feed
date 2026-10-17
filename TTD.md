@@ -48,6 +48,4 @@
 
 ## PDF orientation
 
-- [ ] hr-ccaa: replace the wording-matched disclaimer entries in `ignore_pattern` with a geometry rule. The disclaimer's lines start before the first column band (field coordinate 37 against a band at 48); no record line does. Opt-in per layout, then drop the three phrases and keep only the `Stranica` footer pattern
-- [ ] hr-ccaa footer: bound the last record by the table's end along the record axis instead of matching `Stranica N od N`
-- [ ] es-aesa, hu-kh, th-caat declare only the `x` layout; the other orientation is unmeasured and cannot be derived. Declare it from the first real file that arrives flipped, using the measurements the flip error reports
+- [ ] es-aesa, hu-kh, th-caat declare only the `x` layout; the other orientation is unmeasured and cannot be derived. Declare it from the first real file that arrives flipped, using that file's own measurements

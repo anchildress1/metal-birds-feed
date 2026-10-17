@@ -294,6 +294,7 @@ export interface PdfLayoutOptions {
   // tightest row pitch, which is all the default reach allows. Bound it below the column headers.
   after_last_anchor_reach?: number;
   wrap_after_anchor?: boolean;
+  drop_margin_lines?: boolean;
 }
 
 export interface ParsePdfOptions {
@@ -315,7 +316,6 @@ export interface ParsePdfOptions {
   // its real row. Restricting anchors to one column band closes that off at the source. The index is
   // shared across layouts: a flip reorders neither `columns` nor `column_pos`.
   anchor_column?: number;
-  ignore_pattern?: string;
 }
 
 // Per-page options after the orientation is resolved — the selected layout flattened onto the
@@ -495,19 +495,20 @@ const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x'
 };
 
 // Items on one printed line share a record-axis coordinate to within the same-row jitter measured on
-// CCAA Croatia (2.16pt); set just above it so a footer split into fragments still reads as one line,
-// and far below the ~13pt leading that separates adjacent lines.
+// CCAA Croatia (2.16pt); set just above it so a line the renderer split into fragments is still one
+// line, and far below the ~13pt leading that separates adjacent lines.
 const LINE_GAP_PT = 2.5;
 
-// Matching the joined line is what lets one pattern recognize a footer or disclaimer paragraph that
-// the renderer split at every diacritic, without also matching a lone "č" in a real cell. A line
-// carrying an anchor is a record's own row and is never dropped, so a cell that happens to contain
-// a matched phrase cannot delete its record.
-const dropIgnoredLines = (
+// A paragraph set in the page margin (a trailing disclaimer, a repeated page header) starts to the
+// near side of the first printed band, where no table cell does. Judging the printed line by where it
+// starts, not by what it says, keeps the rule independent of the agency's wording. Applies to a line
+// as a whole because the renderer scatters its later fragments across the bands. A line carrying an
+// anchor is a record's own row and is never dropped.
+const dropMarginLines = (
   page: PdfItem[],
   recordAxis: 'x' | 'y',
   fieldAxis: 'x' | 'y',
-  ignoreRe: RegExp,
+  firstBand: number,
   isAnchor: (it: PdfItem) => boolean
 ): PdfItem[] => {
   const sorted = [...page].sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
@@ -519,14 +520,11 @@ const dropIgnoredLines = (
     else lines.push([it]);
   }
   return lines
-    .filter((line) => {
-      if (line.some(isAnchor)) return true;
-      const text = [...line]
-        .sort((a, b) => axisCoord(a, fieldAxis) - axisCoord(b, fieldAxis))
-        .map((it) => it.str.trim())
-        .join(' ');
-      return !ignoreRe.test(text);
-    })
+    .filter(
+      (line) =>
+        line.some(isAnchor) ||
+        Math.min(...line.map((it) => axisCoord(it, fieldAxis))) >= firstBand - SAME_ROW_TOLERANCE_PT
+    )
     .flat();
 };
 
@@ -555,8 +553,7 @@ const parsePdfPage = (
   page: PdfItem[],
   options: ResolvedPdfOptions,
   anchorRe: RegExp,
-  beforeFirstAnchorRe: RegExp | undefined,
-  ignoreRe: RegExp | undefined
+  beforeFirstAnchorRe: RegExp | undefined
 ): Row[] => {
   const recordAxis: 'x' | 'y' = options.field_axis === 'y' ? 'x' : 'y';
   const fieldIndexAt = bandIndexer(options.column_pos);
@@ -564,7 +561,9 @@ const parsePdfPage = (
     anchorRe.test(it.str.trim()) &&
     (options.anchor_column === undefined ||
       fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column);
-  if (ignoreRe) page = dropIgnoredLines(page, recordAxis, options.field_axis, ignoreRe, isAnchor);
+  const firstBand = options.column_pos.find((pos): pos is number => pos !== null);
+  if (options.drop_margin_lines && firstBand !== undefined)
+    page = dropMarginLines(page, recordAxis, options.field_axis, firstBand, isAnchor);
   const anchors = page
     .filter(isAnchor)
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
@@ -751,9 +750,6 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
   const resolved = resolveLayout(options, pages, anchorRe);
   // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const ignoreRe = options.ignore_pattern ? new RegExp(options.ignore_pattern) : undefined;
-  // Pattern source is `sources/<id>.yaml`, validated by the loader alongside anchor_pattern.
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const beforeFirstAnchorRe = resolved.before_first_anchor_pattern
     ? new RegExp(resolved.before_first_anchor_pattern)
     : undefined;
@@ -769,7 +765,7 @@ export async function parsePdf(buf: Buffer, options: ParsePdfOptions): Promise<R
     // ("tolerate leading pages until the first row") would silently forgive a drifted FIRST
     // register page, reintroducing exactly the unbounded silent loss this guard exists to stop.
     if (page.length === 0) continue;
-    const pageRows = parsePdfPage(page, resolved, anchorRe, beforeFirstAnchorRe, ignoreRe);
+    const pageRows = parsePdfPage(page, resolved, anchorRe, beforeFirstAnchorRe);
     if (pageRows.length === 0) anchorlessPages.push(i + 1);
     else rows.push(...pageRows);
   }

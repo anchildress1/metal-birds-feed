@@ -42,11 +42,6 @@ pdf:
   # exposure: in a month without it, one data page that loses its anchors would also pass, dropping
   # about 20 rows with nothing else to catch it, since PDF sources cannot use record_count.
   allowed_anchorless_pages: 1
-  # Page furniture the rotated layout's reach past the last mark would otherwise pull into a cell:
-  # the running footer ("Stranica 4 od 20") and, on the final data page, the three-line disclaimer
-  # that begins 13.8pt after the last record. Matched on whole printed lines because the renderer
-  # splits the disclaimer at every diacritic.
-  ignore_pattern: '^Stranica \d+ od \d+$|Podaci iz Hrvatskog registra|Agencija ne jam|stanje podataka u Hrvatskom'
   anchor_pattern: '^[A-Z]{3}$'
   anchor_field: mark
   layouts:
@@ -72,8 +67,12 @@ pdf:
       wrap_after_anchor: true
       # A last record's own wrapped lines run up to 27.5pt past its mark across the live document
       # (two continuation lines at 13.8pt leading); the default reach is half the tightest row pitch,
-      # 6.75pt. The disclaimer past it is dropped by ignore_pattern.
+      # 6.75pt. The reach also takes in the page footer, which lands in the unmapped address column,
+      # and the three-line disclaimer that begins 13.8pt after the final record: that paragraph is set
+      # in the page margin, before the mark band, where no table line starts, so drop_margin_lines
+      # removes it by position without naming the agency's words.
       after_last_anchor_reach: 42
+      drop_margin_lines: true
       column_pos:
         - 48 # mark
         - 106 # seq

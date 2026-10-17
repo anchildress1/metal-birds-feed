@@ -231,6 +231,12 @@ export interface PdfLayout {
   // second line of a two-line cell sits past the midpoint and nearest-anchor snapping hands it to
   // the next record. Leave it off for cells centred on their anchor, whose first lines precede it.
   wrap_after_anchor?: boolean;
+  // Drop a printed line that starts before the first printed band by more than the same-row jitter.
+  // Declare it when a layout widens `after_last_anchor_reach` or `before_first_anchor_reach` far
+  // enough to reach text set in the page margin (a trailing disclaimer, a repeated header), which
+  // would otherwise join the outermost record's cells. Lines are items sharing a record-axis
+  // coordinate; a line carrying an anchor is never dropped.
+  drop_margin_lines?: boolean;
 }
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited. One record
@@ -256,12 +262,6 @@ export interface PdfConfig {
   // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
   // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
   anchor_field?: string;
-  // A printed line matching this is page furniture (a running footer, a trailing disclaimer) and is
-  // dropped. Lines are items sharing a record-axis coordinate, joined in field order, so a pattern
-  // matches the whole sentence rather than a fragment. Declare it when a layout widens
-  // `after_last_anchor_reach` or `before_first_anchor_reach` far enough to reach that text, which
-  // would otherwise be appended to the outermost record's cells.
-  ignore_pattern?: string;
 }
 
 export interface SourceConfig {

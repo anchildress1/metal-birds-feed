@@ -1513,35 +1513,39 @@ describe('parsePdf wrap_after_anchor', () => {
   });
 });
 
-describe('parsePdf ignore_pattern', () => {
-  // The last record's second line sits 13.8pt past its anchor, beyond the default half-pitch reach,
-  // and the page footer sits 18pt past it: a reach wide enough for the line also reaches the footer.
-  const page: SynthItem[] = [
+describe('parsePdf drop_margin_lines', () => {
+  // Records run along x with the mark band at y=50. The last record's own second line sits 13.8pt past
+  // its mark; the margin paragraph begins in the page margin (y=37) 4pt after that, in the same reach.
+  const base: SynthItem[] = [
     { str: 'AAA', x: 100, y: 50 },
     { str: 'First owner', x: 100, y: 300 },
     { str: 'BBB', x: 127.36, y: 50 },
     { str: 'Second owner', x: 127.36, y: 300 },
     { str: 'Limited', x: 141.16, y: 300 },
-    { str: 'Stranica 4 od 20', x: 145.36, y: 300 },
   ];
-  const opts = (ignore?: string): ParsePdfOptions =>
+  const margin: SynthItem[] = [
+    { str: 'Disclaimer text', x: 145.36, y: 37 },
+    { str: 'c', x: 145.36, y: 139 },
+    { str: 'continues here', x: 145.36, y: 143 },
+  ];
+  const opts = (drop?: boolean): ParsePdfOptions =>
     synthOpts({
       anchor_pattern: '^[A-Z]{3}$',
       anchor_column: 0,
       columns: ['mark', 'owner'],
-      ignore_pattern: ignore,
       layouts: [
         {
           field_axis: 'y',
           column_pos: [50, 300],
           wrap_after_anchor: true,
           after_last_anchor_reach: 20,
+          drop_margin_lines: drop,
         },
       ],
     });
 
-  it('drops page furniture the widened reach would otherwise append to the last record', async () => {
-    const rows = await parsePdf(buildPdf([page]), opts('^Stranica \\d+ od \\d+$'));
+  it('drops a paragraph set in the margin however its fragments scatter across the bands', async () => {
+    const rows = await parsePdf(buildPdf([[...base, ...margin]]), opts(true));
 
     expect(rows).toEqual([
       { mark: 'AAA', owner: 'First owner' },
@@ -1549,61 +1553,56 @@ describe('parsePdf ignore_pattern', () => {
     ]);
   });
 
-  it('appends the footer to the last record without the pattern', async () => {
-    const rows = await parsePdf(buildPdf([page]), opts());
-
-    expect(rows[1]?.owner).toBe('Second owner\nLimited\nStranica 4 od 20');
-  });
-
-  it('matches the whole printed line, so fragments split across bands drop together', async () => {
-    const disclaimer: SynthItem[] = [
-      ...page.slice(0, 5),
-      { str: 'Podaci iz registra', x: 145.36, y: 40 },
-      { str: 'c', x: 145.36, y: 139 },
-      { str: 'objavljeni u tablici', x: 145.36, y: 143 },
-    ];
-    const rows = await parsePdf(buildPdf([disclaimer]), opts('^Podaci iz registra'));
+  it('judges the line by where it starts, not by what it says', async () => {
+    const reworded = margin.map((m) => ({ ...m, str: m.str.replace('Disclaimer', 'Notice') }));
+    const rows = await parsePdf(buildPdf([[...base, ...reworded]]), opts(true));
 
     expect(rows[1]?.owner).toBe('Second owner\nLimited');
   });
 
-  it('keeps a lone diacritic fragment that belongs to a real cell', async () => {
-    const cell: SynthItem[] = [
-      ...page.slice(0, 4),
+  it('pulls the margin paragraph into the last record when the option is off', async () => {
+    const rows = await parsePdf(buildPdf([[...base, ...margin]]), opts());
+
+    expect(rows[1]?.mark).toContain('Disclaimer text');
+  });
+
+  it("keeps a line that starts on a band, such as a real cell's wrapped tail", async () => {
+    const tail: SynthItem[] = [
       { str: 'Fizi', x: 141.16, y: 300 },
       { str: 'c', x: 141.16, y: 311 },
       { str: 'ka osoba', x: 141.16, y: 316 },
     ];
-    const rows = await parsePdf(buildPdf([cell]), opts('^Stranica \\d+ od \\d+$'));
+    const rows = await parsePdf(buildPdf([[...base.slice(0, 4), ...tail]]), opts(true));
 
     expect(rows[1]?.owner).toBe('Second owner\nFizi\nc\nka osoba');
   });
 
-  it('never drops a record row that carries an anchor, even when a cell matches the pattern', async () => {
-    const rows = await parsePdf(buildPdf([page]), opts('First owner'));
+  it('keeps a line within the same-row jitter of the first band', async () => {
+    const jittered: SynthItem[] = [
+      { str: 'Limited', x: 141.16, y: 300 },
+      { str: 'x', x: 141.16, y: 46 },
+    ];
+    const rows = await parsePdf(buildPdf([[...base.slice(0, 4), ...jittered]]), opts(true));
 
-    expect(rows[0]).toEqual({ mark: 'AAA', owner: 'First owner' });
+    expect(rows[1]?.mark).toBe('BBB\nx');
   });
 
-  it('reads footer fragments up to the same-row jitter apart as one line', async () => {
-    const split: SynthItem[] = [
-      ...page.slice(0, 5),
-      { str: 'Stranica', x: 145.36, y: 300 },
-      { str: '4 od 20', x: 147.36, y: 340 },
+  it('never drops a record row that carries an anchor', async () => {
+    const early: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 30 },
+      { str: 'First owner', x: 100, y: 300 },
+      { str: 'BBB', x: 127.36, y: 50 },
     ];
-    const rows = await parsePdf(buildPdf([split]), opts('^Stranica 4 od 20$'));
+    const rows = await parsePdf(
+      buildPdf([early]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        columns: ['mark', 'owner'],
+        layouts: [{ field_axis: 'y', column_pos: [50, 300], drop_margin_lines: true }],
+      })
+    );
 
-    expect(rows[1]?.owner).toBe('Second owner\nLimited');
-  });
-
-  it('keeps text that merely resembles furniture when the pattern is anchored', async () => {
-    const withLookalike: SynthItem[] = [
-      ...page.slice(0, 4),
-      { str: 'Stranica d.o.o.', x: 141.16, y: 300 },
-    ];
-    const rows = await parsePdf(buildPdf([withLookalike]), opts('^Stranica \\d+ od \\d+$'));
-
-    expect(rows[1]?.owner).toBe('Second owner\nStranica d.o.o.');
+    expect(rows.map((r) => r.mark)).toEqual(['AAA', 'BBB']);
   });
 });
 

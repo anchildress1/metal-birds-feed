@@ -16,5 +16,5 @@ Declare a second layout only from a real file published in that orientation. Nev
 ## Directives
 
 - Wrapped lines that nearest-anchor snapping hands to the next record: set `wrap_after_anchor: true` on that layout.
-- Page furniture a widened reach pulls into a cell: `ignore_pattern`, matched on whole printed lines.
+- Margin text a widened reach pulls into a cell (a disclaimer, a repeated header): `drop_margin_lines: true`. It judges where a printed line starts; never match an agency's wording.
 - Never have a model read a PDF into rows when a deterministic check fails: a guessed row is invented data.
