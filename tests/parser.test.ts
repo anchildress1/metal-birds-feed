@@ -1480,6 +1480,21 @@ describe('parsePdf wrap_after_anchor', () => {
     ]);
   });
 
+  it('hands a line to the next record only within the same-row jitter of its mark', async () => {
+    const lineAt = (x: number): SynthItem[] => [
+      { str: 'AAA', x: 100, y: 50 },
+      { str: 'First owner', x: 100, y: 300 },
+      { str: 'tail', x, y: 300 },
+      { str: 'BBB', x: 141.04, y: 50 },
+      { str: 'Second owner', x: 141.04, y: 300 },
+    ];
+    const withinJitter = await parsePdf(buildPdf([lineAt(141.04 - 4)]), rotatedOpts(true));
+    const beyondJitter = await parsePdf(buildPdf([lineAt(141.04 - 6)]), rotatedOpts(true));
+
+    expect(withinJitter[1]?.owner).toBe('tail\nSecond owner');
+    expect(beyondJitter[0]?.owner).toBe('First owner\ntail');
+  });
+
   it('keeps a three-line cell whole when the next anchor sits a full record pitch on', async () => {
     const page: SynthItem[] = [
       { str: 'AAA', x: 100, y: 50 },
@@ -1585,6 +1600,40 @@ describe('parsePdf drop_margin_lines', () => {
     const rows = await parsePdf(buildPdf([[...base.slice(0, 4), ...jittered]]), opts(true));
 
     expect(rows[1]?.mark).toBe('BBB\nx');
+  });
+
+  it('reads the margin as the far side of the first band when bands are listed in descending order', async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 300 },
+      { str: 'First owner', x: 100, y: 50 },
+      { str: 'BBB', x: 127.36, y: 300 },
+      { str: 'Second owner', x: 127.36, y: 50 },
+      { str: 'Limited', x: 141.16, y: 50 },
+      { str: 'Disclaimer text', x: 145.36, y: 313 },
+      { str: 'continues here', x: 145.36, y: 143 },
+    ];
+    const rows = await parsePdf(
+      buildPdf([page]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        columns: ['mark', 'owner'],
+        layouts: [
+          {
+            field_axis: 'y',
+            column_pos: [300, 50],
+            wrap_after_anchor: true,
+            after_last_anchor_reach: 20,
+            drop_margin_lines: true,
+          },
+        ],
+      })
+    );
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Second owner\nLimited' },
+    ]);
   });
 
   it('never drops a record row that carries an anchor', async () => {

@@ -222,6 +222,19 @@ const SourceConfigSchema = z
                     'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
                 }
               )
+              // The margin is the side of the first band away from the others; one band, or bands
+              // at the same coordinate, give no direction to read.
+              .refine(
+                (l) => {
+                  if (!l.drop_margin_lines) return true;
+                  const printed = l.column_pos.filter((p): p is number => p !== null);
+                  return printed.length >= 2 && printed[0] !== printed[printed.length - 1];
+                },
+                {
+                  message:
+                    'pdf.layouts[].drop_margin_lines needs printed bands at two different coordinates to tell which side is the margin',
+                }
+              )
           )
           .min(1)
           // Two layouts on one axis would make selection order-dependent, and the parser picks the

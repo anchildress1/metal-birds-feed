@@ -677,6 +677,23 @@ describe('loadSourceConfig', () => {
     }
   };
 
+  it.each([
+    [
+      'a single printed band',
+      '    - field_axis: y\n      column_pos: [100, null]\n      drop_margin_lines: true\n',
+    ],
+    [
+      'bands at one coordinate',
+      '    - field_axis: y\n      column_pos: [100, 100]\n      drop_margin_lines: true\n',
+    ],
+  ])('rejects drop_margin_lines with %s, which gives no direction', (_label, layouts) => {
+    withPdfGuard('_test_pdf_margin_dir.yaml', pdfGuardYaml({ layouts }), (path) => {
+      expect(() => loadSourceConfig(path)).toThrow(
+        /needs printed bands at two different coordinates/
+      );
+    });
+  });
+
   it('accepts wrap_after_anchor and drop_margin_lines per layout and rejects a non-boolean value', () => {
     const layouts = (value: string): string =>
       `    - field_axis: y\n      column_pos: [100, 50]\n      wrap_after_anchor: ${value}\n      drop_margin_lines: ${value}\n    - field_axis: x\n      column_pos: [10, 20]\n`;

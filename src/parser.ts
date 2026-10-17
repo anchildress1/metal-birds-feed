@@ -499,18 +499,27 @@ const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x'
 // line, and far below the ~13pt leading that separates adjacent lines.
 const LINE_GAP_PT = 2.5;
 
-// A paragraph set in the page margin (a trailing disclaimer, a repeated page header) starts to the
-// near side of the first printed band, where no table cell does. Judging the printed line by where it
-// starts, not by what it says, keeps the rule independent of the agency's wording. Applies to a line
-// as a whole because the renderer scatters its later fragments across the bands. A line carrying an
-// anchor is a record's own row and is never dropped.
+// A paragraph set in the page margin (a trailing disclaimer, a repeated page header) starts before
+// the first printed band, on the side away from the other bands, where no table cell does. Judging
+// the printed line by where it starts, not by what it says, keeps the rule independent of the
+// agency's wording. It applies to a line as a whole because the renderer scatters a paragraph's later
+// fragments across the bands. A line carrying an anchor is a record's own row and is never dropped.
+// Bands may be listed in either direction, so which side is "before" follows from their order.
 const dropMarginLines = (
   page: PdfItem[],
   recordAxis: 'x' | 'y',
   fieldAxis: 'x' | 'y',
-  firstBand: number,
+  bands: number[],
   isAnchor: (it: PdfItem) => boolean
 ): PdfItem[] => {
+  const first = bands[0];
+  const ascending = bands[bands.length - 1] > first;
+  const isMargin = (line: PdfItem[]): boolean => {
+    const coords = line.map((it) => axisCoord(it, fieldAxis));
+    return ascending
+      ? Math.min(...coords) < first - SAME_ROW_TOLERANCE_PT
+      : Math.max(...coords) > first + SAME_ROW_TOLERANCE_PT;
+  };
   const sorted = [...page].sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
   const lines: PdfItem[][] = [];
   for (const it of sorted) {
@@ -519,13 +528,7 @@ const dropMarginLines = (
       line.push(it);
     else lines.push([it]);
   }
-  return lines
-    .filter(
-      (line) =>
-        line.some(isAnchor) ||
-        Math.min(...line.map((it) => axisCoord(it, fieldAxis))) >= firstBand - SAME_ROW_TOLERANCE_PT
-    )
-    .flat();
+  return lines.filter((line) => line.some(isAnchor) || !isMargin(line)).flat();
 };
 
 // Distributes items to their records. A layout that sets wrap_after_anchor trusts the reading-order
@@ -561,9 +564,14 @@ const parsePdfPage = (
     anchorRe.test(it.str.trim()) &&
     (options.anchor_column === undefined ||
       fieldIndexAt(axisCoord(it, options.field_axis)) === options.anchor_column);
-  const firstBand = options.column_pos.find((pos): pos is number => pos !== null);
-  if (options.drop_margin_lines && firstBand !== undefined)
-    page = dropMarginLines(page, recordAxis, options.field_axis, firstBand, isAnchor);
+  if (options.drop_margin_lines)
+    page = dropMarginLines(
+      page,
+      recordAxis,
+      options.field_axis,
+      options.column_pos.filter((pos): pos is number => pos !== null),
+      isAnchor
+    );
   const anchors = page
     .filter(isAnchor)
     .sort((a, b) => axisCoord(a, recordAxis) - axisCoord(b, recordAxis));
