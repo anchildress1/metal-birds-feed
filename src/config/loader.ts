@@ -199,6 +199,7 @@ const SourceConfigSchema = z
                   }),
                 before_first_anchor_reach: z.number().nonnegative().optional(),
                 after_last_anchor_reach: z.number().nonnegative().optional(),
+                wrap_after_anchor: z.boolean().optional(),
                 before_first_anchor_pattern: z
                   .string()
                   .min(1)

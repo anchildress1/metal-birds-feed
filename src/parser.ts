@@ -293,6 +293,8 @@ export interface PdfLayoutOptions {
   // other end. Opt in when the outermost record's own cell runs taller than half the page's
   // tightest row pitch, which is all the default reach allows. Bound it below the column headers.
   after_last_anchor_reach?: number;
+  // See PdfLayout.wrap_after_anchor in src/types/config.ts.
+  wrap_after_anchor?: boolean;
 }
 
 export interface ParsePdfOptions {
@@ -477,6 +479,19 @@ const recordIndex = (perPair: number[] | undefined, anchorCoords: number[], rc: 
   return i;
 };
 
+// The record a wrapped line trails: the anchor on the reading-start side of the item, allowing
+// same-row jitter so a record's own first-line fields still resolve to it. Reading runs ascending
+// along x and descending along y, so the start side is the lower coordinate on x and the higher on y.
+const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x' | 'y'): number => {
+  if (recordAxis === 'x')
+    return Math.max(
+      0,
+      anchorCoords.findLastIndex((c) => c <= rc + SAME_ROW_TOLERANCE_PT)
+    );
+  const i = anchorCoords.findIndex((c) => c >= rc - SAME_ROW_TOLERANCE_PT);
+  return i === -1 ? anchorCoords.length - 1 : i;
+};
+
 const parsePdfPage = (
   page: PdfItem[],
   options: ResolvedPdfOptions,
@@ -536,7 +551,10 @@ const parsePdfPage = (
   const boundaries = columnBoundaries(inRange, anchorCoords);
   const buckets = anchors.map(() => new Map<number, PdfItem[]>());
   for (const { it, rc, fi } of inRange) {
-    pushTo(buckets[recordIndex(boundaries.get(fi), anchorCoords, rc)], fi, it);
+    const index = options.wrap_after_anchor
+      ? trailingRecordIndex(anchorCoords, rc, recordAxis)
+      : recordIndex(boundaries.get(fi), anchorCoords, rc);
+    pushTo(buckets[index], fi, it);
   }
   return buckets.map((cells) => buildPdfRow(cells, options, recordAxis));
 };

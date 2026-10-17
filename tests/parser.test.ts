@@ -1419,3 +1419,79 @@ describe('parseHtml', () => {
     expect(rows).toEqual([{ mark: 'second' }]);
   });
 });
+
+// Leading of 13.8 against a record pitch of 27.36 puts a two-line cell's second line 0.12pt past the
+// midpoint to the next anchor, which is what CCAA Croatia's rotated scan prints.
+describe('parsePdf wrap_after_anchor', () => {
+  const rotatedPage: SynthItem[] = [
+    { str: 'AAA', x: 100, y: 50 },
+    { str: 'First owner', x: 100, y: 300 },
+    { str: 'Limited', x: 113.8, y: 300 },
+    { str: 'BBB', x: 127.36, y: 50 },
+    { str: 'Second owner', x: 127.36, y: 300 },
+  ];
+  const rotatedOpts = (wrap?: boolean): ParsePdfOptions =>
+    synthOpts({
+      anchor_pattern: '^[A-Z]{3}$',
+      anchor_column: 0,
+      columns: ['mark', 'owner'],
+      layouts: [{ field_axis: 'y', column_pos: [50, 300], wrap_after_anchor: wrap }],
+    });
+
+  it('keeps a line past the midpoint with the record it trails when records run along x', async () => {
+    const rows = await parsePdf(buildPdf([rotatedPage]), rotatedOpts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner\nLimited' },
+      { mark: 'BBB', owner: 'Second owner' },
+    ]);
+  });
+
+  it('hands that line to the next record by nearest-anchor snapping when the option is off', async () => {
+    const rows = await parsePdf(buildPdf([rotatedPage]), rotatedOpts());
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Limited\nSecond owner' },
+    ]);
+  });
+
+  it('keeps a line short of the midpoint with the record it trails when records run along y', async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'First owner', x: 300, y: 500 },
+      { str: 'Limited', x: 300, y: 486.2 },
+      { str: 'BBB', x: 50, y: 472.64 },
+      { str: 'Second owner', x: 300, y: 472.64 },
+    ];
+    const rows = await parsePdf(
+      buildPdf([page]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        columns: ['mark', 'owner'],
+        layouts: [{ field_axis: 'x', column_pos: [50, 300], wrap_after_anchor: true }],
+      })
+    );
+
+    expect(rows).toEqual([
+      { mark: 'BBB', owner: 'Second owner' },
+      { mark: 'AAA', owner: 'First owner\nLimited' },
+    ]);
+  });
+
+  it("leaves a record's own first-line fields on its anchor despite same-row jitter", async () => {
+    const page: SynthItem[] = [
+      { str: 'AAA', x: 100, y: 50 },
+      { str: 'First owner', x: 100, y: 300 },
+      { str: 'BBB', x: 127.36, y: 50 },
+      { str: 'Second owner', x: 125.5, y: 300 },
+    ];
+    const rows = await parsePdf(buildPdf([page]), rotatedOpts(true));
+
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'First owner' },
+      { mark: 'BBB', owner: 'Second owner' },
+    ]);
+  });
+});

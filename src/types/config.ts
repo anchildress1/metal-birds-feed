@@ -226,6 +226,11 @@ export interface PdfLayout {
   // that clears the outermost record's tallest cell without reaching the header band; the default
   // reach is half the page's tightest row pitch, which a taller outer record overruns.
   after_last_anchor_reach?: number;
+  // Assign a wrapped line to the record whose anchor precedes it in reading order, instead of the
+  // nearest anchor. Declare it when a cell's line leading exceeds half the record pitch, so the
+  // second line of a two-line cell sits past the midpoint and nearest-anchor snapping hands it to
+  // the next record. Leave it off for cells centred on their anchor, whose first lines precede it.
+  wrap_after_anchor?: boolean;
 }
 
 // Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited. One record
