@@ -521,21 +521,18 @@ describe('excel_serial_year_or_null', () => {
     expect(applyScalar('excel_serial_year_or_null', '100000')).toBeNull());
 });
 
-describe('date_ddmmyyyy_or_null', () => {
-  it('parses an 8-digit DDMMYYYY date', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', '23092026')).toBe('2026-09-23'));
-  it('parses a single-digit-day date padded to two digits', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', '03072011')).toBe('2011-07-03'));
-  it('trims surrounding whitespace', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', ' 18082026 ')).toBe('2026-08-18'));
-  it('returns null for ANAC legacy 6-digit stubs', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', '300996')).toBeNull());
-  it('returns null for an empty string', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', '')).toBeNull());
-  it('returns null for a non-numeric value', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', '23/09/2026')).toBeNull());
-  it('returns null for an impossible calendar date', () =>
-    expect(applyScalar('date_ddmmyyyy_or_null', '32012026')).toBeNull());
+describe('br_validity_date_or_null', () => {
+  const run = (v: string): string | null => applyScalar('br_validity_date_or_null', v);
+  it('parses an 8-digit DDMMYYYY date', () => expect(run('23092026')).toBe('2026-09-23'));
+  it('trims surrounding whitespace', () => expect(run(' 18082026 ')).toBe('2026-08-18'));
+  it('reads a 6-digit year of 45 as 2045', () => expect(run('300945')).toBe('2045-09-30'));
+  it('reads a 6-digit year of 46 as 1946', () => expect(run('300946')).toBe('1946-09-30'));
+  it('reads a legacy 6-digit date', () => expect(run('300996')).toBe('1996-09-30'));
+  it('returns null for an impossible 8-digit date', () => expect(run('32012026')).toBeNull());
+  it('returns null for an impossible 6-digit date', () => expect(run('310296')).toBeNull());
+  it('returns null for a 7-digit value', () => expect(run('3009996')).toBeNull());
+  it('returns null for a non-numeric value', () => expect(run('ABORDO')).toBeNull());
+  it('returns null for an empty string', () => expect(run('')).toBeNull());
 });
 
 describe('date_dmmmyy_or_null', () => {

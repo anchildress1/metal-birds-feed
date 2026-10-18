@@ -203,7 +203,9 @@ mapping:
 
   expiration_date:
     field: DT_VALIDADE_CA
-    transform: date_ddmmyyyy_or_null
+    transform: br_validity_date_or_null
+    # A placeholder on legacy certificates, not a date anyone was issued.
+    null_values: ['010101']
 
   last_action_date:
     field: DT_CANC
@@ -230,7 +232,8 @@ mapping:
 
   airworthiness_review_date:
     field: DT_VALIDADE_CVA
-    transform: date_ddmmyyyy_or_null
+    transform: br_validity_date_or_null
+    null_values: ['010101']
 
   cancellation_reason:
     field: DS_MOTIVO_CANC

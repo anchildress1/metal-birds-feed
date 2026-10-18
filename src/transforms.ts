@@ -85,11 +85,18 @@ const dateDdSlashOrNull = (value: string): string | null => {
   return validateAndFormatYMD(v.slice(6, 10), v.slice(3, 5), v.slice(0, 2));
 };
 
-// 8-digit DDMMYYYY — distinct from date_yyyymmdd_or_null, which reads the same digits as YYYYMMDD.
-const dateDdmmyyyyOrNull = (value: string): string | null => {
+// DDMMYYYY, or DDMMYY on legacy certificates. Observed six-digit years are 46–99 and 00–15, so the
+// pivot sits at 46. Distinct from date_yyyymmdd_or_null, which reads the same digits as YYYYMMDD.
+const brValidityDateOrNull = (value: string): string | null => {
   const v = value.trim();
-  if (!/^\d{8}$/.test(v)) return null;
-  return validateAndFormatYMD(v.slice(4, 8), v.slice(2, 4), v.slice(0, 2));
+  if (/^\d{8}$/.test(v)) return validateAndFormatYMD(v.slice(4, 8), v.slice(2, 4), v.slice(0, 2));
+  if (!/^\d{6}$/.test(v)) return null;
+  const yy = Number(v.slice(4, 6));
+  return validateAndFormatYMD(
+    String(yy < 46 ? 2000 + yy : 1900 + yy),
+    v.slice(2, 4),
+    v.slice(0, 2)
+  );
 };
 
 // Accepts an ISO 8601 date or datetime string and returns just the YYYY-MM-DD date
@@ -869,7 +876,6 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,
-  date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
   date_dmmmyy_or_null: dateDmmmyyOrNull,
   date_month_d_yyyy_or_null: dateMonthDYyyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
@@ -891,6 +897,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   ee_registration: eeRegistration,
   br_airframe: brAirframe,
   br_build_certification: brBuildCertification,
+  br_validity_date_or_null: brValidityDateOrNull,
   br_party_name: brPartyName,
   br_party_state: brPartyState,
   br_party_kind: brPartyKind,

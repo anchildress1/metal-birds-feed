@@ -2449,7 +2449,8 @@ describe('BR-ANAC fixture mapping', () => {
     it('classifies an unpowered landplane (L00) as glider', () =>
       expect(r.airframe_type).toBe('glider'));
     it('maps SEM MOTOR to engine type none', () => expect(r.engine.type).toBe('none'));
-    it('rejects the malformed 6-digit validity date', () => expect(r.expiration_date).toBeNull());
+    it('reads the legacy 6-digit validity date', () =>
+      expect(r.expiration_date).toBe('1996-09-30'));
     it('distinguishes owner from operator', () => {
       expect(r.owner.name).toBe('GOVERNO FEDERAL ANAC');
       expect(r.operator.name).toBe('AEROCLUBE DE RIBEIRAO PRETO');
