@@ -97,6 +97,24 @@ describe('applyScalar', () => {
       expect(applyScalar('mph_to_ktas_or_null', '82')).toBe('71.3'));
   });
 
+  describe('lbs_to_kg_or_null', () => {
+    it('converts pounds to kilograms, rounded to one decimal', () =>
+      expect(applyScalar('lbs_to_kg_or_null', '2550')).toBe('1156.7'));
+    it('preserves a decimal pound value', () =>
+      expect(applyScalar('lbs_to_kg_or_null', '1.5')).toBe('0.7'));
+    it('returns null for zero', () => expect(applyScalar('lbs_to_kg_or_null', '0')).toBeNull());
+    it('returns null for negative', () =>
+      expect(applyScalar('lbs_to_kg_or_null', '-2550')).toBeNull());
+    it('returns null for non-numeric', () =>
+      expect(applyScalar('lbs_to_kg_or_null', 'N/A')).toBeNull());
+    it('returns null for whitespace', () =>
+      expect(applyScalar('lbs_to_kg_or_null', '   ')).toBeNull());
+    it('returns null for a unit-suffixed value', () =>
+      expect(applyScalar('lbs_to_kg_or_null', '2550 lbs')).toBeNull());
+    it('returns null for a thousands-separated value', () =>
+      expect(applyScalar('lbs_to_kg_or_null', '12,500')).toBeNull());
+  });
+
   describe('date_yyyy_slash_or_null', () => {
     it('formats valid date', () =>
       expect(applyScalar('date_yyyy_slash_or_null', '1979/06/20')).toBe('1979-06-20'));
@@ -541,6 +559,29 @@ describe('date_dmmmyy_or_null', () => {
     expect(applyScalar('date_dmmmyy_or_null', '2-Dec-1995')).toBeNull());
   it('returns null for an empty string', () =>
     expect(applyScalar('date_dmmmyy_or_null', '')).toBeNull());
+});
+
+describe('date_month_d_yyyy_or_null', () => {
+  it('parses a single-digit day', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'September 3, 2001')).toBe('2001-09-03'));
+  it('parses a two-digit day', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'December 17, 2024')).toBe('2024-12-17'));
+  it('is case-insensitive on the month name', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'MAY 1, 1990')).toBe('1990-05-01'));
+  it('trims surrounding whitespace', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', ' June 4, 2005 ')).toBe('2005-06-04'));
+  it('returns null for an abbreviated month', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'Sep 3, 2001')).toBeNull());
+  it('returns null for a word that is not a month', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'Smarch 3, 2001')).toBeNull());
+  it('returns null for an impossible calendar date', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'February 30, 2020')).toBeNull());
+  it('returns null for a two-digit year', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'September 3, 01')).toBeNull());
+  it('returns null without the comma', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', 'September 3 2001')).toBeNull());
+  it('returns null for an empty string', () =>
+    expect(applyScalar('date_month_d_yyyy_or_null', '')).toBeNull());
 });
 
 describe('first_line_or_null', () => {

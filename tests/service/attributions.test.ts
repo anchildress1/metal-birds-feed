@@ -57,6 +57,10 @@ describe('attributionFor', () => {
       'Source data from the Közlekedési Hatóság (Hungarian Transport Authority), Magyarország Légijármű Lajstroma — https://www.kozlekedesihatosag.kormany.hu/hu/dokumentum/104604; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
     ],
     [
+      'jm-jcaa',
+      'Source data from the Jamaica Civil Aviation Authority (JCAA) — https://www.jcaa.gov.jm/aircraft-registry-page/; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+    [
       'th-caat',
       'Source data from the Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th; used and shared with permission for non-commercial use, normalized into this project schema without implying endorsement.',
     ],

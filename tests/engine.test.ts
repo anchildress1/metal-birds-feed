@@ -3281,6 +3281,149 @@ describe('record_count guard (ee-tram)', () => {
   });
 });
 
+describe('JCAA Jamaica (HTML) fixture mapping', () => {
+  const JM_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'jm-jcaa.yaml');
+  const JM_HTML = resolve(
+    import.meta.dirname,
+    '..',
+    'fixtures',
+    'jm-jcaa',
+    'input',
+    'register.html'
+  );
+  const jmHtml = (): string => readFileSync(JM_HTML, 'utf8');
+  const mapJm = (html: string): ReturnType<typeof mapRows> =>
+    mapRows(loadSourceConfig(JM_CONFIG), new Map([['register', Buffer.from(html, 'utf8')]]));
+  const byMark = (m: Map<string, Aircraft>, mark: string): Aircraft => {
+    const hits = [...m.values()].filter((r) => r.registration === mark);
+    expect(hits).toHaveLength(1);
+    return hits[0];
+  };
+
+  let jm: Map<string, Aircraft>;
+  let jmStats: EngineStats;
+
+  beforeAll(async () => {
+    const result = await mapJm(jmHtml());
+    jm = result.records;
+    jmStats = result.stats;
+  });
+
+  it('maps all 12 fixture aircraft with no failures', () => {
+    expect(jmStats).toEqual({ total: 12, ok: 12, failed: 0, skipped: 0, duplicateSkipped: 0 });
+  });
+
+  it('keys on mark and serial, registers the bare mark, and lowercases the hex', () => {
+    const r = byMark(jm, '6Y-JTC');
+    expect(r.source_id).toBe('6Y-JTC|18265231');
+    expect(r.source).toBe('jm-jcaa');
+    expect(r.registration).toBe('6Y-JTC');
+    expect(r.icao_hex).toBe('0be1f0');
+    expect(r.country).toBe('JM');
+    expect(r.manufacturer).toBe('Cessna');
+    expect(r.model).toBe('182Q');
+    expect(r.serial_number).toBe('18265231');
+    expect(r.seats).toBe(4);
+    expect(r.engine.manufacturer).toBe('Teledyne Continental');
+    expect(r.engine.model).toBe('O-470-U');
+  });
+
+  it.each<[string, string, Aircraft['status']]>([
+    ['6Y-JTC', 'Valid', 'valid'],
+    ['6Y-JBA', 'Invalid', 'invalid'],
+    ['6Y-JUC', 'Not in operation', 'invalid'],
+    ['6Y-JWT', 'Invalid, Not in operation', 'invalid'],
+    ['6Y-JTB', 'Crashed, Invalid', 'invalid'],
+    ['6Y-JZA', 'De-registered, Invalid', 'cancelled'],
+    ['6Y-JAI', '—', null],
+  ])('maps %s status "%s" to %p', (mark, _upstream, expected) => {
+    expect(byMark(jm, mark).status).toBe(expected);
+  });
+
+  it('fails the row on an unenumerated status instead of guessing one', async () => {
+    const html = jmHtml().replace('<td>Crashed, Invalid</td>', '<td>Suspended</td>');
+    const { records, stats } = await mapJm(html);
+    expect(stats).toEqual({ total: 12, ok: 11, failed: 1, skipped: 0, duplicateSkipped: 0 });
+    expect(records.has('6Y-JTB|27-3293')).toBe(false);
+  });
+
+  it('nulls the "—" C of A category and keeps every other category verbatim', () => {
+    expect(byMark(jm, '6Y-JAI').airworthiness_class).toBeNull();
+    expect(byMark(jm, '6Y-JTC').airworthiness_class).toBe('Commercial Air Transport ‐ Normal');
+    expect(byMark(jm, '6Y-JNE').airworthiness_class).toBe('Normal/Commercial Air Transport');
+    expect(byMark(jm, '6Y-JUC').airworthiness_class).toBe('Sport Flying');
+  });
+
+  it('parses the spelled-out registration date and nulls a blank one', () => {
+    expect(byMark(jm, '6Y-JWT').certification_date).toBe('2001-09-03');
+    expect(byMark(jm, '6Y-JAS').certification_date).toBe('2025-10-01');
+    expect(byMark(jm, '6Y-JZA').certification_date).toBeNull();
+  });
+
+  it('keeps the Private operation label verbatim in the operator name', () => {
+    expect(byMark(jm, '6Y-JWT').operator.name).toBe('Private');
+    expect(byMark(jm, '6Y-JUC').operator.name).toBe('Private (Ultralight)');
+    expect(byMark(jm, '6Y-JCH').operator.name).toBe('Caribbean Aviation Training Center (Private)');
+  });
+
+  it('nulls blank cells rather than borrowing a neighbour', () => {
+    expect(byMark(jm, '6Y-JCH').owner.name).toBeNull();
+    expect(byMark(jm, '6Y-JCG').model).toBeNull();
+    expect(byMark(jm, '6Y-JAS').seats).toBeNull();
+  });
+
+  // The register files an engine model code in the make column on this row; repairing it would mean
+  // inventing which cell the agency meant.
+  it('keeps a misfiled engine cell where the register put it', () => {
+    const r = byMark(jm, '6Y-JLJ');
+    expect(r.engine.manufacturer).toBe('O-320-E2D');
+    expect(r.engine.model).toBeNull();
+  });
+
+  it('decodes an entity-escaped party name to the same text as the raw one', () => {
+    const r = byMark(jm, '6Y-JBA');
+    expect(r.owner.name).toBe('John Roe, Jim Roe & Joe Roe');
+    expect(r.operator.name).toBe(r.owner.name);
+  });
+
+  it('publishes no party location', () => {
+    for (const r of jm.values()) {
+      expect([r.owner.state, r.owner.country, r.operator.state, r.operator.country]).toEqual([
+        null,
+        null,
+        null,
+        null,
+      ]);
+    }
+  });
+
+  it('keys a reissued mark on a new serial as its own row beside the cancelled one', async () => {
+    const reissued = jmHtml().replace(
+      '</tbody>',
+      '<tr><td>6Y-JZA</td><td>0BE28A</td><td>Cessna</td><td>172S</td><td>172S0001</td><td>Acme Air Ltd.</td><td>Acme Air Ltd.</td><td>January 5, 2026</td><td></td><td></td><td>4</td><td>Textron Lycoming</td><td>IO-360-L2A</td><td></td><td></td><td></td><td>Valid</td><td>General Aviation</td></tr></tbody>'
+    );
+    const { records } = await mapJm(reissued);
+    expect(records.get('6Y-JZA|31-7652156')?.status).toBe('cancelled');
+    expect(records.get('6Y-JZA|172S0001')?.status).toBe('valid');
+  });
+
+  it('lands reissue date, MCTOW and C of A expiry in their own fields', async () => {
+    const original = jmHtml();
+    const filled = original.replace(
+      /(<td>November 28, 1996<\/td>\s*)<td><\/td>\s*<td><\/td>(\s*<td>4<\/td>\s*<td>Teledyne Continental<\/td>\s*<td>O-470-U<\/td>\s*)<td><\/td>\s*<td><\/td>\s*<td><\/td>/,
+      '$1<td>March 4, 2019</td><td>2950</td>$2<td>June 30, 2027</td><td>ELT 406</td><td>Float kit fitted</td>'
+    );
+    expect(filled).not.toBe(original);
+    const { records } = await mapJm(filled);
+    const r = records.get('6Y-JTC|18265231');
+    expect(r?.certification_date).toBe('1996-11-28');
+    expect(r?.last_action_date).toBe('2019-03-04');
+    expect(r?.max_takeoff_weight_kg).toBe(1338.1);
+    expect(r?.expiration_date).toBe('2027-06-30');
+    expect(JSON.stringify(r)).not.toMatch(/ELT 406|Float kit fitted/);
+  });
+});
+
 // lt-tka counts against the parsed rows, not the mapped records: its published total covers
 // the accumulated history that latest_snapshot_by then filters down to one publication.
 describe('record_count against a separately published total (lt-tka)', () => {

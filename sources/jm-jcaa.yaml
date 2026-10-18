@@ -1,0 +1,232 @@
+id: jm-jcaa
+label: Jamaica Civil Aviation Authority Aircraft Registry
+country: JM
+language: en
+encoding: utf8
+trim_all: true
+# No cadence_days: clustered edits with quiet gaps up to 179 days fit no window; see
+# DATA_LICENSES.md "Update cadence".
+
+download:
+  # The registry is server-rendered as one <table id="registry">; DataTables pages and exports it
+  # client-side, so the single GET already carries every row. No CSV/XLSX/API channel exists.
+  url: https://www.jcaa.gov.jm/aircraft-registry-page/
+  format: file
+  entries:
+    register: register.html
+
+primary: register
+delimiter: ','
+format: html
+
+# The page states no fleet total, so there is nothing for `record_count` to assert against.
+#
+# `skip_rows: 1` drops the <thead> row so the short names below apply; an added or removed upstream
+# column then fails the discarded-header width check instead of shifting every field.
+#
+# emergency_transponder and comments are unmapped: no schema field holds either.
+skip_rows: 1
+columns:
+  register:
+    - mark
+    - hex
+    - manufacturer
+    - model
+    - serial
+    - operator
+    - owner
+    - reg_date
+    - reissue_date
+    - mctow_lbs
+    - seating
+    - engine_make
+    - engine_model
+    - coa_expiry
+    - emergency_transponder
+    - comments
+    - status
+    - coa_category
+
+# No certificate number or per-aircraft id is published. The register keeps de-registered marks on
+# the page, so a reissued mark would sit beside its old row; the serial keys the new airframe as a
+# new row instead of colliding with the cancelled one.
+source_id: [mark, serial]
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: trim_or_null
+    default: ''
+
+  icao_hex:
+    field: hex
+    transform: lowercase
+
+  icao_type_code:
+    constant: ~
+
+  # The site's status sitemap nests Not in operation, De-registered and Crashed under Invalid, so a
+  # bare child term is still Invalid. A cell joins every assigned term in alphabetical order.
+  # Crashed is not de-registration — the mark stays on the register — so it is invalid, not cancelled.
+  # "—" is the page's blank status.
+  status:
+    field: status
+    lookup:
+      'Valid': valid
+      'Invalid': invalid
+      'Not in operation': invalid
+      'Invalid, Not in operation': invalid
+      'Crashed, Invalid': invalid
+      'De-registered, Invalid': cancelled
+      '—': ~
+
+  country:
+    constant: JM
+
+  manufacturer:
+    field: manufacturer
+    transform: collapse_ws_or_null
+
+  model:
+    field: model
+    transform: collapse_ws_or_null
+
+  serial_number:
+    field: serial
+    transform: collapse_ws_or_null
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  # "C of A Category" mixes the operation the certificate covers with its airworthiness category
+  # ("Commercial Air Transport ‐ Normal", "General Aviation ‐ Utility") in one cell, so it does not
+  # resolve onto the `category` enum; `airworthiness_class` keeps it whole.
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    field: coa_category
+    transform: collapse_ws_or_null
+    null_values:
+      - '—'
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    field: engine_make
+    transform: collapse_ws_or_null
+
+  engine.model:
+    field: engine_model
+    transform: collapse_ws_or_null
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  # No address column is published, so there is no PII to drop and no country to read.
+  owner.name:
+    field: owner
+    transform: collapse_ws_or_null
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  # "Private" is an operation label, not a redaction: it stands alone beside a named owner or
+  # suffixes an operator ("… (Private)"). Kept verbatim.
+  operator.name:
+    field: operator
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    field: reg_date
+    transform: date_month_d_yyyy_or_null
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    field: coa_expiry
+    transform: date_month_d_yyyy_or_null
+
+  last_action_date:
+    field: reissue_date
+    transform: date_month_d_yyyy_or_null
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    field: mctow_lbs
+    transform: lbs_to_kg_or_null
+
+  seats:
+    field: seating
+    transform: int_or_null
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~

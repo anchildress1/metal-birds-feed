@@ -5,6 +5,7 @@ import type {
 } from './types/config.js';
 
 const KNOTS_PER_MPH = 0.868976;
+const KG_PER_LB = 0.45359237;
 const ICAO_MODE_S_BITS = 24;
 
 const trim = (value: string): string => value.trim();
@@ -137,6 +138,30 @@ const dateDmmmyyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(year, month, m[1].padStart(2, '0'));
 };
 
+// `Month D, YYYY` with the month spelled out ("September 3, 2001") — the JCAA Jamaica register
+// date style. An abbreviated month is not this format and nulls rather than being guessed at.
+const MONTH_FULL = [
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
+];
+const dateMonthDYyyyOrNull = (value: string): string | null => {
+  const m = /^([A-Za-z]+) (\d{1,2}), (\d{4})$/.exec(value.trim());
+  if (!m) return null;
+  const month = MONTH_FULL.indexOf(m[1].toLowerCase()) + 1;
+  if (month === 0) return null;
+  return validateAndFormatYMD(m[3], String(month).padStart(2, '0'), m[2].padStart(2, '0'));
+};
+
 // First physical line of a multi-line cell (positioned-PDF extraction joins wrapped lines with
 // "\n"), e.g. the name line of an owner/mortgagee address block. Blank → null.
 const firstLineOrNull = (value: string): string | null => trimOrNull(value.split('\n')[0] ?? '');
@@ -187,6 +212,12 @@ const mphToKtasOrNull = (value: string): string | null => {
   const n = Number.parseFloat(v);
   if (Number.isNaN(n) || n <= 0) return null;
   return String(Math.round(n * KNOTS_PER_MPH * 10) / 10);
+};
+
+// Zero or below nulls on the same mass rule as positive_float_or_null.
+const lbsToKgOrNull = (value: string): string | null => {
+  const lbs = positiveFloatOrNull(value);
+  return lbs === null ? null : String(Math.round(Number(lbs) * KG_PER_LB * 10) / 10);
 };
 
 const binaryToHexOrNull = (value: string): string | null => {
@@ -840,6 +871,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_dd_slash_or_null: dateDdSlashOrNull,
   date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
   date_dmmmyy_or_null: dateDmmmyyOrNull,
+  date_month_d_yyyy_or_null: dateMonthDYyyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
   iso_year_or_null: isoYearOrNull,
   first_line_or_null: firstLineOrNull,
@@ -847,6 +879,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   mv_idera_party: mvIderaParty,
   excel_serial_year_or_null: excelSerialYearOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
+  lbs_to_kg_or_null: lbsToKgOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,
   faa_n_number: faaNNumber,
   faa_cert_class: faaCertClass,

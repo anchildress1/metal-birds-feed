@@ -7,7 +7,7 @@
 
 ## Discovered sources — implementation queue, easiest first
 
-- [ ] Jamaica JCAA — HTML table, `https://jcaa.gov.jm/aircraft-registry-page`; only source here with Mode S hex
+- [x] Jamaica JCAA — HTML table, `https://jcaa.gov.jm/aircraft-registry-page`; only source here with Mode S hex
 - [ ] Fiji CAAF — HTML table, `https://www.caaf.org.fj/aircraft-register-search/`; MSN/series columns misaligned on some rows
 - [ ] Sri Lanka CAASL — PDF, `https://www.caa.lk/en/downloads/sl-aircraft-register`; dated filenames need `discover_url`; marks carry stray spaces
 - [ ] Papua New Guinea CASA — PDF, `https://casapng.gov.pg/safety-regulatory/airworthiness/Aircraft-Registers/`; no serial/status
