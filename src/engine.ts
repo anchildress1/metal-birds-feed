@@ -100,7 +100,7 @@ interface MissingSourceIdPolicy {
 // preamble-count shift can't silently publish a wrong-size fleet. The pattern source is repo-
 // controlled source YAML (justifies the non-literal-regexp suppression below, since it isn't
 // runtime input); the loader also validates it's a syntactically valid regex with exactly one
-// capture group. It's still matched against the decoded primary file — externally-fetched register
+// capture group outside count_matches. It's still matched against externally-fetched register
 // content — so ReDoS risk is bounded by review, not by sandboxing: keep these patterns simple
 // (bounded quantifiers, no nested unbounded repetition) and treat them as reviewed code at PR time.
 const assertRecordCount = (
@@ -115,7 +115,10 @@ const assertRecordCount = (
   const source = publishedTotal ?? new TextDecoder(config.encoding).decode(primaryBuf);
   const where = check.url ?? 'primary file';
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const expected = new RegExp(check.pattern).exec(source)?.[1];
+  const pattern = new RegExp(check.pattern, check.count_matches ? 'g' : '');
+  const expected = check.count_matches
+    ? source.match(pattern)?.length.toString()
+    : pattern.exec(source)?.[1];
   if (expected === undefined)
     throw new Error(`Source "${config.id}": record_count pattern matched no count in ${where}`);
   const actual = counts[against];

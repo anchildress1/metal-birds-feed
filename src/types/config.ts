@@ -203,6 +203,9 @@ export interface RecordCountCheck {
   // prior publications — required where the total counts the accumulated history rather than the
   // current fleet, and the only count an accumulating register publishes about itself.
   against?: 'parsed' | 'mapped';
+  // Count the pattern's matches in the `url` response instead of capturing a stated total, for a
+  // register that publishes no total but lists one entry per aircraft elsewhere (JCAA's sitemap).
+  count_matches?: boolean;
 }
 
 // One page orientation a register has been observed publishing. `field_axis` is the axis along which

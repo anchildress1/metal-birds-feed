@@ -979,6 +979,45 @@ describe('loadSourceConfig', () => {
   });
 });
 
+describe('loadSourceConfig — record_count.count_matches', () => {
+  const rc = (body: string) => BASE('US', `record_count:\n${body}`);
+
+  it('accepts a capture-free pattern counted in a separate endpoint', () => {
+    const config = loadInline(
+      '_test_rc_count_ok.yaml',
+      rc("  url: https://example.com/sitemap.xml\n  pattern: '<loc>'\n  count_matches: true\n")
+    );
+    expect(config.record_count?.count_matches).toBe(true);
+  });
+
+  it('rejects count_matches without an endpoint', () => {
+    expect(() =>
+      loadInline('_test_rc_count_nourl.yaml', rc("  pattern: '<loc>'\n  count_matches: true\n"))
+    ).toThrow(/count_matches requires record_count\.url/);
+  });
+
+  it('still requires one capture group when count_matches is false', () => {
+    expect(() =>
+      loadInline(
+        '_test_rc_count_false.yaml',
+        rc("  url: https://example.com/c\n  pattern: '<loc>'\n  count_matches: false\n")
+      )
+    ).toThrow(/exactly one capture group/);
+  });
+
+  it('rejects count_matches on a download.manual source, like any record_count.url', () => {
+    expect(() =>
+      loadInline(
+        '_test_rc_count_manual.yaml',
+        BASE(
+          'US',
+          "record_count:\n  url: https://example.com/c\n  pattern: '<loc>'\n  count_matches: true\n"
+        ).replace('  format: zip\n', '  format: zip\n  manual: true\n')
+      )
+    ).toThrow(/record_count\.url is not supported with download\.manual/);
+  });
+});
+
 describe('loadSourceConfig — header_text', () => {
   const COLS = 'columns:\n  register: [ID, OWNER]\n';
 

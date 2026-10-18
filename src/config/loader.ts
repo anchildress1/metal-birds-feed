@@ -248,17 +248,19 @@ const SourceConfigSchema = z
       .optional(),
     record_count: z
       .strictObject({
-        pattern: z
-          .string()
-          .min(1)
-          .refine(isValidRegex, {
-            message: 'record_count.pattern must be a valid regular expression',
-          })
-          .refine(hasOneCaptureGroup, {
-            message: 'record_count.pattern must have exactly one capture group',
-          }),
+        pattern: z.string().min(1).refine(isValidRegex, {
+          message: 'record_count.pattern must be a valid regular expression',
+        }),
         url: z.url().optional(),
         against: z.enum(['parsed', 'mapped']).optional(),
+        count_matches: z.boolean().optional(),
+      })
+      .refine((rc) => rc.count_matches === true || hasOneCaptureGroup(rc.pattern), {
+        message: 'record_count.pattern must have exactly one capture group',
+      })
+      // The primary is the register itself; counting matches in it would count what it asserts.
+      .refine((rc) => rc.count_matches !== true || rc.url !== undefined, {
+        message: 'record_count.count_matches requires record_count.url',
       })
       .optional(),
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),

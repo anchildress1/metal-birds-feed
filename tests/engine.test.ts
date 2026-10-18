@@ -3293,8 +3293,27 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
     'register.html'
   );
   const jmHtml = (): string => readFileSync(JM_HTML, 'utf8');
-  const mapJm = (html: string): ReturnType<typeof mapRows> =>
-    mapRows(loadSourceConfig(JM_CONFIG), new Map([['register', Buffer.from(html, 'utf8')]]));
+  // Synthetic in the live sitemap's exact shape: the fixture is a 12-row subset of a 52-entry
+  // sitemap, and trimming the real file to match would fabricate a publication that never existed.
+  const jmSitemap = (aircraft: number, extraLocs: string[] = []): string =>
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
+      ...Array.from(
+        { length: aircraft },
+        (_, i) => `https://www.jcaa.gov.jm/aircraft-registry/6y-j${i}/`
+      ),
+      ...extraLocs,
+    ]
+      .map(
+        (loc) =>
+          `\t<url>\n\t\t<loc><![CDATA[${loc}]]></loc>\n\t\t<lastmod><![CDATA[2026-10-16T19:34:08+00:00]]></lastmod>\n\t</url>`
+      )
+      .join('\n')}\n</urlset>\n`;
+  const mapJm = (html: string, sitemap = jmSitemap(12)): ReturnType<typeof mapRows> =>
+    mapRows(
+      loadSourceConfig(JM_CONFIG),
+      new Map([['register', Buffer.from(html, 'utf8')]]),
+      sitemap
+    );
   const byMark = (m: Map<string, Aircraft>, mark: string): Aircraft => {
     const hits = [...m.values()].filter((r) => r.registration === mark);
     expect(hits).toHaveLength(1);
@@ -3403,7 +3422,7 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
       '</tbody>',
       '<tr><td>6Y-JZA</td><td>0BE28A</td><td>Cessna</td><td>172S</td><td>172S0001</td><td>Acme Air Ltd.</td><td>Acme Air Ltd.</td><td>January 5, 2026</td><td></td><td></td><td>4</td><td>Textron Lycoming</td><td>IO-360-L2A</td><td></td><td></td><td></td><td>Valid</td><td>General Aviation</td></tr></tbody>'
     );
-    const { records } = await mapJm(reissued);
+    const { records } = await mapJm(reissued, jmSitemap(13));
     expect(records.get('6Y-JZA|31-7652156')?.status).toBe('cancelled');
     expect(records.get('6Y-JZA|172S0001')?.status).toBe('valid');
   });
@@ -3422,6 +3441,39 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
     expect(r?.max_takeoff_weight_kg).toBe(1338.1);
     expect(r?.expiration_date).toBe('2027-06-30');
     expect(JSON.stringify(r)).not.toMatch(/ELT 406|Float kit fitted/);
+  });
+
+  describe('record_count from the aircraft sitemap', () => {
+    it('passes when the sitemap lists one aircraft page per parsed row', async () => {
+      const { records } = await mapJm(jmHtml(), jmSitemap(12));
+      expect(records.size).toBe(12);
+    });
+
+    it('fails when the page carries fewer rows than the sitemap lists', async () => {
+      await expect(mapJm(jmHtml(), jmSitemap(13))).rejects.toThrow(
+        /parsed 12 records but the source publishes 13/
+      );
+    });
+
+    it('fails when the sitemap lists fewer aircraft than the page carries', async () => {
+      await expect(mapJm(jmHtml(), jmSitemap(11))).rejects.toThrow(
+        /parsed 12 records but the source publishes 11/
+      );
+    });
+
+    it('does not count index or archive URLs', async () => {
+      const sitemap = jmSitemap(11, [
+        'https://www.jcaa.gov.jm/aircraft-registry/',
+        'https://www.jcaa.gov.jm/aircraft-registry-page/',
+      ]);
+      await expect(mapJm(jmHtml(), sitemap)).rejects.toThrow(/source publishes 11/);
+    });
+
+    it('fails naming the sitemap when it lists no aircraft', async () => {
+      await expect(mapJm(jmHtml(), jmSitemap(0))).rejects.toThrow(
+        /pattern matched no count in https:\/\/www\.jcaa\.gov\.jm\/aircraft-registry-sitemap\.xml/
+      );
+    });
   });
 
   // Same width, so only header_text stands between this and owner/operator publishing swapped.

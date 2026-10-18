@@ -88,6 +88,7 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 - `record_count`: catches a dropped row writing a short artifact.
   - Use the separate-endpoint form for any paged API that cannot self-report truncation. A publication landing between the two responses fails the run — rerun, never relax.
   - Count against parsed rows where the published total covers history `latest_snapshot_by` filters.
+  - `count_matches: true` counts pattern matches in the endpoint response, for a register stating no total but listing one entry per row elsewhere (a sitemap). Verify the listing equals the rows, and pattern only per-row entries.
   - PDF sources cannot use it. `download.manual` sources cannot use the endpoint form.
 - Zero rows always fails.
 - Merge blocks (`merge_duplicates`, `joins[].merge_duplicates`) are for registers emitting one row per co-registered party; never drop the extra rows.

@@ -19,8 +19,15 @@ primary: register
 delimiter: ','
 format: html
 
-# The page states no fleet total, so there is nothing for `record_count` to assert against.
-#
+# The page states no fleet total. The site's sitemap lists one page per aircraft in the table,
+# cancelled rows included, so its entry count stands in for one; counted against parsed rows because
+# that is what the page carries. The pattern requires a slug so an index or archive URL never counts.
+record_count:
+  url: https://www.jcaa.gov.jm/aircraft-registry-sitemap.xml
+  pattern: '<loc><!\[CDATA\[https://www\.jcaa\.gov\.jm/aircraft-registry/[a-z0-9-]+/\]\]></loc>'
+  count_matches: true
+  against: parsed
+
 # `skip_rows: 1` drops the <thead> row so the short names below apply; `header_text` pins that row,
 # so an added, removed, renamed, or swapped upstream column (Operator ↔ Owner/Lessor) fails the run
 # instead of shifting fields.
