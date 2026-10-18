@@ -233,6 +233,7 @@ mapping:
   airworthiness_date:
     field: arc_issue
     transform: hu_kh_date_or_null
+    null_values: ['-']
 
   expiration_date:
     constant: ~
@@ -258,6 +259,7 @@ mapping:
   airworthiness_review_date:
     field: arc_expiry
     transform: hu_kh_date_or_null
+    null_values: ['-']
 
   cancellation_reason:
     constant: ~

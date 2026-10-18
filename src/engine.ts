@@ -4,8 +4,9 @@ import type {
   FieldMapping,
   MergeDuplicatesConfig,
   JoinConfig,
+  ScalarTransformName,
 } from './types/config.js';
-import { applyScalar, applyArray, applyCompound } from './transforms.js';
+import { applyScalar, applyArray, applyCompound, DATE_TRANSFORMS } from './transforms.js';
 import {
   parseCSV,
   parseSpreadsheet,
@@ -214,6 +215,7 @@ export async function mapRows(
   publishedTotal?: string
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   unmatchedLookups.delete(config.id);
+  dateTallies.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
 
   const primaryBuf = files.get(config.primary);
@@ -235,6 +237,7 @@ export async function mapRows(
   // unrecognized values are the evidence for it — throwing first would withhold them from the only
   // run that needed them.
   reportUnmatchedLookups(config.id);
+  assertDateRejections(config.id);
   if (stats.failed === 0)
     assertRecordCount(
       config,
@@ -267,6 +270,7 @@ export async function mapSnapshots(
   if (column === undefined)
     throw new Error(`Source "${config.id}" has no latest_snapshot_by; there are no snapshots`);
   unmatchedLookups.delete(config.id);
+  dateTallies.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
   const primaryBuf = files.get(config.primary);
   if (!primaryBuf)
@@ -295,6 +299,7 @@ export async function mapSnapshots(
     ...mapRowSet(config, joinMaps, group),
   }));
   reportUnmatchedLookups(config.id);
+  assertDateRejections(config.id);
   // A truncated download is indistinguishable from a short publication history, and seeding from
   // it would be permanent; the failed-row tolerance above does not extend to the count.
   assertRecordCount(
@@ -851,6 +856,71 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // concurrently would otherwise clear each other's counts and report each other's values.
 const unmatchedLookups = new Map<string, Map<string, number>>();
 
+// Format drift rejects nearly every cell in a date column; legacy junk and hand typos are a
+// minority. Above this share of non-blank cells the column is drift and the run fails.
+const MAX_DATE_REJECT_RATIO = 0.5;
+const DATE_REJECT_SAMPLES = 5;
+
+interface DateTally {
+  field: string;
+  transform: ScalarTransformName;
+  nonBlank: number;
+  rejected: number;
+  samples: Set<string>;
+}
+
+// Partitioned by source for the same reason as unmatchedLookups.
+const dateTallies = new Map<string, Map<string, DateTally>>();
+
+function tallyDateCell(
+  source: string,
+  field: string,
+  transform: ScalarTransformName,
+  raw: string,
+  rejected: boolean
+): void {
+  const forSource = dateTallies.get(source) ?? new Map<string, DateTally>();
+  dateTallies.set(source, forSource);
+  const key = `${field}\u0000${transform}`;
+  const tally = forSource.get(key) ?? {
+    field,
+    transform,
+    nonBlank: 0,
+    rejected: 0,
+    samples: new Set(),
+  };
+  forSource.set(key, tally);
+  tally.nonBlank++;
+  if (!rejected) return;
+  tally.rejected++;
+  if (tally.samples.size < DATE_REJECT_SAMPLES) tally.samples.add(raw);
+}
+
+function assertDateRejections(source: string): void {
+  const forSource = dateTallies.get(source);
+  dateTallies.delete(source);
+  if (forSource === undefined) return;
+  const drifted: string[] = [];
+  for (const t of forSource.values()) {
+    if (t.rejected === 0) continue;
+    const detail = {
+      source,
+      field: t.field,
+      transform: t.transform,
+      rejected: t.rejected,
+      non_blank: t.nonBlank,
+      samples: [...t.samples].join(' | '),
+    };
+    if (t.rejected / t.nonBlank > MAX_DATE_REJECT_RATIO)
+      drifted.push(
+        `field "${t.field}" (${t.transform}) rejected ${t.rejected} of ${t.nonBlank} non-blank cells, e.g. ${detail.samples}`
+      );
+    else log('warn', 'map_date_rejected', detail);
+  }
+  if (drifted.length > 0)
+    throw new Error(`Source "${source}": date format drift — ${drifted.join('; ')}`);
+}
+
 function resolveLookup(
   value: string,
   lookup: Record<string, string | null>,
@@ -900,6 +970,11 @@ function resolveScalar(row: Row, mapping: FieldMapping, source: string): string 
   if (mapping.null_values?.includes(raw)) return mapping.default ?? null;
 
   const transformed = mapping.transform ? applyScalar(mapping.transform, raw) : raw;
+  if (mapping.transform && DATE_TRANSFORMS.has(mapping.transform) && raw.trim() !== '') {
+    tallyDateCell(source, field, mapping.transform, raw, transformed === null);
+    // `default` stands for routine unmatched data; a rejected date is judged by the ratio guard.
+    if (transformed === null) return null;
+  }
   if (transformed === null) return mapping.default ?? null;
 
   if (mapping.lookup) {

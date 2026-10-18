@@ -4341,6 +4341,116 @@ describe('unmatched lookup reporting', () => {
   });
 });
 
+describe('date rejection ratio guard', () => {
+  const config = {
+    id: 'synthetic-date',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: {
+      registration: { field: 'REG' },
+      status: { constant: 'valid' },
+      country: { constant: 'US' },
+      certification_date: {
+        field: 'DATE',
+        transform: 'date_dd_slash_or_null' as const,
+        null_values: ['NONE'],
+        default: '1900-01-01',
+      },
+      year_manufactured: { field: 'YEAR', transform: 'int_or_null' as const },
+    },
+  };
+
+  const run = (dates: string[], year = '') =>
+    mapRows(
+      config,
+      new Map([
+        [
+          'f',
+          Buffer.from(
+            ['ID,REG,DATE,YEAR', ...dates.map((d, i) => `${i},N${i},${d},${year}`)].join('\n')
+          ),
+        ],
+      ])
+    );
+
+  const dateWarns = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.map((c) => String(c[0])).filter((l) => l.includes('map_date_rejected'));
+
+  it('fails the run when most non-blank cells are rejected', async () => {
+    await expect(run(['2001-09-03', '2001-09-04', '03/09/2001'])).rejects.toThrow(
+      /"synthetic-date".*field "DATE" \(date_dd_slash_or_null\) rejected 2 of 3 .*2001-09-03/
+    );
+  });
+
+  it('fails a single rejected cell out of one', async () => {
+    await expect(run(['junk'])).rejects.toThrow(/rejected 1 of 1/);
+  });
+
+  it('nulls a minority of rejected cells, ignoring default, and warns once with counts', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { records, stats } = await run([
+        'junk',
+        'junk',
+        '03/09/2001',
+        '04/09/2001',
+        '05/09/2001',
+      ]);
+      expect(stats.failed).toBe(0);
+      expect(records.get('0')!.certification_date).toBeNull();
+      expect(records.get('2')!.certification_date).toBe('2001-09-03');
+      const warns = dateWarns(logSpy);
+      expect(warns).toHaveLength(1);
+      expect(warns[0]).toContain('rejected=2');
+      expect(warns[0]).toContain('non_blank=5');
+      expect(warns[0]).toContain('samples=junk');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('does not fail at exactly half', async () => {
+    const { stats } = await run(['junk', '03/09/2001']);
+    expect(stats.failed).toBe(0);
+  });
+
+  it('counts neither blank nor null_values cells', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      // Counting the blanks would put the rejection under half and hide it as a warn.
+      await expect(run(['junk', '', '  ', 'NONE', 'NONE'])).rejects.toThrow(/rejected 1 of 1/);
+      const { records } = await run(['junk', '03/09/2001', '', 'NONE']);
+      expect(records.get('2')!.certification_date).toBe('1900-01-01');
+      expect(records.get('3')!.certification_date).toBe('1900-01-01');
+      expect(dateWarns(logSpy).at(-1)).toContain('non_blank=2');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('leaves a non-date transform returning null alone', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { records, stats } = await run(['03/09/2001'], 'unknown');
+      expect(stats.failed).toBe(0);
+      expect(records.get('0')!.year_manufactured).toBeNull();
+      expect(dateWarns(logSpy)).toHaveLength(0);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
+
 describe('latest_snapshot_by', () => {
   const config: SourceConfig = {
     id: 'synthetic-snapshot',
@@ -4520,12 +4630,21 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
   const HU_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hu-kh', 'input', 'register.pdf');
   let huRecords: Map<string, Aircraft>;
   let huStats: EngineStats;
+  let huDateWarns: string[];
 
   beforeAll(async () => {
     const config = loadSourceConfig(HU_CONFIG);
-    const result = await mapRows(config, new Map([['register', readFileSync(HU_PDF)]]));
-    huRecords = result.records;
-    huStats = result.stats;
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const result = await mapRows(config, new Map([['register', readFileSync(HU_PDF)]]));
+      huRecords = result.records;
+      huStats = result.stats;
+      huDateWarns = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('map_date_rejected'));
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   // The two skips are the HA-MEI self-contradiction below and the HU-16 non-HA mark — neither is a
@@ -4588,6 +4707,12 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.get('HA-MEI')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.certification_date).toBe('2026-07-13');
+  });
+
+  it('reports the malformed dates once per column rather than failing the run', () => {
+    expect(huDateWarns).toHaveLength(2);
+    expect(huDateWarns.find((l) => l.includes('field=arc_issue'))).toContain('202.05.26');
+    expect(huDateWarns.find((l) => l.includes('field=arc_expiry'))).toContain('T010.11.02');
   });
 
   // year_manufactured is an integer and cannot hold "1957/58"; without the range column the only

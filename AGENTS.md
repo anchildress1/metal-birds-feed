@@ -120,6 +120,8 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - A null `lookup` value (recognized, no schema value) differs from an absent key.
   - `default` only where an unmatched value is routine data, not drift: it nulls the field and logs per row, unusable at volume.
 - A blank cell short-circuits to null before any `lookup`; a `transform` returning null bypasses it. Enumeration does not cover blanks.
+- A non-blank cell a date transform (`DATE_TRANSFORMS`) rejects maps to null, never `default`. Per field, rejections above half the non-blank cells fail the run as format drift; fewer emit one `map_date_rejected` warn. Blank and `null_values` cells count toward neither.
+- Register absence-words and placeholder dates go in `null_values`; never in the transform.
 - `null_values`: for a register stating absence in words; prefer it over a lookup for a free-text column of proper nouns. A code meaning "nothing to report" is absence: left populated, two rows differing only there are an unresolvable duplicate.
 - `status` resolves outside the scalar path and never consults `null_values`. Enumerate a status sentinel as a null `lookup` value.
 - `positive_float_or_null`: only for a quantity a register zero-fills where zero is impossible (mass, span, speed). Never a count.

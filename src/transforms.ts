@@ -933,6 +933,23 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
   SCALAR_HANDLERS[name](value);
 
+// A date column is the one place a format change nulls every row with no lookup to notice it, so
+// the engine counts a null from these on a non-blank cell as a rejection for its drift guard.
+export const DATE_TRANSFORMS: ReadonlySet<ScalarTransformName> = new Set<ScalarTransformName>([
+  'date_yyyymmdd_or_null',
+  'date_yyyy_slash_or_null',
+  'date_dd_slash_or_null',
+  'br_validity_date_or_null',
+  'date_dmmmyy_or_null',
+  'date_month_d_yyyy_or_null',
+  'date_dd_dot_or_null',
+  'iso_date_only_or_null',
+  'iso_year_or_null',
+  'excel_serial_year_or_null',
+  'foca_date_array_or_null',
+  'hu_kh_date_or_null',
+]);
+
 const faaCertOps = (value: string): string[] => {
   const v = value.trim();
   return v.length > 1 ? v.slice(1).split('') : [];
