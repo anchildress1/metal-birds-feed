@@ -268,7 +268,9 @@ export type ParseHtmlOptions = BaseSpreadsheetOptions & { encoding: 'utf8' | 'la
 // eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
 export async function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise<Row[]> {
   const html = decodeText(buf, options.encoding);
-  const wb = XLSX.read(html, { type: 'string' });
+  // Without raw, SheetJS parses HTML cell text as values: serial "0123" loses its zero, "1-2"
+  // becomes a date, "172E10" a number.
+  const wb = XLSX.read(html, { type: 'string', raw: true });
   return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
 }
 

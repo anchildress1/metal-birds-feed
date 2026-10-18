@@ -1326,6 +1326,14 @@ describe('shapeRows discarded-header width guard (html/xls/ods/xlsx shared path)
 });
 
 describe('parseHtml', () => {
+  it('keeps cell text verbatim instead of coercing it to numbers or dates', async () => {
+    const rows = await parseHtml(
+      Buffer.from('<table><tr><td>0123</td><td>1-2</td><td>172E10</td></tr></table>', 'utf8'),
+      { encoding: 'utf8', trim: true, columns: ['serial', 'model', 'type'] }
+    );
+    expect(rows).toEqual([{ serial: '0123', model: '1-2', type: '172E10' }]);
+  });
+
   it('extracts the server-rendered table into one row per aircraft, dropping preamble rows', async () => {
     const rows = await parseHtml(eeBuf(), {
       encoding: 'utf8',
