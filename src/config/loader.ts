@@ -199,6 +199,8 @@ const SourceConfigSchema = z
                   }),
                 before_first_anchor_reach: z.number().nonnegative().optional(),
                 after_last_anchor_reach: z.number().nonnegative().optional(),
+                wrap_after_anchor: z.boolean().optional(),
+                drop_margin_lines: z.boolean().optional(),
                 before_first_anchor_pattern: z
                   .string()
                   .min(1)
@@ -218,6 +220,19 @@ const SourceConfigSchema = z
                 {
                   message:
                     'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
+                }
+              )
+              // The margin is the side of the first band away from the others; one band, or bands
+              // at the same coordinate, give no direction to read.
+              .refine(
+                (l) => {
+                  if (!l.drop_margin_lines) return true;
+                  const printed = l.column_pos.filter((p): p is number => p !== null);
+                  return printed.length >= 2 && printed[0] !== printed.at(-1);
+                },
+                {
+                  message:
+                    'pdf.layouts[].drop_margin_lines needs printed bands at two different coordinates to tell which side is the margin',
                 }
               )
           )
