@@ -514,7 +514,7 @@ const dropMarginLines = (
   isAnchor: (it: PdfItem) => boolean
 ): PdfItem[] => {
   const first = bands[0];
-  const ascending = bands[bands.length - 1] > first;
+  const ascending = (bands.at(-1) ?? first) > first;
   const isMargin = (line: PdfItem[]): boolean => {
     const coords = line.map((it) => axisCoord(it, fieldAxis));
     return ascending

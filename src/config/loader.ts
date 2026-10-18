@@ -228,7 +228,7 @@ const SourceConfigSchema = z
                 (l) => {
                   if (!l.drop_margin_lines) return true;
                   const printed = l.column_pos.filter((p): p is number => p !== null);
-                  return printed.length >= 2 && printed[0] !== printed[printed.length - 1];
+                  return printed.length >= 2 && printed[0] !== printed.at(-1);
                 },
                 {
                   message:
