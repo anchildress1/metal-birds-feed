@@ -296,6 +296,9 @@ export interface SourceConfig {
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;
+  // Expected text of the primary's discarded header row (the last non-empty row `skip_rows` drops),
+  // index-paired with `columns[primary]`. Compared after whitespace collapse, case-sensitively.
+  header_text?: string[];
   // Per parsed-file budget, keyed by the same aliases as `columns`: known non-tabular rows in
   // that CSV (e.g. a "N rows selected." trailer) whose cell count differs from the header. Any
   // ragged row beyond a file's budget fails the parse: a short row silently nulls trailing

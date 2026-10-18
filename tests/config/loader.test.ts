@@ -979,6 +979,63 @@ describe('loadSourceConfig', () => {
   });
 });
 
+describe('loadSourceConfig — header_text', () => {
+  const COLS = 'columns:\n  register: [ID, OWNER]\n';
+
+  it('accepts header_text paired one-to-one with columns[primary]', () => {
+    const config = loadInline(
+      '_test_header_ok.yaml',
+      BASE('US', `skip_rows: 1\n${COLS}header_text: ['Mark', 'Owner']\n`)
+    );
+    expect(config.header_text).toEqual(['Mark', 'Owner']);
+  });
+
+  it('rejects columns with skip_rows but no header_text', () => {
+    expect(() =>
+      loadInline('_test_header_missing.yaml', BASE('US', `skip_rows: 1\n${COLS}`))
+    ).toThrow(/columns\[primary\] with skip_rows >= 1 requires header_text/);
+  });
+
+  it('accepts columns without skip_rows and no header_text, since no header row is discarded', () => {
+    expect(
+      loadInline('_test_header_headerless.yaml', BASE('US', COLS)).header_text
+    ).toBeUndefined();
+  });
+
+  it('rejects header_text whose length differs from columns[primary]', () => {
+    expect(() =>
+      loadInline(
+        '_test_header_len.yaml',
+        BASE('US', `skip_rows: 1\n${COLS}header_text: ['Mark']\n`)
+      )
+    ).toThrow(/header_text requires columns\[primary\] of the same length/);
+  });
+
+  it('rejects header_text without skip_rows, since no header row is discarded', () => {
+    expect(() =>
+      loadInline('_test_header_noskip.yaml', BASE('US', `${COLS}header_text: ['Mark', 'Owner']\n`))
+    ).toThrow(/header_text requires/);
+  });
+
+  it('rejects header_text without columns', () => {
+    expect(() =>
+      loadInline('_test_header_nocols.yaml', BASE('US', `skip_rows: 1\nheader_text: ['Mark']\n`))
+    ).toThrow(/header_text requires/);
+  });
+
+  it('rejects header_text on a pdf source', () => {
+    expect(() =>
+      loadInline(
+        '_test_header_pdf.yaml',
+        BASE(
+          'US',
+          `format: pdf\nskip_rows: 1\n${COLS}header_text: ['Mark', 'Owner']\npdf:\n  anchor_pattern: '^X'\n  layouts:\n    - { field_axis: x, column_pos: [1, 2] }\n`
+        )
+      )
+    ).toThrow(/header_text requires/);
+  });
+});
+
 describe('loadSourceConfig — JSON + POST sources', () => {
   it('loads a json source with a POST download and an empty record path', () => {
     const config = loadInline(

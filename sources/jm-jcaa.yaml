@@ -21,8 +21,9 @@ format: html
 
 # The page states no fleet total, so there is nothing for `record_count` to assert against.
 #
-# `skip_rows: 1` drops the <thead> row so the short names below apply; an added or removed upstream
-# column then fails the discarded-header width check instead of shifting every field.
+# `skip_rows: 1` drops the <thead> row so the short names below apply; `header_text` pins that row,
+# so an added, removed, renamed, or swapped upstream column (Operator ↔ Owner/Lessor) fails the run
+# instead of shifting fields.
 #
 # emergency_transponder and comments are unmapped: no schema field holds either.
 skip_rows: 1
@@ -46,6 +47,25 @@ columns:
     - comments
     - status
     - coa_category
+header_text:
+  - 'Registration Marks'
+  - 'Mode S Code (Base 16/Hex)'
+  - 'Manufacturer'
+  - 'Model'
+  - 'Serial Number'
+  - 'Operator'
+  - 'Owner/Lessor'
+  - 'Original Registration Date'
+  - 'Re-issued Registration Date'
+  - 'MCTOW (LBS)'
+  - 'Seating'
+  - 'Engine Make'
+  - 'Engine Model'
+  - 'Certificate of Airworthiness Expires'
+  - 'Emergency Transponder'
+  - 'Comments'
+  - 'Airworthiness Status'
+  - 'C of A Category'
 
 # No certificate number or per-aircraft id is published. The register keeps de-registered marks on
 # the page, so a reissued mark would sit beside its old row; the serial keys the new airframe as a

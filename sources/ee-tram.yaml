@@ -44,6 +44,16 @@ columns:
     - owner
     - operator
     - pad_trail
+header_text:
+  - ''
+  - 'Riiklik registreerimis-tunnus/Registration mark'
+  - ''
+  - ''
+  - 'Õhusõiduki tüüp/Type of the Aircraft'
+  - 'Seerianumber/Serial number'
+  - 'Õhusõiduki omanik/Owner of the Aircraft'
+  - 'Õhusõiduki operaator/Operator of the Aircraft'
+  - ''
 
 # Estonia publishes no permanent per-aircraft id; the ES- mark is the only key. ee_registration
 # normalizes the spaced form ("ES - MBA") to canonical "ES-MBA" for both id and registration.

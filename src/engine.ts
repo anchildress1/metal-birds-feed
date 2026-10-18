@@ -31,6 +31,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       trim: config.trim_all,
       columns: config.columns?.[config.primary],
       skip_rows: config.skip_rows,
+      header_text: config.header_text,
       allowed_ragged_rows: config.allowed_ragged_rows?.[config.primary],
     });
   }
@@ -40,6 +41,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       columns: config.columns?.[config.primary],
       sheet: config.sheet,
       skip_rows: config.skip_rows,
+      header_text: config.header_text,
     });
   }
   if (config.format === 'json') {
@@ -66,6 +68,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       columns: config.columns?.[config.primary],
       sheet: config.sheet,
       skip_rows: config.skip_rows,
+      header_text: config.header_text,
     });
   }
   return parseSpreadsheet(buf, {
@@ -74,6 +77,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
     columns: config.columns?.[config.primary],
     sheet: config.sheet,
     skip_rows: config.skip_rows,
+    header_text: config.header_text,
   });
 };
 

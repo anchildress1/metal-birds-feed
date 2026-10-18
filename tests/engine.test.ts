@@ -3237,7 +3237,7 @@ const eeTable = (statedTotal: number, marks: string[]): Buffer => {
     '',
     '',
   ]);
-  const header = row(['', 'mark', '', '', 'type', 'serial', 'owner', 'operator', '']);
+  const header = row(loadSourceConfig(EE_CONFIG_PATH).header_text ?? []);
   const data = marks.map((m) =>
     row(['', m, '', '', 'Cessna 172', '123', 'Owner OÜ', 'Owner OÜ', ''])
   );
@@ -3422,6 +3422,19 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
     expect(r?.max_takeoff_weight_kg).toBe(1338.1);
     expect(r?.expiration_date).toBe('2027-06-30');
     expect(JSON.stringify(r)).not.toMatch(/ELT 406|Float kit fitted/);
+  });
+
+  // Same width, so only header_text stands between this and owner/operator publishing swapped.
+  it('fails the run when the register swaps Operator and Owner/Lessor', async () => {
+    const original = jmHtml();
+    const swapped = original.replace(
+      /<th>Operator<\/th>(\s*)<th>Owner\/Lessor<\/th>/,
+      '<th>Owner/Lessor</th>$1<th>Operator</th>'
+    );
+    expect(swapped).not.toBe(original);
+    await expect(mapJm(swapped)).rejects.toThrow(
+      /column 5 reads "Owner\/Lessor", expected "Operator"; column 6 reads "Operator", expected "Owner\/Lessor"/
+    );
   });
 });
 

@@ -84,6 +84,7 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 ### Record integrity
 
 - `latest_snapshot_by`: required where a register accumulates publications instead of replacing them, or the feed serves an older active row for a mark the newest publication cancelled.
+- `header_text`: required on a `columns` + `skip_rows` source with a discarded header row, so a column swap or rename fails the run; width alone does not catch a swap. Copy it verbatim from the live file, annotations included.
 - `record_count`: catches a dropped row writing a short artifact.
   - Use the separate-endpoint form for any paged API that cannot self-report truncation. A publication landing between the two responses fails the run — rerun, never relax.
   - Count against parsed rows where the published total covers history `latest_snapshot_by` filters.

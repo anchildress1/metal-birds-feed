@@ -30,6 +30,8 @@ export interface ParseOptions {
   // the header — the file's own header row (then the LAST dropped row; its width is asserted
   // against `columns`). Never data rows.
   skip_rows?: number;
+  // Expected text of that discarded header row, index-paired with `columns`.
+  header_text?: string[];
   // Budget for known non-tabular rows whose cell count differs from the header; see SourceConfig.
   allowed_ragged_rows?: number;
 }
@@ -51,6 +53,8 @@ interface BaseSpreadsheetOptions {
   // header row, the file's own header row still appears at index 0 and would otherwise
   // be parsed as data; set `skip_rows: 1` to drop it. Defaults to 0.
   skip_rows?: number;
+  // Expected text of the discarded header row, index-paired with `columns`.
+  header_text?: string[];
 }
 
 export interface ParseSpreadsheetOptions extends BaseSpreadsheetOptions {
@@ -76,7 +80,11 @@ export async function parseCSV(buf: Buffer, options: ParseOptions): Promise<Row[
   // from_line is 1-based and counts the header, so the header sits at skip_rows + 1.
   const fromLine = (options.skip_rows ?? 0) + 1;
   if (options.columns && (options.skip_rows ?? 0) >= 1) {
-    assertDiscardedHeaderWidth(await parseSkippedRegion(text, options), options.columns);
+    assertDiscardedHeader(
+      await parseSkippedRegion(text, options),
+      options.columns,
+      options.header_text
+    );
   }
   const allowedRagged = options.allowed_ragged_rows ?? 0;
   return new Promise((resolve, reject) => {
@@ -226,6 +234,7 @@ export async function parseSpreadsheet(
     trim: options.trim,
     columns: options.columns,
     skipRows: options.skip_rows ?? 0,
+    headerText: options.header_text,
   });
 }
 
@@ -246,6 +255,7 @@ const sheetToRows = (sheet: XLSX.WorkSheet, options: BaseSpreadsheetOptions): Ro
     trim: options.trim,
     columns: options.columns,
     skipRows: options.skip_rows ?? 0,
+    headerText: options.header_text,
   });
 };
 
@@ -802,12 +812,13 @@ interface ShapeOptions {
   trim: boolean;
   columns?: string[];
   skipRows: number;
+  headerText?: string[];
 }
 
 // Shared row-shaping so hucre and SheetJS paths produce identical Row[] output.
 const shapeRows = (rawRows: string[][], options: ShapeOptions): Row[] => {
   if (options.columns && options.skipRows >= 1) {
-    assertDiscardedHeaderWidth(rawRows.slice(0, options.skipRows), options.columns);
+    assertDiscardedHeader(rawRows.slice(0, options.skipRows), options.columns, options.headerText);
   }
   const sliced = rawRows.slice(options.skipRows);
   const trimmed = options.trim ? sliced.map((cells) => cells.map((c) => c.trim())) : sliced;
@@ -883,14 +894,35 @@ const assertUniqueHeaders = (headers: string[]): string[] => {
 // only run-time witness to it. Width drift means a column was added or removed upstream —
 // positional mapping would silently shift every field across the change, and row-count/hash
 // guards can't see it. The last non-empty skipped row is the header; banners above it may be
-// any width.
-const assertDiscardedHeaderWidth = (skippedRows: string[][], columns: string[]): void => {
+// any width and carry volatile text (dates, counts), so only the header row is compared. Width
+// alone misses two columns swapping places; `headerText` catches that and a rename.
+const assertDiscardedHeader = (
+  skippedRows: string[][],
+  columns: string[],
+  headerText: string[] | undefined
+): void => {
   const header = skippedRows.findLast((cells) => cells.some((c) => c.trim().length > 0));
-  if (header && header.length !== columns.length)
+  if (!header) return;
+  if (header.length !== columns.length)
     throw new Error(
       `Explicit columns (${columns.length}) do not match the file's discarded header row (${header.length} cells) — upstream layout changed`
     );
+  const mismatches = (headerText ?? []).flatMap((expected, i) => {
+    const actual = normalizeHeaderCell(header[i]);
+    return actual === normalizeHeaderCell(expected)
+      ? []
+      : [`column ${i} reads "${actual}", expected "${expected}"`];
+  });
+  if (mismatches.length > 0)
+    throw new Error(
+      `Discarded header row does not match header_text — upstream layout changed: ${mismatches.join('; ')}`
+    );
 };
+
+// Whitespace, nbsp included, is layout rather than wording: HTML and spreadsheet exports reflow it.
+function normalizeHeaderCell(cell: string): string {
+  return cell.replace(/\s+/g, ' ').trim();
+}
 
 interface HeadersAndData {
   headers: string[];
