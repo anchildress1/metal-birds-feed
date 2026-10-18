@@ -1488,8 +1488,8 @@ describe('parsePdf wrap_after_anchor', () => {
       { str: 'BBB', x: 141.04, y: 50 },
       { str: 'Second owner', x: 141.04, y: 300 },
     ];
-    const withinJitter = await parsePdf(buildPdf([lineAt(141.04 - 4)]), rotatedOpts(true));
-    const beyondJitter = await parsePdf(buildPdf([lineAt(141.04 - 6)]), rotatedOpts(true));
+    const withinJitter = await parsePdf(buildPdf([lineAt(141.04 - 2)]), rotatedOpts(true));
+    const beyondJitter = await parsePdf(buildPdf([lineAt(141.04 - 3.5)]), rotatedOpts(true));
 
     expect(withinJitter[1]?.owner).toBe('tail\nSecond owner');
     expect(beyondJitter[0]?.owner).toBe('First owner\ntail');

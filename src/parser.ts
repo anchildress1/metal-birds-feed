@@ -479,6 +479,12 @@ const recordIndex = (perPair: number[] | undefined, anchorCoords: number[], rc: 
   return i;
 };
 
+// How far one printed line's fragments, or a record's own first-line fields, stray along the record
+// axis. CCAA Croatia's address column reaches 2.16pt past its mark; 2.5 sits just above that. It also
+// bounds how close a wrapped line may sit to the next mark before being handed to it: the nearest on
+// the live register is 6.7pt, so the headroom is real but finite, and widening this erodes it.
+const SAME_ROW_JITTER_PT = 2.5;
+
 // The record a wrapped line trails: the anchor on the reading-start side of the item, allowing
 // same-row jitter so a record's own first-line fields still resolve to it. Reading runs ascending
 // along x and descending along y, so the start side is the lower coordinate on x and the higher on y.
@@ -488,16 +494,11 @@ const trailingRecordIndex = (anchorCoords: number[], rc: number, recordAxis: 'x'
   if (recordAxis === 'x')
     return Math.max(
       0,
-      anchorCoords.findLastIndex((c) => c <= rc + SAME_ROW_TOLERANCE_PT)
+      anchorCoords.findLastIndex((c) => c <= rc + SAME_ROW_JITTER_PT)
     );
-  const i = anchorCoords.findIndex((c) => c >= rc - SAME_ROW_TOLERANCE_PT);
+  const i = anchorCoords.findIndex((c) => c >= rc - SAME_ROW_JITTER_PT);
   return i === -1 ? anchorCoords.length - 1 : i;
 };
-
-// Items on one printed line share a record-axis coordinate to within the same-row jitter measured on
-// CCAA Croatia (2.16pt); set just above it so a line the renderer split into fragments is still one
-// line, and far below the ~13pt leading that separates adjacent lines.
-const LINE_GAP_PT = 2.5;
 
 // A paragraph set in the page margin (a trailing disclaimer, a repeated page header) starts before
 // the first printed band, on the side away from the other bands, where no table cell does. Judging
@@ -524,7 +525,10 @@ const dropMarginLines = (
   const lines: PdfItem[][] = [];
   for (const it of sorted) {
     const line = lines.at(-1);
-    if (line && axisCoord(it, recordAxis) - axisCoord(line.at(-1)!, recordAxis) <= LINE_GAP_PT)
+    if (
+      line &&
+      axisCoord(it, recordAxis) - axisCoord(line.at(-1)!, recordAxis) <= SAME_ROW_JITTER_PT
+    )
       line.push(it);
     else lines.push([it]);
   }
