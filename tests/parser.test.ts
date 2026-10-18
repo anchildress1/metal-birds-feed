@@ -127,6 +127,17 @@ describe('parseCSV', () => {
       ).rejects.toThrow(/column 1 reads "owner\/lessor", expected "Owner\/Lessor"/);
     });
 
+    it('rejects a blank discarded header row', async () => {
+      await expect(
+        parseCSV(buf(',,\n,,\nN1,Alice,Bob\n'), opts({ ...cols, header_text }))
+      ).rejects.toThrow(/no non-empty discarded header row found; expected one starting "Mark"/i);
+    });
+
+    it('lets a blank discarded row through when header_text is absent', async () => {
+      const rows = await parseCSV(buf(',,\n,,\nN1,Alice,Bob\n'), opts(cols));
+      expect(rows).toHaveLength(1);
+    });
+
     it('checks width only when header_text is absent', async () => {
       const rows = await parseCSV(file('Mark,Operator,Owner/Lessor'), opts(cols));
       expect(rows).toHaveLength(1);
@@ -284,6 +295,26 @@ const ssOpts = (
   format: 'ods' as HucreFormat,
   trim: false,
   ...overrides,
+});
+
+describe('parseSpreadsheet — discarded header with header_text', () => {
+  it('rejects a blank discarded header row', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['', ''],
+          ['N1', 'Alice'],
+        ],
+      },
+    ]);
+    await expect(
+      parseSpreadsheet(buf, {
+        ...ssOpts({ columns: ['REG', 'OWNER'], skip_rows: 1 }),
+        header_text: ['Mark', 'Owner'],
+      })
+    ).rejects.toThrow(/no non-empty discarded header row found; expected one starting "Mark"/i);
+  });
 });
 
 describe('parseSpreadsheet — ods', () => {

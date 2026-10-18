@@ -902,7 +902,13 @@ const assertDiscardedHeader = (
   headerText: string[] | undefined
 ): void => {
   const header = skippedRows.findLast((cells) => cells.some((c) => c.trim().length > 0));
-  if (!header) return;
+  if (!header) {
+    if (headerText)
+      throw new Error(
+        `No non-empty discarded header row found; expected one starting "${headerText[0]}" — upstream layout changed`
+      );
+    return;
+  }
   if (header.length !== columns.length)
     throw new Error(
       `Explicit columns (${columns.length}) do not match the file's discarded header row (${header.length} cells) — upstream layout changed`
