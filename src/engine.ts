@@ -114,11 +114,10 @@ const assertRecordCount = (
   const against = check.against ?? 'mapped';
   const source = publishedTotal ?? new TextDecoder(config.encoding).decode(primaryBuf);
   const where = check.url ?? 'primary file';
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const pattern = new RegExp(check.pattern, check.count_matches ? 'g' : '');
   const expected = check.count_matches
-    ? source.match(pattern)?.length.toString()
-    : pattern.exec(source)?.[1];
+    ? countMatches(check.pattern, source)
+    : // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+      new RegExp(check.pattern).exec(source)?.[1];
   if (expected === undefined)
     throw new Error(`Source "${config.id}": record_count pattern matched no count in ${where}`);
   const actual = counts[against];
@@ -127,6 +126,13 @@ const assertRecordCount = (
       `Source "${config.id}": ${against} ${actual} records but the source publishes ${expected}`
     );
 };
+
+// Undefined on zero, so a listing with no entries reads as "no count" rather than a total of 0.
+function countMatches(pattern: string, source: string): string | undefined {
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const matches = [...source.matchAll(new RegExp(pattern, 'g'))].length;
+  return matches === 0 ? undefined : String(matches);
+}
 
 // One line per distinct unrecognized value, carrying how many rows hit it — the magnitude is the
 // part that says whether a code is a stray or half the register.
