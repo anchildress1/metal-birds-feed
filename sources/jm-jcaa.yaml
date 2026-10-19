@@ -31,8 +31,6 @@ record_count:
 # `skip_rows: 1` drops the <thead> row so the short names below apply; `header_text` pins that row,
 # so an added, removed, renamed, or swapped upstream column (Operator ↔ Owner/Lessor) fails the run
 # instead of shifting fields.
-#
-# emergency_transponder and comments are unmapped: no schema field holds either.
 skip_rows: 1
 columns:
   register:
@@ -257,3 +255,11 @@ mapping:
 
   interdiction_code:
     constant: ~
+
+  emergency_transponder:
+    field: emergency_transponder
+    transform: collapse_ws_or_null
+
+  remarks:
+    field: comments
+    transform: collapse_ws_or_null

@@ -2345,6 +2345,11 @@ beforeAll(async () => {
 });
 
 describe('BR-ANAC fixture mapping', () => {
+  // A compound of two cells leaves no single one to keep; both already land verbatim elsewhere.
+  it('leaves status_source_text null for the compound status', () => {
+    expect([...brRecords.values()].every((r) => r.status_source_text === null)).toBe(true);
+  });
+
   it('maps all 11 fixture rows with no failures (banner skipped, PRALL collapsed)', () => {
     expect(brStats).toEqual({ total: 11, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(brRecords.size).toBe(10);
@@ -3141,6 +3146,10 @@ describe('CAAT Thailand fixture mapping (PDF)', () => {
 });
 
 describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
+  it('leaves status_source_text null for the constant status', () => {
+    expect([...eeRecords.values()].every((r) => r.status_source_text === null)).toBe(true);
+  });
+
   it('maps all 10 fixture aircraft with no failures', () => {
     expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(eeRecords.size).toBe(10);
@@ -3356,8 +3365,9 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
     ['6Y-JTB', 'Crashed, Invalid', 'invalid'],
     ['6Y-JZA', 'De-registered, Invalid', 'cancelled'],
     ['6Y-JAI', '—', null],
-  ])('maps %s status "%s" to %p', (mark, _upstream, expected) => {
+  ])('maps %s status "%s" to %p, keeping the cell verbatim', (mark, upstream, expected) => {
     expect(byMark(jm, mark).status).toBe(expected);
+    expect(byMark(jm, mark).status_source_text).toBe(upstream);
   });
 
   it('fails the row on an unenumerated status instead of guessing one', async () => {
@@ -3427,7 +3437,7 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
     expect(records.get('6Y-JZA|172S0001')?.status).toBe('valid');
   });
 
-  it('lands reissue date, MCTOW and C of A expiry in their own fields', async () => {
+  it('lands reissue date, MCTOW, C of A expiry, transponder and comments in their own fields', async () => {
     const original = jmHtml();
     const filled = original.replace(
       /(<td>November 28, 1996<\/td>\s*)<td><\/td>\s*<td><\/td>(\s*<td>4<\/td>\s*<td>Teledyne Continental<\/td>\s*<td>O-470-U<\/td>\s*)<td><\/td>\s*<td><\/td>\s*<td><\/td>/,
@@ -3440,7 +3450,8 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
     expect(r?.last_action_date).toBe('2019-03-04');
     expect(r?.max_takeoff_weight_kg).toBe(1338.1);
     expect(r?.expiration_date).toBe('2027-06-30');
-    expect(JSON.stringify(r)).not.toMatch(/ELT 406|Float kit fitted/);
+    expect(r?.emergency_transponder).toBe('ELT 406');
+    expect(r?.remarks).toBe('Float kit fitted');
   });
 
   describe('record_count from the aircraft sitemap', () => {
@@ -4403,6 +4414,53 @@ describe('unmatched lookup reporting', () => {
     } finally {
       logSpy.mockRestore();
     }
+  });
+});
+
+describe('status_source_text', () => {
+  const config = (status: FieldMapping, extra: Record<string, FieldMapping> = {}) => ({
+    id: 'synthetic-status',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: { registration: { field: 'REG' }, country: { constant: 'US' }, status, ...extra },
+  });
+  const run = async (status: FieldMapping, cell: string, extra?: Record<string, FieldMapping>) => {
+    const { records } = await mapRows(
+      config(status, extra),
+      new Map([['f', Buffer.from(`ID,REG,S,ALT\n1,N1,${cell},Alt text\n`)]])
+    );
+    return records.get('1')!;
+  };
+  const resolved = { field: 'S', transform: 'lowercase' as const, lookup: { active: 'valid' } };
+
+  it('keeps the raw cell, before transform and lookup', async () => {
+    const r = await run(resolved, ' ACTIVE ');
+    expect(r.status).toBe('valid');
+    expect(r.status_source_text).toBe(' ACTIVE ');
+  });
+
+  it('nulls a blank or whitespace-only cell', async () => {
+    expect((await run(resolved, '')).status_source_text).toBeNull();
+    expect((await run(resolved, '   ')).status_source_text).toBeNull();
+  });
+
+  it('nulls a constant status', async () => {
+    expect((await run({ constant: 'valid' }, 'ACTIVE')).status_source_text).toBeNull();
+  });
+
+  it('takes an explicit status_source_text mapping over the status cell', async () => {
+    const r = await run(resolved, 'ACTIVE', { status_source_text: { field: 'ALT' } });
+    expect(r.status_source_text).toBe('Alt text');
   });
 });
 

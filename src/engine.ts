@@ -1116,6 +1116,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     // mapping-level `default` (AU/FAA/NL/TC use one for unrecognized codes) must not also catch a
     // blank cell, which states nothing at all rather than an unrecognized-but-stated code.
     status: resolveStatus(m, row, s),
+    status_source_text: scalarField(m, row, 'status_source_text', s) ?? statusCell(m, row),
     country: scalarField(m, row, 'country', s) ?? config.country,
     manufacturer: scalarField(m, row, 'manufacturer', s),
     model: scalarField(m, row, 'model', s),
@@ -1161,5 +1162,15 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     lien_status: lienStatus,
     lien_status_source_text: sourceText('lien_status', lienStatus),
     interdiction_code: scalarField(m, row, 'interdiction_code', s),
+    emergency_transponder: scalarField(m, row, 'emergency_transponder', s),
+    remarks: scalarField(m, row, 'remarks', s),
   };
+}
+
+// Raw, not resolved: a transform or lookup is exactly what status_source_text exists to bypass.
+function statusCell(mapping: FieldMap, row: Row): string | null {
+  const field = mapping['status']?.field;
+  if (field === undefined) return null;
+  const raw = row[field] ?? '';
+  return raw.trim() === '' ? null : raw;
 }
