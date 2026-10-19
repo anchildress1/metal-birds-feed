@@ -307,12 +307,13 @@ export async function mapSnapshots(
   const [newest, newestRows] = ordered.at(-1) ?? [];
   if (newest !== undefined && newestRows)
     assertJoinHits(config, joinMaps, newestRows, `publication ${newest}`);
-  const snapshots = ordered.map(([snapshot, group]) => ({
-    snapshot,
-    ...mapRowSet(config, joinMaps, group),
-  }));
+  const snapshots = ordered.map(([snapshot, group]) => {
+    const mapped = mapRowSet(config, joinMaps, group);
+    // Per publication: pooled across the history, one drifted publication hides behind the clean ones.
+    assertDateRejections(config.id, snapshot);
+    return { snapshot, ...mapped };
+  });
   reportUnmatchedLookups(config.id);
-  assertDateRejections(config.id);
   // A truncated download is indistinguishable from a short publication history, and seeding from
   // it would be permanent; the failed-row tolerance above does not extend to the count.
   assertRecordCount(
@@ -909,7 +910,7 @@ function tallyDateCell(
   if (tally.samples.size < DATE_REJECT_SAMPLES) tally.samples.add(raw);
 }
 
-function assertDateRejections(source: string): void {
+function assertDateRejections(source: string, publication?: string): void {
   const forSource = dateTallies.get(source);
   dateTallies.delete(source);
   if (forSource === undefined) return;
@@ -918,6 +919,7 @@ function assertDateRejections(source: string): void {
     if (t.rejected === 0) continue;
     const detail = {
       source,
+      ...(publication === undefined ? {} : { publication }),
       field: t.field,
       transform: t.transform,
       rejected: t.rejected,
@@ -931,7 +933,9 @@ function assertDateRejections(source: string): void {
     else log('warn', 'map_date_rejected', detail);
   }
   if (drifted.length > 0)
-    throw new Error(`Source "${source}": date format drift — ${drifted.join('; ')}`);
+    throw new Error(
+      `Source "${source}"${publication === undefined ? '' : ` publication ${publication}`}: date format drift — ${drifted.join('; ')}`
+    );
 }
 
 function resolveLookup(

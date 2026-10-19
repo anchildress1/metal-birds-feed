@@ -5035,6 +5035,37 @@ describe('mapSnapshots', () => {
 
   // The bad loads in a real register double every row with different content; they must not hide
   // behind a good publication or abort the replay.
+  describe('date rejection guard', () => {
+    const dated = {
+      mapping: {
+        registration: { field: 'MARK' },
+        certification_date: { field: 'REGISTERED', transform: 'iso_date_only_or_null' as const },
+      },
+    };
+
+    it('fails naming the one drifted publication among clean ones', async () => {
+      const clean = ['2025-01-01', '2025-02-01', '2025-03-01'].flatMap((p) =>
+        ['A', 'B', 'C'].map((m) => `${m},${p},2001-09-03`)
+      );
+      const drifted = ['A', 'B'].map((m) => `${m},2025-04-01,03/09/2001`);
+      // Pooled, 2 rejections of 11 cells would only warn.
+      await expect(
+        run(['MARK,PUBLISHED,REGISTERED', ...clean, ...drifted].join('\n'), dated)
+      ).rejects.toThrow(/publication 2025-04-01: date format drift — field "REGISTERED".*2 of 2/);
+    });
+
+    it('passes when every publication parses', async () => {
+      const snapshots = await run(
+        'MARK,PUBLISHED,REGISTERED\nA,2025-01-01,2001-09-03\nA,2025-02-01,2001-09-03\n',
+        dated
+      );
+      expect(snapshots.map((s) => s.records.get('A')?.certification_date)).toEqual([
+        '2001-09-03',
+        '2001-09-03',
+      ]);
+    });
+  });
+
   it("counts a publication's colliding rows as its own failures", async () => {
     const snapshots = await run(
       'MARK,PUBLISHED,EXTRA\nA,2025-06-10,x\nA,2025-06-10,y\nA,2025-07-21,x\n',
