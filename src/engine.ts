@@ -932,10 +932,9 @@ function assertDateRejections(source: string, publication?: string): void {
       );
     else log('warn', 'map_date_rejected', detail);
   }
-  if (drifted.length > 0)
-    throw new Error(
-      `Source "${source}"${publication === undefined ? '' : ` publication ${publication}`}: date format drift — ${drifted.join('; ')}`
-    );
+  if (drifted.length === 0) return;
+  const where = publication === undefined ? '' : ' publication ' + publication;
+  throw new Error(`Source "${source}"${where}: date format drift — ${drifted.join('; ')}`);
 }
 
 function resolveLookup(
