@@ -152,6 +152,9 @@ const aircraft = (overrides: Partial<Aircraft> = {}): Aircraft => ({
   propeller: null,
   home_base: null,
   interdiction_code: null,
+  status_source_text: null,
+  emergency_transponder: null,
+  remarks: null,
   ...overrides,
 });
 

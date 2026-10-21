@@ -26,6 +26,7 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22)                        | Live — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates`                                |
 | CCAA (Croatia)             | Not specified — treated as Private-use, CC.2 fallback elapsed 2026-06-09                           | Live — `pdf` parser path; monthly `discover_url`; no ICAO hex                                                                                                |
 | Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                                       | Live — `html` parser path                                                                                                                                    |
+| JCAA (Jamaica)             | Not specified ("All rights reserved") — treated as Private-use, CC.2 fallback elapsed 2026-06-04   | Live — `html` parser path; ICAO hex published                                                                                                                |
 | CAA Latvia                 | CC0-1.0                                                                                            | Live                                                                                                                                                         |
 | TKA Lithuania              | CC BY 4.0 (data.gov.lt)                                                                            | Paused 2026-09-10 — upstream geoblocks CI, VPN-only; last slice still served; `csv` data API; `latest_snapshot_by` keeps the newest publication; no ICAO hex |
 | Közlekedési Hatóság (HU)   | Not specified ("Minden jog fenntartva") — treated as Private-use, CC.2 fallback elapsed 2026-06-09 | Live — `pdf` parser path; `discover_url` over the document page, ~weekly; no ICAO hex                                                                        |
@@ -101,7 +102,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | DKPPU Indonesia                           | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | IAA Ireland                               | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | ENAC Italy                                | 2026-05-05 | 2026-06-04 | pending | Yes      |
-| JCAA Jamaica                              | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | CARC Jordan                               | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | Aviation Administration Kazakhstan        | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | KOCA Korea                                | 2026-05-05 | 2026-06-04 | pending | Yes      |

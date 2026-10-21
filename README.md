@@ -113,6 +113,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `hr-ccaa` | CCAA | Croatia | ✅ Live |
 | `ee-tram` | Transpordiamet | Estonia | ✅ Live |
 | `hu-kh` | Közlekedési Hatóság | Hungary | ✅ Live |
+| `jm-jcaa` | JCAA | Jamaica | ✅ Live |
 | `lv-caa` | CAA Latvia | Latvia | ✅ Live |
 | `lt-tka` | TKA | Lithuania | ⏸️ Paused — VPN-only upstream, manual refresh; last slice still served |
 | `mv-caa` | CAA Maldives | Maldives | ✅ Live |

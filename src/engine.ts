@@ -4,8 +4,9 @@ import type {
   FieldMapping,
   MergeDuplicatesConfig,
   JoinConfig,
+  ScalarTransformName,
 } from './types/config.js';
-import { applyScalar, applyArray, applyCompound } from './transforms.js';
+import { applyScalar, applyArray, applyCompound, DATE_TRANSFORMS } from './transforms.js';
 import {
   parseCSV,
   parseSpreadsheet,
@@ -30,6 +31,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       trim: config.trim_all,
       columns: config.columns?.[config.primary],
       skip_rows: config.skip_rows,
+      header_text: config.header_text,
       allowed_ragged_rows: config.allowed_ragged_rows?.[config.primary],
     });
   }
@@ -39,6 +41,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       columns: config.columns?.[config.primary],
       sheet: config.sheet,
       skip_rows: config.skip_rows,
+      header_text: config.header_text,
     });
   }
   if (config.format === 'json') {
@@ -65,6 +68,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
       columns: config.columns?.[config.primary],
       sheet: config.sheet,
       skip_rows: config.skip_rows,
+      header_text: config.header_text,
     });
   }
   return parseSpreadsheet(buf, {
@@ -73,6 +77,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
     columns: config.columns?.[config.primary],
     sheet: config.sheet,
     skip_rows: config.skip_rows,
+    header_text: config.header_text,
   });
 };
 
@@ -95,7 +100,7 @@ interface MissingSourceIdPolicy {
 // preamble-count shift can't silently publish a wrong-size fleet. The pattern source is repo-
 // controlled source YAML (justifies the non-literal-regexp suppression below, since it isn't
 // runtime input); the loader also validates it's a syntactically valid regex with exactly one
-// capture group. It's still matched against the decoded primary file — externally-fetched register
+// capture group outside count_matches. It's still matched against externally-fetched register
 // content — so ReDoS risk is bounded by review, not by sandboxing: keep these patterns simple
 // (bounded quantifiers, no nested unbounded repetition) and treat them as reviewed code at PR time.
 const assertRecordCount = (
@@ -109,8 +114,10 @@ const assertRecordCount = (
   const against = check.against ?? 'mapped';
   const source = publishedTotal ?? new TextDecoder(config.encoding).decode(primaryBuf);
   const where = check.url ?? 'primary file';
-  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-  const expected = new RegExp(check.pattern).exec(source)?.[1];
+  const expected = check.count_matches
+    ? countMatches(check.pattern, source)
+    : // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+      new RegExp(check.pattern).exec(source)?.[1];
   if (expected === undefined)
     throw new Error(`Source "${config.id}": record_count pattern matched no count in ${where}`);
   const actual = counts[against];
@@ -119,6 +126,13 @@ const assertRecordCount = (
       `Source "${config.id}": ${against} ${actual} records but the source publishes ${expected}`
     );
 };
+
+// Undefined on zero, so a listing with no entries reads as "no count" rather than a total of 0.
+function countMatches(pattern: string, source: string): string | undefined {
+  // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+  const matches = [...source.matchAll(new RegExp(pattern, 'g'))].length;
+  return matches === 0 ? undefined : String(matches);
+}
 
 // One line per distinct unrecognized value, carrying how many rows hit it — the magnitude is the
 // part that says whether a code is a stray or half the register.
@@ -214,6 +228,7 @@ export async function mapRows(
   publishedTotal?: string
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   unmatchedLookups.delete(config.id);
+  dateTallies.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
 
   const primaryBuf = files.get(config.primary);
@@ -235,6 +250,7 @@ export async function mapRows(
   // unrecognized values are the evidence for it — throwing first would withhold them from the only
   // run that needed them.
   reportUnmatchedLookups(config.id);
+  assertDateRejections(config.id);
   if (stats.failed === 0)
     assertRecordCount(
       config,
@@ -267,6 +283,7 @@ export async function mapSnapshots(
   if (column === undefined)
     throw new Error(`Source "${config.id}" has no latest_snapshot_by; there are no snapshots`);
   unmatchedLookups.delete(config.id);
+  dateTallies.delete(config.id);
   const joinMaps = await buildJoinMaps(config, files);
   const primaryBuf = files.get(config.primary);
   if (!primaryBuf)
@@ -290,10 +307,12 @@ export async function mapSnapshots(
   const [newest, newestRows] = ordered.at(-1) ?? [];
   if (newest !== undefined && newestRows)
     assertJoinHits(config, joinMaps, newestRows, `publication ${newest}`);
-  const snapshots = ordered.map(([snapshot, group]) => ({
-    snapshot,
-    ...mapRowSet(config, joinMaps, group),
-  }));
+  const snapshots = ordered.map(([snapshot, group]) => {
+    const mapped = mapRowSet(config, joinMaps, group);
+    // Per publication: pooled across the history, one drifted publication hides behind the clean ones.
+    assertDateRejections(config.id, snapshot);
+    return { snapshot, ...mapped };
+  });
   reportUnmatchedLookups(config.id);
   // A truncated download is indistinguishable from a short publication history, and seeding from
   // it would be permanent; the failed-row tolerance above does not extend to the count.
@@ -851,6 +870,73 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // concurrently would otherwise clear each other's counts and report each other's values.
 const unmatchedLookups = new Map<string, Map<string, number>>();
 
+// Format drift rejects nearly every cell in a date column; legacy junk and hand typos are a
+// minority. Above this share of non-blank cells the column is drift and the run fails.
+const MAX_DATE_REJECT_RATIO = 0.5;
+const DATE_REJECT_SAMPLES = 5;
+
+interface DateTally {
+  field: string;
+  transform: ScalarTransformName;
+  nonBlank: number;
+  rejected: number;
+  samples: Set<string>;
+}
+
+// Partitioned by source for the same reason as unmatchedLookups.
+const dateTallies = new Map<string, Map<string, DateTally>>();
+
+function tallyDateCell(
+  source: string,
+  field: string,
+  transform: ScalarTransformName,
+  raw: string,
+  rejected: boolean
+): void {
+  const forSource = dateTallies.get(source) ?? new Map<string, DateTally>();
+  dateTallies.set(source, forSource);
+  const key = `${field}\u0000${transform}`;
+  const tally = forSource.get(key) ?? {
+    field,
+    transform,
+    nonBlank: 0,
+    rejected: 0,
+    samples: new Set(),
+  };
+  forSource.set(key, tally);
+  tally.nonBlank++;
+  if (!rejected) return;
+  tally.rejected++;
+  if (tally.samples.size < DATE_REJECT_SAMPLES) tally.samples.add(raw);
+}
+
+function assertDateRejections(source: string, publication?: string): void {
+  const forSource = dateTallies.get(source);
+  dateTallies.delete(source);
+  if (forSource === undefined) return;
+  const drifted: string[] = [];
+  for (const t of forSource.values()) {
+    if (t.rejected === 0) continue;
+    const detail = {
+      source,
+      ...(publication === undefined ? {} : { publication }),
+      field: t.field,
+      transform: t.transform,
+      rejected: t.rejected,
+      non_blank: t.nonBlank,
+      samples: [...t.samples].join(' | '),
+    };
+    if (t.rejected / t.nonBlank > MAX_DATE_REJECT_RATIO)
+      drifted.push(
+        `field "${t.field}" (${t.transform}) rejected ${t.rejected} of ${t.nonBlank} non-blank cells, e.g. ${detail.samples}`
+      );
+    else log('warn', 'map_date_rejected', detail);
+  }
+  if (drifted.length === 0) return;
+  const where = publication === undefined ? '' : ' publication ' + publication;
+  throw new Error(`Source "${source}"${where}: date format drift — ${drifted.join('; ')}`);
+}
+
 function resolveLookup(
   value: string,
   lookup: Record<string, string | null>,
@@ -900,6 +986,11 @@ function resolveScalar(row: Row, mapping: FieldMapping, source: string): string 
   if (mapping.null_values?.includes(raw)) return mapping.default ?? null;
 
   const transformed = mapping.transform ? applyScalar(mapping.transform, raw) : raw;
+  if (mapping.transform && DATE_TRANSFORMS.has(mapping.transform) && raw.trim() !== '') {
+    tallyDateCell(source, field, mapping.transform, raw, transformed === null);
+    // `default` stands for routine unmatched data; a rejected date is judged by the ratio guard.
+    if (transformed === null) return null;
+  }
   if (transformed === null) return mapping.default ?? null;
 
   if (mapping.lookup) {
@@ -1024,6 +1115,7 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     // mapping-level `default` (AU/FAA/NL/TC use one for unrecognized codes) must not also catch a
     // blank cell, which states nothing at all rather than an unrecognized-but-stated code.
     status: resolveStatus(m, row, s),
+    status_source_text: scalarField(m, row, 'status_source_text', s) ?? statusCell(m, row),
     country: scalarField(m, row, 'country', s) ?? config.country,
     manufacturer: scalarField(m, row, 'manufacturer', s),
     model: scalarField(m, row, 'model', s),
@@ -1069,5 +1161,15 @@ function buildRecord(config: SourceConfig, row: Row, sourceId: string): unknown 
     lien_status: lienStatus,
     lien_status_source_text: sourceText('lien_status', lienStatus),
     interdiction_code: scalarField(m, row, 'interdiction_code', s),
+    emergency_transponder: scalarField(m, row, 'emergency_transponder', s),
+    remarks: scalarField(m, row, 'remarks', s),
   };
+}
+
+// Raw, not resolved: a transform or lookup is exactly what status_source_text exists to bypass.
+function statusCell(mapping: FieldMap, row: Row): string | null {
+  const field = mapping['status']?.field;
+  if (field === undefined) return null;
+  const raw = row[field] ?? '';
+  return raw.trim() === '' ? null : raw;
 }

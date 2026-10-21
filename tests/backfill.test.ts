@@ -86,6 +86,9 @@ const aircraft = (id: string): Aircraft => ({
   lien_status: null,
   lien_status_source_text: null,
   interdiction_code: null,
+  status_source_text: null,
+  emergency_transponder: null,
+  remarks: null,
 });
 
 const stats = (failed = 0): EngineStats => ({

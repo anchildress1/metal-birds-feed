@@ -10,7 +10,7 @@ import type { ArtifactRow, Bind } from './history.js';
 // unrelated upstream data changes. Salting the hash rather than versioning the state envelope
 // keeps record_count/upstream_hash intact through the migration run, so the retain-ratio guard and
 // staleness tracking keep working off the real prior values instead of an invalidated null state.
-export const DB_SCHEMA_VERSION = 14;
+export const DB_SCHEMA_VERSION = 15;
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
@@ -67,6 +67,7 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   icao_hex: r.icao_hex,
   icao_type_code: r.icao_type_code,
   status: r.status,
+  status_source_text: r.status_source_text,
   country: r.country,
   manufacturer: r.manufacturer,
   model: r.model,
@@ -117,6 +118,8 @@ const toColumns = (r: Aircraft): Record<FlatColumn, Bind> => ({
   lien_status: r.lien_status,
   lien_status_source_text: r.lien_status_source_text,
   interdiction_code: r.interdiction_code,
+  emergency_transponder: r.emergency_transponder,
+  remarks: r.remarks,
 });
 
 // A record's columns without the history columns, which the writer adds when it merges a run.
@@ -132,6 +135,7 @@ const DDL = `CREATE TABLE aircraft (
   icao_hex TEXT,
   icao_type_code TEXT,
   status TEXT,
+  status_source_text TEXT,
   country TEXT NOT NULL,
   manufacturer TEXT,
   model TEXT,
@@ -182,6 +186,8 @@ const DDL = `CREATE TABLE aircraft (
   lien_status TEXT,
   lien_status_source_text TEXT,
   interdiction_code TEXT,
+  emergency_transponder TEXT,
+  remarks TEXT,
   first_seen TEXT NOT NULL,
   removed_on TEXT,
   missing_since TEXT
@@ -226,6 +232,7 @@ export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
     // 14 adds first_seen, removed_on and missing_since and keys incarnations on (source_id, first_seen, serial_number):
     // a source_id now repeats across closed rows, so a reader must filter `removed_on IS NULL` for
     // the aircraft on the register today.
+    // 15 adds status_source_text, emergency_transponder and remarks.
     db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
@@ -270,6 +277,7 @@ const MIGRATIONS: Record<number, Migration> = {
   // Before 14 an artifact kept no history: every row is live, first recorded by the run that migrates.
   13: (rows, today) =>
     rows.map((r) => ({ ...r, first_seen: today, removed_on: null, missing_since: null })),
+  14: (rows) => rows,
 };
 
 /**

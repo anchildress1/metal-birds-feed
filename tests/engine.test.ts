@@ -2345,6 +2345,11 @@ beforeAll(async () => {
 });
 
 describe('BR-ANAC fixture mapping', () => {
+  // A compound of two cells leaves no single one to keep; both already land verbatim elsewhere.
+  it('leaves status_source_text null for the compound status', () => {
+    expect([...brRecords.values()].every((r) => r.status_source_text === null)).toBe(true);
+  });
+
   it('maps all 11 fixture rows with no failures (banner skipped, PRALL collapsed)', () => {
     expect(brStats).toEqual({ total: 11, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(brRecords.size).toBe(10);
@@ -2449,7 +2454,8 @@ describe('BR-ANAC fixture mapping', () => {
     it('classifies an unpowered landplane (L00) as glider', () =>
       expect(r.airframe_type).toBe('glider'));
     it('maps SEM MOTOR to engine type none', () => expect(r.engine.type).toBe('none'));
-    it('rejects the malformed 6-digit validity date', () => expect(r.expiration_date).toBeNull());
+    it('reads the legacy 6-digit validity date', () =>
+      expect(r.expiration_date).toBe('1996-09-30'));
     it('distinguishes owner from operator', () => {
       expect(r.owner.name).toBe('GOVERNO FEDERAL ANAC');
       expect(r.operator.name).toBe('AEROCLUBE DE RIBEIRAO PRETO');
@@ -3140,6 +3146,10 @@ describe('CAAT Thailand fixture mapping (PDF)', () => {
 });
 
 describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
+  it('leaves status_source_text null for the constant status', () => {
+    expect([...eeRecords.values()].every((r) => r.status_source_text === null)).toBe(true);
+  });
+
   it('maps all 10 fixture aircraft with no failures', () => {
     expect(eeStats).toEqual({ total: 10, ok: 10, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(eeRecords.size).toBe(10);
@@ -3236,7 +3246,7 @@ const eeTable = (statedTotal: number, marks: string[]): Buffer => {
     '',
     '',
   ]);
-  const header = row(['', 'mark', '', '', 'type', 'serial', 'owner', 'operator', '']);
+  const header = row(loadSourceConfig(EE_CONFIG_PATH).header_text ?? []);
   const data = marks.map((m) =>
     row(['', m, '', '', 'Cessna 172', '123', 'Owner OÜ', 'Owner OÜ', ''])
   );
@@ -3278,6 +3288,216 @@ describe('record_count guard (ee-tram)', () => {
       new Map([['register', eeTable(2, ['ES - AAA', 'NOT-A-MARK'])]])
     );
     expect(stats).toEqual({ total: 2, ok: 1, failed: 1, skipped: 0, duplicateSkipped: 0 });
+  });
+});
+
+describe('JCAA Jamaica (HTML) fixture mapping', () => {
+  const JM_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'jm-jcaa.yaml');
+  const JM_HTML = resolve(
+    import.meta.dirname,
+    '..',
+    'fixtures',
+    'jm-jcaa',
+    'input',
+    'register.html'
+  );
+  const jmHtml = (): string => readFileSync(JM_HTML, 'utf8');
+  // Synthetic in the live sitemap's exact shape: the fixture is a 12-row subset of a 52-entry
+  // sitemap, and trimming the real file to match would fabricate a publication that never existed.
+  const jmSitemap = (aircraft: number, extraLocs: string[] = []): string =>
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[
+      ...Array.from(
+        { length: aircraft },
+        (_, i) => `https://www.jcaa.gov.jm/aircraft-registry/6y-j${i}/`
+      ),
+      ...extraLocs,
+    ]
+      .map(
+        (loc) =>
+          `\t<url>\n\t\t<loc><![CDATA[${loc}]]></loc>\n\t\t<lastmod><![CDATA[2026-10-16T19:34:08+00:00]]></lastmod>\n\t</url>`
+      )
+      .join('\n')}\n</urlset>\n`;
+  const mapJm = (html: string, sitemap = jmSitemap(12)): ReturnType<typeof mapRows> =>
+    mapRows(
+      loadSourceConfig(JM_CONFIG),
+      new Map([['register', Buffer.from(html, 'utf8')]]),
+      sitemap
+    );
+  const byMark = (m: Map<string, Aircraft>, mark: string): Aircraft => {
+    const hits = [...m.values()].filter((r) => r.registration === mark);
+    expect(hits).toHaveLength(1);
+    return hits[0];
+  };
+
+  let jm: Map<string, Aircraft>;
+  let jmStats: EngineStats;
+
+  beforeAll(async () => {
+    const result = await mapJm(jmHtml());
+    jm = result.records;
+    jmStats = result.stats;
+  });
+
+  it('maps all 12 fixture aircraft with no failures', () => {
+    expect(jmStats).toEqual({ total: 12, ok: 12, failed: 0, skipped: 0, duplicateSkipped: 0 });
+  });
+
+  it('keys on mark and serial, registers the bare mark, and lowercases the hex', () => {
+    const r = byMark(jm, '6Y-JTC');
+    expect(r.source_id).toBe('6Y-JTC|18265231');
+    expect(r.source).toBe('jm-jcaa');
+    expect(r.registration).toBe('6Y-JTC');
+    expect(r.icao_hex).toBe('0be1f0');
+    expect(r.country).toBe('JM');
+    expect(r.manufacturer).toBe('Cessna');
+    expect(r.model).toBe('182Q');
+    expect(r.serial_number).toBe('18265231');
+    expect(r.seats).toBe(4);
+    expect(r.engine.manufacturer).toBe('Teledyne Continental');
+    expect(r.engine.model).toBe('O-470-U');
+  });
+
+  it.each<[string, string, Aircraft['status']]>([
+    ['6Y-JTC', 'Valid', 'valid'],
+    ['6Y-JBA', 'Invalid', 'invalid'],
+    ['6Y-JUC', 'Not in operation', 'invalid'],
+    ['6Y-JWT', 'Invalid, Not in operation', 'invalid'],
+    ['6Y-JTB', 'Crashed, Invalid', 'invalid'],
+    ['6Y-JZA', 'De-registered, Invalid', 'cancelled'],
+    ['6Y-JAI', '—', null],
+  ])('maps %s status "%s" to %p, keeping the cell verbatim', (mark, upstream, expected) => {
+    expect(byMark(jm, mark).status).toBe(expected);
+    expect(byMark(jm, mark).status_source_text).toBe(upstream);
+  });
+
+  it('fails the row on an unenumerated status instead of guessing one', async () => {
+    const html = jmHtml().replace('<td>Crashed, Invalid</td>', '<td>Suspended</td>');
+    const { records, stats } = await mapJm(html);
+    expect(stats).toEqual({ total: 12, ok: 11, failed: 1, skipped: 0, duplicateSkipped: 0 });
+    expect(records.has('6Y-JTB|27-3293')).toBe(false);
+  });
+
+  it('nulls the "—" C of A category and keeps every other category verbatim', () => {
+    expect(byMark(jm, '6Y-JAI').airworthiness_class).toBeNull();
+    expect(byMark(jm, '6Y-JTC').airworthiness_class).toBe('Commercial Air Transport ‐ Normal');
+    expect(byMark(jm, '6Y-JNE').airworthiness_class).toBe('Normal/Commercial Air Transport');
+    expect(byMark(jm, '6Y-JUC').airworthiness_class).toBe('Sport Flying');
+  });
+
+  it('parses the spelled-out registration date and nulls a blank one', () => {
+    expect(byMark(jm, '6Y-JWT').certification_date).toBe('2001-09-03');
+    expect(byMark(jm, '6Y-JAS').certification_date).toBe('2025-10-01');
+    expect(byMark(jm, '6Y-JZA').certification_date).toBeNull();
+  });
+
+  it('keeps the Private operation label verbatim in the operator name', () => {
+    expect(byMark(jm, '6Y-JWT').operator.name).toBe('Private');
+    expect(byMark(jm, '6Y-JUC').operator.name).toBe('Private (Ultralight)');
+    expect(byMark(jm, '6Y-JCH').operator.name).toBe('Caribbean Aviation Training Center (Private)');
+  });
+
+  it('nulls blank cells rather than borrowing a neighbour', () => {
+    expect(byMark(jm, '6Y-JCH').owner.name).toBeNull();
+    expect(byMark(jm, '6Y-JCG').model).toBeNull();
+    expect(byMark(jm, '6Y-JAS').seats).toBeNull();
+  });
+
+  // The register files an engine model code in the make column on this row; repairing it would mean
+  // inventing which cell the agency meant.
+  it('keeps a misfiled engine cell where the register put it', () => {
+    const r = byMark(jm, '6Y-JLJ');
+    expect(r.engine.manufacturer).toBe('O-320-E2D');
+    expect(r.engine.model).toBeNull();
+  });
+
+  it('decodes an entity-escaped party name to the same text as the raw one', () => {
+    const r = byMark(jm, '6Y-JBA');
+    expect(r.owner.name).toBe('John Roe, Jim Roe & Joe Roe');
+    expect(r.operator.name).toBe(r.owner.name);
+  });
+
+  it('publishes no party location', () => {
+    for (const r of jm.values()) {
+      expect([r.owner.state, r.owner.country, r.operator.state, r.operator.country]).toEqual([
+        null,
+        null,
+        null,
+        null,
+      ]);
+    }
+  });
+
+  it('keys a reissued mark on a new serial as its own row beside the cancelled one', async () => {
+    const reissued = jmHtml().replace(
+      '</tbody>',
+      '<tr><td>6Y-JZA</td><td>0BE28A</td><td>Cessna</td><td>172S</td><td>172S0001</td><td>Acme Air Ltd.</td><td>Acme Air Ltd.</td><td>January 5, 2026</td><td></td><td></td><td>4</td><td>Textron Lycoming</td><td>IO-360-L2A</td><td></td><td></td><td></td><td>Valid</td><td>General Aviation</td></tr></tbody>'
+    );
+    const { records } = await mapJm(reissued, jmSitemap(13));
+    expect(records.get('6Y-JZA|31-7652156')?.status).toBe('cancelled');
+    expect(records.get('6Y-JZA|172S0001')?.status).toBe('valid');
+  });
+
+  it('lands reissue date, MCTOW, C of A expiry, transponder and comments in their own fields', async () => {
+    const original = jmHtml();
+    const filled = original.replace(
+      /(<td>November 28, 1996<\/td>\s*)<td><\/td>\s*<td><\/td>(\s*<td>4<\/td>\s*<td>Teledyne Continental<\/td>\s*<td>O-470-U<\/td>\s*)<td><\/td>\s*<td><\/td>\s*<td><\/td>/,
+      '$1<td>March 4, 2019</td><td>2950</td>$2<td>June 30, 2027</td><td>ELT 406</td><td>Float kit fitted</td>'
+    );
+    expect(filled).not.toBe(original);
+    const { records } = await mapJm(filled);
+    const r = records.get('6Y-JTC|18265231');
+    expect(r?.certification_date).toBe('1996-11-28');
+    expect(r?.last_action_date).toBe('2019-03-04');
+    expect(r?.max_takeoff_weight_kg).toBe(1338.1);
+    expect(r?.expiration_date).toBe('2027-06-30');
+    expect(r?.emergency_transponder).toBe('ELT 406');
+    expect(r?.remarks).toBe('Float kit fitted');
+  });
+
+  describe('record_count from the aircraft sitemap', () => {
+    it('passes when the sitemap lists one aircraft page per parsed row', async () => {
+      const { records } = await mapJm(jmHtml(), jmSitemap(12));
+      expect(records.size).toBe(12);
+    });
+
+    it('fails when the page carries fewer rows than the sitemap lists', async () => {
+      await expect(mapJm(jmHtml(), jmSitemap(13))).rejects.toThrow(
+        /parsed 12 records but the source publishes 13/
+      );
+    });
+
+    it('fails when the sitemap lists fewer aircraft than the page carries', async () => {
+      await expect(mapJm(jmHtml(), jmSitemap(11))).rejects.toThrow(
+        /parsed 12 records but the source publishes 11/
+      );
+    });
+
+    it('does not count index or archive URLs', async () => {
+      const sitemap = jmSitemap(11, [
+        'https://www.jcaa.gov.jm/aircraft-registry/',
+        'https://www.jcaa.gov.jm/aircraft-registry-page/',
+      ]);
+      await expect(mapJm(jmHtml(), sitemap)).rejects.toThrow(/source publishes 11/);
+    });
+
+    it('fails naming the sitemap when it lists no aircraft', async () => {
+      await expect(mapJm(jmHtml(), jmSitemap(0))).rejects.toThrow(
+        /pattern matched no count in https:\/\/www\.jcaa\.gov\.jm\/aircraft-registry-sitemap\.xml/
+      );
+    });
+  });
+
+  // Same width, so only header_text stands between this and owner/operator publishing swapped.
+  it('fails the run when the register swaps Operator and Owner/Lessor', async () => {
+    const original = jmHtml();
+    const swapped = original.replace(
+      /<th>Operator<\/th>(\s*)<th>Owner\/Lessor<\/th>/,
+      '<th>Owner/Lessor</th>$1<th>Operator</th>'
+    );
+    expect(swapped).not.toBe(original);
+    await expect(mapJm(swapped)).rejects.toThrow(
+      /column 5 reads "Owner\/Lessor", expected "Operator"; column 6 reads "Operator", expected "Owner\/Lessor"/
+    );
   });
 });
 
@@ -4197,6 +4417,163 @@ describe('unmatched lookup reporting', () => {
   });
 });
 
+describe('status_source_text', () => {
+  const config = (status: FieldMapping, extra: Record<string, FieldMapping> = {}) => ({
+    id: 'synthetic-status',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: { registration: { field: 'REG' }, country: { constant: 'US' }, status, ...extra },
+  });
+  const run = async (status: FieldMapping, cell: string, extra?: Record<string, FieldMapping>) => {
+    const { records } = await mapRows(
+      config(status, extra),
+      new Map([['f', Buffer.from(`ID,REG,S,ALT\n1,N1,${cell},Alt text\n`)]])
+    );
+    return records.get('1')!;
+  };
+  const resolved = { field: 'S', transform: 'lowercase' as const, lookup: { active: 'valid' } };
+
+  it('keeps the raw cell, before transform and lookup', async () => {
+    const r = await run(resolved, ' ACTIVE ');
+    expect(r.status).toBe('valid');
+    expect(r.status_source_text).toBe(' ACTIVE ');
+  });
+
+  it('nulls a blank or whitespace-only cell', async () => {
+    expect((await run(resolved, '')).status_source_text).toBeNull();
+    expect((await run(resolved, '   ')).status_source_text).toBeNull();
+  });
+
+  it('nulls a constant status', async () => {
+    expect((await run({ constant: 'valid' }, 'ACTIVE')).status_source_text).toBeNull();
+  });
+
+  it('takes an explicit status_source_text mapping over the status cell', async () => {
+    const r = await run(resolved, 'ACTIVE', { status_source_text: { field: 'ALT' } });
+    expect(r.status_source_text).toBe('Alt text');
+  });
+});
+
+describe('date rejection ratio guard', () => {
+  const config = {
+    id: 'synthetic-date',
+    label: 't',
+    country: 'US',
+    language: 'en',
+    encoding: 'utf8' as const,
+    download: { url: 'https://example.com/x.zip', format: 'zip' as const, entries: { f: 'f.txt' } },
+    primary: 'f',
+    delimiter: ',',
+    trim_all: false,
+    format: 'csv' as const,
+    joins: [],
+    source_id: 'ID',
+    registration: 'REG',
+    mapping: {
+      registration: { field: 'REG' },
+      status: { constant: 'valid' },
+      country: { constant: 'US' },
+      certification_date: {
+        field: 'DATE',
+        transform: 'date_dd_slash_or_null' as const,
+        null_values: ['NONE'],
+        default: '1900-01-01',
+      },
+      year_manufactured: { field: 'YEAR', transform: 'int_or_null' as const },
+    },
+  };
+
+  const run = (dates: string[], year = '') =>
+    mapRows(
+      config,
+      new Map([
+        [
+          'f',
+          Buffer.from(
+            ['ID,REG,DATE,YEAR', ...dates.map((d, i) => `${i},N${i},${d},${year}`)].join('\n')
+          ),
+        ],
+      ])
+    );
+
+  const dateWarns = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.map((c) => String(c[0])).filter((l) => l.includes('map_date_rejected'));
+
+  it('fails the run when most non-blank cells are rejected', async () => {
+    await expect(run(['2001-09-03', '2001-09-04', '03/09/2001'])).rejects.toThrow(
+      /"synthetic-date".*field "DATE" \(date_dd_slash_or_null\) rejected 2 of 3 .*2001-09-03/
+    );
+  });
+
+  it('fails a single rejected cell out of one', async () => {
+    await expect(run(['junk'])).rejects.toThrow(/rejected 1 of 1/);
+  });
+
+  it('nulls a minority of rejected cells, ignoring default, and warns once with counts', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { records, stats } = await run([
+        'junk',
+        'junk',
+        '03/09/2001',
+        '04/09/2001',
+        '05/09/2001',
+      ]);
+      expect(stats.failed).toBe(0);
+      expect(records.get('0')!.certification_date).toBeNull();
+      expect(records.get('2')!.certification_date).toBe('2001-09-03');
+      const warns = dateWarns(logSpy);
+      expect(warns).toHaveLength(1);
+      expect(warns[0]).toContain('rejected=2');
+      expect(warns[0]).toContain('non_blank=5');
+      expect(warns[0]).toContain('samples=junk');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('does not fail at exactly half', async () => {
+    const { stats } = await run(['junk', '03/09/2001']);
+    expect(stats.failed).toBe(0);
+  });
+
+  it('counts neither blank nor null_values cells', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      // Counting the blanks would put the rejection under half and hide it as a warn.
+      await expect(run(['junk', '', '  ', 'NONE', 'NONE'])).rejects.toThrow(/rejected 1 of 1/);
+      const { records } = await run(['junk', '03/09/2001', '', 'NONE']);
+      expect(records.get('2')!.certification_date).toBe('1900-01-01');
+      expect(records.get('3')!.certification_date).toBe('1900-01-01');
+      expect(dateWarns(logSpy).at(-1)).toContain('non_blank=2');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('leaves a non-date transform returning null alone', async () => {
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { records, stats } = await run(['03/09/2001'], 'unknown');
+      expect(stats.failed).toBe(0);
+      expect(records.get('0')!.year_manufactured).toBeNull();
+      expect(dateWarns(logSpy)).toHaveLength(0);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
+
 describe('latest_snapshot_by', () => {
   const config: SourceConfig = {
     id: 'synthetic-snapshot',
@@ -4376,12 +4753,21 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
   const HU_PDF = resolve(import.meta.dirname, '..', 'fixtures', 'hu-kh', 'input', 'register.pdf');
   let huRecords: Map<string, Aircraft>;
   let huStats: EngineStats;
+  let huDateWarns: string[];
 
   beforeAll(async () => {
     const config = loadSourceConfig(HU_CONFIG);
-    const result = await mapRows(config, new Map([['register', readFileSync(HU_PDF)]]));
-    huRecords = result.records;
-    huStats = result.stats;
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const result = await mapRows(config, new Map([['register', readFileSync(HU_PDF)]]));
+      huRecords = result.records;
+      huStats = result.stats;
+      huDateWarns = logSpy.mock.calls
+        .map((c) => String(c[0]))
+        .filter((l) => l.includes('map_date_rejected'));
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   // The two skips are the HA-MEI self-contradiction below and the HU-16 non-HA mark — neither is a
@@ -4444,6 +4830,12 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.get('HA-MEI')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.airworthiness_date).toBeNull();
     expect(huRecords.get('HA-MJS')!.certification_date).toBe('2026-07-13');
+  });
+
+  it('reports the malformed dates once per column rather than failing the run', () => {
+    expect(huDateWarns).toHaveLength(2);
+    expect(huDateWarns.find((l) => l.includes('field=arc_issue'))).toContain('202.05.26');
+    expect(huDateWarns.find((l) => l.includes('field=arc_expiry'))).toContain('T010.11.02');
   });
 
   // year_manufactured is an integer and cannot hold "1957/58"; without the range column the only
@@ -4701,6 +5093,37 @@ describe('mapSnapshots', () => {
 
   // The bad loads in a real register double every row with different content; they must not hide
   // behind a good publication or abort the replay.
+  describe('date rejection guard', () => {
+    const dated = {
+      mapping: {
+        registration: { field: 'MARK' },
+        certification_date: { field: 'REGISTERED', transform: 'iso_date_only_or_null' as const },
+      },
+    };
+
+    it('fails naming the one drifted publication among clean ones', async () => {
+      const clean = ['2025-01-01', '2025-02-01', '2025-03-01'].flatMap((p) =>
+        ['A', 'B', 'C'].map((m) => `${m},${p},2001-09-03`)
+      );
+      const drifted = ['A', 'B'].map((m) => `${m},2025-04-01,03/09/2001`);
+      // Pooled, 2 rejections of 11 cells would only warn.
+      await expect(
+        run(['MARK,PUBLISHED,REGISTERED', ...clean, ...drifted].join('\n'), dated)
+      ).rejects.toThrow(/publication 2025-04-01: date format drift — field "REGISTERED".*2 of 2/);
+    });
+
+    it('passes when every publication parses', async () => {
+      const snapshots = await run(
+        'MARK,PUBLISHED,REGISTERED\nA,2025-01-01,2001-09-03\nA,2025-02-01,2001-09-03\n',
+        dated
+      );
+      expect(snapshots.map((s) => s.records.get('A')?.certification_date)).toEqual([
+        '2001-09-03',
+        '2001-09-03',
+      ]);
+    });
+  });
+
   it("counts a publication's colliding rows as its own failures", async () => {
     const snapshots = await run(
       'MARK,PUBLISHED,EXTRA\nA,2025-06-10,x\nA,2025-06-10,y\nA,2025-07-21,x\n',

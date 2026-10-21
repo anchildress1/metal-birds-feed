@@ -11,8 +11,8 @@ export const SCALAR_TRANSFORMS = [
   'date_yyyymmdd_or_null',
   'date_yyyy_slash_or_null',
   'date_dd_slash_or_null',
-  'date_ddmmyyyy_or_null',
   'date_dmmmyy_or_null',
+  'date_month_d_yyyy_or_null',
   'iso_date_only_or_null',
   'iso_year_or_null',
   'first_line_or_null',
@@ -20,6 +20,7 @@ export const SCALAR_TRANSFORMS = [
   'mv_idera_party',
   'excel_serial_year_or_null',
   'mph_to_ktas_or_null',
+  'lbs_to_kg_or_null',
   'binary_to_hex_or_null',
   'faa_n_number',
   'faa_cert_class',
@@ -30,6 +31,7 @@ export const SCALAR_TRANSFORMS = [
   'br_registration',
   'br_airframe',
   'br_build_certification',
+  'br_validity_date_or_null',
   'br_party_name',
   'br_party_state',
   'br_party_kind',
@@ -201,6 +203,9 @@ export interface RecordCountCheck {
   // prior publications — required where the total counts the accumulated history rather than the
   // current fleet, and the only count an accumulating register publishes about itself.
   against?: 'parsed' | 'mapped';
+  // Count the pattern's matches in the `url` response instead of capturing a stated total, for a
+  // register that publishes no total but lists one entry per aircraft elsewhere (JCAA's sitemap).
+  count_matches?: boolean;
 }
 
 // One page orientation a register has been observed publishing. `field_axis` is the axis along which
@@ -294,6 +299,9 @@ export interface SourceConfig {
   sheet?: string | number;
   skip_rows?: number;
   columns?: Record<string, string[]>;
+  // Expected text of the primary's discarded header row (the last non-empty row `skip_rows` drops),
+  // index-paired with `columns[primary]`. Compared after whitespace collapse, case-sensitively.
+  header_text?: string[];
   // Per parsed-file budget, keyed by the same aliases as `columns`: known non-tabular rows in
   // that CSV (e.g. a "N rows selected." trailer) whose cell count differs from the header. Any
   // ragged row beyond a file's budget fails the parse: a short row silently nulls trailing

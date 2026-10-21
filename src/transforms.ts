@@ -5,6 +5,7 @@ import type {
 } from './types/config.js';
 
 const KNOTS_PER_MPH = 0.868976;
+const KG_PER_LB = 0.45359237;
 const ICAO_MODE_S_BITS = 24;
 
 const trim = (value: string): string => value.trim();
@@ -84,11 +85,18 @@ const dateDdSlashOrNull = (value: string): string | null => {
   return validateAndFormatYMD(v.slice(6, 10), v.slice(3, 5), v.slice(0, 2));
 };
 
-// 8-digit DDMMYYYY — distinct from date_yyyymmdd_or_null, which reads the same digits as YYYYMMDD.
-const dateDdmmyyyyOrNull = (value: string): string | null => {
+// DDMMYYYY, or DDMMYY on legacy certificates. Observed six-digit years are 46–99 and 00–15, so the
+// pivot sits at 46. Distinct from date_yyyymmdd_or_null, which reads the same digits as YYYYMMDD.
+const brValidityDateOrNull = (value: string): string | null => {
   const v = value.trim();
-  if (!/^\d{8}$/.test(v)) return null;
-  return validateAndFormatYMD(v.slice(4, 8), v.slice(2, 4), v.slice(0, 2));
+  if (/^\d{8}$/.test(v)) return validateAndFormatYMD(v.slice(4, 8), v.slice(2, 4), v.slice(0, 2));
+  if (!/^\d{6}$/.test(v)) return null;
+  const yy = Number(v.slice(4, 6));
+  return validateAndFormatYMD(
+    String(yy < 46 ? 2000 + yy : 1900 + yy),
+    v.slice(2, 4),
+    v.slice(0, 2)
+  );
 };
 
 // Accepts an ISO 8601 date or datetime string and returns just the YYYY-MM-DD date
@@ -135,6 +143,30 @@ const dateDmmmyyOrNull = (value: string): string | null => {
   const yy = Number(m[3]);
   const year = String(yy < 50 ? 2000 + yy : 1900 + yy);
   return validateAndFormatYMD(year, month, m[1].padStart(2, '0'));
+};
+
+// `Month D, YYYY` with the month spelled out ("September 3, 2001") — the JCAA Jamaica register
+// date style. An abbreviated month is not this format and nulls rather than being guessed at.
+const MONTH_FULL = [
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
+];
+const dateMonthDYyyyOrNull = (value: string): string | null => {
+  const m = /^([A-Za-z]+) (\d{1,2}), (\d{4})$/.exec(value.trim());
+  if (!m) return null;
+  const month = MONTH_FULL.indexOf(m[1].toLowerCase()) + 1;
+  if (month === 0) return null;
+  return validateAndFormatYMD(m[3], String(month).padStart(2, '0'), m[2].padStart(2, '0'));
 };
 
 // First physical line of a multi-line cell (positioned-PDF extraction joins wrapped lines with
@@ -187,6 +219,12 @@ const mphToKtasOrNull = (value: string): string | null => {
   const n = Number.parseFloat(v);
   if (Number.isNaN(n) || n <= 0) return null;
   return String(Math.round(n * KNOTS_PER_MPH * 10) / 10);
+};
+
+// Zero or below nulls on the same mass rule as positive_float_or_null.
+const lbsToKgOrNull = (value: string): string | null => {
+  const lbs = positiveFloatOrNull(value);
+  return lbs === null ? null : String(Math.round(Number(lbs) * KG_PER_LB * 10) / 10);
 };
 
 const binaryToHexOrNull = (value: string): string | null => {
@@ -838,8 +876,8 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   date_yyyymmdd_or_null: dateYyyymmddOrNull,
   date_yyyy_slash_or_null: dateYyyySlashOrNull,
   date_dd_slash_or_null: dateDdSlashOrNull,
-  date_ddmmyyyy_or_null: dateDdmmyyyyOrNull,
   date_dmmmyy_or_null: dateDmmmyyOrNull,
+  date_month_d_yyyy_or_null: dateMonthDYyyyOrNull,
   iso_date_only_or_null: isoDateOnlyOrNull,
   iso_year_or_null: isoYearOrNull,
   first_line_or_null: firstLineOrNull,
@@ -847,6 +885,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   mv_idera_party: mvIderaParty,
   excel_serial_year_or_null: excelSerialYearOrNull,
   mph_to_ktas_or_null: mphToKtasOrNull,
+  lbs_to_kg_or_null: lbsToKgOrNull,
   binary_to_hex_or_null: binaryToHexOrNull,
   faa_n_number: faaNNumber,
   faa_cert_class: faaCertClass,
@@ -858,6 +897,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   ee_registration: eeRegistration,
   br_airframe: brAirframe,
   br_build_certification: brBuildCertification,
+  br_validity_date_or_null: brValidityDateOrNull,
   br_party_name: brPartyName,
   br_party_state: brPartyState,
   br_party_kind: brPartyKind,
@@ -892,6 +932,23 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>
   SCALAR_HANDLERS[name](value);
+
+// A date column is the one place a format change nulls every row with no lookup to notice it, so
+// the engine counts a null from these on a non-blank cell as a rejection for its drift guard.
+export const DATE_TRANSFORMS: ReadonlySet<ScalarTransformName> = new Set<ScalarTransformName>([
+  'date_yyyymmdd_or_null',
+  'date_yyyy_slash_or_null',
+  'date_dd_slash_or_null',
+  'br_validity_date_or_null',
+  'date_dmmmyy_or_null',
+  'date_month_d_yyyy_or_null',
+  'date_dd_dot_or_null',
+  'iso_date_only_or_null',
+  'iso_year_or_null',
+  'excel_serial_year_or_null',
+  'foca_date_array_or_null',
+  'hu_kh_date_or_null',
+]);
 
 const faaCertOps = (value: string): string[] => {
   const v = value.trim();

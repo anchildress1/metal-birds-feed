@@ -144,6 +144,10 @@ export const AircraftSchema = z.object({
   // it to a concrete value would be inventing data. toFeedRows excludes null the same way it
   // excludes cancelled and reserved, so an unstated status is never served as a plausible aircraft.
   status: AircraftStatusSchema.nullable(),
+  // The status cell verbatim, before transform or lookup: the canonical value collapses register
+  // states ("Crashed, Invalid", "Not in operation") that this keeps. Null where status is a constant
+  // or a compound of several cells, which leave no single cell to keep.
+  status_source_text: z.string().nullable(),
   country: z.string(),
   manufacturer: z.string().nullable(),
   model: z.string().nullable(),
@@ -199,6 +203,8 @@ export const AircraftSchema = z.object({
   // Authoritative restriction code, preserved verbatim — its legend is registry-specific and
   // not published in machine-readable form, so consumers decode it against their own table.
   interdiction_code: z.string().nullable(),
+  emergency_transponder: z.string().nullable(),
+  remarks: z.string().nullable(),
 });
 export type Aircraft = z.infer<typeof AircraftSchema>;
 

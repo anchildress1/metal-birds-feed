@@ -84,9 +84,11 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
 ### Record integrity
 
 - `latest_snapshot_by`: required where a register accumulates publications instead of replacing them, or the feed serves an older active row for a mark the newest publication cancelled.
+- `header_text`: required on a `columns` + `skip_rows` source with a discarded header row, so a column swap or rename fails the run; width alone does not catch a swap. Copy it verbatim from the live file, annotations included.
 - `record_count`: catches a dropped row writing a short artifact.
   - Use the separate-endpoint form for any paged API that cannot self-report truncation. A publication landing between the two responses fails the run — rerun, never relax.
   - Count against parsed rows where the published total covers history `latest_snapshot_by` filters.
+  - `count_matches: true` counts pattern matches in the endpoint response, for a register stating no total but listing one entry per row elsewhere (a sitemap). Verify the listing equals the rows, and pattern only per-row entries.
   - PDF sources cannot use it. `download.manual` sources cannot use the endpoint form.
 - Zero rows always fails.
 - Merge blocks (`merge_duplicates`, `joins[].merge_duplicates`) are for registers emitting one row per co-registered party; never drop the extra rows.
@@ -120,6 +122,8 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - A null `lookup` value (recognized, no schema value) differs from an absent key.
   - `default` only where an unmatched value is routine data, not drift: it nulls the field and logs per row, unusable at volume.
 - A blank cell short-circuits to null before any `lookup`; a `transform` returning null bypasses it. Enumeration does not cover blanks.
+- A non-blank cell a date transform (`DATE_TRANSFORMS`) rejects maps to null, never `default`. Per field, rejections above half the non-blank cells fail the run as format drift; fewer emit one `map_date_rejected` warn. Blank and `null_values` cells count toward neither.
+- Register absence-words and placeholder dates go in `null_values`; never in the transform.
 - `null_values`: for a register stating absence in words; prefer it over a lookup for a free-text column of proper nouns. A code meaning "nothing to report" is absence: left populated, two rows differing only there are an unresolvable duplicate.
 - `status` resolves outside the scalar path and never consults `null_values`. Enumerate a status sentinel as a null `lookup` value.
 - `positive_float_or_null`: only for a quantity a register zero-fills where zero is impossible (mass, span, speed). Never a count.

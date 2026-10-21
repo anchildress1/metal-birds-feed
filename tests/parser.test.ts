@@ -24,6 +24,7 @@ const opts = (
     columns: string[];
     skip_rows: number;
     allowed_ragged_rows: number;
+    header_text: string[];
   }> = {}
 ) => ({
   encoding: 'latin1' as const,
@@ -89,6 +90,58 @@ describe('parseCSV', () => {
       opts({ columns: ['REG', 'OWNER'], skip_rows: 2 })
     );
     expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
+  describe('header_text', () => {
+    const cols = { columns: ['REG', 'OWNER', 'OPERATOR'], skip_rows: 2 };
+    const header_text = ['Mark', 'Owner/Lessor', 'Operator'];
+    const file = (header: string) =>
+      buf(`Updated 2026-10-18, 3 aircraft\n${header}\nN1,Alice,Bob\n`);
+
+    it('accepts a header matching header_text, ignoring the banner above it', async () => {
+      const rows = await parseCSV(
+        file('Mark,Owner/Lessor,Operator'),
+        opts({ ...cols, header_text })
+      );
+      expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice', OPERATOR: 'Bob' }]);
+    });
+
+    it('accepts whitespace variance, nbsp included', async () => {
+      const rows = await parseCSV(
+        file(' Mark ,Owner/\u00a0\u00a0Lessor,Operator\t'),
+        opts({ ...cols, header_text: ['Mark', 'Owner/ Lessor', 'Operator'] })
+      );
+      expect(rows).toHaveLength(1);
+    });
+
+    it('rejects two swapped columns, naming both', async () => {
+      const err = parseCSV(file('Mark,Operator,Owner/Lessor'), opts({ ...cols, header_text }));
+      await expect(err).rejects.toThrow(
+        /column 1 reads "Operator", expected "Owner\/Lessor"; column 2 reads "Owner\/Lessor", expected "Operator"/
+      );
+    });
+
+    it('rejects a renamed header, case-sensitively', async () => {
+      await expect(
+        parseCSV(file('Mark,owner/lessor,Operator'), opts({ ...cols, header_text }))
+      ).rejects.toThrow(/column 1 reads "owner\/lessor", expected "Owner\/Lessor"/);
+    });
+
+    it('rejects a blank discarded header row', async () => {
+      await expect(
+        parseCSV(buf(',,\n,,\nN1,Alice,Bob\n'), opts({ ...cols, header_text }))
+      ).rejects.toThrow(/no non-empty discarded header row found; expected one starting "Mark"/i);
+    });
+
+    it('lets a blank discarded row through when header_text is absent', async () => {
+      const rows = await parseCSV(buf(',,\n,,\nN1,Alice,Bob\n'), opts(cols));
+      expect(rows).toHaveLength(1);
+    });
+
+    it('checks width only when header_text is absent', async () => {
+      const rows = await parseCSV(file('Mark,Operator,Owner/Lessor'), opts(cols));
+      expect(rows).toHaveLength(1);
+    });
   });
 
   it('skips the header check for headerless files (columns without skip_rows)', async () => {
@@ -242,6 +295,26 @@ const ssOpts = (
   format: 'ods' as HucreFormat,
   trim: false,
   ...overrides,
+});
+
+describe('parseSpreadsheet — discarded header with header_text', () => {
+  it('rejects a blank discarded header row', async () => {
+    const buf = await sheetBuf('ods', [
+      {
+        name: 'Sheet1',
+        rows: [
+          ['', ''],
+          ['N1', 'Alice'],
+        ],
+      },
+    ]);
+    await expect(
+      parseSpreadsheet(buf, {
+        ...ssOpts({ columns: ['REG', 'OWNER'], skip_rows: 1 }),
+        header_text: ['Mark', 'Owner'],
+      })
+    ).rejects.toThrow(/no non-empty discarded header row found; expected one starting "Mark"/i);
+  });
 });
 
 describe('parseSpreadsheet — ods', () => {
@@ -1289,6 +1362,43 @@ describe('shapeRows discarded-header width guard (html/xls/ods/xlsx shared path)
     expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
   });
 
+  it('rejects swapped columns against header_text', async () => {
+    await expect(
+      parseHtml(
+        table([
+          ['Owner', 'Mark'],
+          ['Alice', 'N1'],
+        ]),
+        {
+          encoding: 'utf8',
+          trim: true,
+          columns: ['REG', 'OWNER'],
+          skip_rows: 1,
+          header_text: ['Mark', 'Owner'],
+        }
+      )
+    ).rejects.toThrow(
+      /column 0 reads "Owner", expected "Mark"; column 1 reads "Mark", expected "Owner"/
+    );
+  });
+
+  it('accepts a header matching header_text across &nbsp; and line breaks', async () => {
+    const rows = await parseHtml(
+      table([
+        ['Mark', 'Owner&nbsp;/<br>Lessor'],
+        ['N1', 'Alice'],
+      ]),
+      {
+        encoding: 'utf8',
+        trim: true,
+        columns: ['REG', 'OWNER'],
+        skip_rows: 1,
+        header_text: ['Mark', 'Owner / Lessor'],
+      }
+    );
+    expect(rows).toEqual([{ REG: 'N1', OWNER: 'Alice' }]);
+  });
+
   it('skips the header check when skip_rows is absent', async () => {
     const rows = await parseHtml(table([['N1', 'Alice']]), {
       encoding: 'utf8',
@@ -1326,6 +1436,14 @@ describe('shapeRows discarded-header width guard (html/xls/ods/xlsx shared path)
 });
 
 describe('parseHtml', () => {
+  it('keeps cell text verbatim instead of coercing it to numbers or dates', async () => {
+    const rows = await parseHtml(
+      Buffer.from('<table><tr><td>0123</td><td>1-2</td><td>172E10</td></tr></table>', 'utf8'),
+      { encoding: 'utf8', trim: true, columns: ['serial', 'model', 'type'] }
+    );
+    expect(rows).toEqual([{ serial: '0123', model: '1-2', type: '172E10' }]);
+  });
+
   it('extracts the server-rendered table into one row per aircraft, dropping preamble rows', async () => {
     const rows = await parseHtml(eeBuf(), {
       encoding: 'utf8',

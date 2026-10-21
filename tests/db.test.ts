@@ -71,6 +71,9 @@ const make = (id: string, hex: string | null, reg: string): Aircraft => ({
   lien_status: null,
   lien_status_source_text: null,
   interdiction_code: null,
+  status_source_text: null,
+  emergency_transponder: null,
+  remarks: null,
 });
 
 // Every field set to a DISTINCT non-null sentinel so a column/value mis-map (e.g. owner_country
@@ -125,6 +128,9 @@ const populated: Aircraft = {
   lien_status: 'none',
   lien_status_source_text: 'aucun',
   interdiction_code: 'INT-9',
+  status_source_text: 'Valid, in operation',
+  emergency_transponder: 'ELT 406',
+  remarks: 'Float kit fitted',
 };
 
 const records = new Map([
@@ -233,6 +239,9 @@ describe('buildSqlite', () => {
       lien_status: 'none',
       lien_status_source_text: 'aucun',
       interdiction_code: 'INT-9',
+      status_source_text: 'Valid, in operation',
+      emergency_transponder: 'ELT 406',
+      remarks: 'Float kit fitted',
     });
   });
 
@@ -299,6 +308,7 @@ describe('buildSqlite', () => {
       'icao_hex',
       'icao_type_code',
       'status',
+      'status_source_text',
       'country',
       'manufacturer',
       'model',
@@ -349,6 +359,8 @@ describe('buildSqlite', () => {
       'lien_status',
       'lien_status_source_text',
       'interdiction_code',
+      'emergency_transponder',
+      'remarks',
       'first_seen',
       'removed_on',
       'missing_since',
@@ -421,8 +433,8 @@ describe('artifact history columns', () => {
     missing_since: null,
   });
 
-  it('pins the schema version at 14', () => {
-    expect(DB_SCHEMA_VERSION).toBe(14);
+  it('pins the schema version at 15', () => {
+    expect(DB_SCHEMA_VERSION).toBe(15);
   });
 
   it('keeps a closed and a live row for the same source_id', () => {
@@ -509,7 +521,33 @@ describe('readArtifactRows', () => {
     ]);
   });
 
-  it.each([12, 15])('has no path from version %p, so it fails closed', (version) => {
+  // Additive: a carried row lacks the new columns, and buildSqlite stores them as NULL.
+  it('lifts a version-14 artifact unchanged, rebuilding with the new columns null', () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 14');
+    db.run('CREATE TABLE aircraft (source_id TEXT, registration TEXT, first_seen TEXT)');
+    db.run("INSERT INTO aircraft VALUES ('1', 'N1', '2026-01-01')");
+
+    const rows = readArtifactRows(db.serialize(), '2026-10-12');
+    expect(rows).toEqual([{ source_id: '1', registration: 'N1', first_seen: '2026-01-01' }]);
+
+    const rebuilt = Database.deserialize(
+      buildRows(
+        rows.map((r) => ({
+          ...r,
+          source: 's',
+          country: 'US',
+          operational_classes: '[]',
+          operational_classes_source_text: '[]',
+        }))
+      )
+    );
+    expect(
+      rebuilt.query('SELECT status_source_text, emergency_transponder, remarks FROM aircraft').get()
+    ).toEqual({ status_source_text: null, emergency_transponder: null, remarks: null });
+  });
+
+  it.each([12, 16])('has no path from version %p, so it fails closed', (version) => {
     const db = new Database(':memory:');
     db.run(`PRAGMA user_version = ${version}`);
     db.run('CREATE TABLE aircraft (source_id TEXT)');
@@ -535,12 +573,16 @@ describe('readArtifactRows', () => {
         hops.push(13);
         return rows.map((r) => ({ ...r, at13: 'y' }));
       },
+      14: (rows: ArtifactRow[]): ArtifactRow[] => {
+        hops.push(14);
+        return rows.map((r) => ({ ...r, at14: 'z' }));
+      },
     };
 
     const rows = readArtifactRows(db.serialize(), '2026-10-12', migrations);
 
-    expect(hops).toEqual([12, 13]);
-    expect(rows).toEqual([{ source_id: '1', at12: 'x', at13: 'y' }]);
+    expect(hops).toEqual([12, 13, 14]);
+    expect(rows).toEqual([{ source_id: '1', at12: 'x', at13: 'y', at14: 'z' }]);
   });
 
   it('fails closed when a mid-chain version has no entry', () => {

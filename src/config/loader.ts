@@ -248,22 +248,25 @@ const SourceConfigSchema = z
       .optional(),
     record_count: z
       .strictObject({
-        pattern: z
-          .string()
-          .min(1)
-          .refine(isValidRegex, {
-            message: 'record_count.pattern must be a valid regular expression',
-          })
-          .refine(hasOneCaptureGroup, {
-            message: 'record_count.pattern must have exactly one capture group',
-          }),
+        pattern: z.string().min(1).refine(isValidRegex, {
+          message: 'record_count.pattern must be a valid regular expression',
+        }),
         url: z.url().optional(),
         against: z.enum(['parsed', 'mapped']).optional(),
+        count_matches: z.boolean().optional(),
+      })
+      .refine((rc) => rc.count_matches === true || hasOneCaptureGroup(rc.pattern), {
+        message: 'record_count.pattern must have exactly one capture group',
+      })
+      // The primary is the register itself; counting matches in it would count what it asserts.
+      .refine((rc) => rc.count_matches !== true || rc.url !== undefined, {
+        message: 'record_count.count_matches requires record_count.url',
       })
       .optional(),
     sheet: z.union([z.string().min(1), z.number().int().nonnegative()]).optional(),
     skip_rows: z.number().int().nonnegative().optional(),
     columns: z.record(z.string(), z.array(z.string().min(1)).min(1)).optional(),
+    header_text: z.array(z.string()).min(1).optional(),
     allowed_ragged_rows: z.record(z.string(), z.number().int().nonnegative()).optional(),
     latest_snapshot_by: z.string().min(1).optional(),
     allowed_missing_source_id_rows: z
@@ -411,6 +414,30 @@ const SourceConfigSchema = z
       return aliases.has(c.primary) && c.joins.every((j) => aliases.has(j.file));
     },
     { message: 'primary and joins[].file must match a download.entries alias' }
+  )
+  // Only the primary is parsed with skip_rows, and only the delimited/spreadsheet paths keep a
+  // discarded header row; anywhere else header_text would never be compared.
+  .refine(
+    (c) =>
+      c.header_text === undefined ||
+      (c.header_text.length === c.columns?.[c.primary]?.length &&
+        (c.skip_rows ?? 0) >= 1 &&
+        c.format !== 'pdf' &&
+        c.format !== 'json'),
+    {
+      message:
+        'header_text requires columns[primary] of the same length, skip_rows >= 1, and a non-pdf, non-json format',
+    }
+  )
+  // Width alone passes a column swap, so a discarded header row is never left unchecked.
+  .refine(
+    (c) =>
+      c.header_text !== undefined ||
+      c.columns?.[c.primary] === undefined ||
+      (c.skip_rows ?? 0) < 1 ||
+      c.format === 'pdf' ||
+      c.format === 'json',
+    { message: 'columns[primary] with skip_rows >= 1 requires header_text' }
   )
   // columns and allowed_ragged_rows are both keyed by parsed-file alias (?.[config.primary],
   // ?.[join.file]) — an unmatched key is never read, so it silently degrades to the default

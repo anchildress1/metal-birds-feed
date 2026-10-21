@@ -55,6 +55,9 @@ const make = (id: string, hex: string): Aircraft =>
     propeller: null,
     home_base: null,
     interdiction_code: null,
+    status_source_text: null,
+    emergency_transponder: null,
+    remarks: null,
   }) satisfies Aircraft;
 
 const testDb = (): Database => Database.deserialize(buildFeedDb(toFeedRows([make('1', 'a1b2c3')])));
