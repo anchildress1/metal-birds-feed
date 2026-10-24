@@ -1,4 +1,5 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { setImmediate } from 'node:timers/promises';
 import type { RetryOptions } from '../../src/retry.js';
 import type { TranslationItem } from '../../src/localize/gemini-client.js';
 
@@ -209,6 +210,54 @@ describe('translateBatch', () => {
       expect(secondItems.map((i) => i.id)).toEqual(['id200']);
       expect([...secondMap]).toEqual([['id200', 'EN:text200']]);
     });
+
+    it.each(['provider', 'checkpoint'] as const)(
+      'waits for the pending %s before starting the next request interval',
+      async (boundary) => {
+        const blocked = Promise.withResolvers<void>();
+        const interval = Promise.withResolvers<void>();
+        const rateLimitSleep = mock(() => interval.promise);
+        const onChunkTranslated = mock<ChunkCallback>(async () => {
+          if (boundary === 'checkpoint') await blocked.promise;
+        });
+        generateContent.mockImplementation(async (args: { contents: string }) => {
+          if (boundary === 'provider') await blocked.promise;
+          return echo(args);
+        });
+
+        const pending = translateBatch(manyItems(401), {
+          apiKey: 'k',
+          requestsPerMinute: 12,
+          rateLimitSleep,
+          onChunkTranslated,
+        });
+        // Yield the event loop so any incorrectly concurrent chunk can reach the boundary.
+        await setImmediate();
+        expect(generateContent).toHaveBeenCalledTimes(1);
+        expect(rateLimitSleep).not.toHaveBeenCalled();
+        expect(onChunkTranslated).toHaveBeenCalledTimes(boundary === 'checkpoint' ? 1 : 0);
+
+        blocked.resolve();
+        await setImmediate();
+        expect(onChunkTranslated).toHaveBeenCalledTimes(1);
+        expect(rateLimitSleep).toHaveBeenCalledTimes(1);
+        expect(rateLimitSleep).toHaveBeenCalledWith(5_000);
+        expect(generateContent).toHaveBeenCalledTimes(1);
+
+        interval.resolve();
+        const { translated, errors } = await pending;
+        expect(errors).toEqual([]);
+        expect(translated.size).toBe(401);
+        expect(translated.get('id400')).toBe('EN:text400');
+        expect(generateContent).toHaveBeenCalledTimes(3);
+        expect(rateLimitSleep).toHaveBeenCalledTimes(2);
+        expect(onChunkTranslated.mock.calls.map(([, items]) => items[0].id)).toEqual([
+          'id0',
+          'id200',
+          'id400',
+        ]);
+      }
+    );
 
     it('does not fire for a chunk that failed', async () => {
       generateContent.mockImplementation((args: { contents: string }) => {
