@@ -347,7 +347,7 @@ const DDL = `CREATE TABLE feed (\n  ${COLUMN_DEFS}\n);`;
 // a string or null. A slice that is valid JSON but not a well-formed FeedRow[] (a bare object, a row
 // missing a required column, a scalar where a row belongs) is rejected at the read boundary so it
 // self-heals, instead of passing through and crashing consolidation on a bad row.
-const columnSchema = (type: string): z.ZodTypeAny => {
+const columnSchema = (type: string): z.ZodType => {
   if (type.includes('NOT NULL')) return z.string();
   if (type.startsWith('INTEGER') || type.startsWith('REAL')) return z.number().nullable();
   return z.string().nullable();
