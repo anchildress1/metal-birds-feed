@@ -1085,6 +1085,10 @@ const noOperatorKind = (values: string[]): string | null => {
   return (values[1] ?? '').trim().length > 0 ? 'corporation' : null;
 };
 
+// Joins cells a register splits one value across (CAAF's MODEL + SERIES) with single spaces; a blank
+// cell adds nothing, all blank → null.
+const joinWsOrNull = (values: string[]): string | null => collapseWsOrNull(values.join(' '));
+
 const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => string | null> = {
   tc_airframe: tcAirframe,
   nl_ilt_airframe: nlIltAirframe,
@@ -1092,6 +1096,7 @@ const COMPOUND_HANDLERS: Record<CompoundTransformName, (values: string[]) => str
   es_aesa_airframe: esAesaAirframe,
   no_operator_kind: noOperatorKind,
   br_status: brStatus,
+  join_ws_or_null: joinWsOrNull,
 };
 
 export const applyCompound = (name: CompoundTransformName, values: string[]): string | null =>

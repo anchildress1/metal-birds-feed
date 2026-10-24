@@ -26,6 +26,7 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | DGAC (Chile)               | Private-use + attribution, non-commercial (Ley N° 17.336, reply 2026-07-22)                        | Live — `xlsx` + monthly CKAN-API `discover_url` (datos.gob.cl); one row per co-registered party merged via `merge_duplicates`                                |
 | CCAA (Croatia)             | Not specified — treated as Private-use, CC.2 fallback elapsed 2026-06-09                           | Live — `pdf` parser path; monthly `discover_url`; no ICAO hex                                                                                                |
 | Transpordiamet (Estonia)   | Private-use + attribution (reply 2026-05-13)                                                       | Live — `html` parser path                                                                                                                                    |
+| CAAF (Fiji)                | Not specified ("All Rights Reserved") — treated as Private-use, CC.2 fallback elapsed 2026-06-05   | Live — `html` parser path; no ICAO hex                                                                                                                       |
 | JCAA (Jamaica)             | Not specified ("All rights reserved") — treated as Private-use, CC.2 fallback elapsed 2026-06-04   | Live — `html` parser path; ICAO hex published                                                                                                                |
 | CAA Latvia                 | CC0-1.0                                                                                            | Live                                                                                                                                                         |
 | TKA Lithuania              | CC BY 4.0 (data.gov.lt)                                                                            | Paused 2026-09-10 — upstream geoblocks CI, VPN-only; last slice still served; `csv` data API; `latest_snapshot_by` keeps the newest publication; no ICAO hex |
@@ -89,7 +90,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | AAC El Salvador                           | 2026-05-10 | 2026-06-10 | replied | Yes      |
 | ESWACAA Eswatini                          | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | ECAA Ethiopia                             | 2026-05-05 | 2026-06-04 | pending | Yes      |
-| CAAF Fiji                                 | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | DGAC France                               | 2026-05-05 | 2026-06-04 | pending | No       |
 | GCAA Georgia                              | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | HCAA Greece                               | 2026-05-10 | 2026-06-09 | pending | Yes      |

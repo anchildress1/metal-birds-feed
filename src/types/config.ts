@@ -74,6 +74,7 @@ export const COMPOUND_TRANSFORMS = [
   'es_aesa_airframe',
   'no_operator_kind',
   'br_status',
+  'join_ws_or_null',
 ] as const;
 
 export type ScalarTransformName = (typeof SCALAR_TRANSFORMS)[number];

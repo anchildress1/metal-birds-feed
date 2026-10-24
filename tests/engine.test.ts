@@ -3501,6 +3501,135 @@ describe('JCAA Jamaica (HTML) fixture mapping', () => {
   });
 });
 
+describe('CAAF Fiji (HTML) fixture mapping', () => {
+  const FJ_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'fj-caaf.yaml');
+  const FJ_HTML = resolve(
+    import.meta.dirname,
+    '..',
+    'fixtures',
+    'fj-caaf',
+    'input',
+    'register.html'
+  );
+  const fjHtml = (): string => readFileSync(FJ_HTML, 'utf8');
+  const mapFj = (html: string): ReturnType<typeof mapRows> =>
+    mapRows(loadSourceConfig(FJ_CONFIG), new Map([['register', Buffer.from(html, 'utf8')]]));
+  const byMark = (m: Map<string, Aircraft>, mark: string): Aircraft => {
+    const hits = [...m.values()].filter((r) => r.registration === mark);
+    expect(hits).toHaveLength(1);
+    return hits[0];
+  };
+
+  let fj: Map<string, Aircraft>;
+  let fjStats: EngineStats;
+
+  beforeAll(async () => {
+    const result = await mapFj(fjHtml());
+    fj = result.records;
+    fjStats = result.stats;
+  });
+
+  it('maps all 15 fixture aircraft with no failures', () => {
+    expect(fjStats).toEqual({ total: 15, ok: 15, failed: 0, skipped: 0, duplicateSkipped: 0 });
+  });
+
+  it('keys on mark and MSN and serves every listed mark as registered, with no hex', () => {
+    const r = byMark(fj, 'DQ-FJT');
+    expect(r.source_id).toBe('DQ-FJT|1394');
+    expect(r.source).toBe('fj-caaf');
+    expect(r.icao_hex).toBeNull();
+    expect(r.country).toBe('FJ');
+    expect(r.manufacturer).toBe('AIRBUS');
+    expect(r.serial_number).toBe('1394');
+    expect(r.operator.name).toBe('AIR PACIFIC LIMITED');
+    for (const rec of fj.values()) expect(rec.status).toBe('valid');
+  });
+
+  it.each([
+    ['DQ-FJT', 'A330 200'],
+    ['DQ-FAB', 'BOEING B737 MAX 8'],
+    ['DQ-MED', 'AS 355 F1'],
+    ['DQ-FJY', 'ATR 42-500 “600 VERSION” 500'],
+    ['DQ-FED', 'DE-HAVILLAND-HERON DH114-2X (RILEY CON)'],
+  ])('folds the SERIES cell into the %s model as %p', (mark, model) => {
+    expect(byMark(fj, mark).model).toBe(model);
+  });
+
+  // The live page pads DQ-FLD's cells with tabs; Prettier strips them from the fixture, so the test
+  // puts them back.
+  it('trims the stray tabs the register leaves in marks and cells', async () => {
+    const original = fjHtml();
+    const tabbed = original
+      .replace('>DQ-FLD</td>', '>DQ-FLD\t</td>')
+      .replace(
+        /(DQ-FLD[\s\S]*?)>ATR 72<\/td>(\s*<td class="column-5">)600</,
+        '$1>ATR 72\t\t</td>$2600\t<'
+      );
+    expect(tabbed).toContain('DQ-FLD\t');
+    expect(tabbed).toContain('600\t<');
+    const { records } = await mapFj(tabbed);
+    const r = byMark(records, 'DQ-FLD');
+    expect(r.source_id).toBe('DQ-FLD|1711');
+    expect(r.registration).toBe('DQ-FLD');
+    expect(r.model).toBe('ATR 72 600');
+  });
+
+  // The register prints one MSN against two marks; which mark is wrong is not stated, so both stand.
+  it('keeps two marks printed against one MSN as separate rows', () => {
+    expect(byMark(fj, 'DQ-FLC').serial_number).toBe('1711');
+    expect(byMark(fj, 'DQ-FLD').serial_number).toBe('1711');
+    expect(byMark(fj, 'DQ-HUE').serial_number).toBe('30655');
+    expect(byMark(fj, 'DQ-HJJ').serial_number).toBe('30655');
+  });
+
+  it('keeps serials verbatim, letter O and lowercase included', () => {
+    expect(byMark(fj, 'DQ-FJJ').serial_number).toBe('OO2O');
+    expect(byMark(fj, 'DQ-LIF').serial_number).toBe('Fl-903');
+  });
+
+  it('flattens a multi-line MAKE cell, the manufacturer address included', () => {
+    expect(byMark(fj, 'DQ-MCE').manufacturer).toBe(
+      'B-N GROUP LTD BEMBRIDGE, ISLE OF WIGHT, ENGLAND PO35 5PR'
+    );
+    expect(byMark(fj, 'DQ-KVV').manufacturer).toBe('VIKING CANADA');
+  });
+
+  it('never carries the operator address into a record', () => {
+    for (const r of fj.values()) {
+      expect(JSON.stringify(r)).not.toMatch(/BOX|NASOSO|HANGAR|SUVA/);
+      expect([r.operator.state, r.operator.country, r.owner.name, r.owner.country]).toEqual([
+        null,
+        null,
+        null,
+        null,
+      ]);
+    }
+  });
+
+  it('keys a reissued mark on a new MSN as its own row', async () => {
+    const reissued = fjHtml().replace(
+      '</tbody>',
+      '<tr><td>115</td><td>DQ-FED</td><td>CESSNA</td><td>CESSNA 172S</td><td>100</td><td>172S0001</td><td>ACME AIR LTD</td><td>P.O. BOX 1, NADI, FIJI</td></tr></tbody>'
+    );
+    const { records } = await mapFj(reissued);
+    expect(records.get('DQ-FED|14061')?.model).toBe('DE-HAVILLAND-HERON DH114-2X (RILEY CON)');
+    expect(records.get('DQ-FED|172S0001')?.model).toBe('CESSNA 172S 100');
+  });
+
+  // Same width, so only header_text stands between this and model/series publishing swapped.
+  it('fails the run when the register swaps MODEL and SERIES', async () => {
+    const original = fjHtml();
+    const swapped = original.replace(
+      /(<th class="column-4">)MODEL(<\/th>\s*<th class="column-5">)SERIES/,
+      '$1SERIES$2MODEL'
+    );
+    expect(swapped).not.toBe(original);
+    await expect(mapFj(swapped)).rejects.toThrow(
+      /column 3 reads "SERIES", expected "MODEL"; column 4 reads "MODEL", expected "SERIES"/
+    );
+  });
+});
+
 // lt-tka counts against the parsed rows, not the mapped records: its published total covers
 // the accumulated history that latest_snapshot_by then filters down to one publication.
 describe('record_count against a separately published total (lt-tka)', () => {
