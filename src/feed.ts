@@ -427,7 +427,10 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // gap. FEED_SLICE_VERSION still does not move, for the same reason as v9: no producer before this
     // change could emit a null status into a slice, since toFeedRows only ever received an
     // already-validated, then-non-nullable Aircraft record.
-    db.run('PRAGMA user_version = 10');
+    // 11 mirrors db.ts's `unknown` status widening: a register publishing no status is served as
+    // `unknown`, where version 10 served it as `valid`. FEED_SLICE_VERSION does not move — a
+    // value-domain change self-heals on each source's refresh.
+    db.run('PRAGMA user_version = 11');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     // Unique rather than plain: NULLs never collide in a SQLite unique index, so hex-less rows and

@@ -160,6 +160,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 - Cancelled, reserved, and null-status records are excluded once, at slice construction.
 - Reserved is not a weaker cancelled: no airframe exists behind the mark. Map held marks to `reserved`, never `other` — `other` is served.
 - `status` is the one nullable canonical field: a blank or unresolved cell stays null, never `other`.
+- A register publishing no status maps to constant `unknown` (served), never `valid`. `valid` needs the register to state it — a per-row cell or a document that declares its rows active.
 
 ### Hashes and translation
 

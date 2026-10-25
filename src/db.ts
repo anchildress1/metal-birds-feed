@@ -10,7 +10,7 @@ import type { ArtifactRow, Bind } from './history.js';
 // unrelated upstream data changes. Salting the hash rather than versioning the state envelope
 // keeps record_count/upstream_hash intact through the migration run, so the retain-ratio guard and
 // staleness tracking keep working off the real prior values instead of an invalidated null state.
-export const DB_SCHEMA_VERSION = 15;
+export const DB_SCHEMA_VERSION = 16;
 
 const bySourceId = (a: Aircraft, b: Aircraft): number => {
   if (a.source_id < b.source_id) return -1;
@@ -233,6 +233,8 @@ export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
     // a source_id now repeats across closed rows, so a reader must filter `removed_on IS NULL` for
     // the aircraft on the register today.
     // 15 adds status_source_text, emergency_transponder and remarks.
+    // 16 widens the `status` value domain with `unknown`, for a register that publishes no status;
+    // a version-15-or-earlier consumer would read those rows as `valid`.
     db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);
@@ -269,6 +271,19 @@ export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
 
 type Migration = (rows: ArtifactRow[], today: string) => ArtifactRow[];
 
+const STATUSLESS_SOURCES = new Set([
+  'cl-dgac',
+  'ee-tram',
+  'fj-caaf',
+  'hr-ccaa',
+  'hu-kh',
+  'lv-caa',
+  'no-caa',
+  'nz-caa',
+  'sg-caas',
+  'tw-caa',
+]);
+
 // Each entry lifts rows written at that schema version exactly one hop forward; readArtifactRows
 // chains them to current. A version with no entry has no path, and the writer fails that source
 // closed rather than start its history over — so even an additive bump ships the identity entry
@@ -278,6 +293,16 @@ const MIGRATIONS: Record<number, Migration> = {
   13: (rows, today) =>
     rows.map((r) => ({ ...r, first_seen: today, removed_on: null, missing_since: null })),
   14: (rows) => rows,
+  // These registers publish no status and were mapped to a constant `valid`. Live rows regenerate as
+  // `unknown` from the config; closed rows never regenerate, so they are rewritten here. Keyed on the
+  // source rather than on a null status_source_text: br-anac's compound status and es-aesa's stated
+  // `valid` carry the same null and are real.
+  15: (rows) =>
+    rows.map((r) =>
+      r['status'] === 'valid' && STATUSLESS_SOURCES.has(String(r['source']))
+        ? { ...r, status: 'unknown' }
+        : r
+    ),
 };
 
 /**

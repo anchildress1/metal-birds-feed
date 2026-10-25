@@ -59,11 +59,10 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # No status column or deregistration marker; null status is excluded from the feed, so a listed
-  # mark is taken as registered. CAAF never states the list omits deregistered aircraft, so a stale
-  # entry serves as valid.
+  # No per-row status column, and the register never states that a listed mark is in good standing.
+  # `unknown` is served; `valid` would be an inference the register does not make.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: FJ

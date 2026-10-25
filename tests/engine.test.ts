@@ -615,7 +615,8 @@ describe('CAA Latvia fixture mapping', () => {
     it('parses ISO datetime with +03:00 offset to YYYY-MM-DD', () =>
       expect(r.certification_date).toBe('1995-07-31'));
     it('captures Construction_Year as int', () => expect(r.year_manufactured).toBe(1991));
-    it('has status=valid (Latvia register is active-only)', () => expect(r.status).toBe('valid'));
+    it('has status=unknown (Latvia register publishes no status)', () =>
+      expect(r.status).toBe('unknown'));
   });
 
   describe('YL-AAO — Aircraft with missing Construction_Year', () => {
@@ -1564,6 +1565,35 @@ describe('engine — negative and edge cases', () => {
     expect(records.get('1')?.registration).toBe('N1');
   });
 
+  // `unknown` carries no more evidence of being live than null does.
+  it('does not let an unknown-status duplicate automatically outrank an explicitly cancelled one', async () => {
+    const config: SourceConfig = {
+      id: 'synthetic-dup-status-unknown',
+      label: 'synthetic',
+      country: 'US',
+      language: 'en',
+      encoding: 'utf8',
+      download: { url: 'https://example.com/x.zip', format: 'zip', entries: { primary: 'p.csv' } },
+      primary: 'primary',
+      delimiter: ',',
+      trim_all: true,
+      format: 'csv',
+      joins: [],
+      source_id: 'ID',
+      registration: 'REG',
+      mapping: {
+        registration: { field: 'REG' },
+        status: { field: 'STATUS', lookup: { cancelled: 'cancelled', unknown: 'unknown' } },
+      },
+    };
+    const files = new Map([
+      ['primary', Buffer.from('ID,REG,STATUS\n1,N1,cancelled\n1,N2,unknown\n', 'utf8')],
+    ]);
+    const { records, stats } = await mapRows(config, files);
+    expect(stats.failed).toBe(1);
+    expect(records.get('1')?.registration).toBe('N1');
+  });
+
   it('does not let a cancelled duplicate outrank a null-status one that comes first', async () => {
     const config: SourceConfig = {
       id: 'synthetic-dup-status-null-first',
@@ -2256,8 +2286,7 @@ describe('CAA Taiwan fixture mapping (binary .xls)', () => {
       expect(r.registration).toBe('B-00101');
       expect(r.country).toBe('TW');
     });
-    it('has status=valid (register is a current-fleet snapshot)', () =>
-      expect(r.status).toBe('valid'));
+    it('has status=unknown (register publishes no status)', () => expect(r.status).toBe('unknown'));
     it('carries the full free-text model string', () => expect(r.model).toBe('HBC BEECH 350'));
     it('leaves manufacturer null (not separable from model)', () =>
       expect(r.manufacturer).toBeNull());
@@ -3011,8 +3040,8 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
     }
   });
 
-  it('marks the current-publication register as valid', () =>
-    expect([...hrRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+  it('marks every row unknown (register publishes no status)', () =>
+    expect([...hrRecords.values()].every((r) => r.status === 'unknown')).toBe(true));
 });
 
 describe('CCAA Croatia rotated publication, same config', () => {
@@ -3176,7 +3205,7 @@ describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
     });
     it('leaves owner.country null (foreign lessor, not the registration country)', () =>
       expect(r.owner.country).toBeNull());
-    it('marks the register as valid (active-only listing)', () => expect(r.status).toBe('valid'));
+    it('marks the register as unknown (no status column)', () => expect(r.status).toBe('unknown'));
   });
 
   describe('ES-MBB — comma in the owner name', () => {
@@ -3212,10 +3241,10 @@ describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
     it('preserves the spaced alphanumeric serial', () => expect(r.serial_number).toBe('B - 1454'));
   });
 
-  it('every Estonia record has country=EE, status=valid, and no engine/PII-address data', () => {
+  it('every Estonia record has country=EE, status=unknown, and no engine/PII-address data', () => {
     for (const r of eeRecords.values()) {
       expect(r.country).toBe('EE');
-      expect(r.status).toBe('valid');
+      expect(r.status).toBe('unknown');
       expect(r.registration).toMatch(/^ES-[A-Z0-9]+$/);
       expect(r.engine).toEqual({
         manufacturer: null,
@@ -3533,7 +3562,7 @@ describe('CAAF Fiji (HTML) fixture mapping', () => {
     expect(fjStats).toEqual({ total: 15, ok: 15, failed: 0, skipped: 0, duplicateSkipped: 0 });
   });
 
-  it('keys on mark and MSN and serves every listed mark as registered, with no hex', () => {
+  it('keys on mark and MSN and serves every listed mark as unknown status, with no hex', () => {
     const r = byMark(fj, 'DQ-FJT');
     expect(r.source_id).toBe('DQ-FJT|1394');
     expect(r.source).toBe('fj-caaf');
@@ -3542,7 +3571,7 @@ describe('CAAF Fiji (HTML) fixture mapping', () => {
     expect(r.manufacturer).toBe('AIRBUS');
     expect(r.serial_number).toBe('1394');
     expect(r.operator.name).toBe('AIR PACIFIC LIMITED');
-    for (const rec of fj.values()) expect(rec.status).toBe('valid');
+    for (const rec of fj.values()) expect(rec.status).toBe('unknown');
   });
 
   it.each([
@@ -3691,8 +3720,7 @@ describe('CAAS Singapore fixture mapping', () => {
       expect(r.registration).toBe('9V-BLL');
       expect(r.country).toBe('SG');
     });
-    it('has status=valid (register is a current-fleet snapshot)', () =>
-      expect(r.status).toBe('valid'));
+    it('has status=unknown (register publishes no status)', () => expect(r.status).toBe('unknown'));
     it('maps manufacturer, model and serial', () => {
       expect(r.manufacturer).toBe('Cessna');
       expect(r.model).toBe('172S');
@@ -3774,7 +3802,7 @@ describe('CAAS Singapore fixture mapping', () => {
       expect(r.source).toBe('sg-caas');
       expect(r.registration.startsWith('9V-')).toBe(true);
       expect(r.country).toBe('SG');
-      expect(r.status).toBe('valid');
+      expect(r.status).toBe('unknown');
       expect(r.operator.country).toBe('SG');
       expect(r.operator.name).not.toBeNull();
       expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
@@ -3836,9 +3864,9 @@ describe('NO-CAA fixture mapping', () => {
       expect(r.registration).toBe('LN-ABA');
     });
     it('extracts the hexadecimal ICAO address', () => expect(r.icao_hex).toBe('478743'));
-    it('maps Fly to fixed-wing with a constant valid status', () => {
+    it('maps Fly to fixed-wing with a constant unknown status', () => {
       expect(r.airframe_type).toBe('fixed-wing');
-      expect(r.status).toBe('valid');
+      expect(r.status).toBe('unknown');
       expect(r.country).toBe('NO');
     });
     it('parses the dot date and kilogram MTOM', () => {
@@ -3909,12 +3937,12 @@ describe('NO-CAA fixture mapping', () => {
       expect(noRecords.get('LN-ABC')!.owner.kind).toBe('individual'));
   });
 
-  it('every NO record carries country=NO, valid status, and a 6-hex icao_hex', () => {
+  it('every NO record carries country=NO, unknown status, and a 6-hex icao_hex', () => {
     for (const r of noRecords.values()) {
       expect(r.source).toBe('no-caa');
       expect(r.registration.startsWith('LN-')).toBe(true);
       expect(r.country).toBe('NO');
-      expect(r.status).toBe('valid');
+      expect(r.status).toBe('unknown');
       expect(r.icao_hex).toMatch(/^[0-9a-f]{6}$/);
       expect(r.icao_type_code).toBeNull();
       expect(r).not.toHaveProperty('street');
@@ -3961,9 +3989,9 @@ describe('DGAC Chile fixture mapping', () => {
       expect(r.operational_classes).toEqual(['commercial']);
       expect(r.operational_classes_source_text).toEqual(['COMERCIAL']);
     });
-    it('maps HELICOPTERO to rotorcraft with a constant valid status', () => {
+    it('maps HELICOPTERO to rotorcraft with a constant unknown status', () => {
       expect(r.airframe_type).toBe('rotorcraft');
-      expect(r.status).toBe('valid');
+      expect(r.status).toBe('unknown');
     });
     it('records commercial use as an operational class', () =>
       expect(r.operational_classes).toEqual(['commercial']));
@@ -4015,12 +4043,12 @@ describe('DGAC Chile fixture mapping', () => {
   it('maps PRIVADO to a private operational class', () =>
     expect(clRecords.get('CCAAC')!.operational_classes).toEqual(['private']));
 
-  it('every CL record carries country=CL, valid status, a CC- registration, and no owner/hex/PII', () => {
+  it('every CL record carries country=CL, unknown status, a CC- registration, and no owner/hex/PII', () => {
     for (const r of clRecords.values()) {
       expect(r.source).toBe('cl-dgac');
       expect(r.registration.startsWith('CC-')).toBe(true);
       expect(r.country).toBe('CL');
-      expect(r.status).toBe('valid');
+      expect(r.status).toBe('unknown');
       expect(r.operator.country).toBe('CL');
       expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
       expect(r.legal_owner).toEqual({ name: null, kind: null, state: null, country: null });
@@ -4350,8 +4378,8 @@ describe('CAA NZ fixture mapping', () => {
       expect(r.model).toBe('162');
       expect(r.serial_number).toBe('16200060');
     });
-    it('has status=valid (NZ register is an active-fleet snapshot)', () =>
-      expect(r.status).toBe('valid'));
+    it('has status=unknown (NZ register publishes no status)', () =>
+      expect(r.status).toBe('unknown'));
   });
 
   describe('Model Category → airframe_type lookup', () => {
@@ -4922,7 +4950,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.source_id).toBe('HA-GZQ');
     expect(r.registration).toBe('HA-GZQ');
     expect(r.country).toBe('HU');
-    expect(r.status).toBe('valid');
+    expect(r.status).toBe('unknown');
   });
 
   // The extractor sees "HA- GZQ" here and "HA -MEI" three pages later.
@@ -5042,8 +5070,8 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     for (const r of huRecords.values()) expect(r.legal_owner).toEqual(nullParty);
   });
 
-  it('marks the current-publication register as valid throughout', () =>
-    expect([...huRecords.values()].every((r) => r.status === 'valid')).toBe(true));
+  it('marks every row unknown throughout (register publishes no status)', () =>
+    expect([...huRecords.values()].every((r) => r.status === 'unknown')).toBe(true));
 
   it('publishes no ICAO hex — the register prints none', () =>
     expect([...huRecords.values()].every((r) => r.icao_hex === null)).toBe(true));

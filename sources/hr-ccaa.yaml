@@ -111,10 +111,10 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # No per-row status column; the monthly publication IS the current active fleet (same reasoning
-  # as AESA's "Matrículas Activas").
+  # No per-row status column, and the register never states that a listed mark is in good standing.
+  # `unknown` is served; `valid` would be an inference the register does not make.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: HR

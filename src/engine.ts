@@ -373,7 +373,9 @@ function resolveRecency(
   // be outranked by) a row that explicitly states cancelled. The shortcut only applies when both
   // sides have a concrete status that actually disagrees about cancelled-ness; otherwise it falls
   // through to date/superset, and ultimately to the ambiguous-collision failure below.
-  if (candidate.status !== null && incumbent.status !== null) {
+  // `unknown` is the same absence of evidence, stated register-wide instead of per cell.
+  const concrete = (s: Aircraft['status']): boolean => s !== null && s !== 'unknown';
+  if (concrete(candidate.status) && concrete(incumbent.status)) {
     const candidateCancelled = candidate.status === 'cancelled';
     const incumbentCancelled = incumbent.status === 'cancelled';
     if (candidateCancelled !== incumbentCancelled) {

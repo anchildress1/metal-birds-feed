@@ -175,6 +175,13 @@ describe('toFeedRows', () => {
     expect(toFeedRows([make('2', 'a1b2c3', { status: null })])).toEqual([]);
   });
 
+  // `unknown` is a register publishing no status at all; excluding it like null would drop the
+  // whole register from the feed.
+  it('serves an unknown-status record whether or not the register publishes a hex', () => {
+    expect(toFeedRows([make('1', null, { status: 'unknown' })])[0]?.status).toBe('unknown');
+    expect(toFeedRows([make('2', 'a1b2c3', { status: 'unknown' })])[0]?.status).toBe('unknown');
+  });
+
   // A reserved mark has no airframe behind it, so nothing can transmit it — and registers publish
   // the intended model against the row, which would read as a real aircraft if it were served.
   it('excludes reserved marks whether or not the register publishes a hex', () => {
@@ -507,7 +514,7 @@ describe('buildFeedDb', () => {
     // leaving the feed advertising a shape version that predated the values it was serving.
     const db = Database.deserialize(buildFeedDb([]));
     try {
-      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 10 });
+      expect(db.query('PRAGMA user_version').get()).toEqual({ user_version: 11 });
     } finally {
       db.close();
     }
