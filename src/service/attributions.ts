@@ -54,6 +54,8 @@ const NOTICES: Record<string, string> = {
   // CAAT's 2026-05-21 reply conditions use on crediting CAAT and referencing its official website.
   'th-caat':
     'Source data from the Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th; used and shared with permission for non-commercial use, normalized into this project schema without implying endorsement.',
+  'fj-caaf':
+    'Source data from the Civil Aviation Authority of Fiji (CAAF) — https://www.caaf.org.fj/aircraft-register-search/; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
 };
 
 // A source slug with no mapped notice still gets a credit rather than an empty string — a displayed

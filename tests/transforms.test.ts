@@ -1051,6 +1051,19 @@ describe('no_airworthiness_classes', () => {
     expect(applyArray('no_airworthiness_classes', '"Normal"')).toEqual([]));
 });
 
+describe('join_ws_or_null', () => {
+  it('joins the cells with one space', () =>
+    expect(applyCompound('join_ws_or_null', ['A330', '200'])).toBe('A330 200'));
+  it('adds nothing for a blank cell', () =>
+    expect(applyCompound('join_ws_or_null', ['BELL 212', ''])).toBe('BELL 212'));
+  it('keeps a cell that stands alone after a blank one', () =>
+    expect(applyCompound('join_ws_or_null', ['', '200'])).toBe('200'));
+  it('collapses whitespace inside and between cells', () =>
+    expect(applyCompound('join_ws_or_null', ['ATR 72\t\t', '600\t'])).toBe('ATR 72 600'));
+  it('returns null when every cell is blank', () =>
+    expect(applyCompound('join_ws_or_null', [' ', ''])).toBeNull());
+});
+
 describe('no_operator_kind', () => {
   it('types an org-number operator as a corporation', () =>
     expect(applyCompound('no_operator_kind', ['Heli Team AS', '850447772'])).toBe('corporation'));

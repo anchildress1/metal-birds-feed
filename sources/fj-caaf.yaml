@@ -1,0 +1,211 @@
+id: fj-caaf
+label: Civil Aviation Authority of Fiji Aircraft Register
+country: FJ
+language: en
+encoding: utf8
+# Marks and cells carry stray trailing tabs.
+trim_all: true
+# No cadence_days: no declared cadence and no stamp on the table; see DATA_LICENSES.md
+# "Update cadence".
+
+download:
+  # The register is one server-rendered TablePress <table>; there is no CSV/XLSX/API channel.
+  url: https://www.caaf.org.fj/aircraft-register-search/
+  format: file
+  entries:
+    register: register.html
+
+primary: register
+delimiter: ','
+format: html
+
+# `skip_rows: 1` drops the <thead> row so the short names below apply; `header_text` pins that row,
+# so an added, removed, renamed, or swapped upstream column fails the run instead of shifting fields.
+skip_rows: 1
+columns:
+  register:
+    - row_no
+    - mark
+    - make
+    - model
+    - series
+    - msn
+    - operator
+    - operator_address
+header_text:
+  - '#'
+  - 'REG'
+  - 'MAKE'
+  - 'MODEL'
+  - 'SERIES'
+  - 'MSN'
+  - 'OPERATOR NAME'
+  - 'OPERATOR ADDRESS'
+
+# No certificate number or per-aircraft id is published. The serial keys a reissued mark as a new
+# row; it does not dedupe, since the register prints one MSN against two marks in places.
+source_id: [mark, msn]
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: trim_or_null
+    default: ''
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # No status column or deregistration marker; null status is excluded from the feed, so a listed
+  # mark is taken as registered. CAAF never states the list omits deregistered aircraft, so a stale
+  # entry serves as valid.
+  status:
+    constant: valid
+
+  country:
+    constant: FJ
+
+  # Some MAKE cells carry the manufacturer's own postal address on later lines; a company address is
+  # not PII and is kept verbatim.
+  manufacturer:
+    field: make
+    transform: collapse_ws_or_null
+
+  # SERIES is the variant the MODEL cell omits (A330 + 200, B737 MAX + 8); the schema has no slot for
+  # it, so it rides on the model.
+  model:
+    fields: [model, series]
+    compound_transform: join_ws_or_null
+
+  serial_number:
+    field: msn
+    transform: collapse_ws_or_null
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: operator
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    constant: ~
+
+  # OPERATOR ADDRESS is PII and never mapped. Its trailing component is a Fijian town as often as a
+  # country, so no country is read from it.
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~
+
+  emergency_transponder:
+    constant: ~
+
+  remarks:
+    constant: ~

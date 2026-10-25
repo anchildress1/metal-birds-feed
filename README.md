@@ -112,6 +112,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `cl-dgac` | DGAC | Chile | ✅ Live |
 | `hr-ccaa` | CCAA | Croatia | ✅ Live |
 | `ee-tram` | Transpordiamet | Estonia | ✅ Live |
+| `fj-caaf` | CAAF | Fiji | ✅ Live |
 | `hu-kh` | Közlekedési Hatóság | Hungary | ✅ Live |
 | `jm-jcaa` | JCAA | Jamaica | ✅ Live |
 | `lv-caa` | CAA Latvia | Latvia | ✅ Live |
