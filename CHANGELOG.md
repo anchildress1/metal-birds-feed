@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.3.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.2.0...v2.3.0) (2026-10-25)
+
+
+### Features
+
+* onboard the Fiji CAAF aircraft register ([#219](https://github.com/anchildress1/metal-birds-feed/issues/219)) ([b9d3cdb](https://github.com/anchildress1/metal-birds-feed/commit/b9d3cdbea749eb8b071bc2b20dc27a4540b83d1a))
+
+
+### Bug Fixes
+
+* update Zod schema type and test required ordering ([#215](https://github.com/anchildress1/metal-birds-feed/issues/215)) ([70643ac](https://github.com/anchildress1/metal-birds-feed/commit/70643ac3d53f5aecd457a17ee1efad1b553e2213))
+
 ## [2.2.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.1.0...v2.2.0) (2026-10-21)
 
 
