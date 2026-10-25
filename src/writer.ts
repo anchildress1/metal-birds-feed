@@ -1,10 +1,15 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, NoSuchKey } from '@aws-sdk/client-s3';
 import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
-import type { FeedRow } from './feed-row.js';
-import { FeedSliceSchema, serializeFeedSlice } from './feed.js';
+import { FeedSliceSchema, serializeFeedSlice, type FeedSlice } from './feed.js';
 import { buildSqlite, hashArtifact, readArtifactRows, toRow, DB_SCHEMA_VERSION } from './db.js';
-import { assertHistoryPreserved, mergeHistory, type ArtifactRow } from './history.js';
+import {
+  assertHistoryPreserved,
+  mergeHistory,
+  summarizeHistory,
+  type ArtifactRow,
+  type HistorySummary,
+} from './history.js';
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
@@ -127,7 +132,7 @@ export class R2ArtifactWriter {
     priorState: SourceState | null,
     upstreamHash: string,
     today: string,
-    beforeCommit?: () => Promise<void>
+    beforeCommit?: (history: HistorySummary) => Promise<void>
   ): Promise<WriteStats> {
     assertRecordCountForWrite(records.size, source, priorState);
 
@@ -159,7 +164,7 @@ export class R2ArtifactWriter {
     // schema version — a hash match alone can't tell that apart from the real, untouched artifact.
     const artifactCurrent =
       artifactUnchanged && isArtifactCaughtUp(await this.readArtifactHeader(source), priorState);
-    await beforeCommit?.();
+    await beforeCommit?.(summarizeHistory(rows, today));
     if (artifactCurrent) {
       log('info', 'artifact_unchanged', { source, record_count: records.size });
       return {
@@ -409,11 +414,11 @@ export class R2ArtifactWriter {
 
   // Per-source feed slice, the build intermediate main() merges into the consolidated DB.
   // Stored as JSON so consolidation reads it back without a SQLite round trip.
-  async writeFeedRows(source: string, rows: FeedRow[]): Promise<void> {
-    await this.put(`aircraft/_feed/${source}.json`, serializeFeedSlice(rows), 'application/json');
+  async writeFeedRows(source: string, slice: FeedSlice): Promise<void> {
+    await this.put(`aircraft/_feed/${source}.json`, serializeFeedSlice(slice), 'application/json');
   }
 
-  async readFeedRows(source: string): Promise<FeedRow[] | null> {
+  async readFeedRows(source: string): Promise<FeedSlice | null> {
     return this.readJson(`aircraft/_feed/${source}.json`, FeedSliceSchema, 'feed_rows', null, {
       source,
     });

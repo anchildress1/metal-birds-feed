@@ -7,7 +7,7 @@ import { download, fetchPublishedTotal } from './downloader.js';
 import { mapRows } from './engine.js';
 import { localizeRecords } from './localize/localize.js';
 import { MIN_RETAIN_RATIO, R2ArtifactWriter, isArtifactCaughtUp, type R2Config } from './writer.js';
-import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedRow } from './feed.js';
+import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedSlice } from './feed.js';
 import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
@@ -142,8 +142,8 @@ export async function run(sourceId: string): Promise<RunResult> {
     hashRecords(records),
     new Date().toISOString().slice(0, 10),
     // The slice lands before the artifact so history advances last, and only past every guard.
-    async () => {
-      if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values()));
+    async (history) => {
+      if (!dryRun) await writer.writeFeedRows(sourceId, toFeedRows(localized.values(), history));
     }
   );
 
@@ -485,7 +485,7 @@ export const publishFeed = async (sources: string[], dryRun: boolean): Promise<s
       throw new Error(
         `Missing feed rows for: ${missing.join(', ')}. Run \`make refresh\` (or \`make build-feed\` to refresh and assemble in one step) — these sources have not written a feed slice yet.`
       );
-    const groups = loaded.filter((group): group is FeedRow[] => group !== null);
+    const groups = loaded.filter((group): group is FeedSlice => group !== null);
     const rows = mergeFeedRows(groups);
     const hash = hashFeedRows(rows);
     await writeFeedAtomically(outputPath, buildFeedDb(rows));

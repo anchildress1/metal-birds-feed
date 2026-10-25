@@ -157,6 +157,10 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 - Both key columns stay nullable — the unique indexes rely on SQLite not treating NULLs as equal.
 - No `source_id` tiebreak: it may be reissued every publication, flipping the served answer with no upstream change.
+- A collision the register's own dates cannot settle — within a slice or across slices on one hex — goes to the row history proves newest: its `first_seen` is after its source's `history_start` and after the other row's `first_seen`. Otherwise within-source drops the key; cross-source keeps the first claim in sorted source order.
+  - Never rank raw `first_seen`: migration and onboarding stamp every pre-existing row with `history_start`, so raw order is onboarding order.
+  - Sound only on a stable `source_id`: a reissued one reopens every row as newly seen.
+  - `first_seen` rides the slice only; `mergeFeedRows` strips it before the served table.
 - Cancelled, reserved, and null-status records are excluded once, at slice construction.
 - Reserved is not a weaker cancelled: no airframe exists behind the mark. Map held marks to `reserved`, never `other` — `other` is served.
 - `status` is the one nullable canonical field: a blank or unresolved cell stays null, never `other`.

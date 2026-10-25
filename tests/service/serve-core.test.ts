@@ -60,7 +60,10 @@ const make = (id: string, hex: string): Aircraft =>
     remarks: null,
   }) satisfies Aircraft;
 
-const testDb = (): Database => Database.deserialize(buildFeedDb(toFeedRows([make('1', 'a1b2c3')])));
+const NO_HISTORY = { firstSeen: new Map<string, string>(), start: '2026-01-01' };
+
+const testDb = (): Database =>
+  Database.deserialize(buildFeedDb(toFeedRows([make('1', 'a1b2c3')], NO_HISTORY).rows));
 
 const post = (token: string | null, body: unknown): Request =>
   new Request('https://feed.local/feed', {
@@ -124,8 +127,9 @@ describe('serveRequest', () => {
     const db = Database.deserialize(
       buildFeedDb(
         toFeedRows(
-          stored.map((registration, i) => ({ ...make(String(i), `a1b2c${i}`), registration }))
-        )
+          stored.map((registration, i) => ({ ...make(String(i), `a1b2c${i}`), registration })),
+          NO_HISTORY
+        ).rows
       )
     );
     try {
