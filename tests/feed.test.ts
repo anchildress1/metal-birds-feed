@@ -275,6 +275,27 @@ describe('toFeedRows', () => {
     expect(rows).toEqual([]);
   });
 
+  // Rows 2 and 3 tie, but both supersede row 1, so row 1's differing data cannot poison the key.
+  it('collapses identical survivors once history rules out a superseded row', () => {
+    const history = {
+      firstSeen: new Map([
+        ['1', '2026-01-01'],
+        ['2', '2026-06-01'],
+        ['3', '2026-06-01'],
+      ]),
+      start: '2026-01-01',
+    };
+    const rows = sliceRows(
+      [
+        make('1', null, { registration: 'LY-AXX', model: 'AN-2' }),
+        make('2', null, { registration: 'LY-AXX', model: 'JAK-52' }),
+        make('3', null, { registration: 'LY-AXX', model: 'JAK-52' }),
+      ],
+      history
+    );
+    expect(rows.map((r) => r.model)).toEqual(['JAK-52']);
+  });
+
   it('lets a register date outrank first_seen', () => {
     const history = {
       firstSeen: new Map([
@@ -460,6 +481,15 @@ describe('mergeFeedRows', () => {
     const late = asSlice([rowFor('a1b2c3', 'zz', 'valid', 'ZZ-1', '2026-09-01')], '2026-09-01');
     const ca = asSlice([rowFor('a1b2c3', 'ca', 'valid', 'C-2', '2026-06-01')]);
     expect(mergeFeedRows([late, ca])[0]?.registration).toBe('ZZ-1');
+  });
+
+  // X supersedes Z but cannot be ordered against Y, so no claim is newest. Z is first in source
+  // order, yet history already proves it stale; the fallback skips it.
+  it('never falls back to a claim another claim supersedes', () => {
+    const z = asSlice([rowFor('a1b2c3', 'ar', 'valid', 'LV-Z')]);
+    const x = asSlice([rowFor('a1b2c3', 'ca', 'valid', 'C-X', '2026-06-01')]);
+    const y = asSlice([rowFor('a1b2c3', 'zz', 'valid', 'ZZ-Y', '2026-06-01')], '2026-06-01');
+    expect(mergeFeedRows([z, x, y])[0]?.registration).toBe('C-X');
   });
 
   it('serves no first_seen', () => {

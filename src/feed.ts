@@ -28,15 +28,13 @@ export interface FeedSlice {
 // each was onboarded, not by the airframe.
 const provablyNewer = (a: string, aStart: string, b: string): boolean => a > aStart && a > b;
 
-// The one candidate provably newer than every other, or undefined. Resolved as a group: a pairwise
-// fold would pick a different winner depending on candidate order.
-const newestOf = <T>(
-  candidates: T[],
-  seen: (c: T) => string,
-  start: (c: T) => string
-): T | undefined =>
-  candidates.find((c) =>
-    candidates.every((d) => d === c || provablyNewer(seen(c), start(c), seen(d)))
+// The candidates no other candidate provably supersedes, in input order. Resolved as a group: a
+// pairwise fold would pick a different winner depending on candidate order, and a fallback over the
+// full set could serve a claim history already proves stale. Never empty for a non-empty input —
+// superseding needs a strictly later first_seen, so the latest one always survives.
+const unsuperseded = <T>(candidates: T[], seen: (c: T) => string, start: (c: T) => string): T[] =>
+  candidates.filter(
+    (c) => !candidates.some((d) => d !== c && provablyNewer(seen(d), start(d), seen(c)))
   );
 
 // A live row absent from history cannot be dated; the history start is the bound that never wins.
@@ -75,16 +73,17 @@ const resolveCandidates = (candidates: Aircraft[], history: HistorySummary): Air
   const winners = candidates.filter((_, i) => dates[i] === newest);
   const first = winners[0] ?? null;
   if (winners.length === 1 || first === null) return first;
-  const appearedLast = newestOf(
+  const current = unsuperseded(
     winners,
     (r) => firstSeenOf(r, history),
     () => history.start
   );
-  if (appearedLast !== undefined) return appearedLast;
+  const head = current[0] ?? null;
+  if (current.length === 1 || head === null) return head;
   // Both sides are projected by the same function, so key order is fixed and JSON.stringify is a
   // sound identity test here — unlike hashFeedRows, which compares across code paths.
-  const reference = JSON.stringify(toFeedRow(first, null));
-  return winners.every((r) => JSON.stringify(toFeedRow(r, null)) === reference) ? first : null;
+  const reference = JSON.stringify(toFeedRow(head, null));
+  return current.every((r) => JSON.stringify(toFeedRow(r, null)) === reference) ? head : null;
 };
 
 // Per-source slice: one row per aircraft, collapsed on icao_hex where the register publishes one
@@ -256,8 +255,9 @@ const toFeedRow = (r: Aircraft, icao_hex: string | null): FeedRow => {
 
 // Merge per-source slices into one row per icao_hex for the consolidated table. A cross-source hex
 // collision is one airframe in two registries — typically mid-transfer — and goes to the row history
-// proves newest. Where history cannot order them, the first slice to claim the hex keeps it; sources
-// are enumerated in sorted order (resolveAllSources), so that fallback is at least deterministic.
+// proves newest. Where history cannot order them, the first slice to claim the hex keeps it among the
+// claims history has not superseded; sources are enumerated in sorted order (resolveAllSources), so
+// that fallback is at least deterministic.
 export const mergeFeedRows = (slices: FeedSlice[]): FeedRow[] => {
   const byHex = new Map<string, { row: SliceRow; start: string }[]>();
   const hexless: FeedRow[] = [];
@@ -279,12 +279,11 @@ export const mergeFeedRows = (slices: FeedSlice[]): FeedRow[] => {
     }
   }
   const winners = [...byHex.values()].flatMap((claims) => {
-    const winner =
-      newestOf(
-        claims,
-        (c) => c.row.first_seen,
-        (c) => c.start
-      ) ?? claims[0];
+    const [winner] = unsuperseded(
+      claims,
+      (c) => c.row.first_seen,
+      (c) => c.start
+    );
     return winner === undefined ? [] : [toServedRow(winner.row)];
   });
   return resolveRegistrationAmbiguity([...winners, ...hexless]);
