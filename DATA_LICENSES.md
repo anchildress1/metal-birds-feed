@@ -197,6 +197,7 @@ Single record of source for agency correspondence and source-use posture: every 
 
 ## Required Notices
 
+- cl-dgac: "Dirección General de Aeronáutica Civil (DGAC) of Chile — the sole official source and copyright holder of the information — https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/"
 - ee-tram: "Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register"
 - mv-caa: "Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission."
 - tc-ca: "Reproduced and distributed with the permission of the Government of Canada."

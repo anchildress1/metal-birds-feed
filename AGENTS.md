@@ -51,14 +51,14 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - Record residual exposure where terms are narrower than the intended use.
 - A new source is complete only with all six surfaces:
 
-| Surface                               | Content                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------- |
-| `sources/<id>.yaml`                   | config                                                                                |
-| `fixtures/<id>/`                      | real rows, one fixture per declared PDF orientation                                   |
-| `DATA_LICENSES.md`                    | `## Source Posture` bullet; `## Required Notices` line only where wording is mandated |
-| `README.md` sources table             | row inserted alphabetically by country, never appended; active sources only           |
-| `src/service/attributions.ts`         | `NOTICES[<id>]` — a missing entry silently degrades to a generic slug credit          |
-| `docs/source-onboarding-checklist.md` | `✅ Done` row; remove the source's triage row                                         |
+| Surface                               | Content                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `sources/<id>.yaml`                   | config                                                                                                  |
+| `fixtures/<id>/`                      | real rows, one fixture per declared PDF orientation                                                     |
+| `DATA_LICENSES.md`                    | `## Source Posture` bullet; `## Required Notices` line only where wording or credit content is mandated |
+| `README.md` sources table             | row inserted alphabetically by country, never appended; active sources only                             |
+| `src/service/attributions.ts`         | `NOTICES[<id>]` — a missing entry silently degrades to a generic slug credit                            |
+| `docs/source-onboarding-checklist.md` | `✅ Done` row; remove the source's triage row                                                           |
 
 ### Research-first
 
@@ -248,11 +248,11 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 Single record for correspondence and posture; update it on every source addition or posture change. Flat tracker, not a reply archive — the email thread is the verbatim record.
 
-| Section                    | Holds                                                         | Never holds                                                                        |
-| -------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `## Agency Correspondence` | who was written to, when, reply state; bare table             | reply text                                                                         |
-| `## Required Notices`      | one `<source-id>: "<text>"` line per agency-mandated wording  | rationale, clearance basis, coverage cost, credit line; any source with no mandate |
-| `## Source Posture`        | clearance basis, conditions, residual exposure, coverage cost | the served credit line (that is `src/service/attributions.ts`)                     |
-| `## Update cadence`        | declared vs observed rhythm per source                        | `cadence_days` values (those live in the YAML)                                     |
+| Section                    | Holds                                                                          | Never holds                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `## Agency Correspondence` | who was written to, when, reply state; bare table                              | reply text                                                                         |
+| `## Required Notices`      | one `<source-id>: "<text>"` line per agency-mandated wording or credit content | rationale, clearance basis, coverage cost, credit line; any source with no mandate |
+| `## Source Posture`        | clearance basis, conditions, residual exposure, coverage cost                  | the served credit line (that is `src/service/attributions.ts`)                     |
+| `## Update cadence`        | declared vs observed rhythm per source                                         | `cadence_days` values (those live in the YAML)                                     |
 
 - `docs/source-onboarding-checklist.md` is a triage worklist. Its tables stay bare: contact provenance, names, phones, prefixes belong in `DATA_LICENSES.md`.

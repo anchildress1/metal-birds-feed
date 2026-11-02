@@ -77,10 +77,6 @@ describe('attributionFor', () => {
       'Source: Agência Nacional de Aviação Civil (ANAC), Brazil — https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/; open data reused with the mandatory source citation, normalized into this project schema without implying endorsement.',
     ],
     [
-      'cl-dgac',
-      'Source data from the Dirección General de Aeronáutica Civil (DGAC) of Chile — the sole official source and copyright holder of the information — https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/; reused non-commercially for research and reference under Ley N° 17.336, normalized into this project schema without implying endorsement.',
-    ],
-    [
       'es-aesa',
       'Data source: Agencia Estatal de Seguridad Aérea (AESA) — https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas; reusable under Real Decreto 1495/2011 (Ley 37/2007 on public-sector-information reuse), normalized into this project schema without implying endorsement.',
     ],
