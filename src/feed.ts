@@ -51,9 +51,9 @@ const groupInto = (map: Map<string, Aircraft[]>, key: string, record: Aircraft):
 };
 
 // Records sharing a lookup key collapse to one winner: the most recent known date wins, then the
-// row history proves newest, and rows that render an identical served row are interchangeable so a
-// plain re-publish costs nothing. A surviving tie returns null — the register contradicts itself about which aircraft holds the key
-// and neither row can be served.
+// rows history proves superseded drop out, and rows that render an identical served row are
+// interchangeable so a plain re-publish costs nothing. A surviving tie returns null — the register
+// contradicts itself about which aircraft holds the key and neither row can be served.
 //
 // It resolves the candidates as a group rather than folding them pairwise, because a pairwise tie
 // has nowhere to record itself except by poisoning the key, which would then discard a later row
@@ -487,8 +487,8 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // change could emit a null status into a slice, since toFeedRows only ever received an
     // already-validated, then-non-nullable Aircraft record.
     // 11 mirrors db.ts's `unknown` status widening: a register publishing no status is served as
-    // `unknown`, where version 10 served it as `valid`. FEED_SLICE_VERSION does not move — a
-    // value-domain change self-heals on each source's refresh.
+    // `unknown`, where version 10 served it as `valid`. The widening alone would not move
+    // FEED_SLICE_VERSION — a value-domain change self-heals on each source's refresh.
     db.run('PRAGMA user_version = 11');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
