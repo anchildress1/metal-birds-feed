@@ -160,6 +160,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 - A collision the register's own dates cannot settle — within a slice or across slices on one hex — goes to the row history proves newest: its `first_seen` is after its source's `history_start` and after the other row's `first_seen`. Otherwise within-source drops the key; cross-source keeps the first claim in sorted source order.
   - Never rank raw `first_seen`: migration and onboarding stamp every pre-existing row with `history_start`, so raw order is onboarding order.
   - Sound only on a stable `source_id`: a reissued one reopens every row as newly seen.
+  - A reopened row keeps its original `first_seen`, so an airframe returning to a register loses to a stale claim another register still lists. Accepted: fixing it needs a reappearance date column; never overwrite a closed row's `first_seen` to get it.
   - `first_seen` rides the slice only; `mergeFeedRows` strips it before the served table.
 - Cancelled, reserved, and null-status records are excluded once, at slice construction.
 - Reserved is not a weaker cancelled: no airframe exists behind the mark. Map held marks to `reserved`, never `other` — `other` is served.
