@@ -167,35 +167,38 @@ const translateAtRate = async (
     requestStarted = true;
   };
 
-  // Gemini quotas are project-wide RPM. refresh.yml serializes workflows and source jobs; this
-  // intentionally sequential loop plus shared request gate spaces every API attempt, including
-  // retries, so one cold source cannot burst the quota.
+  // Every request attempt shares the RPM gate; each paid chunk must finish its checkpoint
+  // before the next request so concurrent cache writes cannot discard completed translations.
+  let pending = Promise.resolve();
   for (const items of chunks) {
-    let value: Map<string, string> | undefined;
-    try {
-      value = await translateChunk(
-        items,
-        ai,
-        config.model ?? DEFAULT_MODEL,
-        config.retryOptions,
-        beforeRequest
-      );
-      results.push({ status: 'fulfilled', value });
-    } catch (reason) {
-      results.push({ status: 'rejected', reason });
-    }
-    // Outside the result try/catch so a throwing callback cannot record the same chunk as both
-    // fulfilled and rejected — but wrapped in its own, because letting it propagate would abort the
-    // whole batch and discard every other chunk's already-paid results. The contract says the
-    // caller swallows its failures; this makes that structural instead of documented.
-    if (value) {
+    pending = pending.then(async () => {
+      let value: Map<string, string> | undefined;
       try {
-        await config.onChunkTranslated?.(value, items);
-      } catch (err) {
-        log('warn', 'localize_chunk_callback_failed', { msg: String(err) });
+        value = await translateChunk(
+          items,
+          ai,
+          config.model ?? DEFAULT_MODEL,
+          config.retryOptions,
+          beforeRequest
+        );
+        results.push({ status: 'fulfilled', value });
+      } catch (reason) {
+        results.push({ status: 'rejected', reason });
       }
-    }
+      // Outside the result try/catch so a throwing callback cannot record the same chunk as both
+      // fulfilled and rejected — but wrapped in its own, because letting it propagate would abort the
+      // whole batch and discard every other chunk's already-paid results. The contract says the
+      // caller swallows its failures; this makes that structural instead of documented.
+      if (value) {
+        try {
+          await config.onChunkTranslated?.(value, items);
+        } catch (err) {
+          log('warn', 'localize_chunk_callback_failed', { msg: String(err) });
+        }
+      }
+    });
   }
+  await pending;
   return results;
 };
 

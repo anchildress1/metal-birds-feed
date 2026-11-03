@@ -1,3 +1,4 @@
+import { setImmediate } from 'node:timers/promises';
 import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -441,6 +442,35 @@ describe('download — CRC verification', () => {
 
     expect(files.get('f')!.equals(DATA)).toBe(true);
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries a connection lost after a requested entry has started buffering', async () => {
+    const zip = buildStoredZip('f.txt', DATA, GOOD_CRC);
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        async pull(controller) {
+          if (!sent) {
+            sent = true;
+            controller.enqueue(zip.subarray(0, 35 + Math.floor(DATA.length / 2)));
+          } else {
+            await setImmediate();
+            controller.error(new Error('connection lost during entry'));
+          }
+        },
+      },
+      { highWaterMark: 0 }
+    );
+    const fn = mock()
+      .mockResolvedValueOnce(new Response(body))
+      .mockImplementationOnce(() => Promise.resolve(streamResponse(zip)));
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(files.get('f')).toEqual(DATA);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(body.locked).toBe(false);
   });
 
   it('skips CRC verification for data-descriptor entries in stream mode', async () => {
