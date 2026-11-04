@@ -188,7 +188,7 @@ const collapseWsOrNull = (value: string): string | null => {
 // A reference too long for the cell wraps its date onto the next line, which reads as a party name
 // unless the line straight after the reference is recognised as a bare date.
 const MV_IDERA_REF = /^Letter No\b/i;
-const MV_IDERA_REF_DATE = /^(?:dated\s+)?\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{4}$/i;
+const MV_IDERA_REF_DATE = /^(?:dated\s+)?\d{1,2}\s+[a-z]{3,9}\.?\s+\d{4}$/i;
 const mvIderaParty = (value: string): string | null => {
   const lines = value
     .split('\n')
