@@ -724,13 +724,50 @@ describe('loadSourceConfig', () => {
     });
   });
 
+  it('accepts two layouts on one axis when anchor_field names the band that tells them apart', () => {
+    const yaml = pdfGuardYaml({
+      layouts:
+        '    - field_axis: x\n      column_pos: [10, 50]\n    - field_axis: x\n      column_pos: [10, 70]\n',
+      anchorField: 'mark',
+    });
+    withPdfGuard('_test_pdf_same_axis.yaml', yaml, (path) => {
+      expect(loadSourceConfig(path).pdf?.layouts.map((l) => l.field_axis)).toEqual(['x', 'x']);
+    });
+  });
+
+  it('accepts after_last_anchor_pattern alongside its reach, and a reach alone', () => {
+    const layouts =
+      '    - field_axis: y\n      column_pos: [100, 50]\n      after_last_anchor_reach: 14\n      after_last_anchor_pattern: "^(?!Status$)"\n    - field_axis: x\n      column_pos: [10, 20]\n      after_last_anchor_reach: 14\n';
+    withPdfGuard('_test_pdf_after_pattern.yaml', pdfGuardYaml({ layouts }), (path) => {
+      const config = loadSourceConfig(path);
+      expect(config.pdf?.layouts.map((l) => l.after_last_anchor_pattern)).toEqual([
+        '^(?!Status$)',
+        undefined,
+      ]);
+    });
+  });
+
   it.each([
     [
-      'two layouts on one axis',
+      'two layouts on one axis without an anchor_field to tell them apart',
       '_test_pdf_dup_axis.yaml',
       '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: y\n      column_pos: [90, 40]\n',
       undefined,
-      /at most one layout per field_axis/,
+      /layouts sharing a field_axis require pdf.anchor_field/,
+    ],
+    [
+      'an after_last_anchor_pattern without a reach',
+      '_test_pdf_after_pattern_no_reach.yaml',
+      '    - field_axis: y\n      column_pos: [100, 50]\n      after_last_anchor_pattern: "^(?!Status$)"\n',
+      undefined,
+      /after_last_anchor_pattern requires pdf.after_last_anchor_reach/,
+    ],
+    [
+      'an after_last_anchor_pattern that is not a valid regex',
+      '_test_pdf_after_pattern_bad.yaml',
+      '    - field_axis: y\n      column_pos: [100, 50]\n      after_last_anchor_reach: 14\n      after_last_anchor_pattern: "("\n',
+      undefined,
+      /after_last_anchor_pattern must be a valid regular expression/,
     ],
     [
       'a layout whose column_pos prints no band at all',

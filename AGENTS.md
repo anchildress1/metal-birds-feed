@@ -109,12 +109,14 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - Field order survives a flip; axis and band positions do not. Measure each layout's `column_pos` against a real file in that orientation. Never derive one layout from another.
   - A null band marks a field that orientation does not print — one shared `columns` order, no orientation branches. A placeholder coordinate competes for nearby items.
   - No axis reading on any page → first layout, so the anchorless-page and zero-row guards report the real cause. Do not pre-empt them.
+  - A republished geometry on an already-declared axis (columns re-spaced, not flipped) is a second layout on that axis, never a re-measure of the first: the register may switch back. Same-axis layouts require `anchor_field` and are picked by where the marks sit against each anchor band, never by wording.
 - Set `anchor_field` whenever `anchor_pattern` could match a wrapped continuation line in another column.
 - A refresh failing with a missing `field_axis` means the register flipped: declare the new layout from that file's own measurements, add its fixture, and update `.agents/memory/pdf-orientation.md`.
 - Set `wrap_after_anchor: true` on a layout whose line leading exceeds half the record pitch: a two-line cell's second line then sits past the midpoint and nearest-anchor snapping hands it to the next record. Per layout; a centred-cell layout keeps nearest-anchor.
 - `drop_margin_lines: true` on a layout whose widened `after_last_anchor_reach` or `before_first_anchor_reach` reaches text set in the page margin (a trailing disclaimer, a repeated header): a printed line starting before the first band minus the same-row jitter is dropped. Position, never wording.
-- Records snap per column at the outlier gap between adjacent anchors, anchor midpoint when no gap stands out. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
+- Records snap per column at the outlier gap between adjacent anchors. With no outlier gap, the split that mirrors the most lines about their own anchor wins, only when it beats the anchor midpoint outright; otherwise the midpoint. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
 - An outer-record reach must clear that record's tallest cell. The page-wide minimum row pitch is not a safe bound.
+- `after_last_anchor_pattern`: only where the column headers sit closer to one page's outer anchor than another page's outer record's tallest cell, so no reach clears one without admitting the other. Exclude the exact header labels.
 
 ### Values
 

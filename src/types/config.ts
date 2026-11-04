@@ -232,6 +232,10 @@ export interface PdfLayout {
   // that clears the outermost record's tallest cell without reaching the header band; the default
   // reach is half the page's tightest row pitch, which a taller outer record overruns.
   after_last_anchor_reach?: number;
+  // Optional allowlist for text in the extra reach past the last record coordinate; requires
+  // `after_last_anchor_reach`. Use when the column headers sit closer to one page's outer anchor than
+  // another page's outer record's tallest cell, so no reach alone clears one without the other.
+  after_last_anchor_pattern?: string;
   // Assign a wrapped line to the record whose anchor precedes it in reading order, instead of the
   // nearest anchor. Declare it when a cell's line leading exceeds half the record pitch, so the
   // second line of a two-line cell sits past the midpoint and nearest-anchor snapping hands it to
@@ -257,7 +261,8 @@ export interface PdfLayout {
 // full set of structurally valid, silently scrambled records.
 export interface PdfConfig {
   anchor_pattern: string;
-  // One entry per observed orientation, at most one per `field_axis`.
+  // One entry per observed geometry. Layouts sharing a `field_axis` require `anchor_field`: the
+  // parser picks among them by where the marks sit against each one's anchor band.
   layouts: PdfLayout[];
   // Budget of text-bearing pages expected to yield zero anchor matches (cover/preface/legend
   // pages). Any anchorless page beyond this fails the parse: a register page that silently loses

@@ -2837,6 +2837,68 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
       ).toBe(true);
     });
   });
+
+  // The rotated table's sixteen columns set with fields along x — the same axis as the 97-row
+  // publication above, so both x layouts are declared and the marks' position picks between them.
+  describe('sixteen-column publication, same config', () => {
+    const MV_SIXTEEN_PDF = resolve(
+      import.meta.dirname,
+      '..',
+      'fixtures',
+      'mv-caa',
+      'input',
+      'register-sixteen-column.pdf'
+    );
+    let sixteen: Map<string, Aircraft>;
+    let sixteenStats: EngineStats;
+    beforeAll(async () => {
+      const result = await mapRows(
+        loadSourceConfig(MV_CONFIG),
+        new Map([['register', readFileSync(MV_SIXTEEN_PDF)]])
+      );
+      sixteen = result.records;
+      sixteenStats = result.stats;
+    });
+
+    it('maps all 137 rows with no failures', () =>
+      expect(sixteenStats).toEqual({
+        total: 137,
+        ok: 137,
+        failed: 0,
+        skipped: 0,
+        duplicateSkipped: 0,
+      }));
+
+    it('parses the issue and revision dates from their own bands', () => {
+      const r = sixteen.get('21')!;
+      expect(r.registration).toBe('8Q-OEQ');
+      expect(r.status).toBe('valid');
+      expect(r.certification_date).toBe('1995-12-02');
+      expect(r.last_action_date).toBe('2026-07-08');
+    });
+
+    // Page 3's top record prints its legal owner 11.2pt above its mark, past the default reach.
+    it('keeps a top record’s first legal-owner line as the party name', () =>
+      expect(sixteen.get('128')!.legal_owner.name).toBe('Seaplane Holding Cayman Ltd.'));
+
+    // The last page carries this record alone, so nothing but the margin rule and the header pattern
+    // bounds what joins it.
+    it('maps the record a page closes on alone without header or footer text', () => {
+      const r = sixteen.get('255')!;
+      expect(r.registration).toBe('8Q-ZNG');
+      expect(r.status).toBe('valid');
+      expect(r.certification_date).toBe('2026-10-01');
+      expect(r.owner.name).toBe('Zenith Aviation Academy Pvt. Ltd.');
+    });
+
+    it('keeps the legal owners of a packed page with their own records', () => {
+      expect(sixteen.get('175')!.legal_owner.name).toBe('Asian Academy of Aeronautics');
+      expect(sixteen.get('187')!.legal_owner.name).toBe('Seaplane Holding Cayman Ltd.');
+    });
+
+    it('recovers the IDERA party of a top record whose letter line sits 13pt above its mark', () =>
+      expect(sixteen.get('214')!.idera_authorised_party).toBe('AER, LLC'));
+  });
 });
 
 describe('AESA Spain fixture mapping (PDF)', () => {
