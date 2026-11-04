@@ -1,5 +1,5 @@
 - This file overrides any conflicting local instruction file. Read `PRD.md` §CC before any source-posture decision.
-- Entries here are decisions, prohibitions, and failure modes the code does not show. Read the code for mechanics.
+- Add only decisions, prohibitions, and failure modes the code does not show. Read the code for mechanics; never restate it here.
 
 ## Hard prohibitions
 
@@ -19,7 +19,7 @@
 
 ## Code style
 
-Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does not enforce:
+Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; apply these by hand:
 
 - `??`/`??=` over `||` for null/undefined; `?.` over guard clauses.
 - No `as T` unless TS cannot narrow structurally. `no-unnecessary-type-assertion` catches only the no-op case.
@@ -136,12 +136,12 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - A live row closes on the second consecutive fetched run that misses it, on a later UTC day, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. The artifact PUT is the last write before state, so a failed slice never advances history. Never serve `first_seen`.
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
-- R2 is a build and intermediate store; nothing serves reads from it. The DB is baked into the Cloud Run image and served in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
+- Never serve reads from R2; it is a build and intermediate store. Bake the DB into the Cloud Run image and serve it in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
 - Assembly always rebuilds from R2 slices, never an on-disk copy, and sequences through the recipe rather than prerequisites so `make -j` cannot assemble mid-refresh. Publish fails closed if any slice is missing.
 
 ### Version markers
 
-Bumped independently; check all three on every schema change. Coinciding numbers are chance. Tests pin each — update the assertion in the same commit.
+Bump each independently; check all three on every schema change. Never align numbers — a match is chance. Tests pin each; update the assertion in the same commit.
 
 | Marker                                    | Bump when                                                                                                                                                               |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -153,7 +153,7 @@ Bumped independently; check all three on every schema change. Coinciding numbers
 
 ### Feed collapse
 
-Collapse keys on `icao_hex` where published and on `registration_key` where not; keying on hex alone excludes every hex-less source. Beyond `src/feed.ts` mechanics:
+Key collapse on `icao_hex` where published and on `registration_key` where not; keying on hex alone excludes every hex-less source.
 
 - Both key columns stay nullable — the unique indexes rely on SQLite not treating NULLs as equal.
 - No `source_id` tiebreak: it may be reissued every publication, flipping the served answer with no upstream change.
@@ -247,7 +247,7 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 ### `DATA_LICENSES.md`
 
-Single record for correspondence and posture; update it on every source addition or posture change. Flat tracker, not a reply archive — the email thread is the verbatim record.
+Update it on every source addition or posture change; it is the single record for correspondence and posture. Keep it a flat tracker, never a reply archive — the email thread is the verbatim record.
 
 | Section                    | Holds                                                                          | Never holds                                                                        |
 | -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
