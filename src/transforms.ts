@@ -185,12 +185,22 @@ const collapseWsOrNull = (value: string): string | null => {
 // its postal address. Only the party name is kept; the address block that follows is PII and dropped
 // at the boundary, never reaching the artifact. Returns null when no party line is present (e.g.
 // "None"). A multi-line party name keeps only its first line — acceptable; the party stays identifiable.
+// A reference too long for the cell wraps its date onto the next line, which reads as a party name
+// unless the line straight after the reference is recognised as a bare date.
+const MV_IDERA_REF = /^Letter No\b/i;
+const MV_IDERA_REF_DATE = /^(?:dated\s+)?\d{1,2}\s+[A-Za-z]{3,9}\.?\s+\d{4}$/i;
 const mvIderaParty = (value: string): string | null => {
   const lines = value
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
-  const party = lines.find((l) => l !== 'None' && !/^Letter No\b/i.test(l) && !/^\(.*\)$/.test(l));
+  const party = lines.find(
+    (l, i) =>
+      l !== 'None' &&
+      !MV_IDERA_REF.test(l) &&
+      !/^\(.*\)$/.test(l) &&
+      !(i > 0 && MV_IDERA_REF.test(lines[i - 1]) && MV_IDERA_REF_DATE.test(l))
+  );
   return party ?? null;
 };
 

@@ -2896,6 +2896,11 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
       expect(sixteen.get('187')!.legal_owner.name).toBe('Seaplane Holding Cayman Ltd.');
     });
 
+    it('takes the IDERA party after a reference whose date wraps onto its own line', () =>
+      expect(sixteen.get('154')!.idera_authorised_party).toBe(
+        'FTAI aircraft leasing Ireland (2025)'
+      ));
+
     it('recovers the IDERA party of a top record whose letter line sits 13pt above its mark', () =>
       expect(sixteen.get('214')!.idera_authorised_party).toBe('AER, LLC'));
   });
