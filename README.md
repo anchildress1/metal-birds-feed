@@ -89,7 +89,7 @@ Required GitHub Actions secrets: `MBF_R2_ACCOUNT_ID`, `MBF_R2_ACCESS_KEY_ID`, `M
 
 Required variables: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, plus optional `GEMINI_REQUESTS_PER_MINUTE` (default 10), `GCP_RUN_REGION` (default `us-east1`), `GCP_RUN_SERVICE` (default `metal-birds-feed`).
 
-`FEED_TOKEN` is a Google Secret Manager binding on the Cloud Run service — never copied into GitHub or `.env`. `GCP_SERVICE_ACCOUNT` also needs `roles/artifactregistry.repoAdmin`, or deploys succeed but stop pruning old images.
+`FEED_TOKEN` is a Google Secret Manager binding on the Cloud Run service — never copied into GitHub or `.env`.
 
 ## Adding a registry source
 

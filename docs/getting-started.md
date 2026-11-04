@@ -412,9 +412,6 @@ and permission that the deploy recipe expects:
   gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
     --role="roles/run.builder"
-  gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-    --member="user:$(gcloud config get-value account)" \
-    --role="roles/artifactregistry.repoAdmin"
   gcloud iam service-accounts create metal-birds-feed-run \
     --display-name="metal-birds-feed runtime" --project="$GCP_PROJECT_ID"
   FEED_TOKEN=$(openssl rand -hex 16)
@@ -424,6 +421,12 @@ and permission that the deploy recipe expects:
   gcloud secrets add-iam-policy-binding feed-token \
     --member="serviceAccount:metal-birds-feed-run@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
     --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
+  gcloud artifacts repositories create metal-birds-feed --repository-format=docker \
+    --location=us-east1 --project="$GCP_PROJECT_ID"
+  printf '%s' '[{"name":"delete-old","action":{"type":"Delete"},"condition":{"tagState":"any"}},{"name":"keep-recent-3","action":{"type":"Keep"},"mostRecentVersions":{"keepCount":3}}]' > cleanup-policy.json
+  gcloud artifacts repositories set-cleanup-policies metal-birds-feed \
+    --project="$GCP_PROJECT_ID" --location=us-east1 --policy=cleanup-policy.json --no-dry-run
+  rm cleanup-policy.json
   make deploy
 )
 ```
@@ -431,10 +434,10 @@ and permission that the deploy recipe expects:
 These are first-deploy commands. If the service account or secret existed before this attempt, stop
 rather than overwriting it; use the existing deployment's operator procedure instead.
 
-`roles/artifactregistry.repoAdmin` is what every deploy after this one uses to prune old container
-images from the `cloud-run-source-deploy` repo (keep 5 most recent, delete anything older than 90
-days). Without it, `make deploy` still succeeds — it just warns on stderr and skips pruning that
-run, so the repo keeps every image ever built until the grant is added.
+The `metal-birds-feed` Artifact Registry repo holds this service's images and nothing else. Its
+cleanup policy keeps the 3 newest images and deletes the rest. It's set once here; deploys never
+change it, so CI needs no admin rights on the repo. Without its own repo, `make deploy` would build
+into `cloud-run-source-deploy`, the default repo every service in the project shares.
 
 The block stops on the first failure but cannot roll back cloud resources already created. If this
 attempt created something before a later command failed, **do not rerun the whole block**.
@@ -443,7 +446,8 @@ attempt created something before a later command failed, **do not rerun the whol
 
 Use this only after confirming the fixed-name resources were created by the interrupted attempt in
 this project. It verifies or creates the runtime identity, verifies that the secret has an enabled
-payload version rather than trusting the secret metadata alone, applies the binding, and deploys:
+payload version rather than trusting the secret metadata alone, applies the binding, verifies or
+creates the image repo and its cleanup policy, and deploys:
 
 ```bash
 (
@@ -477,6 +481,15 @@ payload version rather than trusting the secret metadata alone, applies the bind
   gcloud secrets add-iam-policy-binding feed-token \
     --member="serviceAccount:$SERVICE_ACCOUNT" \
     --role="roles/secretmanager.secretAccessor" --project="$GCP_PROJECT_ID"
+  if ! gcloud artifacts repositories describe metal-birds-feed --location=us-east1 \
+    --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+    gcloud artifacts repositories create metal-birds-feed --repository-format=docker \
+      --location=us-east1 --project="$GCP_PROJECT_ID"
+  fi
+  printf '%s' '[{"name":"delete-old","action":{"type":"Delete"},"condition":{"tagState":"any"}},{"name":"keep-recent-3","action":{"type":"Keep"},"mostRecentVersions":{"keepCount":3}}]' > cleanup-policy.json
+  gcloud artifacts repositories set-cleanup-policies metal-birds-feed \
+    --project="$GCP_PROJECT_ID" --location=us-east1 --policy=cleanup-policy.json --no-dry-run
+  rm cleanup-policy.json
   make deploy
 )
 ```
@@ -509,19 +522,18 @@ territory.
 
 ## When Something Breaks 🔧
 
-| What you see                                                           | What it means                                               | Fix                                                                                                                                                                                                     |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command not found: bun`                                               | Terminal hasn't picked up the new install                   | Close and reopen your terminal                                                                                                                                                                          |
-| `command not found: make`                                              | Build tools missing                                         | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                         |
-| `.env not found`                                                       | Step 6 didn't happen                                        | `cp .env.example .env` and fill it in                                                                                                                                                                   |
-| `MBF_R2_ACCOUNT_ID missing from .env` (Step 7)                         | That one line is blank                                      | Fill it in — the message names the exact key                                                                                                                                                            |
-| `MBF_R2_ACCOUNT_ID is required` (Step 8)                               | Same thing — Step 8 words it differently                    | Fill it in — the message names the exact key                                                                                                                                                            |
-| `Missing required environment variable: GEMINI_API_KEY`                | A non-English source needs translation                      | Add the key, or set `REFRESH_SOURCE` to an English source                                                                                                                                               |
-| `FEED_TOKEN must be set (at least 16 characters)`                      | Token missing or too short                                  | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                             |
-| `gitleaks not found` when committing                                   | Secret scanner isn't installed                              | `brew install gitleaks` — do not skip the hook                                                                                                                                                          |
-| `warning: could not set the Artifact Registry cleanup policy` (Step 9) | Deploying identity lacks `roles/artifactregistry.repoAdmin` | Deploy still succeeded; run the grant command from Step 9 to enable pruning                                                                                                                             |
-| Refresh looks stuck                                                    | You're pulling every configured registry at once            | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A steady-state run is ~25s; a cold first pull is longer but not minutes-times-source-count |
-| An R2 `403` or `AccessDenied`                                          | Token lacks write access or is scoped to another bucket     | Recreate it with **Object Read & Write** on the right bucket                                                                                                                                            |
+| What you see                                            | What it means                                           | Fix                                                                                                                                                                                                     |
+| ------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command not found: bun`                                | Terminal hasn't picked up the new install               | Close and reopen your terminal                                                                                                                                                                          |
+| `command not found: make`                               | Build tools missing                                     | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                         |
+| `.env not found`                                        | Step 6 didn't happen                                    | `cp .env.example .env` and fill it in                                                                                                                                                                   |
+| `MBF_R2_ACCOUNT_ID missing from .env` (Step 7)          | That one line is blank                                  | Fill it in — the message names the exact key                                                                                                                                                            |
+| `MBF_R2_ACCOUNT_ID is required` (Step 8)                | Same thing — Step 8 words it differently                | Fill it in — the message names the exact key                                                                                                                                                            |
+| `Missing required environment variable: GEMINI_API_KEY` | A non-English source needs translation                  | Add the key, or set `REFRESH_SOURCE` to an English source                                                                                                                                               |
+| `FEED_TOKEN must be set (at least 16 characters)`       | Token missing or too short                              | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                             |
+| `gitleaks not found` when committing                    | Secret scanner isn't installed                          | `brew install gitleaks` — do not skip the hook                                                                                                                                                          |
+| Refresh looks stuck                                     | You're pulling every configured registry at once        | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A steady-state run is ~25s; a cold first pull is longer but not minutes-times-source-count |
+| An R2 `403` or `AccessDenied`                           | Token lacks write access or is scoped to another bucket | Recreate it with **Object Read & Write** on the right bucket                                                                                                                                            |
 
 Still stuck? Open an issue with the command you ran and the last 20 lines of `logs/pipeline.log`.
 **Redact your keys first** — the log does not print them, but paste carefully anyway.
