@@ -8,7 +8,8 @@ help:
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
 
-BUN := $(or $(shell command -v bun 2>/dev/null), $(HOME)/.bun/bin/bun)
+# No fallback path: a stray global install would silently run a Bun other than the .tool-versions pin.
+BUN := $(or $(shell command -v bun 2>/dev/null),$(error bun not on PATH — run `mise install`))
 BUNX := $(BUN) x
 
 # Cloud Run feed service.
