@@ -138,7 +138,7 @@ describe('translateBatch', () => {
   it('keeps a failing chunk from discarding another chunk that succeeded', async () => {
     generateContent.mockImplementation((args: { contents: string }) => {
       const items = JSON.parse(args.contents) as { id: string; text: string }[];
-      if (items.some((i) => i.id === 'fails')) return Promise.reject(new MockApiError(401));
+      if (items.some((i) => i.id === 'fails')) return Promise.reject(new MockApiError(400));
       return Promise.resolve(textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` }))));
     });
 
@@ -163,6 +163,26 @@ describe('translateBatch', () => {
     expect(errors).toHaveLength(1);
     expect(translated.get('ok')).toBe('EN:x');
     expect(translated.has('fails')).toBe(false);
+  });
+
+  it('stops sending chunks once the key is rejected', async () => {
+    const rejected = new MockApiError(401);
+    generateContent.mockRejectedValue(rejected);
+    const items: TranslationItem[] = Array.from({ length: 401 }, (_, i) => ({
+      id: `id${i}`,
+      field: 'cancellation_reason',
+      text: `text${i}`,
+    }));
+
+    const { translated, errors } = await translateBatch(items, {
+      apiKey: 'k',
+      retryOptions: FAST_RETRY,
+      rateLimitSleep: async () => {},
+    });
+
+    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(errors).toEqual([rejected]);
+    expect(translated.size).toBe(0);
   });
 
   it('exhausts its attempts on a persistent 503 and reports the chunk as an error', async () => {
@@ -263,7 +283,7 @@ describe('translateBatch', () => {
       generateContent.mockImplementation((args: { contents: string }) => {
         const items = JSON.parse(args.contents) as { id: string }[];
         return items.some((i) => i.id === 'id0')
-          ? Promise.reject(new MockApiError(401))
+          ? Promise.reject(new MockApiError(400))
           : echo(args);
       });
       const onChunkTranslated = mock<ChunkCallback>(() => Promise.resolve());

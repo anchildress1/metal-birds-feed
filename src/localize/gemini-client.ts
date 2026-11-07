@@ -169,9 +169,13 @@ const translateAtRate = async (
 
   // Every request attempt shares the RPM gate; each paid chunk must finish its checkpoint
   // before the next request so concurrent cache writes cannot discard completed translations.
+  // A rejected key fails every later chunk identically; each would only burn a rate interval
+  // before localize throws on it.
+  let keyRejected = false;
   let pending = Promise.resolve();
   for (const items of chunks) {
     pending = pending.then(async () => {
+      if (keyRejected) return;
       let value: Map<string, string> | undefined;
       try {
         value = await translateChunk(
@@ -183,6 +187,7 @@ const translateAtRate = async (
         );
         results.push({ status: 'fulfilled', value });
       } catch (reason) {
+        keyRejected = isGeminiAuthError(reason);
         results.push({ status: 'rejected', reason });
       }
       // Outside the result try/catch so a throwing callback cannot record the same chunk as both
