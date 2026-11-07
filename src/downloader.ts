@@ -1,4 +1,5 @@
-import { once } from 'node:events';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { crc32 } from 'node:zlib';
 import { Open, Parse, type Entry } from 'unzipper';
 import type { DownloadConfig } from './types/config.js';
@@ -299,7 +300,10 @@ async function extractZipStream(
   // them and throwing the bytes away.
   const parser = Parse();
   const pending: Promise<void>[] = [];
+  const activeEntries = new Set<Entry>();
   parser.on('entry', (entry: Entry) => {
+    activeEntries.add(entry);
+    entry.once('close', () => activeEntries.delete(entry));
     seen.push(entry.path);
     const alias = wanted.get(entry.path);
     if (alias) {
@@ -309,36 +313,52 @@ async function extractZipStream(
     }
   });
 
-  // Manual pump, not Readable.fromWeb(...).pipe(parser): pipe() never forwards source errors,
-  // and under Bun fromWeb doesn't emit 'error' at all — a connection dropped mid-body would
-  // hang the parse forever instead of rejecting into the retry. reader.read() rejects reliably,
-  // so the pump routes the failure into the parser, which rejects the promise() below.
-  // Bun types Response.body as an untyped ReadableStream; the payload is always bytes.
-  const reader = res.body.getReader() as ReadableStreamDefaultReader<Uint8Array>;
-  void (async () => {
-    try {
-      // Sequential by nature — each read depends on the prior chunk being written.
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (!parser.write(value)) await once(parser, 'drain');
-      }
-      parser.end();
-    } catch (err) {
-      parser.destroy(err instanceof Error ? err : new Error(String(err)));
-    }
-  })();
-
+  // Bun's fromWeb adapter can lose source errors. Keep explicit reader ownership so a
+  // parser failure cancels even a pending network read and releases the response lock.
+  const reader = res.body.getReader();
+  const source = new Readable({
+    highWaterMark: 0,
+    read() {
+      void reader.read().then(
+        ({ done, value }) => this.push(done ? null : value),
+        (err: unknown) => this.destroy(err instanceof Error ? err : new Error(String(err)))
+      );
+    },
+    destroy(error, callback) {
+      // A dead socket can reject cancellation; retain the pipeline failure.
+      void reader
+        .cancel()
+        .catch(() => {})
+        .then(() => {
+          reader.releaseLock();
+          callback(error);
+        });
+    },
+  });
+  // pipeline() settles on 'finish' — input exhausted, not archive complete. An archive truncated
+  // after a whole entry fails later, when the record loop finds no end-of-central-directory, after
+  // pipeline() dropped its error listener. Only the EOCD record ends the readable side; Parse's
+  // synthetic 'end' on finish leaves readableEnded false.
+  const centralDirectoryEnd = new Promise<void>((resolve, reject) => {
+    parser.on('end', () => {
+      if (parser.readableEnded) resolve();
+    });
+    parser.on('error', reject);
+  });
+  parser.resume();
+  const piped = pipeline(source, parser);
   try {
-    await parser.promise();
+    await Promise.all([piped, centralDirectoryEnd]);
+  } catch (err) {
+    // unzipper does not forward a parser failure into an entry already being buffered.
+    // Destroy those entries before waiting for their buffers, or a mid-entry disconnect hangs.
+    const error = err instanceof Error ? err : new Error(String(err));
+    for (const entry of activeEntries) entry.destroy(error);
+    // The parser error rejects centralDirectoryEnd before teardown cancels the response
+    // reader; without this wait the retry fetches while the failed body is still locked.
+    await piped.catch(() => {});
+    throw error;
   } finally {
-    // Close the connection if parsing bailed early; on a dead socket cancel itself can
-    // reject, and that must not mask the parse error.
-    try {
-      await reader.cancel();
-    } catch {
-      // connection already gone
-    }
     // A mid-entry failure also fails the parser, whose error is the one thrown — settle the
     // losing entry-buffer rejections here so none are ever left unhandled.
     await Promise.allSettled(pending);

@@ -1,7 +1,8 @@
+import { setImmediate } from 'node:timers/promises';
 import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { crc32 } from 'node:zlib';
+import { crc32, deflateRawSync } from 'node:zlib';
 import {
   download,
   fetchPublishedTotal,
@@ -443,6 +444,35 @@ describe('download — CRC verification', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
+  it('retries a connection lost after a requested entry has started buffering', async () => {
+    const zip = buildStoredZip('f.txt', DATA, GOOD_CRC);
+    let sent = false;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        async pull(controller) {
+          if (!sent) {
+            sent = true;
+            controller.enqueue(zip.subarray(0, 35 + Math.floor(DATA.length / 2)));
+          } else {
+            await setImmediate();
+            controller.error(new Error('connection lost during entry'));
+          }
+        },
+      },
+      { highWaterMark: 0 }
+    );
+    const fn = mock()
+      .mockResolvedValueOnce(new Response(body))
+      .mockImplementationOnce(() => Promise.resolve(streamResponse(zip)));
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(files.get('f')).toEqual(DATA);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(body.locked).toBe(false);
+  });
+
   it('skips CRC verification for data-descriptor entries in stream mode', async () => {
     // Flag bit 3 leaves the local-header CRC at 0; the guard must not false-fail on it.
     setFetch(
@@ -454,6 +484,86 @@ describe('download — CRC verification', () => {
     const files = await download(CRC_CONFIG);
 
     expect(files.get('f')!.equals(DATA)).toBe(true);
+  });
+
+  // Inflation is async, so the parser finishes before the entry does and the record loop hits
+  // end-of-input after pipeline() has already settled.
+  it('retries a deflated archive truncated before its central directory', async () => {
+    const name = Buffer.from('f.txt');
+    const deflated = deflateRawSync(DATA);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt32LE(GOOD_CRC, 14);
+    local.writeUInt32LE(deflated.byteLength, 18);
+    local.writeUInt32LE(DATA.byteLength, 22);
+    local.writeUInt16LE(name.byteLength, 26);
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(Buffer.concat([local, name, deflated])))
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)))
+      );
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('releases the failed response body before the retry fetches', async () => {
+    // A socket teardown settles cancel() asynchronously; the reader holds its lock until then.
+    const garbage = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(Buffer.alloc(4096, 0xff)));
+      },
+      async cancel() {
+        for (let i = 0; i < 10; i++) await setImmediate();
+      },
+    });
+    let lockedAtRetry: boolean | undefined;
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve({ ...streamResponse(Buffer.alloc(0)), body: garbage })
+      )
+      .mockImplementationOnce(() => {
+        lockedAtRetry = garbage.locked;
+        return Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)));
+      });
+    setFetch(fn);
+
+    await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(lockedAtRetry).toBe(false);
+  });
+
+  it('retries a stream that drops inside an undeclared entry', async () => {
+    const skipped = Buffer.alloc(64 * 1024, 'x');
+    const zip = buildStoredZip('skipped.txt', skipped, crc32(skipped));
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve({
+          ...streamResponse(zip),
+          body: new ReadableStream({
+            start(controller) {
+              controller.enqueue(zip.subarray(0, 1024));
+              controller.error(new Error('ECONNRESET mid-body'));
+            },
+          }),
+        })
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)))
+      );
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 });
 
