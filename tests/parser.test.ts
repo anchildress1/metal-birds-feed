@@ -809,11 +809,31 @@ const MV_ROTATED_PDF = resolve(
   'input',
   'register-rotated.pdf'
 );
+const MV_SIXTEEN_PDF = resolve(
+  import.meta.dirname,
+  '..',
+  'fixtures',
+  'mv-caa',
+  'input',
+  'register-sixteen-column.pdf'
+);
 const mvBuf = (): Buffer => readFileSync(MV_PDF);
 const mvRotatedBuf = (): Buffer => readFileSync(MV_ROTATED_PDF);
-// Mirrors sources/mv-caa.yaml, both orientations. Keep them in step — the register alternates
-// layouts, and these two real publications are what prove the parser picks the right axis and still
-// separates the bands after a flip.
+const mvSixteenBuf = (): Buffer => readFileSync(MV_SIXTEEN_PDF);
+// Mirrors sources/mv-caa.yaml, all three geometries. Keep them in step — the register switches
+// between them, and these real publications are what prove the parser picks the right one and still
+// separates the bands after a switch.
+const MV_SIXTEEN_LAYOUT: PdfLayoutOptions = {
+  field_axis: 'x',
+  after_last_anchor_reach: 14,
+  after_last_anchor_pattern:
+    "^(?!(?:Registration S/N|Certificate number|Nationality &|Registration Mark|Manufacturer &|Manufacturere's|Designation of Aircraft|MTOW in kg|Aircraft Serial no\\.|Year Built|Name and Address of|the registered owner|Legal Owner|Basis of Registration,?|Other Specifics|Mortgage|IDERA|Date of Original Issue|Date of Last Revision|Status)$)",
+  drop_margin_lines: true,
+  column_pos: [
+    32.3, 45.8, 70.8, 92.2, 160.9, 187.9, 208.6, 220.7, 301.3, 384.1, 466.9, 549.7, 613.1, 680.9,
+    709.7, 741.7,
+  ],
+};
 const MV_UNROTATED_LAYOUT: PdfLayoutOptions = {
   field_axis: 'x',
   after_last_anchor_reach: 14,
@@ -829,7 +849,6 @@ const MV_UNROTATED_LAYOUT: PdfLayoutOptions = {
     424.7,
     null,
     null,
-    null,
     546.1,
     null,
     647.0,
@@ -840,14 +859,14 @@ const MV_UNROTATED_LAYOUT: PdfLayoutOptions = {
 const MV_ROTATED_LAYOUT: PdfLayoutOptions = {
   field_axis: 'y',
   column_pos: [
-    28.9, 40.6, 66.2, 87.6, 156.9, 183, 205.6, 217.9, 299.8, 383.8, 420, 467.8, 551.8, 616.1, 685.8,
+    28.9, 40.6, 66.2, 87.6, 156.9, 183, 205.6, 217.9, 299.8, 383.8, 467.8, 551.8, 616.1, 685.8,
     713.1, 746,
   ],
 };
 const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
   anchor_pattern: '^8Q-[A-Z]{3}$',
   anchor_column: 2,
-  layouts: [MV_UNROTATED_LAYOUT, MV_ROTATED_LAYOUT],
+  layouts: [MV_SIXTEEN_LAYOUT, MV_UNROTATED_LAYOUT, MV_ROTATED_LAYOUT],
   columns: [
     'sn',
     'cert_no',
@@ -858,7 +877,6 @@ const mvOpts = (overrides: Partial<ParsePdfOptions> = {}): ParsePdfOptions => ({
     'year',
     'owner',
     'legal_owner',
-    'operator',
     'basis',
     'other_specifics',
     'mortgage',
@@ -1052,6 +1070,72 @@ describe('parsePdf', () => {
     });
   });
 
+  // The rotated table's sixteen columns, set with fields along x: the same axis as the thirteen-column
+  // layout, told apart by where the marks sit (x=70.8 against 87.0).
+  describe('sixteen-column geometry', () => {
+    it('reads every record with the issue and revision dates in their own bands', async () => {
+      const rows = await parsePdf(mvSixteenBuf(), mvOpts());
+      expect(rows).toHaveLength(137);
+      const r = rows.find((row) => row.mark === '8Q-OEQ')!;
+      expect(r.sn).toBe('21');
+      expect(r.date_issue).toBe('2-Dec-95');
+      expect(r.date_revision).toBe('8-Jul-26');
+      expect(r.status).toBe('Valid');
+    });
+
+    it('still picks the thirteen-column layout for that geometry’s publication', async () => {
+      const rows = await parsePdf(mvBuf(), mvOpts());
+      expect(rows).toHaveLength(97);
+      expect(rows.find((row) => row.mark === '8Q-OEQ')!.date_issue).toBe('2-Dec-95');
+    });
+
+    it('picks by mark position, not declaration order', async () => {
+      const reversed = mvOpts({
+        layouts: [MV_ROTATED_LAYOUT, MV_UNROTATED_LAYOUT, MV_SIXTEEN_LAYOUT],
+      });
+      expect(await parsePdf(mvSixteenBuf(), reversed)).toEqual(
+        await parsePdf(mvSixteenBuf(), mvOpts())
+      );
+    });
+
+    // Page 3's top record carries its legal owner 11.2pt above its mark; pages 4 and 5 print the
+    // column headers 10.6pt above theirs, pages 7 and 8 10.2pt.
+    it('keeps the top record’s first line while the pattern keeps the headers out', async () => {
+      const rows = await parsePdf(mvSixteenBuf(), mvOpts());
+      expect(rows.find((row) => row.mark === '8Q-TMW')!.legal_owner.split('\n')[0]).toBe(
+        'Seaplane Holding Cayman Ltd.'
+      );
+      const blob = rows.flatMap((row) => Object.values(row)).join('\n');
+      expect(blob).not.toMatch(/Registration S\/N|Date of Original Issue|Nationality &|^Status$/m);
+    });
+
+    // Page 4 packs these cells with no extra row gap; the midpoint gave each party name to the
+    // record above.
+    it('keeps a packed page’s centred party names with their own records', async () => {
+      const rows = await parsePdf(mvSixteenBuf(), mvOpts());
+      const firstLegal = (mark: string): string =>
+        rows.find((row) => row.mark === mark)!.legal_owner.split('\n')[0];
+      expect(firstLegal('8Q-GAI')).toBe('Asian Academy of Aeronautics');
+      expect(firstLegal('8Q-TAG')).toBe('Seaplane Holding Cayman Ltd.');
+    });
+
+    // Page 7 sets each IDERA reference 8.9pt above its party, wider than that column's row gap; the
+    // outlier split handed the reference to the record above.
+    it('keeps an IDERA reference with the party it heads', async () => {
+      const rows = await parsePdf(mvSixteenBuf(), mvOpts());
+      const idera = (mark: string): string => rows.find((row) => row.mark === mark)!.idera;
+      expect(idera('8Q-FBA').split('\n')[0]).toBe('Letter No. 201-ASD-D/BYD/2023/01');
+      expect(idera('8Q-RAQ')).not.toMatch(/BYD\/2023\/01/);
+    });
+
+    it('drops the footer line from the record a page closes on alone', async () => {
+      const rows = await parsePdf(mvSixteenBuf(), mvOpts());
+      const r = rows.find((row) => row.mark === '8Q-ZNG')!;
+      expect(r.status).toBe('Valid');
+      expect(Object.values(r).join('\n')).not.toMatch(/Whilst reasonable care|Page \d of \d/);
+    });
+  });
+
   it('throws when the anchor pattern matches nothing on a text-bearing page', async () => {
     // Silently returning [] here published a zero/short fleet whenever the register's mark
     // format drifted; the writer's guards can't attribute the loss to a page.
@@ -1237,6 +1321,223 @@ describe('parsePdf final record continuations', () => {
     );
 
     expect(rows).toEqual([{ mark: 'AAA', model: 'Cessna 172' }]);
+  });
+});
+
+// Records run along y, marks at x=50 and one owner column at x=100 with 4.4pt leading throughout,
+// so no gap between the two cells stands out. Record A (anchor 90.2) centres a six-line cell, record
+// B (anchor 112.2) a four-line one: A's first line, at 101.3, sits just past the anchor midpoint.
+describe('parsePdf centre-fit row split', () => {
+  const marks: SynthItem[] = [
+    { str: 'AAA', x: 50, y: 90.2 },
+    { str: 'BBB', x: 50, y: 112.2 },
+  ];
+  const parse = (owner: SynthItem[]) =>
+    parsePdf(
+      buildPdf([[...marks, ...owner]]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        columns: ['mark', 'owner'],
+        layouts: [{ field_axis: 'x', column_pos: [50, 100] }],
+      })
+    );
+  const line = (str: string, y: number): SynthItem => ({ str, x: 100, y });
+
+  it('keeps a centred cell’s first line when it crosses the anchor midpoint', async () => {
+    const rows = await parse([
+      ...[101.3, 96.9, 92.5, 88.1, 83.7, 79.3].map((y, i) => line(`A${i + 1}`, y)),
+      ...[118.8, 114.4, 110, 105.6].map((y, i) => line(`B${i + 1}`, y)),
+    ]);
+    expect(rows).toEqual([
+      { mark: 'AAA', owner: 'A1\nA2\nA3\nA4\nA5\nA6' },
+      { mark: 'BBB', owner: 'B1\nB2\nB3\nB4' },
+    ]);
+  });
+
+  // Lines with no mirror partner about either anchor carry no centring evidence.
+  it('falls back to the anchor midpoint when no line is pulled off-centre', async () => {
+    const rows = await parse([
+      ...[101.3, 96.9, 92.5].map((y, i) => line(`A${i + 1}`, y)),
+      ...[110, 105.6].map((y, i) => line(`B${i + 1}`, y)),
+    ]);
+    expect(rows[1]?.owner).toBe('B1\nB2\nA1');
+  });
+
+  it('leaves single-line cells on their own rows', async () => {
+    const rows = await parse([line('Alpha', 90.2), line('Bravo', 112.2)]);
+    expect(rows.map((r) => r.owner)).toEqual(['Alpha', 'Bravo']);
+  });
+
+  // Top-aligned cells hanging from their anchor: B's tall cell runs past the midpoint, but the 8pt
+  // gap above A's cell is the row break and decides before any centring is weighed.
+  it('still splits at an outlier gap when one stands out', async () => {
+    const rows = await parsePdf(
+      buildPdf([
+        [
+          { str: 'AAA', x: 50, y: 90 },
+          { str: 'BBB', x: 50, y: 120 },
+          ...[90, 85.6, 81.2, 76.8].map((y, i) => line(`A${i + 1}`, y)),
+          ...[120, 115.6, 111.2, 106.8, 102.4, 98].map((y, i) => line(`B${i + 1}`, y)),
+        ],
+      ]),
+      synthOpts({
+        anchor_pattern: '^[A-Z]{3}$',
+        anchor_column: 0,
+        columns: ['mark', 'owner'],
+        layouts: [
+          {
+            field_axis: 'x',
+            column_pos: [50, 100],
+            before_first_anchor_reach: 20,
+            before_first_anchor_pattern: '^A',
+          },
+        ],
+      })
+    );
+    expect(rows.map((r) => r.owner)).toEqual(['A1\nA2\nA3\nA4', 'B1\nB2\nB3\nB4\nB5\nB6']);
+  });
+});
+
+// Records run along y with the mark band at x=50; anchors at 500/480 give a default ceiling of 510
+// and, with reach 20, a widened one of 520. Both the top record's first line (513) and the header
+// label (515) sit inside the widened band, so only the pattern can tell them apart.
+describe('parsePdf after_last_anchor_pattern', () => {
+  const headerPage: SynthItem[] = [
+    { str: 'Owner', x: 100, y: 515 },
+    { str: 'Tall first line', x: 100, y: 513 },
+    { str: 'AAA', x: 50, y: 500 },
+    { str: 'First owner', x: 100, y: 500 },
+    { str: 'BBB', x: 50, y: 480 },
+    { str: 'Second owner', x: 100, y: 480 },
+  ];
+  const opts = (pattern?: string, items: SynthItem[] = headerPage): [Buffer, ParsePdfOptions] => [
+    buildPdf([items]),
+    synthOpts({
+      anchor_pattern: '^[A-Z]{3}$',
+      anchor_column: 0,
+      columns: ['mark', 'owner'],
+      layouts: [
+        {
+          field_axis: 'x',
+          after_last_anchor_reach: 20,
+          after_last_anchor_pattern: pattern,
+          column_pos: [50, 100],
+        },
+      ],
+    }),
+  ];
+
+  it('keeps the top record’s tall first line and drops the header label', async () => {
+    const rows = await parsePdf(...opts('^(?!Owner$)'));
+    expect(rows).toEqual([
+      { mark: 'BBB', owner: 'Second owner' },
+      { mark: 'AAA', owner: 'Tall first line\nFirst owner' },
+    ]);
+  });
+
+  it('admits the header label into the top record without a pattern', async () => {
+    const rows = await parsePdf(...opts());
+    expect(rows[1]?.owner).toBe('Owner\nTall first line\nFirst owner');
+  });
+
+  // A lone anchor has no pitch, so the default ceiling falls back to the same-row tolerance; the gate
+  // must still apply rather than being skipped with the unbounded spread.
+  it('still gates the reach on a page with one anchor', async () => {
+    const lone: SynthItem[] = [
+      { str: 'Owner', x: 100, y: 515 },
+      { str: 'Tall first line', x: 100, y: 508 },
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'First owner', x: 100, y: 500 },
+    ];
+    const rows = await parsePdf(...opts('^(?!Owner$)', lone));
+    expect(rows).toEqual([{ mark: 'AAA', owner: 'Tall first line\nFirst owner' }]);
+  });
+});
+
+// Two geometries on one axis: marks in band 50 or 70, an owner band 50pt right of the mark and a
+// status band 90pt right. A cell at x=130 is the owner under the 70 geometry and the status under the
+// 50 geometry, so where it lands shows which layout was chosen.
+describe('parsePdf same-axis layouts', () => {
+  const geometry = (mark: number): PdfLayoutOptions => ({
+    field_axis: 'x',
+    column_pos: [mark, mark + 50, mark + 90],
+  });
+  const page = (markX: number): SynthItem[] => [
+    { str: 'AAA', x: markX, y: 500 },
+    { str: 'Lessor Ltd', x: 130, y: 500 },
+    { str: 'BBB', x: markX, y: 450 },
+    { str: 'Other Ltd', x: 130, y: 450 },
+  ];
+  const opts = (layouts: PdfLayoutOptions[], overrides: Partial<ParsePdfOptions> = {}) =>
+    synthOpts({
+      anchor_pattern: '^[A-Z]{3}$',
+      anchor_column: 0,
+      columns: ['mark', 'owner', 'status'],
+      layouts,
+      ...overrides,
+    });
+
+  it.each([
+    ['declared first', [geometry(70), geometry(50)]],
+    ['declared last', [geometry(50), geometry(70)]],
+  ])('picks the layout whose anchor band the marks sit on, %s', async (_label, layouts) => {
+    const rows = await parsePdf(buildPdf([page(71)]), opts(layouts));
+    expect(rows.map((r) => r.owner)).toEqual(['Other Ltd', 'Lessor Ltd']);
+  });
+
+  it('throws when the marks sit beyond tolerance of every same-axis anchor band', async () => {
+    await expect(
+      parsePdf(buildPdf([page(60)]), opts([geometry(50), geometry(70)]))
+    ).rejects.toThrow(/marks sit 10\.0pt from the nearest declared anchor band.*columns moved/);
+  });
+
+  it('throws when two same-axis anchor bands sit equally near the marks', async () => {
+    await expect(
+      parsePdf(buildPdf([page(60)]), opts([geometry(58), geometry(62)]))
+    ).rejects.toThrow(/fits 2 field_axis: x layouts within tolerance/);
+  });
+
+  // A file between two geometries must fail even when one band is marginally closer.
+  it('throws when the runner-up anchor band is also within tolerance', async () => {
+    await expect(
+      parsePdf(buildPdf([page(60)]), opts([geometry(57), geometry(62)]))
+    ).rejects.toThrow(/marks 2\.0pt and 3\.0pt from their anchor bands/);
+  });
+
+  // Each layout reads its own axis off a different page, and each captures three marks.
+  it('throws when layouts on different axes fit with equal anchor counts', async () => {
+    const recordsDown: SynthItem[] = [
+      { str: 'AAA', x: 50, y: 500 },
+      { str: 'BBB', x: 50, y: 400 },
+    ];
+    const recordsAcross: SynthItem[] = [
+      { str: 'CCC', x: 50, y: 500 },
+      { str: 'DDD', x: 300, y: 500 },
+    ];
+    await expect(
+      parsePdf(
+        buildPdf([recordsDown, recordsAcross]),
+        synthOpts({
+          anchor_pattern: '^[A-Z]{3}$',
+          anchor_column: 0,
+          columns: ['mark', 'owner'],
+          layouts: [
+            { field_axis: 'x', column_pos: [50, 100] },
+            { field_axis: 'y', column_pos: [500, 420] },
+          ],
+        })
+      )
+    ).rejects.toThrow(/fits 2 declared layouts equally \(3 anchors each\)/);
+  });
+
+  // The other axis keeps its own call: a rotated layout alongside two x geometries changes nothing.
+  it('still resolves the orientation first when the other axis is declared too', async () => {
+    const rows = await parsePdf(
+      buildPdf([page(71)]),
+      opts([{ field_axis: 'y', column_pos: [500, 450, 400] }, geometry(50), geometry(70)])
+    );
+    expect(rows.map((r) => r.owner)).toEqual(['Other Ltd', 'Lessor Ltd']);
   });
 });
 

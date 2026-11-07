@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { assertHistoryPreserved, mergeHistory, type ArtifactRow } from '../src/history.js';
+import {
+  assertHistoryPreserved,
+  mergeHistory,
+  summarizeHistory,
+  type ArtifactRow,
+} from '../src/history.js';
 
 const rec = (id: string, serial: string | null = null): ArtifactRow => ({
   source_id: id,
@@ -246,5 +251,39 @@ describe('assertHistoryPreserved', () => {
   it('ignores live rows and an absent prior', () => {
     expect(() => assertHistoryPreserved('x', null, [])).not.toThrow();
     expect(() => assertHistoryPreserved('x', [stored('A', '2026-01-01')], [])).not.toThrow();
+  });
+});
+
+describe('summarizeHistory', () => {
+  // A closed row is the oldest evidence of when this source's history began, so it sets the start
+  // even though it no longer reaches the slice.
+  it('dates history from the earliest row, closed included, and maps only live rows', () => {
+    const summary = summarizeHistory(
+      [
+        stored('1', '2026-03-01'),
+        stored('2', '2026-01-01', { removed_on: '2026-02-01' }),
+        stored('3', '2026-06-01'),
+      ],
+      '2026-10-01'
+    );
+    expect(summary.start).toBe('2026-01-01');
+    expect(summary.firstSeen).toEqual(
+      new Map([
+        ['1', '2026-03-01'],
+        ['3', '2026-06-01'],
+      ])
+    );
+  });
+
+  it('throws on a stored row with no first_seen rather than dating it today', () =>
+    expect(() =>
+      summarizeHistory([stored('1', '2026-03-01', { first_seen: null })], '2026-10-01')
+    ).toThrow(/first_seen missing on stored row 1/));
+
+  it('starts history today when there are no rows', () => {
+    expect(summarizeHistory([], '2026-10-01')).toEqual({
+      firstSeen: new Map(),
+      start: '2026-10-01',
+    });
   });
 });

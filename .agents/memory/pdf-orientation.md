@@ -7,6 +7,8 @@ Declare a second layout only from a real file published in that orientation. Nev
 | `PDF records run along X, needing a field_axis: Y layout, but only Z declared` | The register flipped                   | Measure the failing file's first-line band per column, add a `layouts` entry, add a rotated fixture |
 | `Downloaded file is not a PDF (starts with "<!DOCTYPE html>…")`                | Outage or error page, not a flip       | Wait; the last good slice keeps serving                                                             |
 | `PDF fits N declared layouts equally`                                          | Bands do not separate the orientations | Re-measure                                                                                          |
+| `marks sit Npt from the nearest declared anchor band`                          | Columns re-spaced on a declared axis   | Measure the failing file's bands, add a same-axis layout, add its fixture; keep the old layout      |
+| `PDF fits N field_axis: X layouts equally`                                     | Same-axis anchor bands too close       | Re-measure the anchor band of each                                                                  |
 
 ## Open
 

@@ -44,9 +44,9 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # Active-fleet snapshot — deregistered aircraft drop out rather than carrying a cancelled marker.
+  # No per-row status column, and the register never states that a listed mark is in good standing.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: NZ

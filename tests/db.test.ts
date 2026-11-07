@@ -433,8 +433,8 @@ describe('artifact history columns', () => {
     missing_since: null,
   });
 
-  it('pins the schema version at 15', () => {
-    expect(DB_SCHEMA_VERSION).toBe(15);
+  it('pins the schema version at 16', () => {
+    expect(DB_SCHEMA_VERSION).toBe(16);
   });
 
   it('keeps a closed and a live row for the same source_id', () => {
@@ -547,7 +547,57 @@ describe('readArtifactRows', () => {
     ).toEqual({ status_source_text: null, emergency_transponder: null, remarks: null });
   });
 
-  it.each([12, 16])('has no path from version %p, so it fails closed', (version) => {
+  // Closed rows never regenerate from config, so a constant `valid` written before the remap must be
+  // rewritten here, or it is served forever.
+  it("lifts a version-15 artifact, rewriting a status-less register's valid to unknown", () => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 15');
+    db.run('CREATE TABLE aircraft (source_id TEXT, source TEXT, status TEXT, removed_on TEXT)');
+    db.run("INSERT INTO aircraft VALUES ('1', 'nz-caa', 'valid', '2026-05-01')");
+    db.run("INSERT INTO aircraft VALUES ('2', 'nz-caa', 'valid', NULL)");
+    db.run("INSERT INTO aircraft VALUES ('3', 'nz-caa', 'cancelled', '2026-05-01')");
+    db.run("INSERT INTO aircraft VALUES ('4', 'es-aesa', 'valid', '2026-05-01')");
+    db.run("INSERT INTO aircraft VALUES ('5', 'br-anac', 'valid', '2026-05-01')");
+
+    const status = Object.fromEntries(
+      readArtifactRows(db.serialize(), '2026-10-12').map((r) => [
+        String(r['source_id']),
+        r['status'],
+      ])
+    );
+
+    expect(status).toEqual({
+      '1': 'unknown',
+      '2': 'unknown',
+      '3': 'cancelled',
+      '4': 'valid',
+      '5': 'valid',
+    });
+  });
+
+  // Listed, not read from sources/: the migration is a frozen record of which registers stored a
+  // constant `valid`, so a later config edit must not change what it rewrites.
+  it.each([
+    'cl-dgac',
+    'ee-tram',
+    'fj-caaf',
+    'hr-ccaa',
+    'hu-kh',
+    'lv-caa',
+    'no-caa',
+    'nz-caa',
+    'sg-caas',
+    'tw-caa',
+  ])('rewrites a version-15 %s valid row to unknown', (source) => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 15');
+    db.run('CREATE TABLE aircraft (source_id TEXT, source TEXT, status TEXT, removed_on TEXT)');
+    db.run(`INSERT INTO aircraft VALUES ('1', '${source}', 'valid', '2026-05-01')`);
+
+    expect(readArtifactRows(db.serialize(), '2026-10-12')[0]['status']).toBe('unknown');
+  });
+
+  it.each([12, 17])('has no path from version %p, so it fails closed', (version) => {
     const db = new Database(':memory:');
     db.run(`PRAGMA user_version = ${version}`);
     db.run('CREATE TABLE aircraft (source_id TEXT)');
@@ -577,12 +627,16 @@ describe('readArtifactRows', () => {
         hops.push(14);
         return rows.map((r) => ({ ...r, at14: 'z' }));
       },
+      15: (rows: ArtifactRow[]): ArtifactRow[] => {
+        hops.push(15);
+        return rows.map((r) => ({ ...r, at15: 'w' }));
+      },
     };
 
     const rows = readArtifactRows(db.serialize(), '2026-10-12', migrations);
 
-    expect(hops).toEqual([12, 13, 14]);
-    expect(rows).toEqual([{ source_id: '1', at12: 'x', at13: 'y', at14: 'z' }]);
+    expect(hops).toEqual([12, 13, 14, 15]);
+    expect(rows).toEqual([{ source_id: '1', at12: 'x', at13: 'y', at14: 'z', at15: 'w' }]);
   });
 
   it('fails closed when a mid-chain version has no entry', () => {

@@ -99,6 +99,9 @@ const CONFIG: SourceConfig = {
   mapping: {},
 };
 const HASH64 = '0'.repeat(64);
+const HISTORY = { firstSeen: new Map([['1', '2026-06-01']]), start: '2026-01-01' };
+const EMPTY_SLICE = { history_start: '2026-01-01', rows: [] };
+type BeforeCommit = (history: typeof HISTORY) => Promise<void>;
 
 // toFeedRows is the real implementation here (src/feed.js is not mocked), so any record reaching a
 // non-dry-run write needs the full canonical shape, not a stub.
@@ -201,7 +204,7 @@ beforeEach(() => {
   );
   // The real writer runs the callback once its guards pass; the slice write rides on it.
   mockR2Write.mockImplementation(async (...args: unknown[]) => {
-    await (args[5] as (() => Promise<void>) | undefined)?.();
+    await (args[5] as BeforeCommit | undefined)?.(HISTORY);
     return { changed: false, record_count: 0, content_hash: 'h0' };
   });
   mockReadState.mockResolvedValue(null);
@@ -212,7 +215,7 @@ beforeEach(() => {
   });
   mockFeedRowsExist.mockResolvedValue(true);
   mockWriteFeedRows.mockResolvedValue(undefined);
-  mockReadFeedRows.mockResolvedValue([]);
+  mockReadFeedRows.mockResolvedValue(EMPTY_SLICE);
 });
 
 afterEach(() => {
@@ -244,8 +247,8 @@ describe('run', () => {
     await run('faa');
 
     expect(mockWriteFeedRows).not.toHaveBeenCalled();
-    const beforeCommit = mockR2Write.mock.calls[0]?.[5] as () => Promise<void>;
-    await beforeCommit();
+    const beforeCommit = mockR2Write.mock.calls[0]?.[5] as BeforeCommit;
+    await beforeCommit(HISTORY);
     expect(mockWriteFeedRows).toHaveBeenCalledTimes(1);
   });
 
@@ -255,7 +258,7 @@ describe('run', () => {
 
     await run('faa');
 
-    await (mockR2Write.mock.calls[0]?.[5] as () => Promise<void>)();
+    await (mockR2Write.mock.calls[0]?.[5] as BeforeCommit)(HISTORY);
     expect(mockWriteFeedRows).not.toHaveBeenCalled();
   });
 
@@ -401,9 +404,15 @@ describe('run', () => {
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       expect.any(Function)
     );
-    expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', [
-      expect.objectContaining({ cancellation_reason: 'AIRCRAFT EXPORTED' }),
-    ]);
+    expect(mockWriteFeedRows).toHaveBeenCalledWith('faa', {
+      history_start: HISTORY.start,
+      rows: [
+        expect.objectContaining({
+          cancellation_reason: 'AIRCRAFT EXPORTED',
+          first_seen: '2026-06-01',
+        }),
+      ],
+    });
     expect(mockLog).toHaveBeenCalledWith(
       'warn',
       'localize_partial_failure',
@@ -771,7 +780,7 @@ describe('feed publication', () => {
   it('refuses to publish when any configured source slice is missing', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['MBF_FEED_DB_OUT'] = outputPath;
-    mockReadFeedRows.mockResolvedValueOnce([]).mockResolvedValueOnce(null);
+    mockReadFeedRows.mockResolvedValueOnce(EMPTY_SLICE).mockResolvedValueOnce(null);
 
     await expect(publishFeed(['faa', 'tc-ca'], false)).rejects.toThrow(
       'Missing feed rows for: tc-ca'
@@ -800,7 +809,7 @@ describe('feed publication', () => {
   it('publishes all requested source slices atomically', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['MBF_FEED_DB_OUT'] = outputPath;
-    mockReadFeedRows.mockResolvedValue([]);
+    mockReadFeedRows.mockResolvedValue(EMPTY_SLICE);
 
     await publishFeed(['faa', 'tc-ca'], false);
 
@@ -814,7 +823,7 @@ describe('feed publication', () => {
   it('returns the feed content hash on publish, and null when no output is configured', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['MBF_FEED_DB_OUT'] = outputPath;
-    mockReadFeedRows.mockResolvedValue([]);
+    mockReadFeedRows.mockResolvedValue(EMPTY_SLICE);
 
     expect(await publishFeed(['faa'], false)).toBe(hashFeedRows([]));
 
@@ -825,7 +834,7 @@ describe('feed publication', () => {
   it('reports the feed changed when it differs from the deployed marker', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['MBF_FEED_DB_OUT'] = outputPath;
-    mockReadFeedRows.mockResolvedValue([]);
+    mockReadFeedRows.mockResolvedValue(EMPTY_SLICE);
     mockReadDeployedFeedHash.mockResolvedValue('f'.repeat(64));
 
     expect(await publishFeedForDeploy(['faa'])).toEqual({ changed: true, hash: hashFeedRows([]) });
@@ -834,7 +843,7 @@ describe('feed publication', () => {
   it('reports the feed unchanged when it matches the deployed marker', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['MBF_FEED_DB_OUT'] = outputPath;
-    mockReadFeedRows.mockResolvedValue([]);
+    mockReadFeedRows.mockResolvedValue(EMPTY_SLICE);
     mockReadDeployedFeedHash.mockResolvedValue(hashFeedRows([]));
 
     expect(await publishFeedForDeploy(['faa'])).toEqual({ changed: false, hash: hashFeedRows([]) });
@@ -861,7 +870,7 @@ describe('feed publication', () => {
     process.env['DRY_RUN'] = 'false';
     process.env['REFRESH_SOURCE'] = 'faa';
     process.env['MBF_FEED_DB_OUT'] = outputPath;
-    mockReadFeedRows.mockResolvedValue([]);
+    mockReadFeedRows.mockResolvedValue(EMPTY_SLICE);
     const expectedSources = readdirSync('sources')
       .filter((file) => file.endsWith('.yaml'))
       .map((file) => file.replace(/\.yaml$/, ''))

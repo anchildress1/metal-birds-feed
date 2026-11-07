@@ -67,10 +67,9 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # The register lists currently-inscribed aircraft only — there is no per-row status column, so
-  # every listed row is an active registration.
+  # No per-row status column, and the register never states that a listed mark is in good standing.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: CL
