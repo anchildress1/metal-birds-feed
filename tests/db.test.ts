@@ -575,6 +575,28 @@ describe('readArtifactRows', () => {
     });
   });
 
+  // Listed, not read from sources/: the migration is a frozen record of which registers stored a
+  // constant `valid`, so a later config edit must not change what it rewrites.
+  it.each([
+    'cl-dgac',
+    'ee-tram',
+    'fj-caaf',
+    'hr-ccaa',
+    'hu-kh',
+    'lv-caa',
+    'no-caa',
+    'nz-caa',
+    'sg-caas',
+    'tw-caa',
+  ])('rewrites a version-15 %s valid row to unknown', (source) => {
+    const db = new Database(':memory:');
+    db.run('PRAGMA user_version = 15');
+    db.run('CREATE TABLE aircraft (source_id TEXT, source TEXT, status TEXT, removed_on TEXT)');
+    db.run(`INSERT INTO aircraft VALUES ('1', '${source}', 'valid', '2026-05-01')`);
+
+    expect(readArtifactRows(db.serialize(), '2026-10-12')[0]['status']).toBe('unknown');
+  });
+
   it.each([12, 17])('has no path from version %p, so it fails closed', (version) => {
     const db = new Database(':memory:');
     db.run(`PRAGMA user_version = ${version}`);
