@@ -36,11 +36,9 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # The data.gov.lv export publishes only currently-registered aircraft (the CAA replaces
-  # the file each refresh with the active fleet snapshot). Cancelled/deregistered records
-  # never appear, so status is constant `valid` for every row.
+  # No per-row status column, and the register never states that a listed mark is in good standing.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: LV

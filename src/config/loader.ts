@@ -208,6 +208,13 @@ const SourceConfigSchema = z
                     message: 'pdf.before_first_anchor_pattern must be a valid regular expression',
                   })
                   .optional(),
+                after_last_anchor_pattern: z
+                  .string()
+                  .min(1)
+                  .refine(isValidRegex, {
+                    message: 'pdf.after_last_anchor_pattern must be a valid regular expression',
+                  })
+                  .optional(),
               })
               // Required together, not just pattern-requires-reach: a reach with no pattern admits
               // whatever text falls in the widened zone unconditionally — the exact failure mode a
@@ -220,6 +227,17 @@ const SourceConfigSchema = z
                 {
                   message:
                     'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
+                }
+              )
+              // One-directional, unlike the before pair: a reach alone is the established way to
+              // clear a tall outer cell where the headers sit beyond it, while a pattern alone gates
+              // nothing on any page with two anchors.
+              .refine(
+                (l) =>
+                  l.after_last_anchor_pattern === undefined ||
+                  l.after_last_anchor_reach !== undefined,
+                {
+                  message: 'pdf.after_last_anchor_pattern requires pdf.after_last_anchor_reach',
                 }
               )
               // The margin is the side of the first band away from the others; one band, or bands
@@ -236,15 +254,17 @@ const SourceConfigSchema = z
                 }
               )
           )
-          .min(1)
-          // Two layouts on one axis would make selection order-dependent, and the parser picks the
-          // first match — a silent choice between two measured geometries.
-          .refine((ls) => new Set(ls.map((l) => l.field_axis)).size === ls.length, {
-            message: 'pdf.layouts must declare at most one layout per field_axis',
-          }),
+          .min(1),
         allowed_anchorless_pages: z.number().int().nonnegative().optional(),
         anchor_field: z.string().min(1).optional(),
       })
+      // Same-axis layouts are told apart only by where the marks sit against the anchor band.
+      .refine(
+        (p) =>
+          p.anchor_field !== undefined ||
+          new Set(p.layouts.map((l) => l.field_axis)).size === p.layouts.length,
+        { message: 'pdf.layouts sharing a field_axis require pdf.anchor_field' }
+      )
       .optional(),
     record_count: z
       .strictObject({
@@ -402,6 +422,18 @@ const SourceConfigSchema = z
       (c.columns?.[c.primary] ?? []).includes(c.pdf.anchor_field),
     {
       message: 'pdf.anchor_field must name a column in columns[primary]',
+    }
+  )
+  // A layout that does not print the anchor column can never capture an anchor, so it would never
+  // be picked and a file in its geometry would fail blaming an orientation flip.
+  .refine(
+    (c) => {
+      if (c.pdf?.anchor_field === undefined) return true;
+      const idx = (c.columns?.[c.primary] ?? []).indexOf(c.pdf.anchor_field);
+      return idx === -1 || c.pdf.layouts.every((l) => l.column_pos[idx] !== null);
+    },
+    {
+      message: 'every pdf.layouts[].column_pos must print a band for pdf.anchor_field',
     }
   )
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's

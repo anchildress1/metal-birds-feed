@@ -8,8 +8,7 @@ cadence_days: 1
 
 # Luftfartstilsynet publishes the full register as one JSON feed, refreshed daily (~16:00 local),
 # listed on the national open-data portal data.norge.no. Fetchable without auth; the response is
-# {headers, data:[...]}. The register lists only currently-registered aircraft, so status is a
-# constant `valid` (no deregistration rows to distinguish, mirroring the FOCA source).
+# {headers, data:[...]}.
 download:
   url: https://data.caa.no/nlr/norgesluftfartoyregister.json
   format: file
@@ -42,8 +41,9 @@ mapping:
   icao_type_code:
     constant: ~
 
+  # No per-row status column, and the register never states that a listed mark is in good standing.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: NO

@@ -2,6 +2,8 @@ import { describe, it, expect, mock, beforeEach, spyOn } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import type { Aircraft } from '../src/schema.js';
 import type { FeedRow } from '../src/feed-row.js';
+import type { FeedSlice } from '../src/feed.js';
+import type { HistorySummary } from '../src/history.js';
 import type { SourceState } from '../src/cadence.js';
 import { hashRecords, readArtifactRows, toRow, DB_SCHEMA_VERSION } from '../src/db.js';
 
@@ -47,14 +49,12 @@ const mockSend = mock();
 const s3ClientConfig: { value: unknown } = { value: undefined };
 
 void mock.module('@aws-sdk/client-s3', () => ({
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   S3Client: class {
-    send: any = mockSend;
+    send = mockSend;
     constructor(config: unknown) {
       s3ClientConfig.value = config;
     }
   },
-  /* eslint-enable @typescript-eslint/no-explicit-any */
   GetObjectCommand: class {
     readonly _kind = 'get';
     constructor(public input: { Bucket: string; Key: string }) {}
@@ -197,8 +197,13 @@ interface PutCmd {
 const putCalls = (): PutCmd[] =>
   (mockSend.mock.calls as unknown[][]).map((c) => c[0] as PutCmd).filter((c) => c._kind === 'put');
 
-const feedSliceBody = (rows: FeedRow[] = [FEED_ROW]): string =>
-  JSON.stringify({ version: FEED_SLICE_VERSION, rows });
+const FEED_SLICE: FeedSlice = {
+  history_start: '2026-01-01',
+  rows: [{ ...FEED_ROW, first_seen: '2026-01-01' }],
+};
+
+const feedSliceBody = (slice: FeedSlice = FEED_SLICE): string =>
+  JSON.stringify({ version: FEED_SLICE_VERSION, ...slice });
 
 const legacyFeedRow = (): object =>
   Object.fromEntries(
@@ -740,6 +745,37 @@ describe('R2ArtifactWriter — write', () => {
       });
     });
 
+    // A row first seen on the history start only proves it existed by then, so the slice needs both.
+    it("hands beforeCommit each live row's first_seen and the day history began", async () => {
+      mockAbsentArtifact();
+      const writer = new R2ArtifactWriter(R2_CONFIG, false);
+      const first = await writer.write(onlyFirst, 'faa', null, HASH_UP, '2026-10-01');
+      serve(writtenBytes());
+      const seen: HistorySummary[] = [];
+
+      await writer.write(
+        both,
+        'faa',
+        priorFor(first.content_hash),
+        'b'.repeat(64),
+        '2026-10-08',
+        (h) => {
+          seen.push(h);
+          return Promise.resolve();
+        }
+      );
+
+      expect(seen).toEqual([
+        {
+          firstSeen: new Map([
+            ['00001', '2026-10-01'],
+            ['00002', '2026-10-08'],
+          ]),
+          start: '2026-10-01',
+        },
+      ]);
+    });
+
     it('carries a closed row forward untouched', async () => {
       mockAbsentArtifact();
       const writer = new R2ArtifactWriter(R2_CONFIG, false);
@@ -1252,7 +1288,12 @@ describe('R2ArtifactWriter — feed intermediates', () => {
   it('bounds the schema-failure log instead of dumping an issue per row', async () => {
     const rows = Array.from({ length: 2000 }, (_, i) => ({ icao_hex: `a${i}` }));
     mockSend.mockResolvedValue({
-      Body: { transformToString: () => Promise.resolve(JSON.stringify({ version: 3, rows })) },
+      Body: {
+        transformToString: () =>
+          Promise.resolve(
+            JSON.stringify({ version: FEED_SLICE_VERSION, history_start: '2026-01-01', rows })
+          ),
+      },
     });
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
@@ -1304,12 +1345,12 @@ describe('R2ArtifactWriter — feed intermediates', () => {
   it('writes the per-source slice JSON to aircraft/_feed/<source>.json', async () => {
     mockAbsentArtifact();
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    await writer.writeFeedRows('faa', [FEED_ROW]);
+    await writer.writeFeedRows('faa', FEED_SLICE);
     const put = putCalls().find((c) => c.input.Key === 'aircraft/_feed/faa.json');
     expect(put?.input.ContentType).toBe('application/json');
     expect(JSON.parse(String(put?.input.Body))).toEqual({
       version: FEED_SLICE_VERSION,
-      rows: [FEED_ROW],
+      ...FEED_SLICE,
     });
   });
 
@@ -1318,7 +1359,7 @@ describe('R2ArtifactWriter — feed intermediates', () => {
       Body: { transformToString: () => Promise.resolve(feedSliceBody()) },
     });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readFeedRows('faa')).toEqual([FEED_ROW]);
+    expect(await writer.readFeedRows('faa')).toEqual(FEED_SLICE);
   });
 
   it('returns null for a pre-versioned slice instead of an incomplete row set', async () => {

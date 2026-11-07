@@ -65,8 +65,20 @@ describe('attributionFor', () => {
       'Source data from the Jamaica Civil Aviation Authority (JCAA) — https://www.jcaa.gov.jm/aircraft-registry-page/; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
     ],
     [
-      'th-caat',
-      'Source data from the Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th; used and shared with permission for non-commercial use, normalized into this project schema without implying endorsement.',
+      'au-casa',
+      'Source data from the Civil Aviation Safety Authority (CASA), Australia, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); changed by normalization into this project schema, without implying endorsement.',
+    ],
+    [
+      'br-anac',
+      'Source: Agência Nacional de Aviação Civil (ANAC), Brazil — https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/; open data reused with the mandatory source citation, normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'es-aesa',
+      'Data source: Agencia Estatal de Seguridad Aérea (AESA) — https://www.seguridadaerea.gob.es/en/ambitos/aeronaves/registro-de-matriculas-de-aeronaves-civiles/registro-de-matriculas; reusable under Real Decreto 1495/2011 (Ley 37/2007 on public-sector-information reuse), normalized into this project schema without implying endorsement.',
+    ],
+    [
+      'lt-tka',
+      'Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); retrieved from https://data.gov.lt and changed by normalization into this project schema, without implying endorsement.',
     ],
   ])('serves the unmandated %s notice exactly', (id, expected) => {
     expect(attributionFor(id)).toBe(expected);
@@ -81,7 +93,7 @@ describe('attributionFor', () => {
   // DATA_LICENSES.md is the authority for mandated wording (AGENTS.md), but nothing checked that
   // the served string still matches it — the two could drift silently, and the licence conditions
   // are the half that matters. Every recorded mandate is a substring the served notice must carry;
-  // losing one (AESA's citation, NZ's credit) is a licence breach, not a cosmetic drift.
+  // losing one (Canada's notices, Taiwan's credit) is a licence breach, not a cosmetic drift.
   const RECORDED = /^- ([a-zA-Z0-9_-]+): "([^"]+)"$/;
 
   const noticeSection = (): string => {

@@ -1,23 +1,27 @@
 // Why this exists: the feed is the one place a consumer reads a row's credit line, so it never has
-// to encode its own source→notice map. Where a license mandates exact wording (Transport Canada,
-// CAA Maldives, AESA's required citation), the string here must stay verbatim to that mandate — keep
-// it in sync with DATA_LICENSES `## Required Notices`, which is authoritative for the legally-fixed
-// text. Open / public-domain sources with no mandated notice get a courtesy credit so no displayed
-// row is ever uncredited. Keyed by source slug (config.id / FeedRow.source).
+// to encode its own source→notice map. Where an agency mandates exact wording (Transport Canada,
+// CAA Maldives, CAA Taiwan, Transpordiamet) or credit content (DGAC Chile, CAA New Zealand, CAAS,
+// CAAT), the string here must carry that mandate verbatim — keep it in sync with DATA_LICENSES
+// `## Required Notices`, which is authoritative for the legally-fixed text. Sources with no mandated
+// notice get a courtesy credit so no displayed row is ever uncredited. Keyed by source slug
+// (config.id / FeedRow.source).
 
 const NOTICES: Record<string, string> = {
   faa: 'Source: Federal Aviation Administration (FAA), United States — public-domain civil aircraft registry, normalized into this project schema without implying endorsement.',
   'tc-ca':
     'Reproduced and distributed with the permission of the Government of Canada. This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product.',
+  // CASA's CC BY 4.0 terms require attribution, a link to the licence, and indicating changes.
   'au-casa':
-    'Source data from the Civil Aviation Safety Authority (CASA), Australia, licensed under CC BY 4.0, normalized into this project schema without implying endorsement.',
+    'Source data from the Civil Aviation Safety Authority (CASA), Australia, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); changed by normalization into this project schema, without implying endorsement.',
   // ANAC states the register is open data needing no prior authorization, but that "proper citation
   // of the source is mandatory" (Brazilian Aeronautical Registry Technical Branch, 2026-05-12). No
   // wording was prescribed; the citation itself is the condition, so it cannot be dropped.
   'br-anac':
     'Source: Agência Nacional de Aviação Civil (ANAC), Brazil — https://sistemas.anac.gov.br/dadosabertos/Aeronaves/RAB/; open data reused with the mandatory source citation, normalized into this project schema without implying endorsement.',
+  // Transpordiamet supplied the opening attribution and it was accepted verbatim (2026-05-13): keep its
+  // "Source:" prefix and en dash.
   'ee-tram':
-    'Data source: Estonian Transport Administration (Transpordiamet) — https://transpordiamet.ee/ohusoidukite-register; reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.',
+    'Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register; reused and redistributed with permission for non-commercial use, normalized into this project schema without implying endorsement. The data is provided without guarantees of completeness, accuracy, or uninterrupted availability.',
   'lv-caa':
     'Source: Civil Aviation Agency of Latvia (CAA Latvia) — open aviation registry, normalized into this project schema without implying endorsement.',
   // CC BY 4.0 makes attribution, licence identification, and indication of changes conditions of
@@ -44,7 +48,7 @@ const NOTICES: Record<string, string> = {
   // Division, 2026-05-15). The first sentence is theirs and must not be reworded; permission is
   // conditional on OGDL v1.0 and on the register link accompanying the credit.
   'tw-caa':
-    'Source: Civil Aviation Administration, MOTC R.O.C. — caa.gov.tw. Licensed under the Open Government Data License, v1.0. Register: https://www.caa.gov.tw/article.aspx?a=4499&lang=1; normalized into this project schema without implying endorsement.',
+    'Source: Civil Aviation Administration, MOTC R.O.C. — caa.gov.tw. Licensed under the Open Government Data License, v1.0. Register: https://www.caa.gov.tw/article.aspx?a=238&lang=1; normalized into this project schema without implying endorsement.',
   'hr-ccaa':
     'Source data from the Croatian Civil Aviation Agency (CCAA) — https://www.ccaa.hr/en/list-of-registered-aircraft-94674; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
   'hu-kh':

@@ -24,6 +24,11 @@ export const AircraftStatusSchema = z.enum([
   // reserved row's type column with the intended model — so `other` answered a tail-number lookup
   // with a plausible aircraft that does not exist. `toFeedRows` excludes it for that reason.
   'reserved',
+  // The register publishes no status at all, so whether a listed mark is in good standing is not
+  // stated. Distinct from null, which is a blank or unresolved cell on a register that does publish
+  // one: null is excluded from the feed, while a whole register without a status column would vanish
+  // from it if mapped to null — and mapping it to `valid` would be an inference the register never makes.
+  'unknown',
   'other',
 ]);
 
