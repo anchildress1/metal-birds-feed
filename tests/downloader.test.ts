@@ -539,6 +539,32 @@ describe('download — CRC verification', () => {
 
     expect(lockedAtRetry).toBe(false);
   });
+
+  it('retries a stream that drops inside an undeclared entry', async () => {
+    const skipped = Buffer.alloc(64 * 1024, 'x');
+    const zip = buildStoredZip('skipped.txt', skipped, crc32(skipped));
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve({
+          ...streamResponse(zip),
+          body: new ReadableStream({
+            start(controller) {
+              controller.enqueue(zip.subarray(0, 1024));
+              controller.error(new Error('ECONNRESET mid-body'));
+            },
+          }),
+        })
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)))
+      );
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('download — format: file', () => {
