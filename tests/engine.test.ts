@@ -3109,6 +3109,28 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
 
   it('marks every row unknown (register publishes no status)', () =>
     expect([...hrRecords.values()].every((r) => r.status === 'unknown')).toBe(true));
+
+  // The last page holds five tall rows, so half its tightest pitch (15.42pt) reaches the column
+  // header line 13.32pt above the first mark; that line starts left of the mark band.
+  it('keeps the column header out of the first record on a sparse last page', async () => {
+    const tail = await mapRows(
+      loadSourceConfig(HR_CONFIG),
+      new Map([
+        [
+          'register',
+          readFileSync(
+            resolve(import.meta.dirname, '..', 'fixtures', 'hr-ccaa', 'input', 'register-tail.pdf')
+          ),
+        ],
+      ])
+    );
+
+    expect(tail.stats).toEqual({ total: 5, ok: 5, failed: 0, skipped: 0, duplicateSkipped: 0 });
+    const r = tail.records.get('VIO')!;
+    expect(r.registration).toBe('9A-VIO');
+    expect(r.model).toBe('DA40 NG');
+    expect(JSON.stringify([...tail.records.values()])).not.toMatch(/OZNAKA|REGISTRU|Podaci/);
+  });
 });
 
 describe('CCAA Croatia rotated publication, same config', () => {
