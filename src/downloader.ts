@@ -315,7 +315,7 @@ async function extractZipStream(
 
   // Bun's fromWeb adapter can lose source errors. Keep explicit reader ownership so a
   // parser failure cancels even a pending network read and releases the response lock.
-  const reader = res.body.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+  const reader = res.body.getReader();
   const source = new Readable({
     highWaterMark: 0,
     read() {
@@ -335,8 +335,19 @@ async function extractZipStream(
         });
     },
   });
+  // pipeline() settles on 'finish' — input exhausted, not archive complete. An archive truncated
+  // after a whole entry fails later, when the record loop finds no end-of-central-directory, after
+  // pipeline() dropped its error listener. Only the EOCD record ends the readable side; Parse's
+  // synthetic 'end' on finish leaves readableEnded false.
+  const centralDirectoryEnd = new Promise<void>((resolve, reject) => {
+    parser.on('end', () => {
+      if (parser.readableEnded) resolve();
+    });
+    parser.on('error', reject);
+  });
+  parser.resume();
   try {
-    await pipeline(source, parser);
+    await Promise.all([pipeline(source, parser), centralDirectoryEnd]);
   } catch (err) {
     // unzipper does not forward a parser failure into an entry already being buffered.
     // Destroy those entries before waiting for their buffers, or a mid-entry disconnect hangs.

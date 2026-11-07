@@ -2,7 +2,7 @@ import { setImmediate } from 'node:timers/promises';
 import { describe, it, expect, mock, afterEach } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { crc32 } from 'node:zlib';
+import { crc32, deflateRawSync } from 'node:zlib';
 import {
   download,
   fetchPublishedTotal,
@@ -484,6 +484,34 @@ describe('download — CRC verification', () => {
     const files = await download(CRC_CONFIG);
 
     expect(files.get('f')!.equals(DATA)).toBe(true);
+  });
+
+  // Inflation is async, so the parser finishes before the entry does and the record loop hits
+  // end-of-input after pipeline() has already settled.
+  it('retries a deflated archive truncated before its central directory', async () => {
+    const name = Buffer.from('f.txt');
+    const deflated = deflateRawSync(DATA);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt32LE(GOOD_CRC, 14);
+    local.writeUInt32LE(deflated.byteLength, 18);
+    local.writeUInt32LE(DATA.byteLength, 22);
+    local.writeUInt16LE(name.byteLength, 26);
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(Buffer.concat([local, name, deflated])))
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)))
+      );
+    setFetch(fn);
+
+    const files = await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(files.get('f')!.equals(DATA)).toBe(true);
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 });
 

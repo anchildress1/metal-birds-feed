@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, mock } from 'bun:test';
-import { PassThrough, Writable } from 'node:stream';
+import { Duplex, PassThrough } from 'node:stream';
 import { setImmediate } from 'node:timers/promises';
 import { crc32 } from 'node:zlib';
 
@@ -8,8 +8,9 @@ const writeBytes = mock<(bytes: Uint8Array) => void>();
 const finalize = mock<() => void>();
 let releaseWrite: () => void;
 const createParser = () =>
-  new Writable({
-    highWaterMark: 1,
+  new Duplex({
+    writableHighWaterMark: 1,
+    read() {},
     write(bytes: Uint8Array, _encoding, callback) {
       writeBytes(bytes);
       if (writeBytes.mock.calls.length === 1) releaseWrite = callback;
@@ -25,6 +26,8 @@ const createParser = () =>
           buffer: () => Promise.resolve(entryBytes),
         })
       );
+      // unzipper ends its readable side only on the end-of-central-directory record.
+      parser.push(null);
       callback();
     },
   });
