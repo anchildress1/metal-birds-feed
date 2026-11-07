@@ -37,9 +37,12 @@ const unsuperseded = <T>(candidates: T[], seen: (c: T) => string, start: (c: T) 
     (c) => !candidates.some((d) => d !== c && provablyNewer(seen(d), start(d), seen(c)))
   );
 
-// A live row absent from history cannot be dated; the history start is the bound that never wins.
-const firstSeenOf = (r: Aircraft, history: HistorySummary): string =>
-  history.firstSeen.get(r.source_id) ?? history.start;
+// History is merged from the same records the slice is built from; a miss means the two diverged.
+const firstSeenOf = (r: Aircraft, history: HistorySummary): string => {
+  const seen = history.firstSeen.get(r.source_id);
+  if (seen === undefined) throw new Error(`no first_seen for live row ${r.source_id}`);
+  return seen;
+};
 
 // Re-exported so existing importers (and tests) keep reaching it from here.
 export { registrationKey };
@@ -425,8 +428,8 @@ export const FEED_SLICE_VERSION = 4;
 export const FeedSliceSchema: z.ZodType<FeedSlice> = z
   .strictObject({
     version: z.literal(FEED_SLICE_VERSION),
-    history_start: z.string(),
-    rows: z.array(FeedRowObjectSchema.extend({ first_seen: z.string() })),
+    history_start: z.iso.date(),
+    rows: z.array(FeedRowObjectSchema.extend({ first_seen: z.iso.date() })),
   })
   .transform(({ history_start, rows }) => ({ history_start, rows }));
 

@@ -60,10 +60,14 @@ const make = (id: string, hex: string): Aircraft =>
     remarks: null,
   }) satisfies Aircraft;
 
-const NO_HISTORY = { firstSeen: new Map<string, string>(), start: '2026-01-01' };
+// Every row dated to the history start, so first_seen ranks nothing.
+const datedAtStart = (records: Aircraft[]) => ({
+  firstSeen: new Map(records.map((r): [string, string] => [r.source_id, '2026-01-01'])),
+  start: '2026-01-01',
+});
+const feedRows = (records: Aircraft[]) => toFeedRows(records, datedAtStart(records)).rows;
 
-const testDb = (): Database =>
-  Database.deserialize(buildFeedDb(toFeedRows([make('1', 'a1b2c3')], NO_HISTORY).rows));
+const testDb = (): Database => Database.deserialize(buildFeedDb(feedRows([make('1', 'a1b2c3')])));
 
 const post = (token: string | null, body: unknown): Request =>
   new Request('https://feed.local/feed', {
@@ -126,10 +130,9 @@ describe('serveRequest', () => {
     const stored = ['C-FABC', 'LY-AYP', 'N12345', 'VH-XYZ'];
     const db = Database.deserialize(
       buildFeedDb(
-        toFeedRows(
-          stored.map((registration, i) => ({ ...make(String(i), `a1b2c${i}`), registration })),
-          NO_HISTORY
-        ).rows
+        feedRows(
+          stored.map((registration, i) => ({ ...make(String(i), `a1b2c${i}`), registration }))
+        )
       )
     );
     try {

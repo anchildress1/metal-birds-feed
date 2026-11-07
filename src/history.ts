@@ -167,7 +167,9 @@ export const summarizeHistory = (rows: ArtifactRow[], today: string): HistorySum
   const firstSeen = new Map<string, string>();
   let start = today;
   for (const row of rows) {
-    const seen = text(row, 'first_seen') ?? today;
+    const seen = text(row, 'first_seen');
+    // A defaulted date would rank this row as newly seen and win every collision it enters.
+    if (seen === null) throw new Error(`first_seen missing on stored row ${sourceId(row)}`);
     if (seen < start) start = seen;
     if (row['removed_on'] === null) firstSeen.set(sourceId(row), seen);
   }

@@ -19,7 +19,13 @@ import type { HistorySummary } from '../src/history.js';
 // Every row predates history, so first_seen ranks nothing unless a test sets it.
 const NO_HISTORY: HistorySummary = { firstSeen: new Map(), start: '2026-01-01' };
 const sliceRows = (records: Aircraft[], history: HistorySummary = NO_HISTORY): SliceRow[] =>
-  toFeedRows(records, history).rows;
+  toFeedRows(records, {
+    start: history.start,
+    firstSeen: new Map([
+      ...records.map((r): [string, string] => [r.source_id, history.start]),
+      ...history.firstSeen,
+    ]),
+  }).rows;
 const asSlice = (rows: SliceRow[], history_start = NO_HISTORY.start): FeedSlice => ({
   history_start,
   rows,
@@ -314,9 +320,12 @@ describe('toFeedRows', () => {
     expect(rows.map((r) => r.model)).toEqual(['AN-2']);
   });
 
-  it('stamps each slice row with its first_seen, falling back to the history start', () => {
+  it('stamps each slice row with its first_seen', () => {
     const slice = toFeedRows([make('1', 'a1b2c3'), make('2', '4d5e6f', { registration: 'N2' })], {
-      firstSeen: new Map([['1', '2026-06-01']]),
+      firstSeen: new Map([
+        ['1', '2026-06-01'],
+        ['2', '2026-01-01'],
+      ]),
       start: '2026-01-01',
     });
     expect(slice.history_start).toBe('2026-01-01');
@@ -325,6 +334,12 @@ describe('toFeedRows', () => {
       '4d5e6f': '2026-01-01',
     });
   });
+
+  // A defaulted date would rank the row against history it never had.
+  it('throws on a live row its history does not date', () =>
+    expect(() =>
+      toFeedRows([make('1', 'a1b2c3')], { firstSeen: new Map(), start: '2026-01-01' })
+    ).toThrow(/no first_seen for live row 1/));
 
   it('reports a dropped key rather than absorbing it', () => {
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
@@ -759,6 +774,16 @@ describe('FeedSliceSchema', () => {
     expect(_start).toBe('2026-01-01');
     expect(FeedSliceSchema.safeParse(noStart).success).toBe(false);
     expect(FeedSliceSchema.safeParse({ ...current(), rows: v3Rows() }).success).toBe(false);
+  });
+
+  // Ranking compares these as strings, which orders only ISO dates.
+  it('rejects a history_start or first_seen that is not an ISO date', () => {
+    const [row] = currentRows();
+    expect(FeedSliceSchema.safeParse({ ...current(), history_start: '' }).success).toBe(false);
+    expect(
+      FeedSliceSchema.safeParse({ ...current(), rows: [{ ...row, first_seen: '01/06/2026' }] })
+        .success
+    ).toBe(false);
   });
 
   it('accepts an empty slice', () => {

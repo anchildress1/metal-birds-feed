@@ -275,6 +275,11 @@ describe('summarizeHistory', () => {
     );
   });
 
+  it('throws on a stored row with no first_seen rather than dating it today', () =>
+    expect(() =>
+      summarizeHistory([stored('1', '2026-03-01', { first_seen: null })], '2026-10-01')
+    ).toThrow(/first_seen missing on stored row 1/));
+
   it('starts history today when there are no rows', () => {
     expect(summarizeHistory([], '2026-10-01')).toEqual({
       firstSeen: new Map(),
