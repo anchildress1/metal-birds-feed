@@ -113,7 +113,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 - Set `anchor_field` whenever `anchor_pattern` could match a wrapped continuation line in another column.
 - A refresh failing with a missing `field_axis` means the register flipped: declare the new layout from that file's own measurements, add its fixture, and update `.agents/memory/pdf-orientation.md`.
 - Set `wrap_after_anchor: true` on a layout whose line leading exceeds half the record pitch: a two-line cell's second line then sits past the midpoint and nearest-anchor snapping hands it to the next record. Per layout; a centred-cell layout keeps nearest-anchor.
-- `drop_margin_lines: true` on a layout whose widened `after_last_anchor_reach` or `before_first_anchor_reach` reaches text set in the page margin (a trailing disclaimer, a repeated header): a printed line starting before the first band minus the same-row jitter is dropped. Position, never wording.
+- `drop_margin_lines: true` on a layout where any reach — widened, the default on a sparse page, or a lone record's — reaches text set in the page margin (a trailing disclaimer, a repeated header): a printed line starting before the first band minus the same-row jitter is dropped. Position, never wording.
 - Records snap per column at the outlier gap between adjacent anchors; a gap between two lines mirrored about the same anchor is inside that cell, never the outlier. With no outlier gap, the split that mirrors the most lines about their own anchor wins, only when it beats the anchor midpoint outright; otherwise the midpoint. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
 - An outer-record reach must clear that record's tallest cell. The page-wide minimum row pitch is not a safe bound.
 - `after_last_anchor_pattern`: only where the column headers sit closer to one page's outer anchor than another page's outer record's tallest cell, so no reach clears one without admitting the other. Exclude the exact header labels.
@@ -159,11 +159,10 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 
 - Both key columns stay nullable — the unique indexes rely on SQLite not treating NULLs as equal.
 - No `source_id` tiebreak: it may be reissued every publication, flipping the served answer with no upstream change.
-- A collision the register's own dates cannot settle — within a slice or across slices on one hex — goes to the row history proves newest: its `first_seen` is after its source's `history_start` and after the other row's `first_seen`. Otherwise within-source drops the key; cross-source keeps the first claim in sorted source order.
+- A collision the register's own dates cannot settle — within a slice or across slices on one hex — goes to the row history proves newest: its `first_seen` is after its source's `history_start` and after the other row's `first_seen`. Otherwise within-source drops the key; cross-source keeps the first claim, in sorted source order, that history has not superseded.
   - Never rank raw `first_seen`: migration and onboarding stamp every pre-existing row with `history_start`, so raw order is onboarding order.
   - Sound only on a stable `source_id`: a reissued one reopens every row as newly seen.
   - A reopened row keeps its original `first_seen`, so an airframe returning to a register loses to a stale claim another register still lists. Accepted: fixing it needs a reappearance date column; never overwrite a closed row's `first_seen` to get it.
-  - `first_seen` rides the slice only; `mergeFeedRows` strips it before the served table.
 - Cancelled, reserved, and null-status records are excluded once, at slice construction.
 - Reserved is not a weaker cancelled: no airframe exists behind the mark. Map held marks to `reserved`, never `other` — `other` is served.
 - `status` is the one nullable canonical field: a blank or unresolved cell stays null, never `other`.
