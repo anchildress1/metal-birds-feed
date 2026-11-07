@@ -148,18 +148,20 @@ const jsonType = (value: unknown): string => {
   return typeof value;
 };
 
-// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so a parse throw becomes a rejection, matching the other parsers
-export async function parseJson(buf: Buffer, options: ParseJsonOptions): Promise<Row[]> {
-  const text = decodeText(buf, options.encoding);
-  const parsed: unknown = JSON.parse(text);
-  const records = navigateToArray(parsed, options.record_path);
-  return records.map((record, i) => {
-    // Fail fast at the boundary: a non-object record (number/string/array) would flatten to an
-    // empty-key row and later surface as a vague "missing source_id" instead of the real cause.
-    if (record === null || typeof record !== 'object' || Array.isArray(record)) {
-      throw new TypeError(`JSON record at index ${i} is not an object (got ${jsonType(record)})`);
-    }
-    return flattenRecord(record);
+// Promise.try: sync internals, but a parse throw must surface as a rejection like the other parsers.
+export function parseJson(buf: Buffer, options: ParseJsonOptions): Promise<Row[]> {
+  return Promise.try(() => {
+    const text = decodeText(buf, options.encoding);
+    const parsed: unknown = JSON.parse(text);
+    const records = navigateToArray(parsed, options.record_path);
+    return records.map((record, i) => {
+      // Fail fast at the boundary: a non-object record (number/string/array) would flatten to an
+      // empty-key row and later surface as a vague "missing source_id" instead of the real cause.
+      if (record === null || typeof record !== 'object' || Array.isArray(record)) {
+        throw new TypeError(`JSON record at index ${i} is not an object (got ${jsonType(record)})`);
+      }
+      return flattenRecord(record);
+    });
   });
 }
 
@@ -261,10 +263,12 @@ const sheetToRows = (sheet: XLSX.WorkSheet, options: BaseSpreadsheetOptions): Ro
 
 // Parses legacy binary .xls (BIFF2–BIFF8 / OLE2) via SheetJS. Cells read raw (numeric serials kept;
 // dates deferred to transforms).
-// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
-export async function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
-  const wb = XLSX.read(buf, { type: 'buffer' });
-  return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
+// Promise.try: sync internals, but a throw must surface as a rejection.
+export function parseXls(buf: Buffer, options: ParseXlsOptions): Promise<Row[]> {
+  return Promise.try(() => {
+    const wb = XLSX.read(buf, { type: 'buffer' });
+    return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
+  });
 }
 
 export type ParseHtmlOptions = BaseSpreadsheetOptions & { encoding: 'utf8' | 'latin1' };
@@ -275,13 +279,15 @@ export type ParseHtmlOptions = BaseSpreadsheetOptions & { encoding: 'utf8' | 'la
 // shaping as the spreadsheet paths applies. A page with no parseable table makes SheetJS throw,
 // failing the run loudly rather than yielding an empty set. Dynamic page chrome never reaches the
 // artifact because content_hash is over the parsed records, not the raw page.
-// eslint-disable-next-line @typescript-eslint/require-await -- sync internals; async so throws become rejections
-export async function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise<Row[]> {
-  const html = decodeText(buf, options.encoding);
-  // Without raw, SheetJS parses HTML cell text as values: serial "0123" loses its zero, "1-2"
-  // becomes a date, "172E10" a number.
-  const wb = XLSX.read(html, { type: 'string', raw: true });
-  return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
+// Promise.try: sync internals, but a throw must surface as a rejection.
+export function parseHtml(buf: Buffer, options: ParseHtmlOptions): Promise<Row[]> {
+  return Promise.try(() => {
+    const html = decodeText(buf, options.encoding);
+    // Without raw, SheetJS parses HTML cell text as values: serial "0123" loses its zero, "1-2"
+    // becomes a date, "172E10" a number.
+    const wb = XLSX.read(html, { type: 'string', raw: true });
+    return sheetToRows(wb.Sheets[pickXlsSheet(wb.SheetNames, options.sheet)], options);
+  });
 }
 
 // One observed page orientation. `column_pos` and the reach tolerances are measured against that

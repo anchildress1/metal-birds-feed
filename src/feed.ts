@@ -292,8 +292,12 @@ export const mergeFeedRows = (slices: FeedSlice[]): FeedRow[] => {
   return resolveRegistrationAmbiguity([...winners, ...hexless]);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to drop it: first_seen is never served
-const toServedRow = ({ first_seen, ...row }: SliceRow): FeedRow => row;
+// first_seen is never served.
+const toServedRow = (row: SliceRow): FeedRow => {
+  const served: FeedRow & { first_seen?: string } = { ...row };
+  delete served.first_seen;
+  return served;
+};
 
 // A mark reaching two different aircraft cannot be served: returning either would be a wrong
 // answer, which is worse than a miss. Canada alone produces these without leaving the register —

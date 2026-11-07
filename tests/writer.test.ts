@@ -49,14 +49,12 @@ const mockSend = mock();
 const s3ClientConfig: { value: unknown } = { value: undefined };
 
 void mock.module('@aws-sdk/client-s3', () => ({
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   S3Client: class {
-    send: any = mockSend;
+    send = mockSend;
     constructor(config: unknown) {
       s3ClientConfig.value = config;
     }
   },
-  /* eslint-enable @typescript-eslint/no-explicit-any */
   GetObjectCommand: class {
     readonly _kind = 'get';
     constructor(public input: { Bucket: string; Key: string }) {}
