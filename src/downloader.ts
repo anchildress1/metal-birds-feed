@@ -346,13 +346,17 @@ async function extractZipStream(
     parser.on('error', reject);
   });
   parser.resume();
+  const piped = pipeline(source, parser);
   try {
-    await Promise.all([pipeline(source, parser), centralDirectoryEnd]);
+    await Promise.all([piped, centralDirectoryEnd]);
   } catch (err) {
     // unzipper does not forward a parser failure into an entry already being buffered.
     // Destroy those entries before waiting for their buffers, or a mid-entry disconnect hangs.
     const error = err instanceof Error ? err : new Error(String(err));
     for (const entry of activeEntries) entry.destroy(error);
+    // The parser error rejects centralDirectoryEnd before teardown cancels the response
+    // reader; without this wait the retry fetches while the failed body is still locked.
+    await piped.catch(() => {});
     throw error;
   } finally {
     // A mid-entry failure also fails the parser, whose error is the one thrown — settle the

@@ -513,6 +513,32 @@ describe('download — CRC verification', () => {
     expect(files.get('f')!.equals(DATA)).toBe(true);
     expect(fn).toHaveBeenCalledTimes(2);
   });
+
+  it('releases the failed response body before the retry fetches', async () => {
+    // A socket teardown settles cancel() asynchronously; the reader holds its lock until then.
+    const garbage = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(Buffer.alloc(4096, 0xff)));
+      },
+      async cancel() {
+        for (let i = 0; i < 10; i++) await setImmediate();
+      },
+    });
+    let lockedAtRetry: boolean | undefined;
+    const fn = mock()
+      .mockImplementationOnce(() =>
+        Promise.resolve({ ...streamResponse(Buffer.alloc(0)), body: garbage })
+      )
+      .mockImplementationOnce(() => {
+        lockedAtRetry = garbage.locked;
+        return Promise.resolve(streamResponse(buildStoredZip('f.txt', DATA, GOOD_CRC)));
+      });
+    setFetch(fn);
+
+    await download(CRC_CONFIG, { ...FAST_RETRY, attempts: 2 });
+
+    expect(lockedAtRetry).toBe(false);
+  });
 });
 
 describe('download — format: file', () => {
