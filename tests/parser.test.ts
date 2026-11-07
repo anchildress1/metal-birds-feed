@@ -1119,6 +1119,15 @@ describe('parsePdf', () => {
       expect(firstLegal('8Q-TAG')).toBe('Seaplane Holding Cayman Ltd.');
     });
 
+    // Page 7 sets each IDERA reference 8.9pt above its party, wider than that column's row gap; the
+    // outlier split handed the reference to the record above.
+    it('keeps an IDERA reference with the party it heads', async () => {
+      const rows = await parsePdf(mvSixteenBuf(), mvOpts());
+      const idera = (mark: string): string => rows.find((row) => row.mark === mark)!.idera;
+      expect(idera('8Q-FBA').split('\n')[0]).toBe('Letter No. 201-ASD-D/BYD/2023/01');
+      expect(idera('8Q-RAQ')).not.toMatch(/BYD\/2023\/01/);
+    });
+
     it('drops the footer line from the record a page closes on alone', async () => {
       const rows = await parsePdf(mvSixteenBuf(), mvOpts());
       const r = rows.find((row) => row.mark === '8Q-ZNG')!;

@@ -457,20 +457,26 @@ const splitBetween = (coords: number[], anchorCoords: number[], k: number): numb
   const lo = anchorCoords[k];
   const hi = anchorCoords[k + 1];
   const inner = coords.filter((c) => c > lo && c < hi);
+  const ownsLo = inner.map((c) => mirroredAbout(coords, c, lo, anchorCoords[k - 1]));
+  const ownsHi = inner.map((c) => mirroredAbout(coords, c, hi, anchorCoords[k + 2]));
   const seq = [lo, ...inner, hi];
   const gaps = seq.slice(1).map((c, i) => c - seq[i]);
   // Under three gaps there is no leading to compare against — one cell's lines cannot be told from
   // a row break, so position is the only available answer.
   const median = gaps.length >= 3 ? medianOf([...gaps].sort((a, b) => a - b)) : Infinity;
+  // A gap between two lines mirrored about the same anchor lies inside that anchor's centred cell:
+  // CAA Maldives sets each IDERA reference a paragraph apart from its party, wider than the row gap.
+  const insideCell = (i: number): boolean =>
+    i > 0 && i < inner.length && ((ownsLo[i - 1] && ownsLo[i]) || (ownsHi[i - 1] && ownsHi[i]));
   let outlierSplit: number | undefined;
   let bestGap = median * ROW_BREAK_GAP_RATIO;
   gaps.forEach((gap, i) => {
-    if (gap > bestGap) {
+    if (gap > bestGap && !insideCell(i)) {
       bestGap = gap;
       outlierSplit = (seq[i] + seq[i + 1]) / 2;
     }
   });
-  return outlierSplit ?? centreFitSplit(coords, inner, anchorCoords, k);
+  return outlierSplit ?? centreFitSplit(inner, ownsLo, ownsHi, lo, hi);
 };
 
 // Mirror pairs of one centred cell land within a few tenths of a point of each other on the live
@@ -495,16 +501,13 @@ const mirroredAbout = (
 
 // `inner` ascends; the first k items go to the anchor at `lo`, the rest to the one at `hi`.
 const centreFitSplit = (
-  coords: number[],
   inner: number[],
-  anchorCoords: number[],
-  pair: number
+  ownsLo: boolean[],
+  ownsHi: boolean[],
+  lo: number,
+  hi: number
 ): number => {
-  const lo = anchorCoords[pair];
-  const hi = anchorCoords[pair + 1];
   const mid = (lo + hi) / 2;
-  const ownsLo = inner.map((c) => mirroredAbout(coords, c, lo, anchorCoords[pair - 1]));
-  const ownsHi = inner.map((c) => mirroredAbout(coords, c, hi, anchorCoords[pair + 2]));
   const score = (k: number): number =>
     ownsLo.slice(0, k).filter(Boolean).length + ownsHi.slice(k).filter(Boolean).length;
   const midK = inner.filter((c) => c < mid).length;
