@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { Aircraft } from './schema.js';
 import type { FeedRow } from './feed-row.js';
+import type { HistorySummary } from './history.js';
 import { latestKnownDate } from './recency.js';
 import { registrationKey } from './registration.js';
 import { log } from './logger.js';
@@ -13,6 +14,33 @@ import { log } from './logger.js';
 // legal_owner, interdiction code, operational classes).
 export type { FeedRow };
 
+// A slice row carries first_seen so mergeFeedRows can rank a cross-source collision; the merge
+// strips it, so it never reaches the served table.
+export type SliceRow = FeedRow & { first_seen: string };
+export interface FeedSlice {
+  history_start: string;
+  rows: SliceRow[];
+}
+
+// `a` is provably newer than `b` only when a's first_seen is the day it actually appeared — later
+// than its source's history start, which merely bounds when a pre-existing row began — and falls
+// after the latest day b could have appeared. Comparing raw first_seen would rank sources by the day
+// each was onboarded, not by the airframe.
+const provablyNewer = (a: string, aStart: string, b: string): boolean => a > aStart && a > b;
+
+// The candidates no other candidate provably supersedes, in input order. Resolved as a group: a
+// pairwise fold would pick a different winner depending on candidate order, and a fallback over the
+// full set could serve a claim history already proves stale. Never empty for a non-empty input —
+// superseding needs a strictly later first_seen, so the latest one always survives.
+const unsuperseded = <T>(candidates: T[], seen: (c: T) => string, start: (c: T) => string): T[] =>
+  candidates.filter(
+    (c) => !candidates.some((d) => d !== c && provablyNewer(seen(d), start(d), seen(c)))
+  );
+
+// A live row absent from history cannot be dated; the history start is the bound that never wins.
+const firstSeenOf = (r: Aircraft, history: HistorySummary): string =>
+  history.firstSeen.get(r.source_id) ?? history.start;
+
 // Re-exported so existing importers (and tests) keep reaching it from here.
 export { registrationKey };
 
@@ -22,10 +50,10 @@ const groupInto = (map: Map<string, Aircraft[]>, key: string, record: Aircraft):
   else existing.push(record);
 };
 
-// Records sharing a lookup key collapse to one winner: the most recent known date wins, and rows
-// that render an identical served row are interchangeable so a plain re-publish costs nothing.
-// A surviving tie returns null — the register contradicts itself about which aircraft holds the key
-// and neither row can be served.
+// Records sharing a lookup key collapse to one winner: the most recent known date wins, then the
+// rows history proves superseded drop out, and rows that render an identical served row are
+// interchangeable so a plain re-publish costs nothing. A surviving tie returns null — the register
+// contradicts itself about which aircraft holds the key and neither row can be served.
 //
 // It resolves the candidates as a group rather than folding them pairwise, because a pairwise tie
 // has nowhere to record itself except by poisoning the key, which would then discard a later row
@@ -36,7 +64,7 @@ const groupInto = (map: Map<string, Aircraft[]>, key: string, record: Aircraft):
 // which of two conflicting rows got served could flip with no upstream change — churning the feed
 // hash and the answer a lookup returns. Even where source_id is stable, ordering on it only makes
 // the coin flip repeatable; the feed's rule is that a wrong answer is worse than a miss.
-const resolveCandidates = (candidates: Aircraft[]): Aircraft | null => {
+const resolveCandidates = (candidates: Aircraft[], history: HistorySummary): Aircraft | null => {
   if (candidates.length === 1) return candidates[0] ?? null;
   const dates = candidates.map((r) => latestKnownDate(r) ?? '');
   // Seeded with '', which is also what an unknown date maps to — so the seed can never beat a real
@@ -45,16 +73,23 @@ const resolveCandidates = (candidates: Aircraft[]): Aircraft | null => {
   const winners = candidates.filter((_, i) => dates[i] === newest);
   const first = winners[0] ?? null;
   if (winners.length === 1 || first === null) return first;
+  const current = unsuperseded(
+    winners,
+    (r) => firstSeenOf(r, history),
+    () => history.start
+  );
+  const head = current[0] ?? null;
+  if (current.length === 1 || head === null) return head;
   // Both sides are projected by the same function, so key order is fixed and JSON.stringify is a
   // sound identity test here — unlike hashFeedRows, which compares across code paths.
-  const reference = JSON.stringify(toFeedRow(first, null));
-  return winners.every((r) => JSON.stringify(toFeedRow(r, null)) === reference) ? first : null;
+  const reference = JSON.stringify(toFeedRow(head, null));
+  return current.every((r) => JSON.stringify(toFeedRow(r, null)) === reference) ? head : null;
 };
 
 // Per-source slice: one row per aircraft, collapsed on icao_hex where the register publishes one
 // and on the normalized mark where it does not. Keying the whole slice on hex silently excluded
 // every register that publishes no Mode S address.
-export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
+export const toFeedRows = (records: Iterable<Aircraft>, history: HistorySummary): FeedSlice => {
   const byHex = new Map<string, Aircraft[]>();
   const byMark = new Map<string, Aircraft[]>();
   for (const r of records) {
@@ -91,7 +126,7 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   // whatever hex winner happens to share the mark — tracked so the supersede step below never treats
   // one as the other.
   const fallbackMarks = new Set<string>();
-  const hexWinners = collapseGroups(byHex, (hex, candidates) => {
+  const hexWinners = collapseGroups(byHex, history, (hex, candidates) => {
     ambiguousHex.push(hex);
     for (const r of candidates) {
       const mark = registrationKey(r.registration);
@@ -114,15 +149,24 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
   }
 
   const ambiguousMarks = new Set<string>();
-  const markWinners = collapseGroups(byMark, (mark) => {
+  const markWinners = collapseGroups(byMark, history, (mark) => {
     ambiguousMarks.add(mark);
   });
   reportWithinSourceAmbiguity(ambiguousHex, [...ambiguousMarks]);
 
-  return [
-    ...[...hexWinners].map(([hex, r]) => clearIfMarkAmbiguous(toFeedRow(r, hex), ambiguousMarks)),
-    ...[...markWinners.values()].map((r) => toFeedRow(r, null)),
-  ];
+  const toSliceRow = (r: Aircraft, hex: string | null): SliceRow => ({
+    ...toFeedRow(r, hex),
+    first_seen: firstSeenOf(r, history),
+  });
+  return {
+    history_start: history.start,
+    rows: [
+      ...[...hexWinners].map(([hex, r]) =>
+        clearIfMarkAmbiguous(toSliceRow(r, hex), ambiguousMarks)
+      ),
+      ...[...markWinners.values()].map((r) => toSliceRow(r, null)),
+    ],
+  };
 };
 
 // A mark can be ambiguous within byMark without ever reaching the supersede step above — when the
@@ -132,16 +176,17 @@ export const toFeedRows = (records: Iterable<Aircraft>): FeedRow[] => {
 // genuinely unsettled about who holds it. The hex path stays valid (the winner's own hex was never
 // in question); only the mark it can no longer vouch for is cleared — the same policy
 // resolveRegistrationAmbiguity applies across sources, applied here within one.
-const clearIfMarkAmbiguous = (row: FeedRow, ambiguousMarks: ReadonlySet<string>): FeedRow =>
+const clearIfMarkAmbiguous = (row: SliceRow, ambiguousMarks: ReadonlySet<string>): SliceRow =>
   ambiguousMarks.has(row.registration_key ?? '') ? { ...row, registration_key: null } : row;
 
 const collapseGroups = (
   groups: Map<string, Aircraft[]>,
+  history: HistorySummary,
   onAmbiguous: (key: string, candidates: Aircraft[]) => void
 ): Map<string, Aircraft> => {
   const winners = new Map<string, Aircraft>();
   for (const [key, candidates] of groups) {
-    const winner = resolveCandidates(candidates);
+    const winner = resolveCandidates(candidates, history);
     if (winner === null) onAmbiguous(key, candidates);
     else winners.set(key, winner);
   }
@@ -208,16 +253,15 @@ const toFeedRow = (r: Aircraft, icao_hex: string | null): FeedRow => {
   } satisfies FeedRow;
 };
 
-// Merge per-source slices into one row per icao_hex for the consolidated table. A live
-// (non-cancelled) incumbent is never overwritten; a cancelled incumbent is replaced by any later
-// row — so a live row always beats a cancelled one regardless of order, and among all-cancelled the
-// last-seen wins. Sources are enumerated in sorted order (resolveAllSources), so the result is
-// deterministic. The slice drops the date fields, so within-source recency is already resolved in
-// toFeedRows; a cross-source hex collision (one airframe in two registries) is rare and transient.
-export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
-  const byHex = new Map<string, FeedRow>();
+// Merge per-source slices into one row per icao_hex for the consolidated table. A cross-source hex
+// collision is one airframe in two registries — typically mid-transfer — and goes to the row history
+// proves newest. Where history cannot order them, the first slice to claim the hex keeps it among the
+// claims history has not superseded; sources are enumerated in sorted order (resolveAllSources), so
+// that fallback is at least deterministic.
+export const mergeFeedRows = (slices: FeedSlice[]): FeedRow[] => {
+  const byHex = new Map<string, { row: SliceRow; start: string }[]>();
   const hexless: FeedRow[] = [];
-  for (const group of groups) {
+  for (const { history_start: start, rows: group } of slices) {
     // No cancelled filter here. Every slice is written by toFeedRows, which excludes them, and the
     // pre-change slices were deleted so each source regenerated one — filtering again would be a
     // compatibility shim for data that no longer exists.
@@ -226,14 +270,27 @@ export const mergeFeedRows = (groups: FeedRow[][]): FeedRow[] => {
         // Not deduped on the mark across sources: a hex is globally unique, so two sources sharing
         // one are the same airframe, but two registers can legitimately issue marks that normalize
         // alike. Those are different aircraft and are resolved as an ambiguity, not a duplicate.
-        hexless.push(row);
+        hexless.push(toServedRow(row));
         continue;
       }
-      if (byHex.get(row.icao_hex) === undefined) byHex.set(row.icao_hex, row);
+      const claims = byHex.get(row.icao_hex);
+      if (claims === undefined) byHex.set(row.icao_hex, [{ row, start }]);
+      else claims.push({ row, start });
     }
   }
-  return resolveRegistrationAmbiguity([...byHex.values(), ...hexless]);
+  const winners = [...byHex.values()].flatMap((claims) => {
+    const [winner] = unsuperseded(
+      claims,
+      (c) => c.row.first_seen,
+      (c) => c.start
+    );
+    return winner === undefined ? [] : [toServedRow(winner.row)];
+  });
+  return resolveRegistrationAmbiguity([...winners, ...hexless]);
 };
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to drop it: first_seen is never served
+const toServedRow = ({ first_seen, ...row }: SliceRow): FeedRow => row;
 
 // A mark reaching two different aircraft cannot be served: returning either would be a wrong
 // answer, which is worse than a miss. Canada alone produces these without leaving the register —
@@ -335,7 +392,7 @@ const COLUMN_TYPES: Record<keyof FeedRow, string> = {
   source: 'TEXT NOT NULL',
 };
 
-// Single source of column truth: the DDL, the INSERT, and FeedRowsSchema all derive from this,
+// Single source of column truth: the DDL, the INSERT, and FeedSliceSchema all derive from this,
 // so a field cannot reach FeedRow without reaching the served database.
 const COLUMNS = Object.keys(COLUMN_TYPES) as (keyof FeedRow)[];
 
@@ -359,20 +416,22 @@ const FeedRowObjectSchema = z.strictObject(
     COLUMNS.map((column) => [column, columnSchema(COLUMN_TYPES[column])])
   ) as FeedRowShape
 );
-export const FeedRowsSchema: z.ZodType<FeedRow[]> = z.array(FeedRowObjectSchema);
-export const FEED_SLICE_VERSION = 3;
+export const FEED_SLICE_VERSION = 4;
 
-// Only the current version is accepted. Earlier slices are structurally readable — every column
-// they carry still validates — but they were written when the producer dropped hex-less records, so
-// they are silently short by exactly the rows this version exists to serve. Migrating one would
-// publish that gap; failing closed drops the source to "no slice", which the pipeline already
-// self-heals by regenerating it from the register.
-export const FeedSliceSchema: z.ZodType<FeedRow[]> = z
-  .strictObject({ version: z.literal(FEED_SLICE_VERSION), rows: FeedRowsSchema })
-  .transform(({ rows }) => rows);
+// Only the current version is accepted. Version 3 lacks the first_seen and history_start that rank
+// a cross-source collision, and version 2 and earlier were written when the producer dropped
+// hex-less records. Migrating either would publish that gap; failing closed drops the source to
+// "no slice", which the pipeline already self-heals by regenerating it from the register.
+export const FeedSliceSchema: z.ZodType<FeedSlice> = z
+  .strictObject({
+    version: z.literal(FEED_SLICE_VERSION),
+    history_start: z.string(),
+    rows: z.array(FeedRowObjectSchema.extend({ first_seen: z.string() })),
+  })
+  .transform(({ history_start, rows }) => ({ history_start, rows }));
 
-export const serializeFeedSlice = (rows: FeedRow[]): string =>
-  JSON.stringify({ version: FEED_SLICE_VERSION, rows });
+export const serializeFeedSlice = (slice: FeedSlice): string =>
+  JSON.stringify({ version: FEED_SLICE_VERSION, ...slice });
 
 // The consolidated, single-table lookup DB the service serves: one row per aircraft across every
 // source, queried as `SELECT * FROM feed WHERE icao_hex IN (...)` or `... registration_key IN (...)`
@@ -427,7 +486,10 @@ export const buildFeedDb = (rows: FeedRow[]): Uint8Array => {
     // gap. FEED_SLICE_VERSION still does not move, for the same reason as v9: no producer before this
     // change could emit a null status into a slice, since toFeedRows only ever received an
     // already-validated, then-non-nullable Aircraft record.
-    db.run('PRAGMA user_version = 10');
+    // 11 mirrors db.ts's `unknown` status widening: a register publishing no status is served as
+    // `unknown`, where version 10 served it as `valid`. The widening alone would not move
+    // FEED_SLICE_VERSION — a value-domain change self-heals on each source's refresh.
+    db.run('PRAGMA user_version = 11');
     db.run(DDL);
     db.run('CREATE INDEX idx_feed_country ON feed (country)');
     // Unique rather than plain: NULLs never collide in a SQLite unique index, so hex-less rows and

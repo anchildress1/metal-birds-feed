@@ -85,10 +85,10 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # The register is a current-fleet snapshot — cancelled/deregistered aircraft never appear,
-  # so every listed row is active.
+  # No per-row status column, and the register never states that a listed mark is in good standing.
+  # `unknown` is served; `valid` would be an inference the register does not make.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: TW

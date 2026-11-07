@@ -629,6 +629,21 @@ describe('mv_idera_party', () => {
     expect(applyScalar('mv_idera_party', '(8 Aug 2023)\nAER, LLC\n3641-2 Higashikata')).toBe(
       'AER, LLC'
     ));
+  it('skips the date a long reference wraps onto the next line', () =>
+    expect(
+      applyScalar(
+        'mv_idera_party',
+        'Letter No: 201-ASD-D/MIS/2026/418\ndated 9 Aug 2026\nFTAI aircraft leasing Ireland (2025)\nDAC, Ella House'
+      )
+    ).toBe('FTAI aircraft leasing Ireland (2025)'));
+  it('skips a wrapped bare date without the "dated" word', () =>
+    expect(
+      applyScalar('mv_idera_party', 'Letter No: 201-ASD-D/MIS/2026/418\n9 Aug 2026\nAER, LLC')
+    ).toBe('AER, LLC'));
+  it('returns null when a reference and its wrapped date are all the cell holds', () =>
+    expect(
+      applyScalar('mv_idera_party', 'None\nLetter No: 201-ASD-D/MIS/2026/418\ndated 9 Aug 2026')
+    ).toBeNull());
   it('returns null for a bare "None"', () =>
     expect(applyScalar('mv_idera_party', 'None')).toBeNull());
   it('returns null when only a reference follows "None"', () =>

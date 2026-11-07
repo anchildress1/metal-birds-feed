@@ -153,3 +153,23 @@ export const assertHistoryPreserved = (
     );
   }
 };
+
+// What the feed slice needs from history to rank colliding rows: each live row's first_seen, and
+// the day this source's history began. A row first seen on that day only proves it existed by then
+// (migration and onboarding stamp every pre-existing row with it); a later first_seen is the day
+// the row actually appeared.
+export interface HistorySummary {
+  firstSeen: ReadonlyMap<string, string>;
+  start: string;
+}
+
+export const summarizeHistory = (rows: ArtifactRow[], today: string): HistorySummary => {
+  const firstSeen = new Map<string, string>();
+  let start = today;
+  for (const row of rows) {
+    const seen = text(row, 'first_seen') ?? today;
+    if (seen < start) start = seen;
+    if (row['removed_on'] === null) firstSeen.set(sourceId(row), seen);
+  }
+  return { firstSeen, start };
+};

@@ -71,8 +71,8 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # "Matrículas Activas" — the register lists active registrations only; there is no per-row status
-  # column. Constant rather than a defaulted lookup: the whole document IS the active fleet.
+  # No per-row status column, but the document itself is titled "Matrículas Activas": the register
+  # states every listed mark is an active registration, so `valid` is stated, not inferred.
   status:
     constant: valid
 

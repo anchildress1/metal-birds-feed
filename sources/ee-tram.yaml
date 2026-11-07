@@ -73,10 +73,10 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # The published register lists currently-registered aircraft only (deregistered marks drop off),
-  # so status is constant `valid` for every row — there is no per-row status column.
+  # No per-row status column, and the register never states that a listed mark is in good standing.
+  # `unknown` is served; `valid` would be an inference the register does not make.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: EE

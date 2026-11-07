@@ -148,7 +148,7 @@ describe('AircraftSchema', () => {
     expect(AircraftSchema.safeParse({ ...base, registration: 'A/B' }).success).toBe(true);
   });
 
-  it.each([null, 'reserved'] as const)('accepts status %p', (status) => {
+  it.each([null, 'reserved', 'unknown'] as const)('accepts status %p', (status) => {
     expect(AircraftSchema.safeParse({ ...base, status }).success).toBe(true);
   });
 

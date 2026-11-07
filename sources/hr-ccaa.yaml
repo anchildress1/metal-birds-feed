@@ -50,6 +50,10 @@ pdf:
       # while the 42.72pt page footer remains outside the parser's capture range.
       before_first_anchor_reach: 17
       before_first_anchor_pattern: '^(?:Ireland|Irska|Republika Irska|Mađarska|Slovenija|Slovenia|Austria|Bermuda|Singapore)$'
+      # The default reach past the top mark is half the page's tightest pitch; a last page of only
+      # tall rows (2026-11: 15.42pt) widens it past the column header line 13.32pt above that mark.
+      # The header line starts at the page margin, left of the mark band, where no table line does.
+      drop_margin_lines: true
       column_pos:
         - 66 # mark
         - 124 # seq (register sequence number — not unique across the doc; see source_id note below)
@@ -111,10 +115,10 @@ mapping:
   icao_type_code:
     constant: ~
 
-  # No per-row status column; the monthly publication IS the current active fleet (same reasoning
-  # as AESA's "Matrículas Activas").
+  # No per-row status column, and the register never states that a listed mark is in good standing.
+  # `unknown` is served; `valid` would be an inference the register does not make.
   status:
-    constant: valid
+    constant: unknown
 
   country:
     constant: HR

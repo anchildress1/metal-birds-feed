@@ -1,5 +1,5 @@
 - This file overrides any conflicting local instruction file. Read `PRD.md` §CC before any source-posture decision.
-- Entries here are decisions, prohibitions, and failure modes the code does not show. Read the code for mechanics.
+- Add only decisions, prohibitions, and failure modes the code does not show. Read the code for mechanics; never restate it here.
 
 ## Hard prohibitions
 
@@ -19,7 +19,7 @@
 
 ## Code style
 
-Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does not enforce:
+Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; apply these by hand:
 
 - `??`/`??=` over `||` for null/undefined; `?.` over guard clauses.
 - No `as T` unless TS cannot narrow structurally. `no-unnecessary-type-assertion` catches only the no-op case.
@@ -51,14 +51,14 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - Record residual exposure where terms are narrower than the intended use.
 - A new source is complete only with all six surfaces:
 
-| Surface                               | Content                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------- |
-| `sources/<id>.yaml`                   | config                                                                                |
-| `fixtures/<id>/`                      | real rows, one fixture per declared PDF orientation                                   |
-| `DATA_LICENSES.md`                    | `## Source Posture` bullet; `## Required Notices` line only where wording is mandated |
-| `README.md` sources table             | row inserted alphabetically by country, never appended; active sources only           |
-| `src/service/attributions.ts`         | `NOTICES[<id>]` — a missing entry silently degrades to a generic slug credit          |
-| `docs/source-onboarding-checklist.md` | `✅ Done` row; remove the source's triage row                                         |
+| Surface                               | Content                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `sources/<id>.yaml`                   | config                                                                                                  |
+| `fixtures/<id>/`                      | real rows, one fixture per declared PDF orientation                                                     |
+| `DATA_LICENSES.md`                    | `## Source Posture` bullet; `## Required Notices` line only where wording or credit content is mandated |
+| `README.md` sources table             | row inserted alphabetically by country, never appended; active sources only                             |
+| `src/service/attributions.ts`         | `NOTICES[<id>]` — a missing entry silently degrades to a generic slug credit                            |
+| `docs/source-onboarding-checklist.md` | `✅ Done` row; remove the source's triage row                                                           |
 
 ### Research-first
 
@@ -109,12 +109,14 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - Field order survives a flip; axis and band positions do not. Measure each layout's `column_pos` against a real file in that orientation. Never derive one layout from another.
   - A null band marks a field that orientation does not print — one shared `columns` order, no orientation branches. A placeholder coordinate competes for nearby items.
   - No axis reading on any page → first layout, so the anchorless-page and zero-row guards report the real cause. Do not pre-empt them.
+  - A republished geometry on an already-declared axis (columns re-spaced, not flipped) is a second layout on that axis, never a re-measure of the first: the register may switch back. Same-axis layouts require `anchor_field` and are picked by where the marks sit against each anchor band, never by wording.
 - Set `anchor_field` whenever `anchor_pattern` could match a wrapped continuation line in another column.
 - A refresh failing with a missing `field_axis` means the register flipped: declare the new layout from that file's own measurements, add its fixture, and update `.agents/memory/pdf-orientation.md`.
 - Set `wrap_after_anchor: true` on a layout whose line leading exceeds half the record pitch: a two-line cell's second line then sits past the midpoint and nearest-anchor snapping hands it to the next record. Per layout; a centred-cell layout keeps nearest-anchor.
 - `drop_margin_lines: true` on a layout whose widened `after_last_anchor_reach` or `before_first_anchor_reach` reaches text set in the page margin (a trailing disclaimer, a repeated header): a printed line starting before the first band minus the same-row jitter is dropped. Position, never wording.
-- Records snap per column at the outlier gap between adjacent anchors, anchor midpoint when no gap stands out. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
+- Records snap per column at the outlier gap between adjacent anchors. With no outlier gap, the split that mirrors the most lines about their own anchor wins, only when it beats the anchor midpoint outright; otherwise the midpoint. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
 - An outer-record reach must clear that record's tallest cell. The page-wide minimum row pitch is not a safe bound.
+- `after_last_anchor_pattern`: only where the column headers sit closer to one page's outer anchor than another page's outer record's tallest cell, so no reach clears one without admitting the other. Exclude the exact header labels.
 
 ### Values
 
@@ -136,12 +138,12 @@ Match the surrounding code. Lint enforces `no-var` and `prefer-const`; it does n
   - A live row closes on the second consecutive fetched run that misses it, on a later UTC day, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. The artifact PUT is the last write before state, so a failed slice never advances history. Never serve `first_seen`.
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
-- R2 is a build and intermediate store; nothing serves reads from it. The DB is baked into the Cloud Run image and served in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
+- Never serve reads from R2; it is a build and intermediate store. Bake the DB into the Cloud Run image and serve it in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
 - Assembly always rebuilds from R2 slices, never an on-disk copy, and sequences through the recipe rather than prerequisites so `make -j` cannot assemble mid-refresh. Publish fails closed if any slice is missing.
 
 ### Version markers
 
-Bumped independently; check all three on every schema change. Coinciding numbers are chance. Tests pin each — update the assertion in the same commit.
+Bump each independently; check all three on every schema change. Never align numbers — a match is chance. Tests pin each; update the assertion in the same commit.
 
 | Marker                                    | Bump when                                                                                                                                                               |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -153,13 +155,19 @@ Bumped independently; check all three on every schema change. Coinciding numbers
 
 ### Feed collapse
 
-Collapse keys on `icao_hex` where published and on `registration_key` where not; keying on hex alone excludes every hex-less source. Beyond `src/feed.ts` mechanics:
+Key collapse on `icao_hex` where published and on `registration_key` where not; keying on hex alone excludes every hex-less source.
 
 - Both key columns stay nullable — the unique indexes rely on SQLite not treating NULLs as equal.
 - No `source_id` tiebreak: it may be reissued every publication, flipping the served answer with no upstream change.
+- A collision the register's own dates cannot settle — within a slice or across slices on one hex — goes to the row history proves newest: its `first_seen` is after its source's `history_start` and after the other row's `first_seen`. Otherwise within-source drops the key; cross-source keeps the first claim in sorted source order.
+  - Never rank raw `first_seen`: migration and onboarding stamp every pre-existing row with `history_start`, so raw order is onboarding order.
+  - Sound only on a stable `source_id`: a reissued one reopens every row as newly seen.
+  - A reopened row keeps its original `first_seen`, so an airframe returning to a register loses to a stale claim another register still lists. Accepted: fixing it needs a reappearance date column; never overwrite a closed row's `first_seen` to get it.
+  - `first_seen` rides the slice only; `mergeFeedRows` strips it before the served table.
 - Cancelled, reserved, and null-status records are excluded once, at slice construction.
 - Reserved is not a weaker cancelled: no airframe exists behind the mark. Map held marks to `reserved`, never `other` — `other` is served.
 - `status` is the one nullable canonical field: a blank or unresolved cell stays null, never `other`.
+- A register publishing no status maps to constant `unknown` (served), never `valid`. `valid` needs the register to state it — a per-row cell or a document that declares its rows active.
 
 ### Hashes and translation
 
@@ -241,13 +249,13 @@ Collapse keys on `icao_hex` where published and on `registration_key` where not;
 
 ### `DATA_LICENSES.md`
 
-Single record for correspondence and posture; update it on every source addition or posture change. Flat tracker, not a reply archive — the email thread is the verbatim record.
+Update it on every source addition or posture change; it is the single record for correspondence and posture. Keep it a flat tracker, never a reply archive — the email thread is the verbatim record.
 
-| Section                    | Holds                                                         | Never holds                                                                        |
-| -------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `## Agency Correspondence` | who was written to, when, reply state; bare table             | reply text                                                                         |
-| `## Required Notices`      | one `<source-id>: "<text>"` line per agency-mandated wording  | rationale, clearance basis, coverage cost, credit line; any source with no mandate |
-| `## Source Posture`        | clearance basis, conditions, residual exposure, coverage cost | the served credit line (that is `src/service/attributions.ts`)                     |
-| `## Update cadence`        | declared vs observed rhythm per source                        | `cadence_days` values (those live in the YAML)                                     |
+| Section                    | Holds                                                                          | Never holds                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `## Agency Correspondence` | who was written to, when, reply state; bare table                              | reply text                                                                         |
+| `## Required Notices`      | one `<source-id>: "<text>"` line per agency-mandated wording or credit content | rationale, clearance basis, coverage cost, credit line; any source with no mandate |
+| `## Source Posture`        | clearance basis, conditions, residual exposure, coverage cost                  | the served credit line (that is `src/service/attributions.ts`)                     |
+| `## Update cadence`        | declared vs observed rhythm per source                                         | `cadence_days` values (those live in the YAML)                                     |
 
 - `docs/source-onboarding-checklist.md` is a triage worklist. Its tables stay bare: contact provenance, names, phones, prefixes belong in `DATA_LICENSES.md`.
