@@ -714,7 +714,7 @@ describe('loadSourceConfig', () => {
   it('accepts one layout per axis and an anchor_field that names a primary column', () => {
     const yaml = pdfGuardYaml({
       layouts:
-        '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: x\n      column_pos: [10, null]\n',
+        '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: x\n      column_pos: [null, 60]\n',
       anchorField: 'mark',
     });
     withPdfGuard('_test_pdf_two_axes.yaml', yaml, (path) => {
@@ -789,6 +789,13 @@ describe('loadSourceConfig', () => {
       '    - field_axis: y\n      column_pos: [100, 50]\n',
       'nope',
       /anchor_field must name a column in columns\[primary\]/,
+    ],
+    [
+      'a layout that prints no band for anchor_field',
+      '_test_pdf_unprinted_anchor_field.yaml',
+      '    - field_axis: y\n      column_pos: [100, null]\n',
+      'mark',
+      /must print a band for pdf\.anchor_field/,
     ],
   ])('rejects %s', (_description, filename, layouts, anchorField, message) => {
     withPdfGuard(filename, pdfGuardYaml({ layouts, anchorField }), (path) => {

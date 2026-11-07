@@ -775,17 +775,13 @@ const pickByAnchorBand = (
   anchorColumn: number | undefined
 ): PdfLayoutOptions => {
   const axis = sameAxis[0].layout.field_axis;
-  if (anchorColumn === undefined)
-    throw new Error(
-      `PDF fits ${sameAxis.length} field_axis: ${axis} layouts and no anchor_column to tell them apart`
-    );
   const ranked = sameAxis
     .map((c) => ({
       layout: c.layout,
-      // A fitting candidate captured anchors into this band, so it is printed and the list non-empty.
+      // The loader requires anchor_field on same-axis layouts and a printed band for it in each.
       offset: Math.abs(
         medianOf([...c.anchorFieldCoords].sort((a, b) => a - b)) -
-          c.layout.column_pos[anchorColumn]!
+          c.layout.column_pos[anchorColumn!]!
       ),
     }))
     .sort((a, b) => a.offset - b.offset);
@@ -796,10 +792,11 @@ const pickByAnchorBand = (
         `nearest declared anchor band (tolerance ${ANCHOR_BAND_TOLERANCE_PT}pt) — the columns moved; ` +
         'measure this geometry against the live file and declare it'
     );
-  if (runnerUp.offset === nearest.offset)
+  if (runnerUp.offset <= ANCHOR_BAND_TOLERANCE_PT)
     throw new Error(
-      `PDF fits ${ranked.length} field_axis: ${axis} layouts equally (marks ${nearest.offset.toFixed(1)}pt ` +
-        'from each anchor band) — the anchor bands do not separate the geometries; re-measure them'
+      `PDF fits ${ranked.length} field_axis: ${axis} layouts within tolerance (marks ` +
+        `${nearest.offset.toFixed(1)}pt and ${runnerUp.offset.toFixed(1)}pt from their anchor bands) ` +
+        '— the anchor bands do not separate the geometries; re-measure them'
     );
   return nearest.layout;
 };

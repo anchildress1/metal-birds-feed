@@ -1495,16 +1495,14 @@ describe('parsePdf same-axis layouts', () => {
   it('throws when two same-axis anchor bands sit equally near the marks', async () => {
     await expect(
       parsePdf(buildPdf([page(60)]), opts([geometry(58), geometry(62)]))
-    ).rejects.toThrow(/fits 2 field_axis: x layouts equally/);
+    ).rejects.toThrow(/fits 2 field_axis: x layouts within tolerance/);
   });
 
-  it('throws when same-axis layouts have no anchor_column to tell them apart', async () => {
+  // A file between two geometries must fail even when one band is marginally closer.
+  it('throws when the runner-up anchor band is also within tolerance', async () => {
     await expect(
-      parsePdf(
-        buildPdf([page(71)]),
-        opts([geometry(50), geometry(70)], { anchor_column: undefined })
-      )
-    ).rejects.toThrow(/no anchor_column to tell them apart/);
+      parsePdf(buildPdf([page(60)]), opts([geometry(57), geometry(62)]))
+    ).rejects.toThrow(/marks 2\.0pt and 3\.0pt from their anchor bands/);
   });
 
   // Each layout reads its own axis off a different page, and each captures three marks.

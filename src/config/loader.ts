@@ -424,6 +424,18 @@ const SourceConfigSchema = z
       message: 'pdf.anchor_field must name a column in columns[primary]',
     }
   )
+  // A layout that does not print the anchor column can never capture an anchor, so it would never
+  // be picked and a file in its geometry would fail blaming an orientation flip.
+  .refine(
+    (c) => {
+      if (c.pdf?.anchor_field === undefined) return true;
+      const idx = (c.columns?.[c.primary] ?? []).indexOf(c.pdf.anchor_field);
+      return idx === -1 || c.pdf.layouts.every((l) => l.column_pos[idx] !== null);
+    },
+    {
+      message: 'every pdf.layouts[].column_pos must print a band for pdf.anchor_field',
+    }
+  )
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's
   // `files.get(config.primary)`), which is keyed by download.entries' own keys — a mismatched
   // alias here only surfaces as a runtime "not found in downloaded files" error after a full
