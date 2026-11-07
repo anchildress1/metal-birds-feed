@@ -253,7 +253,9 @@ The skill hard-codes these. They are not suggestions the assistant may talk itse
 - It confirms with you before the full configured-source pull and reports that the operator's first
   data load incurred approximately $6.50 USD in R2 charges — an observed bill, not a guaranteed
   quote or a claim about which billing dimension caused it
-- It confirms with you before any Cloud Run deploy, because that puts data on a server
+- It confirms with you before any Cloud Run deploy, because that puts data on a server. Before the
+  first one, it creates the service's own image repository with a cleanup policy that keeps the 3
+  newest images, the same one-time step the [manual guide](getting-started.md) walks through
 - It never downloads a register that sits behind a browser check. Those few sources say
   `manual: true`; you save the file in your own browser, and it runs `make ingest` with it
 - It sends you to `DATA_LICENSES.md` rather than deciding a licensing question itself
