@@ -547,8 +547,8 @@ describe('readArtifactRows', () => {
     ).toEqual({ status_source_text: null, emergency_transponder: null, remarks: null });
   });
 
-  // Closed rows never regenerate from config, so a constant `valid` they were written with must be
-  // rewritten here or it outlives the config fix forever.
+  // Closed rows never regenerate from config, so a constant `valid` written before the remap must be
+  // rewritten here, or it is served forever.
   it("lifts a version-15 artifact, rewriting a status-less register's valid to unknown", () => {
     const db = new Database(':memory:');
     db.run('PRAGMA user_version = 15');

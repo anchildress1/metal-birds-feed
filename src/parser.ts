@@ -663,7 +663,7 @@ const parsePdfPage = (
   // reach's bound entirely, disabling the allowlist gate exactly where a lone final-page record
   // most needs it. Falls back to SAME_ROW_TOLERANCE_PT rather than 0: with no gap data, that's the
   // only safe-zone width available, and 0 would gate the record's own same-row fields (see above).
-  // Shared by defaultLo and beforeFirstAnchorReach below so the Infinity-guard lives in one place
+  // Shared by both default bounds and both widened reaches so the Infinity-guard lives in one place
   // — computing it separately in each would let a future edit to just one of them silently
   // reintroduce the Math.max(Infinity, reach) bug this whole block exists to avoid.
   const safeSpread = Number.isFinite(spread) ? spread : SAME_ROW_TOLERANCE_PT;

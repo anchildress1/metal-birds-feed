@@ -135,7 +135,6 @@ build-feed: ## Refresh every source, then assemble feed.sqlite
 # change-checked the DB) can deploy without a second build; `make deploy` chains both for operators.
 # FEED_TOKEN is bound from the Secret Manager secret ($(FEED_SECRET)) on every deploy — idempotent,
 # so the first deploy works too. Application auth owns the Authorization header.
-# Single instance, scale-to-zero: --min-instances=0 --max-instances=1.
 deploy-only:
 	@set -eu; \
 		if [ -f "$(ENV_FILE)" ]; then \

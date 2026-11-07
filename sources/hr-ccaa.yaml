@@ -116,7 +116,6 @@ mapping:
     constant: ~
 
   # No per-row status column, and the register never states that a listed mark is in good standing.
-  # `unknown` is served; `valid` would be an inference the register does not make.
   status:
     constant: unknown
 

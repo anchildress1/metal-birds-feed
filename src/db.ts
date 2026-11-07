@@ -234,7 +234,7 @@ export const buildSqlite = (rows: ArtifactRow[]): Uint8Array => {
     // the aircraft on the register today.
     // 15 adds status_source_text, emergency_transponder and remarks.
     // 16 widens the `status` value domain with `unknown`, for a register that publishes no status;
-    // a version-15-or-earlier consumer would read those rows as `valid`.
+    // version 15 stored those rows as `valid`.
     db.run(`PRAGMA user_version = ${DB_SCHEMA_VERSION}`);
     db.run(DDL);
     for (const stmt of INDEXES) db.run(stmt);

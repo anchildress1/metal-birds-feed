@@ -1098,8 +1098,8 @@ describe('parsePdf', () => {
       );
     });
 
-    // Page 3's top record carries its legal owner 11.2pt above its mark; pages 4, 5, 7 and 8 print
-    // the column headers 10.2pt above theirs.
+    // Page 3's top record carries its legal owner 11.2pt above its mark; pages 4 and 5 print the
+    // column headers 10.6pt above theirs, pages 7 and 8 10.2pt.
     it('keeps the top record’s first line while the pattern keeps the headers out', async () => {
       const rows = await parsePdf(mvSixteenBuf(), mvOpts());
       expect(rows.find((row) => row.mark === '8Q-TMW')!.legal_owner.split('\n')[0]).toBe(

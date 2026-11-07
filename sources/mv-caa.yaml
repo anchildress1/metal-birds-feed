@@ -28,13 +28,13 @@ primary: register
 delimiter: ','
 format: pdf
 
-# CAA republishes this table in three geometries and has switched five times since 2026-07: rotated
-# before 2026-07-13, unrotated until 2026-08-17, rotated again until 2026-09-03, unrotated until
-# 2026-10-28, and since then the rotated table's sixteen columns set with fields along x. All three
-# are declared: the parser detects the axis from the anchors and, between the two x layouts, picks
-# the one whose mark band the marks sit on, so a switch is a no-op here. The field ORDER survives a
-# switch; the axis and every band position do not, so each layout carries its own measured
-# `column_pos` — never derive one from another.
+# CAA republishes this table in three geometries: rotated before 2026-07-13, unrotated until
+# 2026-08-17, rotated again until 2026-09-03, unrotated until 2026-10-28, and since then the rotated
+# table's sixteen columns set with fields along x. All three are declared: the parser detects the
+# axis from the anchors and, between the two x layouts, picks the one whose mark band the marks sit
+# on, so a switch is a no-op here. The field ORDER survives a switch; the axis and every band
+# position do not, so each layout carries its own measured `column_pos` — never derive one from
+# another.
 # See PdfConfig in src/types/config.ts for the extraction model.
 pdf:
   anchor_pattern: '^8Q-[A-Z]{3}$'
@@ -48,8 +48,8 @@ pdf:
     # Registration" holds "Operator of Aircraft" and "Basis of Registration, Other Specifics" holds
     # "N/A". No column names an operator.
     - field_axis: x
-      # Cells centre on their anchor, so a tall top record reaches 13.0 above its mark while the
-      # column headers sit 10.2 above a single-line top record on another page: no reach clears the
+      # Cells centre on their anchor, so a tall top record reaches 11.2 above its mark while the
+      # column headers sit 10.2–10.6 above a single-line top record on other pages: no reach clears the
       # first without admitting the second. 14 clears every record's tallest cell, and the pattern
       # keeps the header labels out of the widened zone.
       after_last_anchor_reach: 14
