@@ -1,9 +1,10 @@
 // Why this exists: the feed is the one place a consumer reads a row's credit line, so it never has
 // to encode its own source→notice map. Where an agency mandates exact wording (Transport Canada,
-// CAA Maldives, CAA Taiwan, Transpordiamet) or credit content (DGAC Chile), the string here must carry
-// that mandate verbatim — keep it in sync with DATA_LICENSES `## Required Notices`, which is
-// authoritative for the legally-fixed text. Open / public-domain sources with no mandated notice get a courtesy credit so no displayed
-// row is ever uncredited. Keyed by source slug (config.id / FeedRow.source).
+// CAA Maldives, CAA Taiwan, Transpordiamet) or credit content (DGAC Chile, CAA New Zealand, CAAS,
+// CAAT), the string here must carry that mandate verbatim — keep it in sync with DATA_LICENSES
+// `## Required Notices`, which is authoritative for the legally-fixed text. Sources with no mandated
+// notice get a courtesy credit so no displayed row is ever uncredited. Keyed by source slug
+// (config.id / FeedRow.source).
 
 const NOTICES: Record<string, string> = {
   faa: 'Source: Federal Aviation Administration (FAA), United States — public-domain civil aircraft registry, normalized into this project schema without implying endorsement.',

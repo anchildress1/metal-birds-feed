@@ -65,10 +65,6 @@ describe('attributionFor', () => {
       'Source data from the Jamaica Civil Aviation Authority (JCAA) — https://www.jcaa.gov.jm/aircraft-registry-page/; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
     ],
     [
-      'th-caat',
-      'Source data from the Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th; used and shared with permission for non-commercial use, normalized into this project schema without implying endorsement.',
-    ],
-    [
       'au-casa',
       'Source data from the Civil Aviation Safety Authority (CASA), Australia, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); changed by normalization into this project schema, without implying endorsement.',
     ],
@@ -83,14 +79,6 @@ describe('attributionFor', () => {
     [
       'lt-tka',
       'Transporto kompetencijų agentūra (Transport Competence Agency), Lithuania — Civilinių orlaivių registro duomenys, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); retrieved from https://data.gov.lt and changed by normalization into this project schema, without implying endorsement.',
-    ],
-    [
-      'nz-caa',
-      'Source data from the Civil Aviation Authority of New Zealand — https://www.aviation.govt.nz/aircraft/aircraft-registration/aircraft-register-search/; the CAA is acknowledged as the source as its terms require, treated as Private-use and normalized into this project schema without implying endorsement.',
-    ],
-    [
-      'sg-caas',
-      'Source data from the Civil Aviation Authority of Singapore — https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/; publicly accessible and free to use with attribution, confirmed by CAAS, normalized into this project schema without implying endorsement.',
     ],
   ])('serves the unmandated %s notice exactly', (id, expected) => {
     expect(attributionFor(id)).toBe(expected);

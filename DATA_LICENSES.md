@@ -200,8 +200,11 @@ Single record of source for agency correspondence and source-use posture: every 
 - cl-dgac: "Dirección General de Aeronáutica Civil (DGAC) of Chile — the sole official source and copyright holder of the information — https://www.dgac.gob.cl/aeronaves-2/registro-nacional-de-aeronaves/"
 - ee-tram: "Source: Estonian Transport Administration (Transpordiamet) – https://transpordiamet.ee/ohusoidukite-register"
 - mv-caa: "Whilst reasonable care is taken compiling the data, the CAA does not warrant it is free of error or omission."
+- nz-caa: "Source data from the Civil Aviation Authority of New Zealand"
+- sg-caas: "Civil Aviation Authority of Singapore — https://www.caas.gov.sg/industry/aircraft-operators/certificate-of-registration/"
 - tc-ca: "Reproduced and distributed with the permission of the Government of Canada."
 - tc-ca: "This product has been produced by or for Ashley Childress and includes data provided by the Government of Canada. The incorporation of data sourced from the Government of Canada within this product shall not be construed as constituting an endorsement by the Government of Canada of our product."
+- th-caat: "Civil Aviation Authority of Thailand (CAAT) — https://www.caat.or.th"
 - tw-caa: "Source: Civil Aviation Administration, MOTC R.O.C. — caa.gov.tw. Licensed under the Open Government Data License, v1.0."
 
 ## Source Posture
