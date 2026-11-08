@@ -135,9 +135,9 @@ the user to look).
 
 **Full configured-source pull — confirm all five before running:**
 
-- wall clock ≈ the slowest single register, since sources run concurrently. Measured locally: a
-  complete run took 25s end to end (413k rows, 15 sources) with most sources cadence-skipped, so
-  quote that as steady state and say a cold first pull is longer. **Not** the 30 minutes quoted
+- wall clock ≈ the slowest single register, since sources run concurrently. A run with most
+  sources cadence-skipped is quick; a cold first pull downloads every source and the FAA register
+  dominates. Quote no figure: source and row counts grow. **Not** the 30 minutes quoted
   elsewhere in this repo — that is this repo's own `timeout-minutes` on the CI refresh job, not a
   platform limit (GitHub allows 6h) and not a local measurement
 - R2 pricing and account usage checked. State that the operator's first data load incurred
