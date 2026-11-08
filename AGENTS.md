@@ -1,4 +1,4 @@
-- Read `PRD.md` §CC before any source-posture decision.
+- This file overrides any conflicting local instruction file. Read `PRD.md` §CC before any source-posture decision.
 
 ## Hard prohibitions
 
@@ -7,6 +7,7 @@
 - No commercial operator deployment (PRD §CC.3).
 - No public output distribution. Artifacts are private to Ashley-operated applications; forks self-host.
 - No `..` in path inputs. Resolve to absolute, enforce sandbox-root containment after resolution, default deny.
+- No quick fixes. No backwards-compatibility shims.
 - No `// @ts-ignore` without a justifying comment. Never weaken `tsconfig.json` strict settings.
 - No inline `eslint-disable*`/`eslint-enable` directives, src or tests. Restructure so the rule passes; a config change is a chat question, never a PR comment.
 - No error handling for impossible scenarios. Validate at system boundaries only.
@@ -14,6 +15,7 @@
 - No silent loss of upstream information. Extend `src/schema.ts` rather than drop a structurally meaningful field at mapping config. PII is the only allowed drop. A field restating a type-level property derivable from mapped fields is not structurally meaningful.
 - No invented data. Null beats a plausible guess.
 - Human prose only in `README.md`, `docs/*.md`, `PRD.md`, `DATA_LICENSES.md`, `CHANGELOG.md`, commit/PR bodies. Elsewhere — this file, `SKILL.md`, `references/*`, `src/`, `tests/`, `sources/*.yaml`, workflows — no overview/purpose/introduction/summary/transition/status sentence, no paragraph where a bullet states the rule.
+- Comments: WHY only — a constraint, an invariant, or a failure mode a reader would reintroduce. Never WHAT. Never narrate a change, ticket, or PR.
 
 ## Code style
 
