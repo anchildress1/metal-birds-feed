@@ -51,6 +51,9 @@ jobs:
 
       - name: Lint workflows
         uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+        with:
+          # Pinned so lint results change only with a commit; .github/actionlint.yaml depends on it.
+          version: 1.7.12
 
       # refresh.yml runs dist/pipeline.js built by make build; tsc can exit 0 while
       # emitting nothing (noEmit config drift), so assert the artifact actually exists.

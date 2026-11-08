@@ -23,11 +23,6 @@ jobs:
       security-events: write
       contents: read
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [javascript-typescript]
-
     steps:
       - name: Checkout code
         # GitHub-owned actions intentionally follow the repository's major-tag update policy.
@@ -36,12 +31,11 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
-          languages: ${{ matrix.language }}
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+          languages: javascript-typescript
+          build-mode: none
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
-          category: '/language:${{ matrix.language }}'
+          # A new category orphans every existing alert.
+          category: '/language:javascript-typescript'
