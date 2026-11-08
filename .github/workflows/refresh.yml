@@ -137,7 +137,7 @@ jobs:
         with:
           name: refresh-logs-${{ matrix.source }}-${{ github.run_id }}
           path: logs/
-          retention-days: 90
+          retention-days: 30
 
   # A paused source is outside the matrix, so nothing above reads its state. Local runs (VPN,
   # `make ingest`) still move it, and this job opens or closes its staleness issue from that state
