@@ -247,11 +247,9 @@ Remove the `REFRESH_SOURCE` line from `.env` (or blank it out) and run `make ref
 warnings apply:
 
 - It pulls every registry still configured in `sources/`, and they run **concurrently** — the wall
-  clock is the slowest single
-  register, not the sum. For scale, a complete `make refresh` measured on this project's own
-  machine took **25 seconds** end to end, publishing 413,000 rows across all 15 sources. Most were
-  already current and skipped their download, so budget longer for a genuine first pull, where all
-  15 download and the FAA's 312k records dominate.
+  clock is the slowest single register, not the sum. A routine run is quick because most sources
+  are already current and skip their download. Budget longer for a genuine first pull, where every
+  source downloads and the FAA register, the largest, dominates.
 
   You may see "30 minutes" quoted for this elsewhere. That is the `timeout-minutes` this project
   sets on its own CI refresh job — not a GitHub limit (hosted runners allow 6 hours) and not a

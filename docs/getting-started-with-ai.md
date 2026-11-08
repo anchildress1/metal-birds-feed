@@ -153,10 +153,10 @@ check the dashboard.
 
 ```bash
 # Claude Code
-claude mcp add --transport http --scope user cloudflare-bindings https://bindings.mcp.cloudflare.com/mcp
+claude mcp add --transport http --scope user cloudflare-api https://mcp.cloudflare.com/mcp
 
 # Codex
-codex mcp add cloudflare-bindings --url https://bindings.mcp.cloudflare.com/mcp
+codex mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp
 ```
 
 Opens a browser to log in to Cloudflare. It uses your normal login — **your R2 API keys are never

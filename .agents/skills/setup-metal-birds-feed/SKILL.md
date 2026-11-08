@@ -135,9 +135,9 @@ the user to look).
 
 **Full configured-source pull — confirm all five before running:**
 
-- wall clock ≈ the slowest single register, since sources run concurrently. Measured locally: a
-  complete run took 25s end to end (413k rows, 15 sources) with most sources cadence-skipped, so
-  quote that as steady state and say a cold first pull is longer. **Not** the 30 minutes quoted
+- wall clock ≈ the slowest single register, since sources run concurrently. A run with most
+  sources cadence-skipped is quick; a cold first pull downloads every source and the FAA register
+  dominates. Quote no figure: source and row counts grow. **Not** the 30 minutes quoted
   elsewhere in this repo — that is this repo's own `timeout-minutes` on the CI refresh job, not a
   platform limit (GitHub allows 6h) and not a local measurement
 - R2 pricing and account usage checked. State that the operator's first data load incurred
@@ -344,21 +344,21 @@ re-pull upstream. Confirm immediately before running it because it publishes dat
 
 Optional. Setup succeeds without it; it improves diagnosis. Configure on request, or offer once.
 
-| Server                | URL                                       | Buys                                                     |
-| --------------------- | ----------------------------------------- | -------------------------------------------------------- |
-| `cloudflare-bindings` | `https://bindings.mcp.cloudflare.com/mcp` | Verify the bucket and uploaded objects directly          |
-| `cloudflare-docs`     | `https://docs.mcp.cloudflare.com/mcp`     | R2 docs; no auth                                         |
-| `context7`            | `https://mcp.context7.com/mcp`            | Current Bun / Zod / AWS SDK docs instead of stale recall |
+| Server            | URL                                   | Buys                                                     |
+| ----------------- | ------------------------------------- | -------------------------------------------------------- |
+| `cloudflare-api`  | `https://mcp.cloudflare.com/mcp`      | Verify the bucket and uploaded objects directly          |
+| `cloudflare-docs` | `https://docs.mcp.cloudflare.com/mcp` | R2 docs; no auth                                         |
+| `context7`        | `https://mcp.context7.com/mcp`        | Current Bun / Zod / AWS SDK docs instead of stale recall |
 
 ```bash
 # Claude Code
-claude mcp add --transport http --scope user cloudflare-bindings https://bindings.mcp.cloudflare.com/mcp
+claude mcp add --transport http --scope user cloudflare-api https://mcp.cloudflare.com/mcp
 
 # Codex
-codex mcp add cloudflare-bindings --url https://bindings.mcp.cloudflare.com/mcp
+codex mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp
 ```
 
-`cloudflare-bindings` opens a browser OAuth login. It uses the user's Cloudflare session — never
+`cloudflare-api` opens a browser OAuth login. It uses the user's Cloudflare session — never
 pass it the R2 API keys from `.env`. Verify with `claude mcp list` / `codex mcp list`; a newly added
 server needs an assistant restart before its tools load.
 
