@@ -1,5 +1,4 @@
-- This file overrides any conflicting local instruction file. Read `PRD.md` §CC before any source-posture decision.
-- Add only decisions, prohibitions, and failure modes the code does not show. Read the code for mechanics; never restate it here.
+- Read `PRD.md` §CC before any source-posture decision.
 
 ## Hard prohibitions
 
@@ -8,14 +7,13 @@
 - No commercial operator deployment (PRD §CC.3).
 - No public output distribution. Artifacts are private to Ashley-operated applications; forks self-host.
 - No `..` in path inputs. Resolve to absolute, enforce sandbox-root containment after resolution, default deny.
-- No quick fixes. No backwards-compatibility shims.
 - No `// @ts-ignore` without a justifying comment. Never weaken `tsconfig.json` strict settings.
+- No inline `eslint-disable*`/`eslint-enable` directives, src or tests. Restructure so the rule passes; a config change is a chat question, never a PR comment.
 - No error handling for impossible scenarios. Validate at system boundaries only.
 - No `.skip` on tests — fix or delete. Never lower coverage thresholds.
 - No silent loss of upstream information. Extend `src/schema.ts` rather than drop a structurally meaningful field at mapping config. PII is the only allowed drop. A field restating a type-level property derivable from mapped fields is not structurally meaningful.
 - No invented data. Null beats a plausible guess.
 - Human prose only in `README.md`, `docs/*.md`, `PRD.md`, `DATA_LICENSES.md`, `CHANGELOG.md`, commit/PR bodies. Elsewhere — this file, `SKILL.md`, `references/*`, `src/`, `tests/`, `sources/*.yaml`, workflows — no overview/purpose/introduction/summary/transition/status sentence, no paragraph where a bullet states the rule.
-- Comments: WHY only — a constraint, an invariant, or a failure mode a reader would reintroduce. Never WHAT. Never narrate a change, ticket, or PR.
 
 ## Code style
 
@@ -63,7 +61,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 ### Research-first
 
 - Exhaust research before the first email: open-data portals (CKAN/Aporta/data.gov.\*), register pages, ToS/disclaimer, robots policy, license declarations.
-- Record in lockstep: `DATA_LICENSES.md` (correspondence row + posture, storage/cache restrictions) + `docs/source-onboarding-checklist.md` (in-flight row). Add the `README.md` row only once active.
+- Record in lockstep: `DATA_LICENSES.md` (correspondence row + posture, storage/cache restrictions) + `docs/source-onboarding-checklist.md` (in-flight row).
 - Keep an agency email in `DATA_LICENSES.md` only if that agency replied — a recorded non-replier address reads as verified. `Email` is `n/a` wherever `Reply` is `pending`. Gmail is the record of who was written to.
 - After recon on an already-emailed agency: update docs, move on; re-contact only on a materially new fact.
 
@@ -134,7 +132,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 
 - `mapRows()` (`map_*`) is column mapping; `localizeRecords()` (`localize_*`) is the Gemini pass. Never call mapping "translate", prose included.
 - Every state field is required. Never add an optional-field fallback for an older shape.
-- A per-source artifact keeps its closed rows (`removed_on` set); live rows regenerate from source. This is the one exception to the no-compatibility rule: a closed row is data the register no longer holds, not cache.
+- A per-source artifact keeps its closed rows (`removed_on` set); live rows regenerate from source. A closed row is data the register no longer holds, not cache; it migrates, never resets.
   - A live row closes on the second consecutive fetched run that misses it, on a later UTC day, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. The artifact PUT is the last write before state, so a failed slice never advances history. Never serve `first_seen`.
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
@@ -214,8 +212,7 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 | `Generated-by`        | AI-majority              |
 
 - Never stack a second footer naming the same model, whatever a harness default asks. A genuinely distinct agent (e.g. `Codex <noreply@openai.com>`) gets its own line.
-- Atomic: each commit independently typechecks, lints, and passes tests. Never sweep unrelated working-tree changes in.
-- Never `--no-verify`; never bypass a pre-commit check.
+- Atomic: each commit independently typechecks, lints, and passes tests. Never sweep unrelated working-tree changes in. Never `--no-verify`.
 - A decision reversing an earlier one: say so in the commit body and update the rule here in the same commit.
 
 ## Branches
@@ -242,9 +239,9 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 
 ### Onboarding surfaces
 
-- A change to `make` targets, `.env.example`, or a required env var updates all three or none: `docs/getting-started.md` (human, manual) · `docs/getting-started-with-ai.md` (human, agent-driven) · the setup skill (agent-executed).
-- The setup skill's one real copy is under `.agents/` (vendor-neutral; what Codex scans). `.claude/skills/` holds a tracked relative symlink. Edit the `.agents/` copy; never replace the symlink with a second real file.
-- `.gitignore` keeps `.claude/*` + `!.claude/skills/`. Ignoring `.claude/` kills the negation — git cannot re-include under an excluded directory — and the symlink vanishes from every clone with nothing failing. Windows clones without `core.symlinks` get a text file; the AI guide documents the fallback.
+- A change to `make` targets, `.env.example`, or a required env var updates all three or none: `docs/getting-started.md` · `docs/getting-started-with-ai.md` · the setup skill.
+- The setup skill's one real copy is under `.agents/` (what Codex scans). `.claude/skills/` holds a tracked relative symlink. Edit the `.agents/` copy; never replace the symlink with a second real file.
+- `.gitignore` keeps `.claude/*` + `!.claude/skills/`. Ignoring `.claude/` kills the negation — git cannot re-include under an excluded directory — and the symlink vanishes from every clone with nothing failing.
 
 ### `DATA_LICENSES.md`
 
