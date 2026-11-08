@@ -344,21 +344,21 @@ re-pull upstream. Confirm immediately before running it because it publishes dat
 
 Optional. Setup succeeds without it; it improves diagnosis. Configure on request, or offer once.
 
-| Server                | URL                                       | Buys                                                     |
-| --------------------- | ----------------------------------------- | -------------------------------------------------------- |
-| `cloudflare-bindings` | `https://bindings.mcp.cloudflare.com/mcp` | Verify the bucket and uploaded objects directly          |
-| `cloudflare-docs`     | `https://docs.mcp.cloudflare.com/mcp`     | R2 docs; no auth                                         |
-| `context7`            | `https://mcp.context7.com/mcp`            | Current Bun / Zod / AWS SDK docs instead of stale recall |
+| Server            | URL                                   | Buys                                                     |
+| ----------------- | ------------------------------------- | -------------------------------------------------------- |
+| `cloudflare-api`  | `https://mcp.cloudflare.com/mcp`      | Verify the bucket and uploaded objects directly          |
+| `cloudflare-docs` | `https://docs.mcp.cloudflare.com/mcp` | R2 docs; no auth                                         |
+| `context7`        | `https://mcp.context7.com/mcp`        | Current Bun / Zod / AWS SDK docs instead of stale recall |
 
 ```bash
 # Claude Code
-claude mcp add --transport http --scope user cloudflare-bindings https://bindings.mcp.cloudflare.com/mcp
+claude mcp add --transport http --scope user cloudflare-api https://mcp.cloudflare.com/mcp
 
 # Codex
-codex mcp add cloudflare-bindings --url https://bindings.mcp.cloudflare.com/mcp
+codex mcp add cloudflare-api --url https://mcp.cloudflare.com/mcp
 ```
 
-`cloudflare-bindings` opens a browser OAuth login. It uses the user's Cloudflare session — never
+`cloudflare-api` opens a browser OAuth login. It uses the user's Cloudflare session — never
 pass it the R2 API keys from `.env`. Verify with `claude mcp list` / `codex mcp list`; a newly added
 server needs an assistant restart before its tools load.
 
