@@ -220,8 +220,8 @@ export interface PdfConfig {
   // Text items matching `mark_pattern` that are not marks, verbatim (a wrapped continuation line in
   // another column that reads like one).
   mark_pattern_exclusions?: string[];
-  // Pages expected to print no mark (a header-only final page). Default 0: every page beyond the
-  // budget fails the run, since rows there escape the mark check.
+  // Trailing pages expected to print no mark (a header-only final page). Default 0: any other
+  // mark-less page fails the run, since rows there escape the mark check.
   markless_pages?: number;
 }
 

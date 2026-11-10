@@ -32,8 +32,7 @@ pdf:
   # Zapovjedništvo HRZ I", a military unit name), which the bare mark pattern also matches.
   mark_pattern_exclusions: [PZO]
   # The register ends on a page holding only the repeated column header and the page footer when
-  # its record count lands exactly on a page boundary. Residual exposure: in a month without that
-  # page, one data page that loses its marks also passes, dropping about 20 rows unchecked.
+  # its record count lands exactly on a page boundary.
   markless_pages: 1
 
 columns:

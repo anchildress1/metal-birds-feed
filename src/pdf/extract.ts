@@ -126,9 +126,10 @@ interface ChunkResult {
  * columns, model, and prompt are unchanged and that still validates; requests the rest at
  * `GEMINI_REQUESTS_PER_MINUTE`. When any chunk was requested, every validated chunk is written back
  * to `cache` before any chunk failure throws.
- * @throws when the file is not a PDF, its text layer prints no mark, more pages print no mark than
- *   `markless_pages` allows, or any chunk's response breaks the schema, has a row without a mark, or
- *   disagrees with the marks its pages print.
+ * @throws when the file is not a PDF, its text layer prints no mark, a page prints no mark outside
+ *   the trailing `markless_pages`, its two page counts disagree, the cache cannot be read, or any
+ *   chunk's response breaks the schema, has a row without a mark, or disagrees with the marks its
+ *   pages print.
  */
 export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): Promise<Row[]> {
   // A register behind a maintenance or error page answers 200 with HTML. The header may follow
@@ -151,10 +152,16 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   if (markless.length === pages.length)
     throw new Error('PDF text layer has no item matching pdf.mark_pattern (scanned or drifted)');
   // Rows on a page printing no mark never reach the mark check, and PDF sources cannot use
-  // record_count: an appended scanned page or a new mark series would drop its rows silently.
-  if (markless.length > (options.markless_pages ?? 0))
+  // record_count: an appended scanned page or a new mark series would drop its rows silently. The
+  // budget covers trailing pages only, so a mid-document page losing its marks can never spend it.
+  const allowed = options.markless_pages ?? 0;
+  let trailing = 0;
+  while (pageMarks[pages.length - 1 - trailing].length === 0) trailing++;
+  const firstBudgeted = pages.length - Math.min(trailing, allowed) + 1;
+  const unbudgeted = markless.filter((page) => page < firstBudgeted);
+  if (unbudgeted.length > 0)
     throw new Error(
-      `${markless.length} PDF pages print no item matching pdf.mark_pattern (pdf.markless_pages allows ${options.markless_pages ?? 0}): pages ${markless.join(', ')}`
+      `${unbudgeted.length} PDF pages print no item matching pdf.mark_pattern (pdf.markless_pages allows ${allowed}, at the end only): pages ${unbudgeted.join(', ')}`
     );
 
   const intervalMs = Math.ceil(

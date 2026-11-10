@@ -204,10 +204,11 @@ describe('extractPdfRows', () => {
     expect(requestTableRows).not.toHaveBeenCalled();
   });
 
-  it('fails on a PDF whose text layer prints no mark, without calling Gemini', async () => {
-    await expect(
-      extractPdfRows(TAIL_PDF, { ...OPTIONS, mark_pattern: 'NOPE-[0-9]{9}' })
-    ).rejects.toThrow('PDF text layer has no item matching pdf.mark_pattern');
+  it('fails on a PDF whose text layer prints no mark, without calling Gemini, whatever the budget', async () => {
+    for (const markless_pages of [undefined, 99])
+      await expect(
+        extractPdfRows(TAIL_PDF, { ...OPTIONS, mark_pattern: 'NOPE-[0-9]{9}', markless_pages })
+      ).rejects.toThrow('PDF text layer has no item matching pdf.mark_pattern');
     expect(requestTableRows).not.toHaveBeenCalled();
   });
 
@@ -286,14 +287,46 @@ describe('extractPdfRows page chunks', () => {
     return Buffer.from(await doc.save());
   };
 
-  it('fails before any paid call when more pages print no mark than markless_pages allows', async () => {
+  it('fails before any paid call when more trailing pages print no mark than markless_pages allows', async () => {
     const pdf = await withBlankChunk();
     await expect(extractPdfRows(pdf, OPTIONS)).rejects.toThrow(
-      '5 PDF pages print no item matching pdf.mark_pattern (pdf.markless_pages allows 0): pages 2, 3, 4, 5, 6'
+      '5 PDF pages print no item matching pdf.mark_pattern (pdf.markless_pages allows 0, at the end only): pages 2, 3, 4, 5, 6'
     );
     await expect(extractPdfRows(pdf, { ...OPTIONS, markless_pages: 4 })).rejects.toThrow(
-      'allows 4'
+      '1 PDF pages print no item matching pdf.mark_pattern (pdf.markless_pages allows 4, at the end only): pages 2'
     );
+    expect(requestTableRows).not.toHaveBeenCalled();
+  });
+
+  it('never spends markless_pages on a mark-less page before the last marked one', async () => {
+    const doc = await PDFDocument.create();
+    const source = await PDFDocument.load(TAIL_PDF);
+    const [first] = await doc.copyPages(source, [0]);
+    const [second] = await doc.copyPages(source, [0]);
+    doc.addPage(first);
+    doc.addPage();
+    doc.addPage(second);
+    await expect(
+      extractPdfRows(Buffer.from(await doc.save()), { ...OPTIONS, markless_pages: 1 })
+    ).rejects.toThrow('(pdf.markless_pages allows 1, at the end only): pages 2');
+    expect(requestTableRows).not.toHaveBeenCalled();
+  });
+
+  it('counts a page whose only pattern matches are exclusions as printing no mark', async () => {
+    const doc = await PDFDocument.create();
+    for (const pdf of [MV_PDF, TAIL_PDF]) {
+      const source = await PDFDocument.load(pdf);
+      const [page] = await doc.copyPages(source, [0]);
+      doc.addPage(page);
+    }
+    const marks = (await tailRows()).map((r) => r.mark as string);
+    await expect(
+      extractPdfRows(Buffer.from(await doc.save()), {
+        ...OPTIONS,
+        mark_pattern: `8Q-[A-Z]{3}|${marks.join('|')}`,
+        mark_pattern_exclusions: marks,
+      })
+    ).rejects.toThrow('at the end only): pages 2');
     expect(requestTableRows).not.toHaveBeenCalled();
   });
 

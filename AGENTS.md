@@ -111,7 +111,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - A row printed across a chunk boundary fails the run (mark-less continuation row). Never relax the check or overlap chunks to pass it; re-chunking is a design change.
   - A non-mark text item matching the pattern (a wrapped continuation line) goes in `mark_pattern_exclusions`, verbatim. Never loosen the check to a count budget.
   - A mark printed as split glyph runs: widen `mark_pattern` (`\s*`), never drop the item.
-- A page printing no mark escapes the check, so pages beyond `pdf.markless_pages` (default 0) fail the run before any paid call. Budget only a page the register genuinely prints without marks (a header-only last page); record the residual exposure beside it.
+- A page printing no mark escapes the check, so any mark-less page outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call. Budget only trailing pages the register genuinely prints without marks (a header-only last page); never widen it to mid-document pages.
 - pdf.js (text layer) and pdf-lib (chunks) count pages independently; a disagreement fails the run, since a page only one sees is never checked.
 - Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
 - Retry transport errors only. A non-STOP finish, malformed JSON, or schema break fails the run.
