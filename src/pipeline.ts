@@ -314,6 +314,15 @@ const resolveSources = (): string[] => {
   return active;
 };
 
+// Gemini reads every PDF's table and translates a non-English register.
+const geminiSources = (ids: string[]): Set<string> =>
+  new Set(
+    ids.filter((id) => {
+      const config = loadSourceConfig(resolve('sources', `${id}.yaml`));
+      return config.format === 'pdf' || config.language !== 'en';
+    })
+  );
+
 const closeWithLogging = async (source: string, token: string, repo: string): Promise<void> => {
   try {
     await closeStalenessIssues(source, token, repo);
@@ -554,9 +563,20 @@ export const evaluatePausedStaleness = async (): Promise<void> => {
 
 export async function main(): Promise<void> {
   const sources = resolveSources();
-  // Wrapped rather than `sources.map(run)`: map passes (value, index, array) positionally, so any
-  // second parameter `run` grows would silently receive the index.
-  const results = await Promise.allSettled(sources.map((sourceId) => run(sourceId)));
+  // A lone source has nothing to queue behind, and a named one may not exist: run() reports that.
+  const gemini = sources.length > 1 ? geminiSources(sources) : new Set<string>();
+  // Gemini's RPM is per project and each source paces from zero at the full rate, so concurrent
+  // Gemini sources draw 429s that outlast the retry budget: they run one after another, beside the
+  // rest. The chain swallows only for sequencing; each run's own promise still settles below.
+  let geminiChain: Promise<unknown> = Promise.resolve();
+  const results = await Promise.allSettled(
+    sources.map((sourceId) => {
+      if (!gemini.has(sourceId)) return run(sourceId);
+      const next = geminiChain.then(() => run(sourceId));
+      geminiChain = next.catch(() => undefined);
+      return next;
+    })
+  );
   const now = new Date();
   const dryRun = process.env['DRY_RUN'] === 'true';
   const gh: GitHubCtx = {

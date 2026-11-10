@@ -247,10 +247,11 @@ browser — there is now an `aircraft/nl-ilt.sqlite` file in it. That's the whol
 Remove the `REFRESH_SOURCE` line from `.env` (or blank it out) and run `make refresh` again. Now the
 warnings apply:
 
-- It pulls every registry still configured in `sources/`, and they run **concurrently** — the wall
-  clock is the slowest single register, not the sum. A routine run is quick because most sources
-  are already current and skip their download. Budget longer for a genuine first pull, where every
-  source downloads and the FAA register, the largest, dominates.
+- It pulls every registry still configured in `sources/`. Most run **concurrently**; the ones that
+  call Gemini (PDF registers and non-English ones) queue one behind another so they stay under
+  your Gemini rate limit. A routine run is quick because most sources are already current and skip
+  their download. Budget longer for a genuine first pull, where every source downloads and either
+  the FAA register, the largest, or the queue of PDF registers being read page by page dominates.
 
   You may see "30 minutes" quoted for this elsewhere. That is the `timeout-minutes` this project
   sets on its own CI refresh job — not a GitHub limit (hosted runners allow 6 hours) and not a
@@ -524,16 +525,16 @@ territory.
 
 ## When Something Breaks 🔧
 
-| What you see                                               | What it means                                           | Fix                                                                                                                                                                                                     |
-| ---------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command not found: bun`                                   | Terminal hasn't picked up the new install               | Close and reopen your terminal                                                                                                                                                                          |
-| `command not found: make`                                  | Build tools missing                                     | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                         |
-| `Missing required environment variable: MBF_R2_ACCOUNT_ID` | `.env` is missing (Step 6) or that line is blank        | `cp .env.example .env` if it is missing, then fill in the key the message names                                                                                                                         |
-| `Missing required environment variable: GEMINI_API_KEY`    | A PDF source or a non-English source needs Gemini       | Add the key, or set `REFRESH_SOURCE` to an English, non-PDF source                                                                                                                                      |
-| `FEED_TOKEN must be set (at least 16 characters)`          | Token missing or too short                              | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                             |
-| `gitleaks not found` when committing                       | Secret scanner isn't installed                          | `brew install gitleaks` — do not skip the hook                                                                                                                                                          |
-| Refresh looks stuck                                        | You're pulling every configured registry at once        | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A steady-state run is ~25s; a cold first pull is longer but not minutes-times-source-count |
-| An R2 `403` or `AccessDenied`                              | Token lacks write access or is scoped to another bucket | Recreate it with **Object Read & Write** on the right bucket                                                                                                                                            |
+| What you see                                               | What it means                                           | Fix                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command not found: bun`                                   | Terminal hasn't picked up the new install               | Close and reopen your terminal                                                                                                                                                                                                                              |
+| `command not found: make`                                  | Build tools missing                                     | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                                                                             |
+| `Missing required environment variable: MBF_R2_ACCOUNT_ID` | `.env` is missing (Step 6) or that line is blank        | `cp .env.example .env` if it is missing, then fill in the key the message names                                                                                                                                                                             |
+| `Missing required environment variable: GEMINI_API_KEY`    | A PDF source or a non-English source needs Gemini       | Add the key, or set `REFRESH_SOURCE` to an English, non-PDF source                                                                                                                                                                                          |
+| `FEED_TOKEN must be set (at least 16 characters)`          | Token missing or too short                              | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                                                                                 |
+| `gitleaks not found` when committing                       | Secret scanner isn't installed                          | `brew install gitleaks` — do not skip the hook                                                                                                                                                                                                              |
+| Refresh looks stuck                                        | You're pulling every configured registry at once        | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A cold first pull reads every PDF register through Gemini one at a time, paced at `GEMINI_REQUESTS_PER_MINUTE`, so it can run for many minutes |
+| An R2 `403` or `AccessDenied`                              | Token lacks write access or is scoped to another bucket | Recreate it with **Object Read & Write** on the right bucket                                                                                                                                                                                                |
 
 Still stuck? Open an issue with the command you ran and the last 20 lines of `logs/pipeline.log`.
 **Redact your keys first** — the log does not print them, but paste carefully anyway.

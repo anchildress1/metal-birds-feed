@@ -929,6 +929,73 @@ describe('main', () => {
     expect(mockDownload.mock.calls).toHaveLength(ids.length - 1);
   });
 
+  describe('Gemini-calling sources', () => {
+    // In run order, so ids[0] heads the Gemini chain.
+    const ids = readdirSync('sources')
+      .filter((f) => f.endsWith('.yaml'))
+      .map((f) => f.replace(/\.yaml$/, ''))
+      .sort((a, b) => a.localeCompare(b));
+    const idOf = (path: string): string => path.replace(/^.*[/\\]/, '').replace(/\.yaml$/, '');
+    // Each download reports its own id via the url, and holds briefly so overlap is observable.
+    const track = (gemini: Set<string>) => {
+      const seen = { geminiPeak: 0, peak: 0 };
+      let active = 0;
+      let geminiActive = 0;
+      mockDownload.mockImplementation(async ({ url }: { url: string }) => {
+        const isGemini = gemini.has(url);
+        active++;
+        if (isGemini) geminiActive++;
+        seen.peak = Math.max(seen.peak, active);
+        seen.geminiPeak = Math.max(seen.geminiPeak, geminiActive);
+        await new Promise((r) => setTimeout(r, 5));
+        active--;
+        if (isGemini) geminiActive--;
+        return new Map([['master', Buffer.from('')]]);
+      });
+      return seen;
+    };
+    const configFor = (gemini: Set<string>, pdf: Set<string>) => (path: string) => {
+      const id = idOf(path);
+      return {
+        ...CONFIG,
+        id,
+        language: gemini.has(id) && !pdf.has(id) ? 'hr' : 'en',
+        ...(pdf.has(id) ? { format: 'pdf' } : {}),
+        download: { ...CONFIG.download, url: id },
+      };
+    };
+
+    it('runs them one at a time, beside the other sources', async () => {
+      const gemini = new Set(ids.slice(0, 3));
+      mockLoadSourceConfig.mockImplementation(configFor(gemini, new Set([ids[0]])));
+      const seen = track(gemini);
+
+      await main();
+
+      expect(mockDownload.mock.calls).toHaveLength(ids.length);
+      expect(seen.geminiPeak).toBe(1);
+      expect(seen.peak).toBeGreaterThan(1);
+    });
+
+    it('keeps the chain going after a Gemini source fails', async () => {
+      const gemini = new Set(ids.slice(0, 2));
+      mockLoadSourceConfig.mockImplementation(configFor(gemini, new Set()));
+      mockDownload.mockImplementation(({ url }: { url: string }) =>
+        url === ids[0]
+          ? Promise.reject(new Error('register 404'))
+          : Promise.resolve(new Map([['master', Buffer.from('')]]))
+      );
+      const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      try {
+        await main();
+        expect(exitSpy).toHaveBeenCalledWith(1);
+      } finally {
+        exitSpy.mockRestore();
+      }
+      expect(mockDownload.mock.calls.map(([dl]) => (dl as { url: string }).url)).toContain(ids[1]);
+    });
+  });
+
   // An explicit REFRESH_SOURCE overrides the pause, which is how a restored upstream is tested
   // without editing the YAML.
   it('still runs a paused source when REFRESH_SOURCE names it', async () => {
