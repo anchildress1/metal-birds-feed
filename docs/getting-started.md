@@ -194,8 +194,8 @@ Leave everything else alone for now.
 ### The Gemini key — for PDF registries and non-English registries
 
 Gemini does two jobs here. It reads the register table out of every `format: pdf` source, whatever
-its language: one call per five pages, paced at `GEMINI_REQUESTS_PER_MINUTE`, and the whole
-document, owner names and addresses included, goes to Google. It also renders a few descriptive
+its language: one call per five pages, paced at `GEMINI_REQUESTS_PER_MINUTE`, and each five-page chunk
+containing a mark, owner names and addresses included, goes to Google. It also renders a few descriptive
 fields in English for any source whose `language:` is not `en`. Read the selected source's YAML instead of relying on a copied list.
 
 Skip this if you're only pulling English, non-PDF sources. Otherwise:

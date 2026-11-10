@@ -78,18 +78,19 @@ Deeper mechanics — R2 key layout, version markers, duplicate resolution, the d
 
 ## Commands
 
-| Command              | Description                                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------------ |
-| `make install`       | Install dependencies and git hooks                                                                     |
-| `make check`         | format-check + lint + typecheck + test (CI gate)                                                       |
-| `make refresh`       | Update R2: pull every source, or one with `REFRESH_SOURCE=<id>` (reads `.env`; the command line wins)  |
-| `make ingest`        | Store a browser-downloaded file for a `manual` source and refresh it (`SOURCE=<id> FILE=drops/<file>`) |
-| `make assemble-feed` | Build `feed.sqlite` from the R2 slices (no refresh)                                                    |
-| `make serve`         | Run the feed service locally (`MBF_FEED_DB_PATH`)                                                      |
-| `make deploy`        | Assemble `feed.sqlite` from R2 and deploy it to Cloud Run (does not refresh)                           |
-| `make secret-scan`   | Scan for accidentally committed secrets                                                                |
+| Command                  | Description                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `make install`           | Install dependencies and git hooks                                                                     |
+| `make check`             | format-check + lint + typecheck + test (CI gate)                                                       |
+| `make refresh`           | Update R2: pull every source, or one with `REFRESH_SOURCE=<id>` (reads `.env`; the command line wins)  |
+| `make ingest`            | Store a browser-downloaded file for a `manual` source and refresh it (`SOURCE=<id> FILE=drops/<file>`) |
+| `make record-extraction` | Re-record Gemini's response for a PDF source's fixtures (`SOURCE=<id>`; billed)                        |
+| `make assemble-feed`     | Build `feed.sqlite` from the R2 slices (no refresh)                                                    |
+| `make serve`             | Run the feed service locally (`MBF_FEED_DB_PATH`)                                                      |
+| `make deploy`            | Assemble `feed.sqlite` from R2 and deploy it to Cloud Run (does not refresh)                           |
+| `make secret-scan`       | Scan for accidentally committed secrets                                                                |
 
-`make help` is the default target and lists the rest (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`, `clean`).
+`make help` is the default target and lists these plus `clean`. The steps `check` and `deploy` chain (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`) also run on their own.
 
 ## Deploying your own copy
 

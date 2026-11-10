@@ -116,8 +116,8 @@ grep -c '^MBF_R2_[A-Z_]*=.\+' .env   # expect 4
 table; dry runs included) or a non-English `language:` (translation). Inspect the current
 declarations in `sources/*.yaml`; do not copy a source list into this skill. Defer the key until
 such a source is actually requested; a missing key throws rather than degrading, so it fails loudly
-when it matters. State before the first PDF source runs that the whole PDF, owner names and
-addresses included, is sent to Google.
+when it matters. State before the first PDF source runs that each five-page chunk containing a mark,
+owner names and addresses included, is sent to Google.
 
 ## Phase 5 — First pull: one small source
 

@@ -104,7 +104,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 
 ### PDF
 
-- Gemini (`src/pdf/gemini-table.ts`, `PDF_EXTRACT_MODEL`) reads the table; no geometry config exists. A source declares `pdf.mark_field` + `pdf.mark_pattern`, plus `mark_pattern_exclusions` / `markless_pages` where needed.
+- Gemini (`src/pdf/gemini-table.ts`, `PDF_EXTRACT_MODEL`) reads the table. A source declares `pdf.mark_field` + `pdf.mark_pattern`, plus `mark_pattern_exclusions` / `markless_pages` where needed.
 - `mark_pattern` is compiled as `^(?:…)$` and matches whole text items; write it unanchored.
 - Extraction runs per 5-page chunk (`src/pdf/chunks.ts`): one response cannot hold a large register before `MAX_TOKENS`. Chunk requests start paced at `GEMINI_REQUESTS_PER_MINUTE`; a mark-less chunk is never sent.
 - The text-layer mark check is the row guard, per chunk: every text item on the chunk's pages matching `mark_pattern` must be an extracted mark and vice versa, counted one for one. A model can stop early or merge rows and still report STOP.

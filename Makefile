@@ -6,7 +6,7 @@
 help:
 	@grep -hE '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) \
 		| sort \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-17s %s\n", $$1, $$2}'
 
 # No fallback path: a stray global install would silently run a Bun other than the .tool-versions pin.
 BUN := $(or $(shell command -v bun 2>/dev/null),$(error bun not on PATH — run `mise install`))
@@ -79,7 +79,7 @@ ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drop
 record-extraction: build ## Re-record Gemini's response for a PDF source's fixtures (SOURCE=<id>)
 	@$(LOAD_ENV); $(BUN) run dist/record-extraction.js "$${SOURCE:-}"
 
-secret-scan:
+secret-scan: ## Scan staged changes for accidentally committed secrets
 	@if command -v gitleaks > /dev/null; then \
 		gitleaks git --staged --redact; \
 	else \
@@ -94,7 +94,7 @@ serve: ## Run the feed service locally against feed.sqlite (MBF_FEED_DB_PATH)
 	$(BUN) run src/service/server.ts
 
 # Rebuilt from R2 every time: a prior local feed.sqlite is never trusted.
-assemble-feed: build
+assemble-feed: build ## Build feed.sqlite from the R2 slices (does not refresh)
 	@set -eu; $(LOAD_ENV); \
 		rm -f feed.sqlite; \
 		MBF_FEED_DB_OUT=feed.sqlite $(BUN) run dist/publish-feed.js; \
