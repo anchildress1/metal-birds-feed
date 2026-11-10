@@ -125,8 +125,7 @@ interface ChunkResult {
  * Extracts the register table from a PDF via Gemini, one Row per printed record, in page chunks
  * (one response cannot hold a large register). Reuses a cached response for any chunk whose pages,
  * columns, model, and prompt are unchanged and that still validates; requests the rest at
- * `GEMINI_REQUESTS_PER_MINUTE`. When any requested chunk validated, every validated chunk is
- * written back to `cache` before any chunk failure throws.
+ * `GEMINI_REQUESTS_PER_MINUTE`. Saves each requested chunk to `cache` as soon as it validates.
  * @throws when the file is not a PDF, its text layer prints no mark, a page prints no mark outside
  *   the trailing `markless_pages`, its two page counts disagree, the cache cannot be read, or any
  *   chunk's response breaks the schema, has a row without a mark, or disagrees with the marks its
@@ -177,6 +176,24 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
     z.strictObject(Object.fromEntries(options.columns.map((c) => [c, z.string().nullable()])))
   );
   const cached = prior?.entries ?? {};
+  const validated: Record<string, unknown> = {};
+  let writeFailed = false;
+  let writes = Promise.resolve();
+  // Saved as each paid chunk lands: a job killed at its timeout mid-document would otherwise lose
+  // every response it already paid for, and a slow register would re-bill them on every run.
+  // Chained so a slower PUT never overwrites a later, fuller one.
+  const persist = (): void => {
+    const snapshot = { entries: { ...cached, ...validated } };
+    writes = writes
+      .then(() => options.cache?.write(snapshot))
+      .catch((err: unknown) => {
+        writeFailed = true;
+        log('error', 'pdf_extract_cache_write_failed', {
+          source: options.source,
+          error: errorMessage(err),
+        });
+      });
+  };
   let requested = 0;
   // Starts spaced at the project's RPM: firing every chunk at once draws 429s that outlast the
   // retry budget.
@@ -213,30 +230,25 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
         }
       }
       const raw = await request(chunk);
-      return { key, raw, fresh: true, rows: validateChunk(raw, printed, schema, options) };
+      const rows = validateChunk(raw, printed, schema, options);
+      validated[key] = raw;
+      persist();
+      return { key, raw, fresh: true, rows };
     })
   );
+  await writes;
 
   const done = settled.flatMap((s) => (s.status === 'fulfilled' && s.value ? [s.value] : []));
   const hits = done.filter((c) => !c.fresh).length;
   if (hits > 0) log('info', 'pdf_extract_cache_hit', { source: options.source, chunks: hits });
   const failures = settled.flatMap((s, i) => (s.status === 'rejected' ? [{ i, s }] : []));
-  // Paid chunks persist even when another chunk fails, so a rerun re-bills only the failures.
-  // Rebuilt from this document's chunks alone, which drops entries for pages no longer printed.
-  if (done.some((c) => c.fresh)) {
-    const write = options.cache?.write({
-      entries: Object.fromEntries(done.map((c) => [c.key, c.raw])),
-    });
-    // The chunk failure is the actionable error; a failed PUT only costs a re-bill.
-    if (failures.length === 0) await write;
-    else
-      await write?.catch((err: unknown) =>
-        log('error', 'pdf_extract_cache_write_failed', {
-          source: options.source,
-          error: errorMessage(err),
-        })
-      );
-  }
+  // A clean run rewrites the cache from this document's chunks alone, dropping entries for pages
+  // no longer printed, and retries a PUT that failed mid-run; that one failing throws. After a
+  // chunk failure the chunk is the actionable error, and the saved chunks already cut the re-bill.
+  const current = Object.fromEntries(done.map((c) => [c.key, c.raw]));
+  const stale = Object.keys(cached).some((k) => !Object.hasOwn(current, k));
+  if (failures.length === 0 && (stale || writeFailed))
+    await options.cache?.write({ entries: current });
 
   if (failures.length > 0) {
     // The thrown error carries one cause; the others may be different faults (a 503 beside a real

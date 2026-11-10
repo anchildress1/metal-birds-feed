@@ -11,6 +11,7 @@ interface GenerateRequest {
     thinkingConfig: unknown;
     responseSchema: unknown;
     systemInstruction: string;
+    httpOptions: unknown;
   };
 }
 const generateContent = mock<(req: GenerateRequest) => Promise<unknown>>();
@@ -86,6 +87,17 @@ describe('requestTableRows', () => {
         propertyOrdering: COLUMNS,
       },
     });
+  });
+
+  it('bounds each attempt with a request timeout, so a hung call settles and retries', async () => {
+    generateContent
+      .mockRejectedValueOnce(new DOMException('The operation was aborted.', 'AbortError'))
+      .mockResolvedValueOnce(response('[]'));
+    await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).resolves.toEqual([]);
+    expect(generateContent.mock.calls.map((c) => c[0].config.httpOptions)).toEqual([
+      { timeout: 180_000 },
+      { timeout: 180_000 },
+    ]);
   });
 
   it('throws on a missing GEMINI_API_KEY before calling Gemini', async () => {

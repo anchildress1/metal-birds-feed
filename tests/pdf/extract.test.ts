@@ -373,7 +373,7 @@ describe('extractPdfRows extraction cache', () => {
     const { cache, write } = cacheOf(null);
     await extractPdfRows(TAIL_PDF, { ...options, cache });
     requestTableRows.mockClear();
-    return write.mock.calls[0][0];
+    return write.mock.lastCall?.[0] ?? { entries: {} };
   };
 
   it('stores one validated response per chunk when nothing is cached', async () => {
@@ -415,7 +415,15 @@ describe('extractPdfRows extraction cache', () => {
     const stored = await storedFor();
     const { cache, write } = cacheOf({ entries: { stale: [] } });
     await extractPdfRows(TAIL_PDF, { ...OPTIONS, cache });
-    expect(write).toHaveBeenCalledWith(stored);
+    expect(write).toHaveBeenLastCalledWith(stored);
+  });
+
+  it('drops stale entries even on a run that bills nothing', async () => {
+    const stored = await storedFor();
+    const { cache, write } = cacheOf({ entries: { ...stored.entries, stale: [] } });
+    await extractPdfRows(TAIL_PDF, { ...OPTIONS, cache });
+    expect(requestTableRows).not.toHaveBeenCalled();
+    expect(write.mock.calls).toEqual([[stored]]);
   });
 
   it('never stores a response that fails validation', async () => {
@@ -443,7 +451,7 @@ describe('extractPdfRows extraction cache', () => {
     const { cache, write } = cacheOf(null);
     await extractPdfRows(MV_PDF, { ...options, cache });
     requestTableRows.mockClear();
-    return write.mock.calls[0][0];
+    return write.mock.lastCall?.[0] ?? { entries: {} };
   };
 
   it('round-trips a two-chunk document: one entry per chunk, then no call at all', async () => {
@@ -477,6 +485,43 @@ describe('extractPdfRows extraction cache', () => {
     expect(Object.values(write.mock.calls[0][0].entries)).toEqual([
       await recordedTableRows(first.bytes),
     ]);
+  });
+
+  it('saves a validated chunk before the others settle, so a killed run keeps what it paid for', async () => {
+    const [first] = await splitPdf(MV_PDF);
+    const { promise: gate, resolve: release } = Promise.withResolvers<void>();
+    requestTableRows.mockImplementation(async (pdf: Buffer) => {
+      if (!pdf.equals(first.bytes)) await gate;
+      return recordedTableRows(pdf);
+    });
+    const { cache, write } = cacheOf(null);
+    const { promise: firstWrite, resolve: wrote } = Promise.withResolvers<PdfExtraction>();
+    write.mockImplementationOnce((e) => {
+      wrote(e);
+      return Promise.resolve();
+    });
+    const run = extractPdfRows(MV_PDF, { ...options, cache });
+    expect(Object.values((await firstWrite).entries)).toEqual([
+      await recordedTableRows(first.bytes),
+    ]);
+    release();
+    await run;
+    expect(write).toHaveBeenLastCalledWith(await storedForMv());
+  });
+
+  it('retries a cache write that failed mid-run once every chunk validated', async () => {
+    const stored = await storedForMv();
+    const { cache, write } = cacheOf(null);
+    write.mockRejectedValueOnce(new Error('PUT 500'));
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(extractPdfRows(MV_PDF, { ...options, cache })).resolves.toHaveLength(
+        Object.values(stored.entries).flat().length
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
+    expect(write).toHaveBeenLastCalledWith(stored);
   });
 
   it('re-requests and replaces a cached response that no longer validates', async () => {
