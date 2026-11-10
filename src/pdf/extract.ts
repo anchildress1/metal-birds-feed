@@ -25,7 +25,7 @@ export interface ExtractPdfOptions extends PdfConfig {
   trim: boolean;
   // Gemini output varies run to run on the same bytes; without a cache an unchanged PDF would
   // advance upstream_hash and churn history and staleness.
-  cache?: PdfExtractionCache;
+  cache: PdfExtractionCache;
   retryOptions?: RetryOptions;
 }
 
@@ -35,9 +35,12 @@ export const pdfExtractOptions = (
   cache?: PdfExtractionCache
 ): ExtractPdfOptions => {
   const columns = config.columns?.[config.primary];
-  // The loader guarantees both for format pdf; this narrows them.
-  if (config.pdf === undefined || columns === undefined)
-    throw new Error(`Source "${config.id}" has no pdf block or no primary columns`);
+  // The loader guarantees the block and columns for format pdf; this narrows them. The cache is
+  // optional only on mapRows, whose other formats never read it.
+  if (config.pdf === undefined || columns === undefined || cache === undefined)
+    throw new Error(
+      `Source "${config.id}" needs a pdf block, primary columns, and an extraction cache`
+    );
   return { ...config.pdf, source: config.id, columns, trim: config.trim_all, cache };
 };
 
@@ -156,9 +159,8 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   // record_count: an appended scanned page or a new mark series would drop its rows silently. The
   // budget covers trailing pages only, so a mid-document page losing its marks can never spend it.
   const allowed = options.markless_pages ?? 0;
-  let trailing = 0;
-  while (pageMarks[pages.length - 1 - trailing].length === 0) trailing++;
-  const firstBudgeted = pages.length - Math.min(trailing, allowed) + 1;
+  const lastMarked = pageMarks.findLastIndex((marks) => marks.length > 0);
+  const firstBudgeted = Math.max(lastMarked + 1, pages.length - allowed) + 1;
   const unbudgeted = markless.filter((page) => page < firstBudgeted);
   if (unbudgeted.length > 0)
     throw new Error(
@@ -168,7 +170,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const intervalMs = Math.ceil(
     60_000 / readPositiveIntegerEnv('GEMINI_REQUESTS_PER_MINUTE', DEFAULT_REQUESTS_PER_MINUTE)
   );
-  const [chunks, prior] = await Promise.all([splitPdf(pdf), options.cache?.read()]);
+  const [chunks, prior] = await Promise.all([splitPdf(pdf), options.cache.read()]);
   // Two parsers count pages independently; a page only one of them sees is never checked.
   const chunked = chunks.reduce((n, c) => n + c.pages.length, 0);
   if (chunked !== pages.length)
@@ -186,7 +188,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const persist = (): void => {
     const snapshot = { entries: { ...cached, ...validated } };
     writes = writes
-      .then(() => options.cache?.write(snapshot))
+      .then(() => options.cache.write(snapshot))
       .catch((err: unknown) => {
         writeFailed = true;
         log('error', 'pdf_extract_cache_write_failed', {
@@ -199,9 +201,10 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   // Starts spaced at the project's RPM: firing every chunk at once draws 429s that outlast the
   // retry budget.
   const request = (chunk: PdfChunk): Promise<unknown> =>
-    requestTableRows(chunk.bytes, options.columns, options.retryOptions, requested++ * intervalMs, {
-      source: options.source,
-      pages: pageSpan(chunk.pages),
+    requestTableRows(chunk.bytes, options.columns, {
+      retryOptions: options.retryOptions,
+      delayMs: requested++ * intervalMs,
+      trace: { source: options.source, pages: pageSpan(chunk.pages) },
     });
   const settled = await Promise.allSettled(
     chunks.map(async (chunk): Promise<ChunkResult | null> => {
@@ -242,28 +245,30 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const done = settled.flatMap((s) => (s.status === 'fulfilled' && s.value ? [s.value] : []));
   const hits = done.filter((c) => !c.fresh).length;
   if (hits > 0) log('info', 'pdf_extract_cache_hit', { source: options.source, chunks: hits });
-  const failures = settled.flatMap((s, i) => (s.status === 'rejected' ? [{ i, s }] : []));
+  const failures = settled.flatMap<{ pages: string; reason: unknown }>((s, i) =>
+    s.status === 'rejected' ? [{ pages: pageSpan(chunks[i].pages), reason: s.reason }] : []
+  );
   // A clean run rewrites the cache from this document's chunks alone, dropping entries for pages
   // no longer printed, and retries a PUT that failed mid-run; that one failing throws. After a
   // chunk failure the chunk is the actionable error, and the saved chunks already cut the re-bill.
   const current = Object.fromEntries(done.map((c) => [c.key, c.raw]));
   const stale = Object.keys(cached).some((k) => !Object.hasOwn(current, k));
   if (failures.length === 0 && (stale || writeFailed))
-    await options.cache?.write({ entries: current });
+    await options.cache.write({ entries: current });
 
   if (failures.length > 0) {
     // The thrown error carries one cause; the others may be different faults (a 503 beside a real
     // mark mismatch) that a rerun would bill again unseen.
-    for (const { i, s } of failures)
+    for (const { pages: span, reason } of failures)
       log('error', 'pdf_extract_chunk_failed', {
         source: options.source,
-        pages: pageSpan(chunks[i].pages),
-        error: errorMessage(s.reason),
+        pages: span,
+        error: errorMessage(reason),
       });
-    const { i, s } = failures[0];
+    const [first] = failures;
     throw new Error(
-      `${failures.length} of ${chunks.length} PDF chunks failed; pages ${pageSpan(chunks[i].pages)}: ${errorMessage(s.reason)}`,
-      { cause: s.reason }
+      `${failures.length} of ${chunks.length} PDF chunks failed; pages ${first.pages}: ${errorMessage(first.reason)}`,
+      { cause: first.reason }
     );
   }
   return done.flatMap((c) => c.rows);

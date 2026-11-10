@@ -646,6 +646,11 @@ describe('loadSourceConfig', () => {
       /invalid source config/i,
     ],
     [
+      'a mark_pattern_exclusions entry with edge whitespace',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  mark_pattern_exclusions: [' PZO']\n",
+      /pdf\.mark_pattern_exclusions entries carry no leading or trailing whitespace/,
+    ],
+    [
       'a leftover geometry key',
       "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  anchor_pattern: '8Q-[A-Z]{3}'\n",
       /invalid source config/i,

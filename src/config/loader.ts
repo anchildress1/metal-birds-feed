@@ -186,7 +186,19 @@ const SourceConfigSchema = z
         mark_pattern: z.string().min(1).refine(isValidRegex, {
           message: 'pdf.mark_pattern must be a valid regular expression',
         }),
-        mark_pattern_exclusions: z.array(z.string().min(1)).min(1).optional(),
+        // Compared against trimmed text items, so an entry with edge whitespace never matches.
+        mark_pattern_exclusions: z
+          .array(
+            z
+              .string()
+              .min(1)
+              .refine((s) => s === s.trim(), {
+                message:
+                  'pdf.mark_pattern_exclusions entries carry no leading or trailing whitespace',
+              })
+          )
+          .min(1)
+          .optional(),
         markless_pages: z.number().int().min(1).optional(),
       })
       .optional(),

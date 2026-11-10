@@ -18,13 +18,15 @@ const mockGemini = (fingerprint: string) =>
     PDF_EXTRACT_FINGERPRINT: fingerprint,
   }));
 void mockGemini('f'.repeat(64));
-const { chunkKey, extractPdfRows } = await import('../../src/pdf/extract.js');
+const { chunkKey, extractPdfRows, pdfExtractOptions } = await import('../../src/pdf/extract.js');
 
 const HR = resolve(import.meta.dirname, '..', '..', 'fixtures', 'hr-ccaa', 'input');
 const TAIL_PDF = readFileSync(resolve(HR, 'register-tail.pdf'));
 const FULL_PDF = readFileSync(resolve(HR, 'register.pdf'));
 const COLUMNS = ['mark', 'seq', 'mfr', 'model', 'serial', 'owner', 'address'];
+const NO_CACHE = { read: () => Promise.resolve(null), write: () => Promise.resolve() };
 const OPTIONS = {
+  cache: NO_CACHE,
   source: 'hr-ccaa',
   columns: COLUMNS,
   mark_field: 'mark',
@@ -55,9 +57,10 @@ describe('extractPdfRows', () => {
     const rows = await extractPdfRows(TAIL_PDF, OPTIONS);
     expect(rows.map((r) => r.mark)).toEqual(['VIO', 'XCA', 'XGB', 'ZAG', 'ZYZ']);
     expect(rows[2]?.owner).toBe('Karting centar-Zagreb i\nZagrebački prometni zavod\nd.o.o.');
-    expect(requestTableRows).toHaveBeenCalledWith(TAIL_CHUNK.bytes, COLUMNS, undefined, 0, {
-      source: 'hr-ccaa',
-      pages: '1-1',
+    expect(requestTableRows).toHaveBeenCalledWith(TAIL_CHUNK.bytes, COLUMNS, {
+      retryOptions: undefined,
+      delayMs: 0,
+      trace: { source: 'hr-ccaa', pages: '1-1' },
     });
   });
 
@@ -241,6 +244,7 @@ describe('extractPdfRows page chunks', () => {
   );
   const mv = loadSourceConfig('sources/mv-caa.yaml');
   const MV = {
+    cache: NO_CACHE,
     source: 'mv-caa',
     columns: mv.columns?.[mv.primary] ?? [],
     mark_field: 'mark',
@@ -261,17 +265,20 @@ describe('extractPdfRows page chunks', () => {
   it('spaces request starts at GEMINI_REQUESTS_PER_MINUTE', async () => {
     process.env.GEMINI_REQUESTS_PER_MINUTE = '30';
     await extractPdfRows(MV_PDF, MV);
-    expect(requestTableRows.mock.calls.map((c) => c[3] as number).sort((a, b) => a - b)).toEqual([
-      0, 2000,
-    ]);
+    expect(
+      requestTableRows.mock.calls
+        .map((c) => (c[2] as { delayMs: number }).delayMs)
+        .sort((a, b) => a - b)
+    ).toEqual([0, 2000]);
   });
 
   it('spaces at the default rate when GEMINI_REQUESTS_PER_MINUTE is unset', async () => {
     await extractPdfRows(MV_PDF, MV);
-    expect(requestTableRows.mock.calls.map((c) => c[3] as number).sort((a, b) => a - b)).toEqual([
-      0,
-      Math.ceil(60_000 / DEFAULT_REQUESTS_PER_MINUTE),
-    ]);
+    expect(
+      requestTableRows.mock.calls
+        .map((c) => (c[2] as { delayMs: number }).delayMs)
+        .sort((a, b) => a - b)
+    ).toEqual([0, Math.ceil(60_000 / DEFAULT_REQUESTS_PER_MINUTE)]);
   });
 
   it('logs every failed chunk, not only the one the error names', async () => {
@@ -440,6 +447,7 @@ describe('extractPdfRows extraction cache', () => {
   );
   const mv = loadSourceConfig('sources/mv-caa.yaml');
   const options = {
+    cache: NO_CACHE,
     source: 'mv-caa',
     columns: mv.columns?.[mv.primary] ?? [],
     mark_field: 'mark',
@@ -469,7 +477,7 @@ describe('extractPdfRows extraction cache', () => {
     const { cache, write } = cacheOf({ entries: { [firstKey]: stored.entries[firstKey] } });
     await extractPdfRows(MV_PDF, { ...options, cache });
     expect(requestTableRows).toHaveBeenCalledTimes(1);
-    expect(requestTableRows.mock.calls[0][3]).toBe(0);
+    expect(requestTableRows.mock.calls[0][2]).toMatchObject({ delayMs: 0 });
     expect(write).toHaveBeenCalledWith(stored);
   });
 
@@ -572,5 +580,25 @@ describe('extractPdfRows extraction cache', () => {
     const cache = { read: () => Promise.reject(new Error('GET 500')), write: mock() };
     await expect(extractPdfRows(TAIL_PDF, { ...OPTIONS, cache })).rejects.toThrow('GET 500');
     expect(requestTableRows).not.toHaveBeenCalled();
+  });
+});
+
+describe('pdfExtractOptions', () => {
+  const hr = loadSourceConfig('sources/hr-ccaa.yaml');
+
+  it('builds the options from a PDF source config and its cache', () => {
+    expect(pdfExtractOptions(hr, NO_CACHE)).toMatchObject({
+      source: 'hr-ccaa',
+      columns: hr.columns?.[hr.primary],
+      mark_field: hr.pdf?.mark_field,
+      trim: hr.trim_all,
+      cache: NO_CACHE,
+    });
+  });
+
+  it('refuses a PDF source mapped without an extraction cache', () => {
+    expect(() => pdfExtractOptions(hr, undefined)).toThrow(
+      'Source "hr-ccaa" needs a pdf block, primary columns, and an extraction cache'
+    );
   });
 });

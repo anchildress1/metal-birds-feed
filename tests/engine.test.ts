@@ -40,6 +40,13 @@ const DUPLICATE_JOIN_CONFIG: SourceConfig = {
   },
 };
 
+// A PDF source maps through an extraction cache; these runs start from an empty one.
+const mapPdf = (config: SourceConfig, files: Map<string, Buffer>) =>
+  mapRows(config, files, undefined, {
+    read: () => Promise.resolve(null),
+    write: () => Promise.resolve(),
+  });
+
 function fixtureBuffer(filename: string): Buffer {
   return readFileSync(resolve(FIXTURES, 'input', filename));
 }
@@ -2742,7 +2749,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(MV_CONFIG);
-    const result = await mapRows(config, new Map([['register', readFileSync(MV_PDF)]]));
+    const result = await mapPdf(config, new Map([['register', readFileSync(MV_PDF)]]));
     mvRecords = result.records;
   });
 
@@ -2821,7 +2828,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
     );
     let rotated: Map<string, Aircraft>;
     beforeAll(async () => {
-      const result = await mapRows(
+      const result = await mapPdf(
         loadSourceConfig(MV_CONFIG),
         new Map([['register', readFileSync(MV_ROTATED_PDF)]])
       );
@@ -2857,7 +2864,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
     let sixteen: Map<string, Aircraft>;
     let sixteenStats: EngineStats;
     beforeAll(async () => {
-      const result = await mapRows(
+      const result = await mapPdf(
         loadSourceConfig(MV_CONFIG),
         new Map([['register', readFileSync(MV_SIXTEEN_PDF)]])
       );
@@ -2919,7 +2926,7 @@ describe('AESA Spain fixture mapping (PDF)', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(ES_CONFIG);
-    const result = await mapRows(config, new Map([['register', readFileSync(ES_PDF)]]));
+    const result = await mapPdf(config, new Map([['register', readFileSync(ES_PDF)]]));
     esRecords = result.records;
     esStats = result.stats;
   });
@@ -3024,7 +3031,7 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(HR_CONFIG);
-    const result = await mapRows(config, new Map([['register', readFileSync(HR_PDF)]]));
+    const result = await mapPdf(config, new Map([['register', readFileSync(HR_PDF)]]));
     hrRecords = result.records;
     hrStats = result.stats;
   });
@@ -3116,7 +3123,7 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
   // The last page holds five tall rows directly under the repeated column header, which must not
   // read as a row or a cell.
   it('keeps the column header out of the first record on a sparse last page', async () => {
-    const tail = await mapRows(
+    const tail = await mapPdf(
       loadSourceConfig(HR_CONFIG),
       new Map([
         [
@@ -3146,10 +3153,10 @@ describe('CCAA Croatia rotated publication, same config', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(HR_CONFIG);
-    const rot = await mapRows(config, new Map([['register', fixture('register-rotated.pdf')]]));
+    const rot = await mapPdf(config, new Map([['register', fixture('register-rotated.pdf')]]));
     rotated = rot.records;
     rotatedStats = rot.stats;
-    upright = (await mapRows(config, new Map([['register', fixture('register.pdf')]]))).records;
+    upright = (await mapPdf(config, new Map([['register', fixture('register.pdf')]]))).records;
   });
 
   it('maps every row of the rotated publication with no failures', () => {
@@ -3170,7 +3177,7 @@ describe('CCAA Croatia rotated publication, same config', () => {
   // The last data page ends on a three-line disclaimer; the page after it holds only the repeated
   // column header and the footer, within hr-ccaa's markless_pages budget.
   it('drops the trailing disclaimer and tolerates the header-only last page', async () => {
-    const tail = await mapRows(
+    const tail = await mapPdf(
       loadSourceConfig(HR_CONFIG),
       new Map([['register', fixture('register-rotated-tail.pdf')]])
     );
@@ -3224,7 +3231,7 @@ describe('CAAT Thailand fixture mapping (PDF)', () => {
 
   beforeAll(async () => {
     const config = loadSourceConfig(TH_CONFIG);
-    const result = await mapRows(config, new Map([['register', readFileSync(TH_PDF)]]));
+    const result = await mapPdf(config, new Map([['register', readFileSync(TH_PDF)]]));
     thRecords = result.records;
     thStats = result.stats;
   });
@@ -5028,7 +5035,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     const config = loadSourceConfig(HU_CONFIG);
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      const result = await mapRows(config, new Map([['register', readFileSync(HU_PDF)]]));
+      const result = await mapPdf(config, new Map([['register', readFileSync(HU_PDF)]]));
       huRecords = result.records;
       huStats = result.stats;
       huDateWarns = logSpy.mock.calls

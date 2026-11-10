@@ -93,7 +93,7 @@ describe('requestTableRows', () => {
     generateContent
       .mockRejectedValueOnce(new DOMException('The operation was aborted.', 'AbortError'))
       .mockResolvedValueOnce(response('[]'));
-    await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).resolves.toEqual([]);
+    await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).resolves.toEqual([]);
     expect(generateContent.mock.calls.map((c) => c[0].config.httpOptions)).toEqual([
       { timeout: 180_000 },
       { timeout: 180_000 },
@@ -113,13 +113,15 @@ describe('requestTableRows', () => {
     [null, 'ended with no finish reason (prompt blocked: unknown), not STOP'],
   ])('throws without retrying when the response finished with %p', async (finish, message) => {
     generateContent.mockResolvedValue(response('[{"mark":"VIO"', finish));
-    await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).rejects.toThrow(message);
+    await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).rejects.toThrow(
+      message
+    );
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
   it('names the block reason of a blocked prompt', async () => {
     generateContent.mockResolvedValue(response(undefined, null, 'PROHIBITED_CONTENT'));
-    await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).rejects.toThrow(
+    await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).rejects.toThrow(
       'prompt blocked: PROHIBITED_CONTENT'
     );
   });
@@ -145,7 +147,10 @@ describe('requestTableRows', () => {
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
       await expect(
-        requestTableRows(PDF, COLUMNS, FAST_RETRY, 0, { source: 'hr-ccaa', pages: '6-10' })
+        requestTableRows(PDF, COLUMNS, {
+          retryOptions: FAST_RETRY,
+          trace: { source: 'hr-ccaa', pages: '6-10' },
+        })
       ).resolves.toEqual([]);
       expect(generateContent).toHaveBeenCalledTimes(2);
       expect(logSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
@@ -159,14 +164,18 @@ describe('requestTableRows', () => {
   it('keeps its own transport-only retry predicate over a caller-supplied one', async () => {
     generateContent.mockRejectedValue(new MockApiError(403));
     await expect(
-      requestTableRows(PDF, COLUMNS, { ...FAST_RETRY, isRetryable: () => true })
+      requestTableRows(PDF, COLUMNS, {
+        retryOptions: { ...FAST_RETRY, isRetryable: () => true },
+      })
     ).rejects.toThrow('status 403');
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
   it('does not retry a rejected key', async () => {
     generateContent.mockRejectedValue(new MockApiError(403));
-    await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).rejects.toThrow('status 403');
+    await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).rejects.toThrow(
+      'status 403'
+    );
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
@@ -180,14 +189,14 @@ describe('requestTableRows', () => {
       order.push('request');
       return Promise.resolve(response('[]'));
     });
-    await requestTableRows(PDF, COLUMNS, { ...FAST_RETRY, sleep }, 2000);
+    await requestTableRows(PDF, COLUMNS, { retryOptions: { ...FAST_RETRY, sleep }, delayMs: 2000 });
     expect(order).toEqual(['sleep 2000', 'request']);
   });
 
   it('does not sleep for a zero delay', async () => {
     const sleep = mock(() => Promise.resolve());
     generateContent.mockResolvedValue(response('[]'));
-    await requestTableRows(PDF, COLUMNS, { ...FAST_RETRY, sleep });
+    await requestTableRows(PDF, COLUMNS, { retryOptions: { ...FAST_RETRY, sleep } });
     expect(sleep).not.toHaveBeenCalled();
   });
 
