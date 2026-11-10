@@ -88,8 +88,8 @@ jobs:
           test "$package_version" = "$RELEASE_VERSION"
           test "$RELEASE_TAG" = "v$RELEASE_VERSION"
 
-      # Assembles only: the refresh matrix has already written every slice. Emits `changed` and `hash`
-      # to $GITHUB_OUTPUT.
+      # Assembles only: slices in R2 come from earlier refreshes. Emits `changed` and `hash` to
+      # $GITHUB_OUTPUT.
       - name: Assemble feed
         id: feed
         env:
