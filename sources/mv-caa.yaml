@@ -28,106 +28,12 @@ primary: register
 delimiter: ','
 format: pdf
 
-# CAA republishes this table in three geometries: rotated before 2026-07-13, unrotated until
-# 2026-08-17, rotated again until 2026-09-03, unrotated until 2026-10-28, and since then the rotated
-# table's sixteen columns set with fields along x. All three are declared: the parser detects the
-# axis from the anchors and, between the two x layouts, picks the one whose mark band the marks sit
-# on, so a switch is a no-op here. The field ORDER survives a switch; the axis and every band
-# position do not, so each layout carries its own measured `column_pos` — never derive one from
-# another.
-# See PdfConfig in src/types/config.ts for the extraction model.
+# Thirteen-column publications print no basis/other-specifics/IDERA cell; those fields extract as
+# null there.
 pdf:
-  anchor_pattern: '^8Q-[A-Z]{3}$'
-  # PDF sources cannot use record_count, so nothing else would catch a phantom record minted by an
-  # 8Q mark printed inside a free-text party cell; restricting anchors to the mark column closes
-  # that off rather than relying on CAA never quoting a mark in an address.
-  anchor_field: mark
-  layouts:
-    # Sixteen columns along x, records down the page. Values are left-aligned except the centred
-    # S/N, mark, MTOW, serial and dates, whose bands sit at the dominant value position. "Basis of
-    # Registration" holds "Operator of Aircraft" and "Basis of Registration, Other Specifics" holds
-    # "N/A". No column names an operator.
-    - field_axis: x
-      # Cells centre on their anchor, so a tall top record reaches 11.2 above its mark while the
-      # column headers sit 10.2–10.6 above a single-line top record on other pages: no reach clears the
-      # first without admitting the second. 14 clears every record's tallest cell, and the pattern
-      # keeps the header labels out of the widened zone.
-      after_last_anchor_reach: 14
-      after_last_anchor_pattern: '^(?!(?:Registration S/N|Certificate number|Nationality &|Registration Mark|Manufacturer &|Manufacturere''s|Designation of Aircraft|MTOW in kg|Aircraft Serial no\.|Year Built|Name and Address of|the registered owner|Legal Owner|Basis of Registration,?|Other Specifics|Mortgage|IDERA|Date of Original Issue|Date of Last Revision|Status)$)'
-      # A page closing on one record has no pitch to bound its reach, so the footer line (disclaimer
-      # set in the left margin, page stamp at the right) would join that record's cells.
-      drop_margin_lines: true
-      column_pos:
-        - 32.3 # sn
-        - 45.8 # cert_no
-        - 70.8 # mark
-        - 92.2 # mfg
-        - 160.9 # mtow
-        - 187.9 # serial
-        - 208.6 # year
-        - 220.7 # owner (registered)
-        - 301.3 # legal_owner
-        - 384.1 # basis
-        - 466.9 # other_specifics
-        - 549.7 # mortgage
-        - 613.1 # idera
-        - 680.9 # date_issue
-        - 709.7 # date_revision
-        - 741.7 # status
-    # Thirteen columns along x. Values are left-aligned, so these are left edges rather than
-    # centers. This geometry prints no basis/other-specifics/IDERA cell at any x — hence the null
-    # bands. Its mark band sits 16pt right of the sixteen-column layout's, which is what tells
-    # the two apart.
-    - field_axis: x
-      # The top record on a page carries its owner/legal-owner block up to 12.84pt above its mark,
-      # but pages closing with a tight run of 25.5pt rows leave a default reach of only 12.75 —
-      # clipping that record's first line and promoting its street address to the party name.
-      # Measured across all eight pages the window is [12.84, 15.24): 14 clears every record's
-      # tallest cell and still stops short of the column headers, at +15.24 on the tightest page.
-      after_last_anchor_reach: 14
-      column_pos:
-        - 31.5 # sn
-        - 50.4 # cert_no
-        - 87.0 # mark
-        - 118.0 # mfg
-        - 219.2 # mtow
-        - 259.0 # serial
-        - 289.0 # year
-        - 306.4 # owner (registered)
-        - 424.7 # legal_owner
-        - ~ # basis — not printed in this geometry
-        - ~ # other_specifics — not printed in this geometry
-        - 546.1 # mortgage
-        - ~ # idera — not printed in this geometry
-        - 647.0 # date_issue
-        - 687.0 # date_revision
-        - 736.0 # status
-    # Rotated 90°: each aircraft is one x-column, each field a y-band, ordered bottom-of-page up so
-    # the index order matches the x layouts. The repeated row-label column needs no handling: it sits
-    # a half-slot outside the record range, which the outer-spread reach drops. Same sixteen columns
-    # as the first x layout: "Operator of Aircraft" is the basis value, and no column names an
-    # operator.
-    - field_axis: y
-      column_pos:
-        - 28.9 # sn
-        - 40.6 # cert_no
-        - 66.2 # mark
-        - 87.6 # mfg
-        - 156.9 # mtow
-        - 183 # serial
-        - 205.6 # year
-        - 217.9 # owner (registered)
-        - 299.8 # legal_owner
-        - 383.8 # basis
-        - 467.8 # other_specifics
-        - 551.8 # mortgage
-        - 616.1 # idera
-        - 685.8 # date_issue
-        - 713.1 # date_revision
-        - 746 # status
+  mark_field: mark
+  mark_pattern: '8Q-[A-Z]{3}'
 
-# Shared by every layout — a switch reorders nothing. Fields the thirteen-column geometry omits keep
-# their slot (null band above) so one order serves all three and the mappings below need no branch.
 columns:
   register:
     - sn
@@ -171,7 +77,7 @@ mapping:
   # Current-fleet register: every listed aircraft is "Valid" bar the superseded half of a re-marked
   # airframe, where CAA writes "N/A" — the register declining to state a status, not a status of its
   # own, so it resolves to null and the row is excluded from the served feed. No default — an
-  # unexpected status (upstream change or a parser mis-snap) fails the run loudly instead of
+  # unexpected status (upstream change or a mis-extracted cell) fails the run loudly instead of
   # silently becoming "other".
   # Enumerated rather than null_values: the column holds exactly these two codes, so a lookup can
   # cover it, and `status` resolves before null_values would ever be consulted.
@@ -286,8 +192,8 @@ mapping:
 
   # IDERA cell holds a letter ref, the authorised-party name, then its postal address. Only the
   # party name is kept; the address block is PII and dropped at this boundary. The
-  # thirteen-column geometry prints no IDERA column, so the cell is absent there and this resolves
-  # to null — no layout branch needed.
+  # thirteen-column layout prints no IDERA column, so the cell is absent there and this resolves
+  # to null.
   idera_authorised_party:
     field: idera
     transform: mv_idera_party

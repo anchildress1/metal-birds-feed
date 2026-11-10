@@ -1,0 +1,301 @@
+[
+  [
+    {
+      "mark": "ABC",
+      "seq": "662",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "30667",
+      "owner": "ILFC Aircraft 73B-30667\nLimited",
+      "address": "4450 Atlantic Avenue, Westpark,\nShanon, Co. Clare, Ireland"
+    },
+    {
+      "mark": "ADV",
+      "seq": "550",
+      "mfr": "Cessna Aircraft Company",
+      "model": "U206G",
+      "serial": "U206-06796",
+      "owner": "Adventure Driven Vacations\nd.o.o.",
+      "address": "Graščica 2n, 10 000 Zagreb"
+    },
+    {
+      "mark": "ATR",
+      "seq": "773",
+      "mfr": "ATR-GIE Avions de Transport\nRegional",
+      "model": "ATR 72-212A",
+      "serial": "1387",
+      "owner": "Avation Pacific Leasing III\nPTE. LTD.",
+      "address": "Kampong Bahru Road 65, 169370\nSingapore, Singapore"
+    },
+    {
+      "mark": "BAA",
+      "seq": "266",
+      "mfr": "Polakie Zaklady Lotnicze (PZL)\nPolska",
+      "model": "Antonov AN - 2",
+      "serial": "1G-11036",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BDG",
+      "seq": "394",
+      "mfr": "Cirrus Design Corporation",
+      "model": "SR-22",
+      "serial": "1252",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BDM",
+      "seq": "153",
+      "mfr": "Cessna Remmis Aviation",
+      "model": "Cessna 172H",
+      "serial": "0351",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BER",
+      "seq": "674",
+      "mfr": "Airbus S.A.S.",
+      "model": "A319-112",
+      "serial": "3950",
+      "owner": "ACS Aero 4 Delta Limited",
+      "address": "Fenian Street, Cumberland Place 2,\n2 Dublin, Ireland"
+    },
+    {
+      "mark": "BFT",
+      "seq": "117",
+      "mfr": "PZL WSK Mielec",
+      "model": "Antonov AN - 2",
+      "serial": "1G-9916",
+      "owner": "Padobranski klub \"Krila\nKvarnera\"",
+      "address": "Verdijeva 11, 51 000 Rijeka"
+    },
+    {
+      "mark": "BKA",
+      "seq": "204",
+      "mfr": "Polskie Zaklady Lotnicze",
+      "model": "Antonov AN-2",
+      "serial": "1G-16705",
+      "owner": "Geodetski zavod d.d.",
+      "address": "L. Jagera 4, 31 000 Osijek"
+    },
+    {
+      "mark": "BKK",
+      "seq": "247",
+      "mfr": "Melets, PZL",
+      "model": "Antonov AN - 2",
+      "serial": "1G-18528",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BKP",
+      "seq": "26",
+      "mfr": "Textron Aviation Inc.",
+      "model": "A188B Agtruck",
+      "serial": "18802875T",
+      "owner": "Poljodar Tim d.o.o.",
+      "address": "J. Jelačića 77, 43 500 Daruvar"
+    },
+    {
+      "mark": "BNA",
+      "seq": "122",
+      "mfr": "Let",
+      "model": "Turbolet L410 UVP",
+      "serial": "851518",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BOS",
+      "seq": "697",
+      "mfr": "Fabrika vazduhoplova - Soko",
+      "model": "Galeb G-2A",
+      "serial": "FVS-G-23112",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BPR",
+      "seq": "27",
+      "mfr": "Reims Aviation",
+      "model": "Cessna 172 FR Rocket",
+      "serial": "0578",
+      "owner": "Zračno pristanište Mali Lošinj\nd.o.o.",
+      "address": "Privlaka 19, 51 550 Mali Lošinj"
+    },
+    {
+      "mark": "BTH",
+      "seq": "637",
+      "mfr": "Airbus",
+      "model": "A320-214",
+      "serial": "1454",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika\nGorica"
+    },
+    {
+      "mark": "BTI",
+      "seq": "653",
+      "mfr": "Airbus SAS",
+      "model": "A320-214",
+      "serial": "2189",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika Gorica"
+    },
+    {
+      "mark": "DAS",
+      "seq": "134",
+      "mfr": "Cessna Aircraft Company",
+      "model": "Cessna 172N",
+      "serial": "17269567",
+      "owner": "Fakultet prometnih znanosti",
+      "address": "Vukelićeva 4, 10 000 Zagreb"
+    },
+    {
+      "mark": "DAT",
+      "seq": "295",
+      "mfr": "Piper Aircraft Corporation",
+      "model": "Piper PA-23-250 Aztec",
+      "serial": "27-7554060",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DAW",
+      "seq": "362",
+      "mfr": "amaterska gradnja",
+      "model": "Avid Amphibian",
+      "serial": "AA 69",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DAZ",
+      "seq": "317",
+      "mfr": "Utva Aircraft Factory",
+      "model": "Utva-66",
+      "serial": "51 109",
+      "owner": "MORH Zapovjedništvo HRZ I\nPZO",
+      "address": "Maksimirska 63, 10 000 Zagreb"
+    },
+    {
+      "mark": "DBE",
+      "seq": "442",
+      "mfr": "Grob Aerospace Gmbh",
+      "model": "GROB G 109",
+      "serial": "6047",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DBR",
+      "seq": "64",
+      "mfr": "Piper Aircraft Corporation",
+      "model": "Piper PA-18-150 Super Cub",
+      "serial": "18-7809172",
+      "owner": "Aeroklub \"Osijek\"",
+      "address": "Trg Jurja Križanića 1, 31 000 Osijek"
+    },
+    {
+      "mark": "DBS",
+      "seq": "50",
+      "mfr": "Piper Aircraft Corporation",
+      "model": "PA-18-150",
+      "serial": "18-7809170",
+      "owner": "Aeroklub \"Zagreb\"",
+      "address": "Jurišićeva 5/1, 10 000 Zagreb"
+    },
+    {
+      "mark": "DBU",
+      "seq": "54",
+      "mfr": "Piper Aircraft Corporation",
+      "model": "Piper PA-18-150 Super Cub",
+      "serial": "18-7809169",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DBV",
+      "seq": "352",
+      "mfr": "Scheibe",
+      "model": "SF-25C Falke",
+      "serial": "44161",
+      "owner": "Autoservis Branko Vidović",
+      "address": "Matuni 20, 10 000 Zagreb"
+    },
+    {
+      "mark": "DCG",
+      "seq": "188",
+      "mfr": "Avid Aircraft Inc.",
+      "model": "Avid Amphibian-Catalina",
+      "serial": "140 AB",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DDB",
+      "seq": "567",
+      "mfr": "Scheibe-Flugzeugbau GmbH",
+      "model": "SF-25 C Falke",
+      "serial": "44385",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DDD",
+      "seq": "171",
+      "mfr": "Cessna Aircraft Company",
+      "model": "Cessna 172 N",
+      "serial": "17273541",
+      "owner": "Ecos pilot school-aircharter\nd.o.o.",
+      "address": "Štefanovec 104, 10 000 Zagreb"
+    },
+    {
+      "mark": "DDH",
+      "seq": "92",
+      "mfr": "Cessna Reims Aviation",
+      "model": "Cessna F172N",
+      "serial": "F17201783",
+      "owner": "Pilotski klub \"Krila Kvarnera\"\nRijeka",
+      "address": "Korzo 2a/III, 51 000 Rijeka"
+    },
+    {
+      "mark": "DDM",
+      "seq": "361",
+      "mfr": "Cessna Aircraft Company",
+      "model": "Cessna T310Q",
+      "serial": "310Q-0929",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DDT",
+      "seq": "491",
+      "mfr": "Scheibe-Flugzeugbau GmbH",
+      "model": "SF 25 C",
+      "serial": "46233C",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "DEG",
+      "seq": "65",
+      "mfr": "Cessna Aircraft Company",
+      "model": "Cessna 172N",
+      "serial": "17272640",
+      "owner": "Aeroklub \"Osijek\"",
+      "address": "Trg Jurja Križanića 1, 31 000 Osijek"
+    },
+    {
+      "mark": "DER",
+      "seq": "460",
+      "mfr": "Cessna Aircraft Corporation",
+      "model": "Cessna 206B",
+      "serial": "P206-0342",
+      "owner": "G&K avio servis d.o.o.",
+      "address": "Moškanjci 95g, 2272 Gorišnica,\nSlovenia"
+    }
+  ]
+]

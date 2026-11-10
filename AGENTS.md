@@ -34,7 +34,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 - A CLI entry point is a one-line shell over an exported function (`mark-deployed.ts`) and carries no test; logic in the shell is untested logic.
 - No test exists to move a coverage number. A test must fail when the behavior it names breaks.
 - Every engine function: positive + negative + edge cases.
-- `fixtures/<source>/` is CI ground truth: real upstream rows, changed only with a schema or config change.
+- `fixtures/<source>/` is CI ground truth: real upstream rows, changed only with a schema or config change. `extraction/` also changes with the PDF model or prompt.
   - Sanitize natural-person names and addresses. Keep organization names and every technical value verbatim.
   - Verify a row shape against the live file before adding it. Never fabricate one.
 - Remove local-validation test files before commit.
@@ -54,7 +54,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 | Surface                               | Content                                                                                                 |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `sources/<id>.yaml`                   | config                                                                                                  |
-| `fixtures/<id>/`                      | real rows, one fixture per declared PDF orientation                                                     |
+| `fixtures/<id>/`                      | real rows; a PDF source adds `extraction/` via `make record-extraction`                                 |
 | `DATA_LICENSES.md`                    | `## Source Posture` bullet; `## Required Notices` line only where wording or credit content is mandated |
 | `README.md` sources table             | row inserted alphabetically by country, never appended; active sources only                             |
 | `src/service/attributions.ts`         | `NOTICES[<id>]` — a missing entry silently degrades to a generic slug credit                            |
@@ -70,7 +70,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 ## Engine
 
 - Use existing extension points; never edit row-mapping logic for one source. A new registry is a new YAML, plus a transform or parser path when needed.
-- Never retry a mapping failure — deterministic on the same bytes; fix the mapping so a signal exists.
+- Never retry a mapping failure — deterministic on the same bytes (PDF extraction via its cache); fix the mapping so a signal exists.
 
 ### Fetching
 
@@ -104,19 +104,25 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 
 ### PDF
 
-- Declare cover pages (`allowed_anchorless_pages`); never tolerate them by position.
-- Orientation is detected, never fixed. Every PDF source declares `pdf.layouts`, single-orientation included, so a republished flip fails naming the missing axis instead of parsing scrambled records.
-  - Field order survives a flip; axis and band positions do not. Measure each layout's `column_pos` against a real file in that orientation. Never derive one layout from another.
-  - A null band marks a field that orientation does not print — one shared `columns` order, no orientation branches. A placeholder coordinate competes for nearby items.
-  - No axis reading on any page → first layout, so the anchorless-page and zero-row guards report the real cause. Do not pre-empt them.
-  - A republished geometry on an already-declared axis (columns re-spaced, not flipped) is a second layout on that axis, never a re-measure of the first: the register may switch back. Same-axis layouts require `anchor_field` and are picked by where the marks sit against each anchor band, never by wording.
-- Set `anchor_field` whenever `anchor_pattern` could match a wrapped continuation line in another column.
-- A refresh failing with a missing `field_axis` means the register flipped: declare the new layout from that file's own measurements, add its fixture, and update `.agents/memory/pdf-orientation.md`.
-- Set `wrap_after_anchor: true` on a layout whose line leading exceeds half the record pitch: a two-line cell's second line then sits past the midpoint and nearest-anchor snapping hands it to the next record. Per layout; a centred-cell layout keeps nearest-anchor.
-- `drop_margin_lines: true` on a layout where any reach — widened, the default on a sparse page, or a lone record's — reaches text set in the page margin (a trailing disclaimer, a repeated header): a printed line starting before the first band minus the same-row jitter is dropped. Position, never wording.
-- Records snap per column at the outlier gap between adjacent anchors; a gap between two lines mirrored about the same anchor is inside that cell, never the outlier. With no outlier gap, the split that mirrors the most lines about their own anchor wins, only when it beats the anchor midpoint outright; otherwise the midpoint. Never nearest-anchor, never largest-gap: a tall multi-line cell outgrows its row band.
-- An outer-record reach must clear that record's tallest cell. The page-wide minimum row pitch is not a safe bound.
-- `after_last_anchor_pattern`: only where the column headers sit closer to one page's outer anchor than another page's outer record's tallest cell, so no reach clears one without admitting the other. Exclude the exact header labels.
+- Gemini (`src/pdf/gemini-table.ts`, `PDF_EXTRACT_MODEL`) reads the table; no geometry config exists. A source declares `pdf.mark_field` + `pdf.mark_pattern`, plus `mark_pattern_exclusions` / `markless_pages` where needed.
+- `mark_pattern` is compiled as `^(?:…)$` and matches whole text items; write it unanchored.
+- Extraction runs per 5-page chunk (`src/pdf/chunks.ts`): one response cannot hold a large register before `MAX_TOKENS`. Chunk requests start paced at `GEMINI_REQUESTS_PER_MINUTE`; a mark-less chunk is never sent.
+- The text-layer mark check is the row guard, per chunk: every text item on the chunk's pages matching `mark_pattern` must be an extracted mark and vice versa, counted one for one. A model can stop early or merge rows and still report STOP.
+  - A row printed across a chunk boundary fails the run (mark-less continuation row). Never relax the check or overlap chunks to pass it; re-chunking is a design change.
+  - A non-mark text item matching the pattern (a wrapped continuation line) goes in `mark_pattern_exclusions`, verbatim. Never loosen the check to a count budget.
+  - A mark printed as split glyph runs: widen `mark_pattern` (`\s*`), never drop the item.
+- A page printing no mark escapes the check, so pages beyond `pdf.markless_pages` (default 0) fail the run before any paid call. Budget only a page the register genuinely prints without marks (a header-only last page); record the residual exposure beside it.
+- pdf.js (text layer) and pdf-lib (chunks) count pages independently; a disagreement fails the run, since a page only one sees is never checked.
+- Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
+- Retry transport errors only. A non-STOP finish, malformed JSON, or schema break fails the run.
+- The extraction cache (`aircraft/_pdf_extraction/<id>.json`) is what makes extraction deterministic: one entry per chunk, keyed on its pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model + prompt) → the stored response, re-validated. Gemini varies run to run; without it an unchanged PDF advances `upstream_hash`. Only a validated chunk is stored; validated chunks persist even when another fails, so a rerun re-bills only failures.
+  - A cached response that no longer validates (a `mark_field`/pattern change keeps its key) is re-requested and replaced, never left to fail every run.
+  - A corrupt cache fails the source, like the translation cache: read as empty it re-bills everything and drifts cells the mark check never compares.
+  - A failed PUT alongside a chunk failure is logged; the chunk failure is the thrown error.
+  - `make ingest` maps through the same cache, so its forced refresh bills nothing new.
+- A dry run reads the cache but suppresses the PUT like every other write, so it re-bills every uncached chunk on every run. Verify a PDF change with a real refresh, never repeated dry runs.
+- `fixtures/<id>/extraction/<pdf>.json` is the recorded model response per chunk, in chunk order (null for an unsent mark-less chunk); engine tests map from it. `make record-extraction` runs the real extraction — paced, mark-checked, validated chunks written even when one fails. Re-record with `make record-extraction SOURCE=<id>` on any model or prompt change, review the diff by hand against the PDF, and commit it with that change.
+- A failing mark check on a live refresh: read the named marks against the PDF. A real row the model missed is a prompt or model problem, never an exclusion.
 
 ### Values
 

@@ -1,11 +1,20 @@
-import { describe, it, expect, beforeAll, spyOn } from 'bun:test';
+import { describe, it, expect, beforeAll, spyOn, mock } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TextDecoder } from 'node:util';
 import { writeOds } from 'hucre/ods';
 import { loadSourceConfig } from '../src/config/loader.js';
-import { mapRows, mapSnapshots } from '../src/engine.js';
 import type { EngineStats } from '../src/engine.js';
+import type { PdfExtraction } from '../src/pdf/extract.js';
+import { recordedTableRows } from './pdf/recorded-extraction.js';
+
+// PDF fixtures map from their recorded Gemini responses; the text-layer mark check still runs live.
+const requestTableRows = mock(recordedTableRows);
+void mock.module('../src/pdf/gemini-table.js', () => ({
+  requestTableRows,
+  PDF_EXTRACT_FINGERPRINT: 'recorded',
+}));
+const { mapRows, mapSnapshots } = await import('../src/engine.js');
 import type { Aircraft } from '../src/schema.js';
 import type { FieldMapping, SourceConfig } from '../src/types/config.js';
 
@@ -2800,9 +2809,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
     expect(statuses).toEqual(new Set(['valid', null]));
   });
 
-  // The same config, no orientation branch: CAA flips this table and the parser detects which axis a
-  // file uses. Both fixtures are real publications, so this is the ground truth that a flip is a
-  // no-op end to end — not just in the parser.
+  // CAA flips this table between publications; both fixtures are real ones, mapped by one config.
   describe('rotated publication, same config', () => {
     const MV_ROTATED_PDF = resolve(
       import.meta.dirname,
@@ -2827,8 +2834,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
     it('keys on the same registration S/N across orientations', () =>
       expect(rotated.get('21')!.registration).toBe('8Q-OEQ'));
 
-    // The rotated layout prints an IDERA column the unrotated one omits; the null band keeps the
-    // shared column order intact, so the mapping picks it up whenever CAA prints it.
+    // The rotated table prints an IDERA column the unrotated one omits.
     it('recovers the IDERA authorised party and drops its address (PII)', () => {
       const withIdera = [...rotated.values()].filter((r) => r.idera_authorised_party !== null);
       expect(withIdera.length).toBeGreaterThan(0);
@@ -2838,8 +2844,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
     });
   });
 
-  // The rotated table's sixteen columns set with fields along x — the same axis as the 97-row
-  // publication above, so both x layouts are declared and the marks' position picks between them.
+  // Sixteen columns, including IDERA party columns the thirteen-column publications omit.
   describe('sixteen-column publication, same config', () => {
     const MV_SIXTEEN_PDF = resolve(
       import.meta.dirname,
@@ -2869,7 +2874,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
         duplicateSkipped: 0,
       }));
 
-    it('parses the issue and revision dates from their own bands', () => {
+    it('maps the issue and revision dates from their own columns', () => {
       const r = sixteen.get('21')!;
       expect(r.registration).toBe('8Q-OEQ');
       expect(r.status).toBe('valid');
@@ -2877,12 +2882,12 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
       expect(r.last_action_date).toBe('2026-07-08');
     });
 
-    // Page 3's top record prints its legal owner 11.2pt above its mark, past the default reach.
+    // Page 3's top record prints its legal owner above its mark, the line a reader could hand to
+    // the record before it.
     it('keeps a top record’s first legal-owner line as the party name', () =>
       expect(sixteen.get('128')!.legal_owner.name).toBe('Seaplane Holding Cayman Ltd.'));
 
-    // The last page carries this record alone, so nothing but the margin rule and the header pattern
-    // bounds what joins it.
+    // The last page carries this record alone between the repeated header and the footer.
     it('maps the record a page closes on alone without header or footer text', () => {
       const r = sixteen.get('255')!;
       expect(r.registration).toBe('8Q-ZNG');
@@ -2901,7 +2906,7 @@ describe('CAA Maldives fixture mapping (PDF)', () => {
         'FTAI aircraft leasing Ireland (2025)'
       ));
 
-    it('recovers the IDERA party of a top record whose letter line sits 13pt above its mark', () =>
+    it('recovers the IDERA party of a top record whose letter line sits above its mark', () =>
       expect(sixteen.get('214')!.idera_authorised_party).toBe('AER, LLC'));
   });
 });
@@ -3024,10 +3029,9 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
     hrStats = result.stats;
   });
 
-  // The fixture's two real pages carry 33 real aircraft. `pdf.anchor_field: mark` keeps a wrapped
-  // owner-cell continuation line that happens to read "PZO" from ever being mistaken for its own
-  // anchor, so there is no false-positive row to skip (see the MORH test below for what that line
-  // actually belongs to).
+  // The fixture's two real pages carry 33 real aircraft. A wrapped owner-cell line reading "PZO"
+  // matches the mark pattern; `mark_pattern_exclusions` keeps it out of the mark count (see the MORH
+  // test below for what that line belongs to).
   it('maps all 33 real rows with no failures', () => {
     expect(hrStats).toEqual({ total: 33, ok: 33, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(hrRecords.size).toBe(33);
@@ -3049,8 +3053,7 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
   it('falls back to other for an association with no recognized legal-form signal', () =>
     expect(hrRecords.get('BFT')!.owner.kind).toBe('other'));
 
-  // Before `anchor_field` this wrapped VLASNIK continuation line ("PZO") was itself mistaken for a
-  // record anchor and discarded, truncating the owner name mid-phrase. It now joins its real row.
+  // The wrapped VLASNIK continuation line ("PZO") reads like a mark; it belongs to this owner name.
   it('keeps a wrapped MORH government owner name whole and drops its street address (PII)', () => {
     const r = hrRecords.get('DAZ')!;
     expect(r.owner.name).toBe('MORH Zapovjedništvo HRZ I PZO');
@@ -3110,8 +3113,8 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
   it('marks every row unknown (register publishes no status)', () =>
     expect([...hrRecords.values()].every((r) => r.status === 'unknown')).toBe(true));
 
-  // The last page holds five tall rows, so half its tightest pitch (15.42pt) reaches the column
-  // header line 13.32pt above the first mark; that line starts left of the mark band.
+  // The last page holds five tall rows directly under the repeated column header, which must not
+  // read as a row or a cell.
   it('keeps the column header out of the first record on a sparse last page', async () => {
     const tail = await mapRows(
       loadSourceConfig(HR_CONFIG),
@@ -3149,25 +3152,23 @@ describe('CCAA Croatia rotated publication, same config', () => {
     upright = (await mapRows(config, new Map([['register', fixture('register.pdf')]]))).records;
   });
 
-  it('maps every row of the rotated scan with no failures', () => {
+  it('maps every row of the rotated publication with no failures', () => {
     expect(rotatedStats).toEqual({ total: 37, ok: 37, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(rotated.size).toBe(37);
   });
 
-  // The second line of a two-line cell sits 0.12pt past the midpoint to the next mark; nearest-anchor
-  // snapping handed it to the following record (ADV read "Limited Adventure Driven Vacations").
+  // The second line of a two-line cell sits closer to the next mark than to its own.
   it('keeps a wrapped owner line with the record it trails', () => {
     expect(rotated.get('ABC')!.owner.name).toBe('ILFC Aircraft 73B-30667 Limited');
     expect(rotated.get('ADV')!.owner.name).toBe('Adventure Driven Vacations d.o.o.');
     expect(rotated.get('ATR')!.owner.name).toBe('Avation Pacific Leasing III PTE. LTD.');
   });
 
-  it('keeps the tail of the last record on the page past the default reach', () =>
+  it('keeps the tail of the last record on the page', () =>
     expect(rotated.get('CAU')!.owner.name).toBe('Key Issuer Designated Activity Company'));
 
-  // The last data page ends on a three-line disclaimer that begins one wrapped line after the last
-  // mark, inside the reach that keeps a last record's own tail; the page after it holds only the
-  // repeated column header and the footer.
+  // The last data page ends on a three-line disclaimer; the page after it holds only the repeated
+  // column header and the footer, within hr-ccaa's markless_pages budget.
   it('drops the trailing disclaimer and tolerates the header-only last page', async () => {
     const tail = await mapRows(
       loadSourceConfig(HR_CONFIG),
@@ -3176,9 +3177,14 @@ describe('CCAA Croatia rotated publication, same config', () => {
 
     expect(tail.stats).toEqual({ total: 20, ok: 20, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(tail.records.get('ZYZ')!.source_id).toBe('ZYZ');
+    // A two-party owner cell: every line belongs to this record, none to the one above.
+    expect(tail.records.get('XGB')!.owner.name).toBe(
+      'Karting centar-Zagreb i Zagrebački prometni zavod d.o.o.'
+    );
+    expect(tail.records.get('XCA')!.owner.name).toBe('Aero-klub Zagreb');
   });
 
-  it('restores the 9A- prefix and keys on the bare mark in both orientations', () => {
+  it('restores the 9A- prefix and keys on the bare mark in both publications', () => {
     for (const records of [rotated, upright])
       for (const [key, r] of records) {
         expect(key).toMatch(/^[A-Z]{3}$/);
@@ -3186,7 +3192,7 @@ describe('CCAA Croatia rotated publication, same config', () => {
       }
   });
 
-  it('yields the same record shape as the upright scan', () => {
+  it('yields the same record shape as the upright publication', () => {
     const shape = (m: Map<string, Aircraft>): string[] =>
       Object.keys([...m.values()][0] ?? {}).sort();
     expect(shape(rotated)).toEqual(shape(upright));
@@ -3223,6 +3229,23 @@ describe('CAAT Thailand fixture mapping (PDF)', () => {
     thStats = result.stats;
   });
 
+  it("extracts through the caller's cache: stores every chunk, then maps from it with no call", async () => {
+    const config = loadSourceConfig(TH_CONFIG);
+    const files = new Map([['register', readFileSync(TH_PDF)]]);
+    const write = mock<(e: PdfExtraction) => Promise<void>>(() => Promise.resolve());
+    await mapRows(config, files, undefined, { read: () => Promise.resolve(null), write });
+    const stored = write.mock.calls[0][0];
+    expect(Object.keys(stored.entries)).toHaveLength(1);
+
+    requestTableRows.mockClear();
+    const replay = await mapRows(config, files, undefined, {
+      read: () => Promise.resolve(stored),
+      write,
+    });
+    expect(requestTableRows).not.toHaveBeenCalled();
+    expect(replay.records).toEqual(thRecords);
+  });
+
   // Three real pages: 53 + 53 + 53 rows.
   it('maps all 159 real rows with no failures', () => {
     expect(thStats).toEqual({ total: 159, ok: 159, failed: 0, skipped: 0, duplicateSkipped: 0 });
@@ -3241,8 +3264,8 @@ describe('CAAT Thailand fixture mapping (PDF)', () => {
     expect(r.icao_hex).toBeNull();
   });
 
-  // The ultralight register shares the table under a U- prefix; the anchor must take both.
-  it('anchors U- ultralight marks alongside HS- marks', () => {
+  // The ultralight register shares the table under a U- prefix; the mark pattern must take both.
+  it('maps U- ultralight marks alongside HS- marks', () => {
     const r = thRecords.get('U-C11')!;
     expect(r.registration).toBe('U-C11');
     expect(r.model).toBe('MX II Sprint');
@@ -5023,9 +5046,9 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.size).toBe(184);
   });
 
-  // The page carrying "HU-16" is in the fixture: it anchors as its own record, budgets out under
-  // allowed_missing_source_id_rows, and HA-TWN maps whole instead of fusing with it.
-  it('keeps HA-TWN whole beside the HU-16 line it once fused with', () => {
+  // The page carrying "HU-16" is in the fixture: it extracts as its own row, budgets out under
+  // allowed_missing_source_id_rows, and HA-TWN maps whole instead of absorbing it.
+  it('keeps HA-TWN whole beside the HU-16 row', () => {
     const r = huRecords.get('HA-TWN')!;
     expect(r.model).toBe('AS 355 F2');
     expect(r.serial_number).toBe('5614');
@@ -5104,8 +5127,9 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.manufacturer).toBeNull();
   });
 
-  // Without the declared reaches HA-MKG's operator loses its first line ("RSZ-COOP", top of its
-  // page) and HA-HML's owner loses its last ("KFT.", bottom of its own).
+  // HA-MKG's operator starts on the first line of its page ("RSZ-COOP"); HA-HML's owner ends on the
+  // last line of its own ("KFT."). Both pages sit inside one chunk, so a line lost at a page break
+  // would not trip the per-chunk mark check.
   it('keeps an outermost record’s wrapped party name whole at both ends of a page', () => {
     expect(huRecords.get('HA-MKG')!.operator.name).toBe(
       'RSZ-COOP LÉGISZOLGÁLTATÓ ÉS KERESKEDELMI KFT.'
@@ -5167,14 +5191,15 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
 
   // The fixture only renders zero or one space around the hyphen, so the `\s*` the config declares
   // is not exercised by the rows above. The mark prints as independently positioned glyph runs, so
-  // a wider render is the same failure mode already observed — and an unmatched anchor drops the
-  // row from the fleet with nothing failing, since a PDF source has no record_count.
-  it('anchors a mark however many spaces the glyph runs put around the hyphen', () => {
-    const anchor = new RegExp(loadSourceConfig(HU_CONFIG).pdf!.anchor_pattern);
+  // a wider render is the same failure mode already observed — and an unmatched mark drops out of
+  // the text-layer count that cross-checks the extracted rows.
+  it('matches a mark however many spaces the glyph runs put around the hyphen', () => {
+    // Wrapped as extractPdfRows compiles it: the pattern matches whole text items.
+    const pattern = new RegExp(`^(?:${loadSourceConfig(HU_CONFIG).pdf!.mark_pattern})$`);
     for (const mark of ['HA-GZQ', 'HA- GZQ', 'HA -GZQ', 'HA  -  GZQ', 'HA-YFKA', 'HA - 742'])
-      expect(anchor.test(mark)).toBe(true);
+      expect(pattern.test(mark)).toBe(true);
     for (const mark of ['HA-GZ', 'HA-GZABC', '9A-BTI', 'GZQ'])
-      expect(anchor.test(mark)).toBe(false);
+      expect(pattern.test(mark)).toBe(false);
   });
 });
 

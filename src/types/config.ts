@@ -209,70 +209,20 @@ export interface RecordCountCheck {
   count_matches?: boolean;
 }
 
-// One page orientation a register has been observed publishing. `field_axis` is the axis along which
-// fields (columns) are distributed; the perpendicular axis is the record axis. Each field's value
-// band sits at `column_pos[i]` on `field_axis`, paired by index with the field name in
-// `columns[primary]`.
-//
-// Every value here is measured against this orientation's geometry and does not transfer to the
-// other one — a flip moves the axis and the band positions together — so re-measure against a live
-// file in that orientation rather than deriving one layout from the other.
-export interface PdfLayout {
-  field_axis: 'x' | 'y';
-  // `null` means this orientation prints no cell for that field, keeping the shared `columns` order
-  // usable by every layout. See ParsePdfOptions.column_pos in src/parser.ts.
-  column_pos: (number | null)[];
-  // Extra reach before the first sorted record coordinate. Declare only a measured value that
-  // retains a known final-row continuation without reaching the source's page footer.
-  before_first_anchor_reach?: number;
-  // Optional allowlist for text in the extra reach. Use when a nearby footer/disclaimer falls in
-  // the same coordinate band as the continuation.
-  before_first_anchor_pattern?: string;
-  // Extra reach past the last record coordinate (the column-header side). Declare a measured value
-  // that clears the outermost record's tallest cell without reaching the header band; the default
-  // reach is half the page's tightest row pitch, which a taller outer record overruns.
-  after_last_anchor_reach?: number;
-  // Optional allowlist for text in the extra reach past the last record coordinate; requires
-  // `after_last_anchor_reach`. Use when the column headers sit closer to one page's outer anchor than
-  // another page's outer record's tallest cell, so no reach alone clears one without the other.
-  after_last_anchor_pattern?: string;
-  // Assign a wrapped line to the record whose anchor precedes it in reading order, instead of the
-  // nearest anchor. Declare it when a cell's line leading exceeds half the record pitch, so the
-  // second line of a two-line cell sits past the midpoint and nearest-anchor snapping hands it to
-  // the next record. Leave it off for cells centred on their anchor, whose first lines precede it.
-  wrap_after_anchor?: boolean;
-  // Drop a printed line that starts before the first printed band by more than the same-row jitter.
-  // Declare it when a layout widens `after_last_anchor_reach` or `before_first_anchor_reach` far
-  // enough to reach text set in the page margin (a trailing disclaimer, a repeated header), which
-  // would otherwise join the outermost record's cells. Lines are items sharing a record-axis
-  // coordinate; a line carrying an anchor is never dropped.
-  drop_margin_lines?: boolean;
-}
-
-// Coordinate-table extraction for PDFs whose rows/columns are positioned, not delimited. One record
-// per item matching `anchor_pattern`.
-//
-// A register can republish the same table rotated 90° — CAA Maldives has flipped four times since
-// 2026-07 — and the field ORDER survives a flip while the axis and every band position do not. So
-// the orientation is detected from the anchors at parse time and the matching `layouts` entry is
-// selected, rather than being declared as one fixed axis. `columns[primary]` is shared by every
-// layout. Declare only orientations measured against a real file: a file in an undeclared
-// orientation fails the parse loudly, which is the point — read on the wrong axis it would yield a
-// full set of structurally valid, silently scrambled records.
+// A PDF register read by Gemini (src/pdf/extract.ts), one row per printed record. The mark fields
+// cross-check the extracted rows against the PDF's own text layer.
 export interface PdfConfig {
-  anchor_pattern: string;
-  // One entry per observed geometry. Layouts sharing a `field_axis` require `anchor_field`: the
-  // parser picks among them by where the marks sit against each one's anchor band.
-  layouts: PdfLayout[];
-  // Budget of text-bearing pages expected to yield zero anchor matches (cover/preface/legend
-  // pages). Any anchorless page beyond this fails the parse: a register page that silently loses
-  // its anchors drops its whole fleet slice, and PDF sources cannot use record_count to catch it.
-  // Defaults to 0 — declare cover pages explicitly rather than inferring them from position.
-  allowed_anchorless_pages?: number;
-  // Column name (from columns[primary]) an anchor_pattern match must fall in to count as a record
-  // anchor. Required whenever anchor_pattern is generic enough to also match a wrapped continuation
-  // line in another column — see ParsePdfOptions.anchor_column in src/parser.ts.
-  anchor_field?: string;
+  // Column of `columns[primary]` holding the registration mark.
+  mark_field: string;
+  // Matches a printed mark as one whole text item (anchored implicitly). Every match must be an
+  // extracted row's mark, and every extracted mark a match.
+  mark_pattern: string;
+  // Text items matching `mark_pattern` that are not marks, verbatim (a wrapped continuation line in
+  // another column that reads like one).
+  mark_pattern_exclusions?: string[];
+  // Pages expected to print no mark (a header-only final page). Default 0: every page beyond the
+  // budget fails the run, since rows there escape the mark check.
+  markless_pages?: number;
 }
 
 export interface SourceConfig {

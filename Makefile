@@ -1,4 +1,4 @@
-.PHONY: help install check format format-check lint typecheck test build refresh ingest secret-scan clean serve assemble-feed deploy-only deploy
+.PHONY: help install check format format-check lint typecheck test build refresh ingest record-extraction secret-scan clean serve assemble-feed deploy-only deploy
 
 .DEFAULT_GOAL := help
 
@@ -73,6 +73,11 @@ ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drop
 		INGEST_SOURCE="$$SOURCE" INGEST_FILE="$$FILE" $(BUN) run dist/ingest.js || exit $$?; \
 		if [ "$${DRY_RUN:-false}" = true ]; then echo "DRY_RUN=true: the file maps cleanly; nothing was stored."; exit 0; fi; \
 		REFRESH_SOURCE="$$SOURCE" FORCE_REFRESH=true $(BUN) run dist/pipeline.js
+
+# Billed: one paced Gemini call per marked five-page chunk of each fixture PDF. `git diff fixtures/`
+# afterwards is the accuracy check.
+record-extraction: build ## Re-record Gemini's response for a PDF source's fixtures (SOURCE=<id>)
+	@$(LOAD_ENV); $(BUN) run dist/record-extraction.js "$${SOURCE:-}"
 
 secret-scan:
 	@if command -v gitleaks > /dev/null; then \

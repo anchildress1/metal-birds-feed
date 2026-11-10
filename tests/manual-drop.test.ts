@@ -11,6 +11,7 @@ const mockMapRows = mock();
 const mockWriteDrop = mock();
 const mockR2Constructor = mock();
 const mockReadState = mock();
+const mockPdfExtractionCache = mock();
 
 void mock.module('../src/config/loader.js', () => ({ loadSourceConfig: mockLoadSourceConfig }));
 void mock.module('../src/engine.js', () => ({ mapRows: mockMapRows }));
@@ -25,6 +26,7 @@ void mock.module('../src/writer.js', () => ({
 
     writeDrop = mockWriteDrop;
     readState = mockReadState;
+    pdfExtractionCache = mockPdfExtractionCache;
   },
 }));
 
@@ -75,6 +77,7 @@ beforeEach(() => {
   mockWriteDrop.mockReset().mockResolvedValue(undefined);
   mockR2Constructor.mockReset();
   mockReadState.mockReset().mockResolvedValue(null);
+  mockPdfExtractionCache.mockReset().mockReturnValue('cache');
   mkdirSync(DROP_DIR, { recursive: true });
   writeFileSync(FILE, '%PDF-test');
 });
@@ -175,6 +178,13 @@ describe('ingest', () => {
     expect(mockWriteDrop).toHaveBeenCalledWith('th-caat', expect.any(Buffer));
     expect(String(mockWriteDrop.mock.calls[0]?.[1])).toBe('%PDF-test');
     expect(mockReadState).toHaveBeenCalledWith('th-caat');
+  });
+
+  // The forced refresh that follows maps the same bytes; without the shared cache both bill Gemini.
+  it("maps through the source's extraction cache", async () => {
+    await ingest('th-caat', FILE, false);
+    expect(mockPdfExtractionCache).toHaveBeenCalledWith('th-caat');
+    expect(mockMapRows.mock.calls[0]?.[3]).toBe('cache');
   });
 
   // A dry run writes nothing, so claiming the drop was stored would send the operator after a file

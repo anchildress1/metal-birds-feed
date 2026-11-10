@@ -102,7 +102,12 @@ export async function run(sourceId: string): Promise<RunResult> {
     countUrl === undefined
       ? undefined
       : await fetchPublishedTotal(countUrl, config.download.headers);
-  const { records, stats } = await mapRows(config, files, publishedTotal);
+  const { records, stats } = await mapRows(
+    config,
+    files,
+    publishedTotal,
+    writer.pdfExtractionCache(sourceId)
+  );
 
   log('info', 'map_summary', { source: sourceId, ...stats });
   if (stats.failed > 0)

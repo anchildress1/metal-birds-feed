@@ -215,14 +215,14 @@ That's enough to trigger the skill. It then works through, in order:
 
 Useful things to say along the way:
 
-| Say this                                 | To get                                                            |
-| ---------------------------------------- | ----------------------------------------------------------------- |
-| "Just get to the point where tests pass" | Stop after step 3 — no accounts, no money                         |
-| "Set up MCP first"                       | Step 4 before anything else                                       |
-| "Use a different first source"           | It inspects that source's `language:` and asks for any needed key |
-| "I want to pull every configured source" | The full load — it will warn you about time and usage             |
-| "Explain what that command just did"     | A plain-language explanation, any time                            |
-| "Stop"                                   | It stops. Nothing is half-applied                                 |
+| Say this                                 | To get                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------- |
+| "Just get to the point where tests pass" | Stop after step 3 — no accounts, no money                                       |
+| "Set up MCP first"                       | Step 4 before anything else                                                     |
+| "Use a different first source"           | It inspects that source's `format:` and `language:` and asks for any needed key |
+| "I want to pull every configured source" | The full load — it will warn you about time and usage                           |
+| "Explain what that command just did"     | A plain-language explanation, any time                                          |
+| "Stop"                                   | It stops. Nothing is half-applied                                               |
 
 ---
 

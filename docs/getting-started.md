@@ -47,12 +47,12 @@ Everything up to it runs on your laptop.
 
 ## What It Costs 💸
 
-| Service            | Required?           | Cost                                                                                                                                                   |
-| ------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cloudflare R2      | Yes                 | The operator's observed bill for the first data load was approximately $6.50 USD in R2 charges. That is not a guaranteed quote; your charge may differ |
-| Google AI (Gemini) | Non-English sources | Depends on your Google AI account; the pipeline limits request rate                                                                                    |
-| Google Cloud Run   | Only if you deploy  | Scale-to-zero; pennies unless you send it real traffic                                                                                                 |
-| GitHub             | Only for automation | Free                                                                                                                                                   |
+| Service            | Required?                   | Cost                                                                                                                                                                 |
+| ------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare R2      | Yes                         | The operator's observed bill for the first data load was approximately $6.50 USD in R2 charges. That is not a guaranteed quote; your charge may differ               |
+| Google AI (Gemini) | PDF and non-English sources | PDF reading: roughly $0.50–$1.30 USD per 100 pages on first extraction at November 2026 pricing; later runs bill only changed five-page chunks. Translation is small |
+| Google Cloud Run   | Only if you deploy          | Scale-to-zero; pennies unless you send it real traffic                                                                                                               |
+| GitHub             | Only for automation         | Free                                                                                                                                                                 |
 
 R2 bills object operations and stored bytes, not aircraft rows. This is not a claim about which
 billing dimension caused the observed charge. Step 7 starts with one registry first.
@@ -191,13 +191,14 @@ Leave everything else alone for now.
 > leaked, delete the token in the Cloudflare dashboard and make a new one. That takes 30 seconds and
 > fully solves the problem.
 
-### The Gemini key — only for configured non-English registries
+### The Gemini key — for PDF registries and non-English registries
 
-Each `sources/<id>.yaml` declares its current `language:`. A source declaring `language: en` skips
-Gemini; any other value sends a few descriptive fields through Gemini to render them in English.
-Read the selected source's YAML instead of relying on a copied country list.
+Gemini does two jobs here. It reads the register table out of every `format: pdf` source, whatever
+its language: one call per five pages, paced at `GEMINI_REQUESTS_PER_MINUTE`, and the whole
+document, owner names and addresses included, goes to Google. It also renders a few descriptive
+fields in English for any source whose `language:` is not `en`. Read the selected source's YAML instead of relying on a copied list.
 
-Skip this if you're only pulling English sources. Otherwise:
+Skip this if you're only pulling English, non-PDF sources. Otherwise:
 
 1. Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 2. Set the existing `GEMINI_API_KEY=` line in `.env` (it's already there, empty). Don't add a
@@ -258,7 +259,7 @@ warnings apply:
 - **It may cost you.** This project's operator incurred approximately $6.50 USD in R2 charges on
   the first data load. That is an observed bill, not a guaranteed quote or a claim about which
   billing dimension caused it. Check current R2 pricing and your account usage before starting
-- Remaining non-English sources need `GEMINI_API_KEY` set or the run stops
+- Remaining PDF and non-English sources need `GEMINI_API_KEY` set or the run stops
 - **A few registers can't be downloaded by the pipeline at all.** Their agencies put the file behind
   a browser check that automated requests cannot pass, and this project does not try to get around
   one. Those configs say `manual: true`. Open the `url` from the YAML in your own browser, save the
@@ -287,8 +288,11 @@ warnings apply:
   before the full pull, not after
 
 Want to see what it would do without writing anything? Set `DRY_RUN=true` in `.env`. It downloads,
-parses and compares, but it does **not** translate — so it cannot tell you whether your
-`GEMINI_API_KEY` works. Treat it as a shape check, not a rehearsal.
+parses and compares, but it does **not** translate. A PDF source still calls Gemini to read the
+table, and because a dry run never saves what it reads, it pays for every page not already stored
+by a real run, every time. For a non-PDF
+source a dry run cannot tell you whether your `GEMINI_API_KEY` works.
+Treat it as a shape check, not a rehearsal.
 
 ---
 
@@ -307,7 +311,7 @@ parses and compares, but it does **not** translate — so it cannot tell you whe
 > step is a separate milestone with account-wide usage to check first.
 >
 > **To continue:** blank out `REFRESH_SOURCE` in `.env` and run `make refresh` — check account-wide
-> R2 usage, set `GEMINI_API_KEY` for remaining non-English sources, and re-read
+> R2 usage, set `GEMINI_API_KEY` for remaining PDF and non-English sources, and re-read
 > [DATA_LICENSES.md](../DATA_LICENSES.md) first. If you're not ready for that, stop at Step 7. You
 > have a working pipeline and a real artifact in R2; that is a legitimate place to stop.
 
@@ -525,7 +529,7 @@ territory.
 | `command not found: bun`                                   | Terminal hasn't picked up the new install               | Close and reopen your terminal                                                                                                                                                                          |
 | `command not found: make`                                  | Build tools missing                                     | macOS: `xcode-select --install` · Linux: `apt-get install make`                                                                                                                                         |
 | `Missing required environment variable: MBF_R2_ACCOUNT_ID` | `.env` is missing (Step 6) or that line is blank        | `cp .env.example .env` if it is missing, then fill in the key the message names                                                                                                                         |
-| `Missing required environment variable: GEMINI_API_KEY`    | A non-English source needs translation                  | Add the key, or set `REFRESH_SOURCE` to an English source                                                                                                                                               |
+| `Missing required environment variable: GEMINI_API_KEY`    | A PDF source or a non-English source needs Gemini       | Add the key, or set `REFRESH_SOURCE` to an English, non-PDF source                                                                                                                                      |
 | `FEED_TOKEN must be set (at least 16 characters)`          | Token missing or too short                              | `export FEED_TOKEN=$(openssl rand -hex 16)`                                                                                                                                                             |
 | `gitleaks not found` when committing                       | Secret scanner isn't installed                          | `brew install gitleaks` — do not skip the hook                                                                                                                                                          |
 | Refresh looks stuck                                        | You're pulling every configured registry at once        | Tail `logs/pipeline.log` — each source logs `elapsed_ms` as it finishes, and `feed_published` marks the end. A steady-state run is ~25s; a cold first pull is longer but not minutes-times-source-count |

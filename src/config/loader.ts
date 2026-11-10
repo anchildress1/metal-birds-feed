@@ -182,89 +182,13 @@ const SourceConfigSchema = z
     record_path: z.string().optional(),
     pdf: z
       .strictObject({
-        anchor_pattern: z.string().min(1).refine(isValidRegex, {
-          message: 'pdf.anchor_pattern must be a valid regular expression',
+        mark_field: z.string().min(1),
+        mark_pattern: z.string().min(1).refine(isValidRegex, {
+          message: 'pdf.mark_pattern must be a valid regular expression',
         }),
-        layouts: z
-          .array(
-            z
-              .strictObject({
-                field_axis: z.enum(['x', 'y']),
-                // null = this orientation prints no cell for that field; at least one must print.
-                column_pos: z
-                  .array(z.number().nullable())
-                  .min(1)
-                  .refine((ps) => ps.some((p) => p !== null), {
-                    message: 'pdf.layouts[].column_pos must declare at least one printed band',
-                  }),
-                before_first_anchor_reach: z.number().nonnegative().optional(),
-                after_last_anchor_reach: z.number().nonnegative().optional(),
-                wrap_after_anchor: z.boolean().optional(),
-                drop_margin_lines: z.boolean().optional(),
-                before_first_anchor_pattern: z
-                  .string()
-                  .min(1)
-                  .refine(isValidRegex, {
-                    message: 'pdf.before_first_anchor_pattern must be a valid regular expression',
-                  })
-                  .optional(),
-                after_last_anchor_pattern: z
-                  .string()
-                  .min(1)
-                  .refine(isValidRegex, {
-                    message: 'pdf.after_last_anchor_pattern must be a valid regular expression',
-                  })
-                  .optional(),
-              })
-              // Required together, not just pattern-requires-reach: a reach with no pattern admits
-              // whatever text falls in the widened zone unconditionally — the exact failure mode a
-              // column-position-only rescue hit in review (an unrelated page-footer paragraph got
-              // pulled into the last record). The pattern is what makes the widened zone safe.
-              .refine(
-                (l) =>
-                  (l.before_first_anchor_reach === undefined) ===
-                  (l.before_first_anchor_pattern === undefined),
-                {
-                  message:
-                    'pdf.before_first_anchor_reach and pdf.before_first_anchor_pattern must be set together',
-                }
-              )
-              // One-directional, unlike the before pair: a reach alone is the established way to
-              // clear a tall outer cell where the headers sit beyond it, while a pattern alone gates
-              // nothing on any page with two anchors.
-              .refine(
-                (l) =>
-                  l.after_last_anchor_pattern === undefined ||
-                  l.after_last_anchor_reach !== undefined,
-                {
-                  message: 'pdf.after_last_anchor_pattern requires pdf.after_last_anchor_reach',
-                }
-              )
-              // The margin is the side of the first band away from the others; one band, or bands
-              // at the same coordinate, give no direction to read.
-              .refine(
-                (l) => {
-                  if (!l.drop_margin_lines) return true;
-                  const printed = l.column_pos.filter((p): p is number => p !== null);
-                  return printed.length >= 2 && printed[0] !== printed.at(-1);
-                },
-                {
-                  message:
-                    'pdf.layouts[].drop_margin_lines needs printed bands at two different coordinates to tell which side is the margin',
-                }
-              )
-          )
-          .min(1),
-        allowed_anchorless_pages: z.number().int().nonnegative().optional(),
-        anchor_field: z.string().min(1).optional(),
+        mark_pattern_exclusions: z.array(z.string().min(1)).min(1).optional(),
+        markless_pages: z.number().int().min(1).optional(),
       })
-      // Same-axis layouts are told apart only by where the marks sit against the anchor band.
-      .refine(
-        (p) =>
-          p.anchor_field !== undefined ||
-          new Set(p.layouts.map((l) => l.field_axis)).size === p.layouts.length,
-        { message: 'pdf.layouts sharing a field_axis require pdf.anchor_field' }
-      )
       .optional(),
     record_count: z
       .strictObject({
@@ -371,8 +295,8 @@ const SourceConfigSchema = z
         });
     }),
   })
-  .refine((c) => c.format !== 'pdf' || c.pdf !== undefined, {
-    message: 'format "pdf" requires a pdf config block',
+  .refine((c) => (c.format === 'pdf') === (c.pdf !== undefined), {
+    message: 'a pdf config block goes with format pdf, and only with it',
   })
   // A list-valued source_id trims every column and joins them; a transform would be silently ignored.
   .refine((c) => !Array.isArray(c.source_id) || c.source_id_transform === undefined, {
@@ -406,36 +330,9 @@ const SourceConfigSchema = z
       message: 'columns arrays must not contain duplicate names',
     }
   )
-  // Every layout maps the same field list, so each one's band count must match it — a flip reorders
-  // neither `columns` nor `column_pos`.
-  .refine(
-    (c) =>
-      c.pdf === undefined ||
-      c.pdf.layouts.every((l) => l.column_pos.length === (c.columns?.[c.primary]?.length ?? 0)),
-    {
-      message: 'every pdf.layouts[].column_pos length must match columns[primary] length',
-    }
-  )
-  .refine(
-    (c) =>
-      c.pdf?.anchor_field === undefined ||
-      (c.columns?.[c.primary] ?? []).includes(c.pdf.anchor_field),
-    {
-      message: 'pdf.anchor_field must name a column in columns[primary]',
-    }
-  )
-  // A layout that does not print the anchor column can never capture an anchor, so it would never
-  // be picked and a file in its geometry would fail blaming an orientation flip.
-  .refine(
-    (c) => {
-      if (c.pdf?.anchor_field === undefined) return true;
-      const idx = (c.columns?.[c.primary] ?? []).indexOf(c.pdf.anchor_field);
-      return idx === -1 || c.pdf.layouts.every((l) => l.column_pos[idx] !== null);
-    },
-    {
-      message: 'every pdf.layouts[].column_pos must print a band for pdf.anchor_field',
-    }
-  )
+  .refine((c) => c.pdf === undefined || (c.columns?.[c.primary] ?? []).includes(c.pdf.mark_field), {
+    message: 'pdf.mark_field must name a column in columns[primary]',
+  })
   // primary/joins[].file resolve into the downloaded-files Map by alias (engine.ts's
   // `files.get(config.primary)`), which is keyed by download.entries' own keys — a mismatched
   // alias here only surfaces as a runtime "not found in downloaded files" error after a full

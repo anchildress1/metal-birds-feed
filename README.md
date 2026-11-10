@@ -23,13 +23,21 @@ See [PRD.md](PRD.md) §Cross-Cutting for the full model.
 Before you copy it, three things decide whether you can:
 
 - **The output is not yours to publish.** It goes to a private R2 bucket for Ashley-operated applications — no public read API, download, or query surface. Several registers granted access to Ashley by name, and some clearances are non-commercial. A fork owes its own per-source assessment before pulling anything — [DATA_LICENSES.md](DATA_LICENSES.md) records who said what.
-- **It costs money.** Cloudflare R2 for the artifacts, optionally Gemini for non-English registers, optionally Cloud Run to serve.
+- **It costs money.** Cloudflare R2 for the artifacts, optionally Gemini for PDF and non-English registers, optionally Cloud Run to serve.
 - **You are the operator.** Per-country data-use, storage, and privacy obligations land on whoever runs it. See [Legal Notice](#legal-notice).
 
 > [!NOTE]
 > R2 billing. The operator's first data load incurred approximately **$6.50 USD** in R2 charges.
 > That is an observed bill, not a guaranteed quote or a claim about which billing dimension caused
 > it. Check current R2 pricing and your account usage before pulling data.
+
+> [!NOTE]
+> Gemini billing. Every `format: pdf` source is read by Gemini, five pages per request. Measured on
+> the fixture registers, a page runs about 560 input and 1,100–3,200 output tokens: roughly
+> **$0.50–$1.30 USD per 100 pages** at November 2026 Gemini 3.8 Flash pricing, plus thinking tokens;
+> check Google's current rate. A source's first extraction pays for every page; after that, only
+> five-page chunks whose text changed are billed again. A dry run reads the stored extraction but
+> never saves one, so it pays for every chunk not yet stored, every time.
 
 ## Setting it up
 

@@ -28,6 +28,7 @@ const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
 const mockReadDeployedFeedHash = mock();
 const mockReadDrop = mock();
+const mockPdfExtractionCache = mock();
 const mockWriteDeployedFeedHash = mock();
 const mockLog = mock();
 const mockLocalizeRecords = mock();
@@ -58,6 +59,7 @@ void mock.module('../src/writer.js', () => ({
     readFeedRows = mockReadFeedRows;
     readDeployedFeedHash = mockReadDeployedFeedHash;
     readDrop = mockReadDrop;
+    pdfExtractionCache = mockPdfExtractionCache;
     writeDeployedFeedHash = mockWriteDeployedFeedHash;
   },
   // pipeline.ts reads this to decide whether a run is trustworthy enough to prune the translation
@@ -176,6 +178,7 @@ beforeEach(() => {
   mockDownload.mockReset();
   mockFetchPublishedTotal.mockReset();
   mockMapRows.mockReset();
+  mockPdfExtractionCache.mockReset();
   mockR2Write.mockReset();
   mockR2Constructor.mockReset();
   mockReadState.mockReset();
@@ -275,14 +278,29 @@ describe('run', () => {
       'https://example.test/count',
       CONFIG.download.headers
     );
-    expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), '17571');
+    expect(mockMapRows).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Map),
+      '17571',
+      undefined
+    );
   });
 
   it('skips the count fetch for a source that declares no endpoint', async () => {
     await run('faa');
 
     expect(mockFetchPublishedTotal).not.toHaveBeenCalled();
-    expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
+    expect(mockMapRows.mock.calls[0]?.[2]).toBeUndefined();
+  });
+
+  it("hands the engine the writer's extraction cache for the source", async () => {
+    const cache = { read: mock(), write: mock() };
+    mockPdfExtractionCache.mockReturnValue(cache);
+
+    await run('hr-ccaa');
+
+    expect(mockPdfExtractionCache).toHaveBeenCalledWith('hr-ccaa');
+    expect(mockMapRows.mock.calls[0]?.[3]).toBe(cache);
   });
 
   it('maps the stored drop instead of fetching for a manual source', async () => {

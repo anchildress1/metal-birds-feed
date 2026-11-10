@@ -112,10 +112,12 @@ Verify without disclosing:
 grep -c '^MBF_R2_[A-Z_]*=.\+' .env   # expect 4
 ```
 
-`GEMINI_API_KEY` is required only for a source whose YAML declares a non-English `language:`.
-Inspect the current declarations in `sources/*.yaml`; do not copy a source list into this skill.
-`language: en` skips Gemini entirely. Defer the key until a non-English source is actually
-requested; a missing key throws rather than degrading, so it fails loudly when it matters.
+`GEMINI_API_KEY` is required for a source whose YAML declares `format: pdf` (Gemini reads the
+table; dry runs included) or a non-English `language:` (translation). Inspect the current
+declarations in `sources/*.yaml`; do not copy a source list into this skill. Defer the key until
+such a source is actually requested; a missing key throws rather than degrading, so it fails loudly
+when it matters. State before the first PDF source runs that the whole PDF, owner names and
+addresses included, is sent to Google.
 
 ## Phase 5 — First pull: one small source
 
@@ -143,7 +145,11 @@ the user to look).
 - R2 pricing and account usage checked. State that the operator's first data load incurred
   approximately $6.50 USD in R2 charges. Present that as an observed bill, not a guaranteed quote
   or a claim about which billing dimension caused it
-- `GEMINI_API_KEY` set if any remaining source declares a non-English `language:`
+- `GEMINI_API_KEY` set if any remaining source declares `format: pdf` or a non-English `language:`
+- Gemini cost stated for every remaining `format: pdf` source: roughly $0.50–$1.30 USD per 100
+  pages on its first extraction (November 2026 Gemini 3.8 Flash pricing, thinking tokens extra;
+  tell the user to check the current rate); later runs bill only changed five-page chunks. Quote
+  the rate, never a page count — registers grow
 - the user has read `DATA_LICENSES.md` **and removed the `sources/<id>.yaml` of every source their
   own assessment does not cover.** Acknowledging that Ashley's clearances do not transfer is not
   enough: `make refresh` with no `REFRESH_SOURCE` pulls every config present, so an uncovered
@@ -157,8 +163,10 @@ the user to look).
 
 `DRY_RUN=true` in `.env` downloads, parses and diffs without writing to R2. It does **not**
 translate: `localize.ts` enters the Gemini call only when `!dryRun`, so a non-English source falls
-back to cache or source text and the run cannot validate `GEMINI_API_KEY`. Offer it as a
-shape check, never as a rehearsal of the paid run.
+back to cache or source text. A `format: pdf` source still calls Gemini to read the table; it reads
+the stored extraction cache but never writes it, so every dry run re-bills every chunk not already
+stored by a real run.
+Offer it as a shape check, never as a rehearsal of the paid run.
 
 ## Phase 6 — Assemble and serve
 
@@ -172,7 +180,7 @@ this exits `Missing feed rows for: <the other configured sources>`. Correct beha
 a partial feed would serve silent holes. Do not retry it and do not work around it.
 
 Stop and put the choice to the user: a full `make refresh` (check account-wide R2 usage,
-`GEMINI_API_KEY` required for remaining non-English sources, `DATA_LICENSES.md` re-read first), or
+`GEMINI_API_KEY` required for remaining PDF and non-English sources, `DATA_LICENSES.md` re-read first), or
 end at Phase 5 with a working pipeline and a real artifact in R2. Phase 5 is a legitimate stopping
 point — say so.
 
@@ -369,7 +377,7 @@ server needs an assistant restart before its tools load.
 | `command not found: bun`                                | PATH not reloaded                        | New shell, re-run Phase 0                                                |
 | `Missing required environment variable: MBF_R2_<KEY>`   | `.env` absent (Phase 4 skipped) or blank | `cp .env.example .env` if absent; quote the named key; user fills it     |
 | `Missing feed rows for: <sources>`                      | Only some sources pulled yet             | Expected after a single-source pull; offer the full refresh, never retry |
-| `Missing required environment variable: GEMINI_API_KEY` | Non-English source in scope              | Add the key, or set `REFRESH_SOURCE` to an `en` source                   |
+| `Missing required environment variable: GEMINI_API_KEY` | PDF or non-English source in scope       | Add the key, or set `REFRESH_SOURCE` to an `en`, non-PDF source          |
 | `GEMINI_API_KEY rejected by Gemini`                     | Revoked / wrong project / billing off    | Setup bug, not transient — do not retry                                  |
 | `FEED_TOKEN must be set (at least 16 characters)`       | Unset or short                           | `export FEED_TOKEN=$(openssl rand -hex 16)`                              |
 | `MBF_FEED_DB_PATH must stay within the service root`    | Path escapes the sandbox                 | Use `./feed.sqlite`                                                      |

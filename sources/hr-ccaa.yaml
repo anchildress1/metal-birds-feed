@@ -23,68 +23,18 @@ primary: register
 delimiter: ','
 format: pdf
 
-# Landscape positioned table, one aircraft per y-row, each field a fixed x-band — same shape as
-# AESA Spain. Records anchor on the bare 3-letter mark (REG. OZNAKA); Croatia's table never repeats
-# the 9A- nationality prefix, so `hr_ccaa_registration` restores it. See PdfConfig in
-# src/types/config.ts for the extraction model.
-#
-# `anchor_field: mark` restricts anchor matches to the mark column's x-band. Without it, a bare
-# `^[A-Z]{3}$` pattern also matches a wrapped continuation line in any other column that happens to
-# read as three capital letters — verified against the live document: a VLASNIK (owner) cell wraps
-# onto its own line reading exactly "PZO" (continuing "MORH Zapovjedništvo HRZ I", a military unit
-# name), which would otherwise mint a phantom record and steal that line from its real row.
-# CCAA scans the table in either orientation between publications; each orientation is declared as
-# its own layout, with bands measured against a real file in that orientation. A third orientation
-# fails the parse naming the missing axis rather than reading it wrong.
+# Records carry the bare 3-letter mark (REG. OZNAKA); Croatia's table never repeats the 9A-
+# nationality prefix, so `hr_ccaa_registration` restores it.
 pdf:
+  mark_field: mark
+  mark_pattern: '[A-Z]{3}'
+  # A VLASNIK (owner) cell wraps onto its own line reading exactly "PZO" (continuing "MORH
+  # Zapovjedništvo HRZ I", a military unit name), which the bare mark pattern also matches.
+  mark_pattern_exclusions: [PZO]
   # The register ends on a page holding only the repeated column header and the page footer when
-  # its record count lands exactly on a page boundary. A budget of one covers that page. Residual
-  # exposure: in a month without it, one data page that loses its anchors would also pass, dropping
-  # about 20 rows with nothing else to catch it, since PDF sources cannot use record_count.
-  allowed_anchorless_pages: 1
-  anchor_pattern: '^[A-Z]{3}$'
-  anchor_field: mark
-  layouts:
-    - field_axis: x
-      # The bottom-most row's address can wrap 16.08pt below its mark; 17pt keeps that country line
-      # while the 42.72pt page footer remains outside the parser's capture range.
-      before_first_anchor_reach: 17
-      before_first_anchor_pattern: '^(?:Ireland|Irska|Republika Irska|Mađarska|Slovenija|Slovenia|Austria|Bermuda|Singapore)$'
-      # The default reach past the top mark is half the page's tightest pitch; a last page of only
-      # tall rows (2026-11: 15.42pt) widens it past the column header line 13.32pt above that mark.
-      # The header line starts at the page margin, left of the mark band, where no table line does.
-      drop_margin_lines: true
-      column_pos:
-        - 66 # mark
-        - 124 # seq (register sequence number — not unique across the doc; see source_id note below)
-        - 174 # manufacturer
-        - 311 # model
-        - 449 # serial
-        - 506 # owner
-        - 638 # address
-    # The same table scanned rotated: records run along x, one aircraft per x-column, each field a
-    # fixed y-band. Bands measured against the live 2026-10 publication, on the first line of each
-    # cell; the order of `columns` is unchanged.
-    - field_axis: y
-      # Line leading (13.8pt) is a hair over half the record pitch (27.36pt), so a two-line cell's
-      # second line lands past the midpoint to the next mark and nearest-anchor snapping steals it.
-      wrap_after_anchor: true
-      # A last record's own wrapped lines run up to 27.5pt past its mark across the live document
-      # (two continuation lines at 13.8pt leading); the default reach is half the tightest row pitch,
-      # 6.75pt. The reach also takes in the page footer, which lands in the unmapped address column,
-      # and the three-line disclaimer that begins 13.8pt after the final record: that paragraph is set
-      # in the page margin, before the mark band, where no table line starts, so drop_margin_lines
-      # removes it by position without naming the agency's words.
-      after_last_anchor_reach: 42
-      drop_margin_lines: true
-      column_pos:
-        - 48 # mark
-        - 106 # seq
-        - 154 # manufacturer
-        - 289 # model
-        - 424 # serial
-        - 480 # owner
-        - 608 # address
+  # its record count lands exactly on a page boundary. Residual exposure: in a month without that
+  # page, one data page that loses its marks also passes, dropping about 20 rows unchecked.
+  markless_pages: 1
 
 columns:
   register:

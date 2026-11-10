@@ -1,0 +1,184 @@
+[
+  [
+    {
+      "mark": "UTI",
+      "seq": "709",
+      "mfr": "APOLLO / APOLLO",
+      "model": "Jet Star / CXMD",
+      "serial": "46812 / 011016",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UTM",
+      "seq": "224",
+      "mfr": "amaterska gradnja",
+      "model": "Teenie two",
+      "serial": "15-2029",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UTO",
+      "seq": "568",
+      "mfr": "Apollo/Apollo",
+      "model": "C15 AXP/Jet Star",
+      "serial": "222/020813",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UTP",
+      "seq": "665",
+      "mfr": "Eurofly SRL",
+      "model": "TWINFOX 912",
+      "serial": "TW07",
+      "owner": "Hardwood & more d.o.o.",
+      "address": null
+    },
+    {
+      "mark": "UTZ",
+      "seq": "91",
+      "mfr": "Pipistrel-Boscorol",
+      "model": "Pipistrel 15",
+      "serial": "TR\n15560240191",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UUU",
+      "seq": "599",
+      "mfr": "Pipistrel",
+      "model": "SINUS 912",
+      "serial": "118 S 912 0903",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UVC",
+      "seq": "231",
+      "mfr": "Pipistrel",
+      "model": "Pipistrel 15 Basic",
+      "serial": "0231/96",
+      "owner": "Zrakoplovni klub \"Bjelovar\"",
+      "address": "Sportska bb, Brezovac, 43 000\nBjelovar"
+    },
+    {
+      "mark": "UVE",
+      "seq": "700",
+      "mfr": "Halley Apollo / Halley Apollo",
+      "model": "C15TN / Jet Star",
+      "serial": "140508 /\n040810",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UVG",
+      "seq": "174",
+      "mfr": "Apollo Xxxxxx Xxxxxx",
+      "model": "Apollo CX-14",
+      "serial": "174/92",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UVI",
+      "seq": "184",
+      "mfr": "Pipistrel Boscorol",
+      "model": "Pipistrel 15",
+      "serial": "N/A",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UVM",
+      "seq": "358",
+      "mfr": "Alpi Aviation s.r.i.",
+      "model": "Pioneer 300",
+      "serial": "96S",
+      "owner": "Andico d.o.o.",
+      "address": "Jeronima Kavanjina 8, 10 000\nZagreb"
+    },
+    {
+      "mark": "UXX",
+      "seq": "713",
+      "mfr": "Ibis Aircraft S.A., Colombia",
+      "model": "MAGIC GS-700",
+      "serial": "GS-10-10-700-\n107",
+      "owner": "Fizička osoba/Zrakoplovni\nklub Vrabac Vinkovci",
+      "address": "Aerodrom Sopot bb, 32 100 Vinkovci"
+    },
+    {
+      "mark": "UYY",
+      "seq": "728",
+      "mfr": "FMP s.r.o.",
+      "model": "QUALT 200 L",
+      "serial": "15/2000",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "UVV",
+      "seq": "597",
+      "mfr": "Pipistrel/Pipistrel",
+      "model": "Hazard 15/Spider",
+      "serial": "H15 061/061",
+      "owner": "Zrakoplovni klub \"Vrabac\"",
+      "address": "Aerodrom Sopot bb, 32 100\nVinkovci"
+    },
+    {
+      "mark": "VIA",
+      "seq": "678",
+      "mfr": "Textron Aviation Inc.",
+      "model": "F172M",
+      "serial": "F17200955",
+      "owner": "Ars Volandi d.o.o.",
+      "address": "Tratinska 54, 10000 Zagreb"
+    },
+    {
+      "mark": "VIO",
+      "seq": "732",
+      "mfr": "Diamond Aircraft Industries\nGmbH Austrija",
+      "model": "DA40 NG",
+      "serial": "40.N652",
+      "owner": "Aviotrade d.o.o.",
+      "address": "Kučanska 24, Varaždin"
+    },
+    {
+      "mark": "XCA",
+      "seq": "478",
+      "mfr": "Aero-klub Zagreb",
+      "model": "CA-10 (Penkala)",
+      "serial": "001",
+      "owner": "Aero-klub Zagreb",
+      "address": "Jurišićeva 5, 10 000 Zagreb"
+    },
+    {
+      "mark": "XGB",
+      "seq": "306",
+      "mfr": "Soko Mostar",
+      "model": "N-60",
+      "serial": "23122",
+      "owner": "Karting centar-Zagreb i\nZagrebački prometni zavod\nd.o.o.",
+      "address": "G.Krkleca 23, 10 000 Zagreb\nLjubljanska avenija 1, 10 000\nZagreb"
+    },
+    {
+      "mark": "ZAG",
+      "seq": "693",
+      "mfr": "Airbus S.A.S.",
+      "model": "A319-111",
+      "serial": "3443",
+      "owner": "ACS AERO 4 ALPHA\nLIMITED",
+      "address": "Block A, George's Quay Plaza,\nGeorge's Quay , Dublin 2"
+    },
+    {
+      "mark": "ZYZ",
+      "seq": "661",
+      "mfr": "SG AVIATION",
+      "model": "Storm Century 04",
+      "serial": "S5-01S0047",
+      "owner": "Fizička osoba",
+      "address": null
+    }
+  ]
+]

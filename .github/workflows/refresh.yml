@@ -10,7 +10,7 @@ on:
         required: false
         default: ''
       dry_run:
-        description: 'Dry run — map and diff, no R2 write and no Gemini pass'
+        description: 'Dry run — map and diff, no R2 write and no translation pass (PDF sources still call Gemini)'
         required: false
         default: 'false'
         type: choice
@@ -93,8 +93,10 @@ jobs:
       issues: write
     strategy:
       fail-fast: false
-      # Unserialized: only br-anac reaches Gemini, and translateAtRate already paces it. Revisit if
-      # a second translating source lands.
+      # Unserialized: only br-anac translates, and translateAtRate paces it. PDF sources pace their
+      # own page-chunk calls, made only for chunks whose pages changed; jobs pacing in parallel can
+      # still exceed the project RPM, and a 429 there retries. Revisit if a second translating source
+      # lands.
       matrix:
         source: ${{ fromJson(needs.discover.outputs.sources) }}
     concurrency:
