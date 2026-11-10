@@ -126,16 +126,18 @@ describe('requestTableRows', () => {
     );
   });
 
-  it('retries a transient transport failure, logging each retry', async () => {
+  it('retries a transient transport failure, logging each retry with its trace', async () => {
     generateContent
       .mockRejectedValueOnce(new MockApiError(503))
       .mockResolvedValueOnce(response('[]'));
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).resolves.toEqual([]);
+      await expect(
+        requestTableRows(PDF, COLUMNS, FAST_RETRY, 0, { source: 'hr-ccaa', pages: '6-10' })
+      ).resolves.toEqual([]);
       expect(generateContent).toHaveBeenCalledTimes(2);
       expect(logSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
-        'level=warn event=pdf_extract_retry attempt=1'
+        'level=warn event=pdf_extract_retry source=hr-ccaa pages=6-10 attempt=1'
       );
     } finally {
       logSpy.mockRestore();

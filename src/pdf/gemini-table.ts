@@ -47,7 +47,7 @@ const responseSchema = (columns: string[]) => ({
 
 /**
  * Asks Gemini for every row of the PDF's table, one object per row keyed by `columns`, after
- * waiting `delayMs` (through `retryOptions.sleep` when given).
+ * waiting `delayMs` (through `retryOptions.sleep` when given). `trace` tags each retry log.
  * @returns the parsed, unvalidated JSON response.
  * @throws when the response did not finish with STOP, has no text, or is not JSON.
  */
@@ -55,7 +55,8 @@ export const requestTableRows = async (
   pdf: Buffer,
   columns: string[],
   retryOptions?: RetryOptions,
-  delayMs = 0
+  delayMs = 0,
+  trace: Record<string, string> = {}
 ): Promise<unknown> => {
   const ai = new GoogleGenAI({ apiKey: requireEnv('GEMINI_API_KEY') });
   if (delayMs > 0) await (retryOptions?.sleep ?? setTimeout)(delayMs);
@@ -83,7 +84,7 @@ export const requestTableRows = async (
       }),
     {
       onRetry: (attempt, err) =>
-        log('warn', 'pdf_extract_retry', { attempt, error: errorMessage(err) }),
+        log('warn', 'pdf_extract_retry', { ...trace, attempt, error: errorMessage(err) }),
       ...retryOptions,
       isRetryable: isRetryableGeminiError,
     }

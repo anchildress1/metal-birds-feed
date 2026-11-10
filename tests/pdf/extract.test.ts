@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PDFDocument } from 'pdf-lib';
@@ -55,7 +55,10 @@ describe('extractPdfRows', () => {
     const rows = await extractPdfRows(TAIL_PDF, OPTIONS);
     expect(rows.map((r) => r.mark)).toEqual(['VIO', 'XCA', 'XGB', 'ZAG', 'ZYZ']);
     expect(rows[2]?.owner).toBe('Karting centar-Zagreb i\nZagrebački prometni zavod\nd.o.o.');
-    expect(requestTableRows).toHaveBeenCalledWith(TAIL_CHUNK.bytes, COLUMNS, undefined, 0);
+    expect(requestTableRows).toHaveBeenCalledWith(TAIL_CHUNK.bytes, COLUMNS, undefined, 0, {
+      source: 'hr-ccaa',
+      pages: '1-1',
+    });
   });
 
   it('omits a null cell, as an empty printed cell yields no value', async () => {
@@ -266,6 +269,25 @@ describe('extractPdfRows page chunks', () => {
       0,
       Math.ceil(60_000 / DEFAULT_REQUESTS_PER_MINUTE),
     ]);
+  });
+
+  it('logs every failed chunk, not only the one the error names', async () => {
+    requestTableRows
+      .mockRejectedValueOnce(new Error('503'))
+      .mockRejectedValueOnce(new Error('MAX_TOKENS'));
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(extractPdfRows(MV_PDF, MV)).rejects.toThrow(
+        '2 of 2 PDF chunks failed; pages 1-5: 503'
+      );
+      const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+      expect(logged).toContain('event=pdf_extract_chunk_failed source=mv-caa pages=1-5 error=503');
+      expect(logged).toContain(
+        'event=pdf_extract_chunk_failed source=mv-caa pages=6-8 error=MAX_TOKENS'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('checks marks per chunk, so a row moved across a chunk boundary fails', async () => {

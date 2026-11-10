@@ -7,7 +7,7 @@ import { errorMessage, log } from '../logger.js';
 import type { Row } from '../parser.js';
 import type { RetryOptions } from '../retry.js';
 import type { PdfConfig, SourceConfig } from '../types/config.js';
-import { splitPdf } from './chunks.js';
+import { splitPdf, type PdfChunk } from './chunks.js';
 import { PDF_EXTRACT_FINGERPRINT, requestTableRows } from './gemini-table.js';
 
 // Validated Gemini responses for a source, one per chunk, keyed by `chunkKey`.
@@ -41,6 +41,8 @@ export const pdfExtractOptions = (
     throw new Error(`Source "${config.id}" has no pdf block or no primary columns`);
   return { ...config.pdf, source: config.id, columns, trim: config.trim_all, cache };
 };
+
+const pageSpan = (pages: number[]): string => `${pages[0] + 1}-${pages[pages.length - 1] + 1}`;
 
 const noWhitespace = (s: string): string => s.replace(/\s+/g, '');
 
@@ -124,8 +126,8 @@ interface ChunkResult {
  * Extracts the register table from a PDF via Gemini, one Row per printed record, in page chunks
  * (one response cannot hold a large register). Reuses a cached response for any chunk whose pages,
  * columns, model, and prompt are unchanged and that still validates; requests the rest at
- * `GEMINI_REQUESTS_PER_MINUTE`. When any chunk was requested, every validated chunk is written back
- * to `cache` before any chunk failure throws.
+ * `GEMINI_REQUESTS_PER_MINUTE`. When any requested chunk validated, every validated chunk is
+ * written back to `cache` before any chunk failure throws.
  * @throws when the file is not a PDF, its text layer prints no mark, a page prints no mark outside
  *   the trailing `markless_pages`, its two page counts disagree, the cache cannot be read, or any
  *   chunk's response breaks the schema, has a row without a mark, or disagrees with the marks its
@@ -179,8 +181,11 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   let requested = 0;
   // Starts spaced at the project's RPM: firing every chunk at once draws 429s that outlast the
   // retry budget.
-  const request = (bytes: Buffer): Promise<unknown> =>
-    requestTableRows(bytes, options.columns, options.retryOptions, requested++ * intervalMs);
+  const request = (chunk: PdfChunk): Promise<unknown> =>
+    requestTableRows(chunk.bytes, options.columns, options.retryOptions, requested++ * intervalMs, {
+      source: options.source,
+      pages: pageSpan(chunk.pages),
+    });
   const settled = await Promise.allSettled(
     chunks.map(async (chunk): Promise<ChunkResult> => {
       const printed = chunk.pages.flatMap((p) => pageMarks[p]);
@@ -203,12 +208,12 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
           // place it would fail every run with no request to replace it.
           log('warn', 'pdf_extract_cache_invalid', {
             source: options.source,
-            pages: `${chunk.pages[0] + 1}-${chunk.pages[chunk.pages.length - 1] + 1}`,
+            pages: pageSpan(chunk.pages),
             reason: errorMessage(err),
           });
         }
       }
-      const raw = await request(chunk.bytes);
+      const raw = await request(chunk);
       return { key, raw, fresh: true, rows: validateChunk(raw, printed, schema, options) };
     })
   );
@@ -237,10 +242,17 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   }
 
   if (failures.length > 0) {
+    // The thrown error carries one cause; the others may be different faults (a 503 beside a real
+    // mark mismatch) that a rerun would bill again unseen.
+    for (const { i, s } of failures)
+      log('error', 'pdf_extract_chunk_failed', {
+        source: options.source,
+        pages: pageSpan(chunks[i].pages),
+        error: errorMessage(s.reason),
+      });
     const { i, s } = failures[0];
-    const { pages: run } = chunks[i];
     throw new Error(
-      `${failures.length} of ${chunks.length} PDF chunks failed; pages ${run[0] + 1}-${run[run.length - 1] + 1}: ${errorMessage(s.reason)}`,
+      `${failures.length} of ${chunks.length} PDF chunks failed; pages ${pageSpan(chunks[i].pages)}: ${errorMessage(s.reason)}`,
       { cause: s.reason }
     );
   }
