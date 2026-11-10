@@ -139,8 +139,8 @@ needs no accounts, no keys, and no internet beyond the package registry.
 make check
 ```
 
-This runs the formatter check, the linter, the type checker, and the full test suite — around 1,400
-tests in a couple of seconds. **It needs no credentials at all.** Nothing in it touches Cloudflare,
+This runs the formatter check, the linter, the type checker, and the full test suite, in a few
+seconds. **It needs no credentials at all.** Nothing in it touches Cloudflare,
 Google, or the internet.
 
 You want to end on `0 fail`. If you do, your machine is set up correctly and every failure after
@@ -215,7 +215,7 @@ A missing key does not fail quietly — a run that needs it stops immediately an
 
 ## Step 7 — Pull Your First Registry
 
-**Start with one small source.** The Dutch register is ~3,000 records, publishes in English (no
+**Start with one small source.** The Dutch register is small, publishes in English (no
 Gemini key needed), and finishes in well under a minute.
 
 Set the existing `REFRESH_SOURCE=` line in `.env` — it already exists and is empty. Change that

@@ -206,10 +206,10 @@ That's enough to trigger the skill. It then works through, in order:
 
 1. **Checks your machine** — Bun, git, make, python3, and what's missing
 2. **Installs the project** — `make install`
-3. **Verifies before you spend anything** — `make check`, ~1,400 tests, no credentials needed
+3. **Verifies before you spend anything** — `make check`, the full test suite, no credentials needed
 4. **Stops and waits** while you create your Cloudflare R2 bucket and API token
 5. **Creates `.env`** and tells you which four lines to paste into
-6. **Pulls one small registry first** — Dutch, ~3,000 records, no translation key, near-zero cost
+6. **Pulls one small registry first** — Dutch, small, no translation key, near-zero cost
 7. **Stops and tells you** that the local feed API needs every registry still configured in
    `sources/`, not just that one, and lets you decide whether the full pull is worth it
 

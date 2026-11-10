@@ -70,7 +70,7 @@ Installs dependencies and git hooks. No network beyond the package registry, no 
 make check
 ```
 
-Runs format-check, lint, typecheck, and ~1,400 tests. **Report the pass/fail line verbatim.** Do not
+Runs format-check, lint, typecheck, and the full test suite. **Report the pass/fail line verbatim.** Do not
 proceed on failure — a broken machine misdiagnosed as a broken credential wastes the user's money in
 Phase 3.
 
