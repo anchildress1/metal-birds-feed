@@ -188,6 +188,7 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 ## Refresh and staleness
 
 - Where declared cadence and observed rhythm differ, run at the more frequent and record both in `DATA_LICENSES.md` `## Update cadence`. A source publishing faster than the cron needs its own workflow. Every run is a full fetch; the content hash gates the PUT.
+- Sources that call Gemini (`format: pdf` or a non-English `language:`) run one at a time against the project RPM: `main()` chains them in a fleet run, `refresh-gemini` (`max-parallel: 1`) in CI. `writeDiscoveredSources` splits the CI matrix with the pipeline's own loader; never classify sources by grepping YAML.
 - Cadence compares whole UTC days, never an ms window: `last_run` is stamped at completion, so a strict window drifts every cycle a day later.
 - A cadence skip requires the source's slice to exist; a missing slice forces the run.
 - Exactly three things bypass the cadence gate: `DRY_RUN`, `FORCE_REFRESH`, and overdue escalation. No fourth.

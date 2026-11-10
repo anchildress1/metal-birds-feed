@@ -1,6 +1,6 @@
 import { resolve, sep } from 'node:path';
 import { readdirSync } from 'node:fs';
-import { rename, rm, writeFile } from 'node:fs/promises';
+import { appendFile, rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
@@ -558,6 +558,23 @@ export const evaluatePausedStaleness = async (): Promise<void> => {
     entries.filter((e) => e !== null),
     dryRun,
     gh
+  );
+};
+
+/**
+ * Appends the sources a refresh resolves to `$GITHUB_OUTPUT`: `sources` (run concurrently) and
+ * `gemini_sources` (run one at a time), each a JSON array.
+ * @throws on an unnamed FORCE_REFRESH, an invalid source id, or a config that fails to load.
+ */
+export const writeDiscoveredSources = async (): Promise<void> => {
+  const ids = resolveSources();
+  // A named dispatch is user input that reaches a path before run() would validate it.
+  for (const id of ids) validateSourceId(id);
+  const gemini = geminiSources(ids);
+  const plain = ids.filter((id) => !gemini.has(id));
+  await appendFile(
+    requireEnv('GITHUB_OUTPUT'),
+    `sources=${JSON.stringify(plain)}\ngemini_sources=${JSON.stringify([...gemini])}\n`
   );
 };
 

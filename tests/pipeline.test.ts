@@ -78,6 +78,7 @@ const {
   markFeedDeployed,
   resolveFeedOutputPath,
   run,
+  writeDiscoveredSources,
 } = await import('../src/pipeline.js');
 
 const CONFIG: SourceConfig = {
@@ -1655,5 +1656,75 @@ describe('main', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mockDownload).toHaveBeenCalledTimes(1);
     expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('writeDiscoveredSources', () => {
+  const ids = readdirSync('sources')
+    .filter((f) => f.endsWith('.yaml'))
+    .map((f) => f.replace(/\.yaml$/, ''))
+    .sort((a, b) => a.localeCompare(b));
+  const idOf = (path: string): string => path.replace(/^.*[/\\]/, '').replace(/\.yaml$/, '');
+  let output: string;
+  beforeEach(() => {
+    output = join(tmpdir(), `mbf-discover-${process.pid}-${Math.random()}`);
+    writeFileSync(output, 'earlier=1\n');
+    process.env['GITHUB_OUTPUT'] = output;
+  });
+  afterEach(() => rmSync(output, { force: true }));
+  const written = (): Record<string, unknown> =>
+    Object.fromEntries(
+      readFileSync(output, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => line.split('='))
+        .map(([k, v]) => [k, k === 'earlier' ? v : JSON.parse(v)])
+    );
+
+  it('splits the unpaused fleet into concurrent and Gemini-calling sources, appending', async () => {
+    const [pdf, translated, parked] = ids;
+    mockLoadSourceConfig.mockImplementation((path: string) => {
+      const id = idOf(path);
+      if (id === pdf) return { ...CONFIG, format: 'pdf' };
+      if (id === translated) return { ...CONFIG, language: 'pt' };
+      if (id === parked) return { ...CONFIG, language: 'pt', paused: true };
+      return CONFIG;
+    });
+
+    await writeDiscoveredSources();
+
+    expect(written()).toEqual({
+      earlier: '1',
+      sources: ids.slice(3),
+      gemini_sources: [pdf, translated],
+    });
+  });
+
+  it('routes a named source to the list its config puts it in, paused or not', async () => {
+    process.env['REFRESH_SOURCE'] = ' hr-ccaa ';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, format: 'pdf', paused: true });
+    await writeDiscoveredSources();
+    expect(written()).toMatchObject({ sources: [], gemini_sources: ['hr-ccaa'] });
+  });
+
+  it('fails on a named source whose config does not load', async () => {
+    process.env['REFRESH_SOURCE'] = 'no-such-source';
+    mockLoadSourceConfig.mockImplementation(() => {
+      throw new Error('ENOENT: no-such-source.yaml');
+    });
+    await expect(writeDiscoveredSources()).rejects.toThrow('ENOENT');
+  });
+
+  it('rejects a traversal-bearing name before reading any config', async () => {
+    process.env['REFRESH_SOURCE'] = '../secrets';
+    await expect(writeDiscoveredSources()).rejects.toThrow();
+    expect(mockLoadSourceConfig).not.toHaveBeenCalled();
+  });
+
+  it('refuses FORCE_REFRESH without a named source', async () => {
+    process.env['FORCE_REFRESH'] = 'true';
+    await expect(writeDiscoveredSources()).rejects.toThrow(
+      'FORCE_REFRESH requires REFRESH_SOURCE to name a single source'
+    );
   });
 });
