@@ -8,6 +8,11 @@ import { DEFAULT_REQUESTS_PER_MINUTE } from '../../src/localize/gemini-client.js
 import type { PdfExtraction } from '../../src/pdf/extract.js';
 import { recordedTableRows } from './recorded-extraction.js';
 
+const unpdf = await import('unpdf');
+// Held before mocking: mock.module rebinds the namespace export to the mock itself.
+const realExtractTextItems = unpdf.extractTextItems;
+const extractTextItems = mock(realExtractTextItems);
+void mock.module('unpdf', () => ({ ...unpdf, extractTextItems }));
 const { splitPdf } = await import('../../src/pdf/chunks.js');
 const split = mock(splitPdf);
 void mock.module('../../src/pdf/chunks.js', () => ({ splitPdf: split }));
@@ -45,6 +50,8 @@ beforeEach(() => {
   requestTableRows.mockImplementation(recordedTableRows);
   split.mockReset();
   split.mockImplementation(splitPdf);
+  extractTextItems.mockReset();
+  extractTextItems.mockImplementation(realExtractTextItems);
   delete process.env.GEMINI_REQUESTS_PER_MINUTE;
 });
 afterEach(() => {
@@ -229,6 +236,31 @@ describe('extractPdfRows', () => {
     ).resolves.toHaveLength(1);
   });
 
+  it('matches marks and exclusions against text items with their edge whitespace trimmed', async () => {
+    // pdf.js trims the runs a generated PDF draws, so the real text layer is padded after the fact.
+    extractTextItems.mockImplementation(async (...args) => {
+      const layer = await realExtractTextItems(...args);
+      return {
+        ...layer,
+        items: layer.items.map((page) => page.map((item) => ({ ...item, str: ` ${item.str}  ` }))),
+      };
+    });
+    await expect(
+      extractPdfRows(FULL_PDF, { ...OPTIONS, mark_pattern_exclusions: ['PZO'] })
+    ).resolves.toHaveLength(33);
+  });
+
+  it('fails before any paid call when the PDF splits into more pages than its text layer', async () => {
+    split.mockImplementation(async (pdf: Buffer) => {
+      const chunks = await splitPdf(pdf);
+      return [...chunks, { ...chunks[0], pages: [chunks.length] }];
+    });
+    await expect(extractPdfRows(TAIL_PDF, OPTIONS)).rejects.toThrow(
+      'PDF splits into 2 pages but its text layer has 1'
+    );
+    expect(requestTableRows).not.toHaveBeenCalled();
+  });
+
   it('fails before any paid call when the two page counts disagree', async () => {
     split.mockImplementation(async (pdf: Buffer) => (await splitPdf(pdf)).slice(1));
     await expect(extractPdfRows(FULL_PDF, OPTIONS)).rejects.toThrow(
@@ -257,6 +289,21 @@ describe('extractPdfRows page chunks', () => {
     const chunks = await splitPdf(MV_PDF);
     expect(requestTableRows).toHaveBeenCalledTimes(2);
     const recorded = await Promise.all(chunks.map((c) => recordedTableRows(c.bytes)));
+    expect(rows.map((r) => r.mark as string | null)).toEqual(
+      recorded.flatMap((r) => (r as Cells[]).map((c) => c.mark))
+    );
+  });
+
+  it('keeps page order when a later chunk answers first', async () => {
+    const [first] = await splitPdf(MV_PDF);
+    requestTableRows.mockImplementation(async (pdf: Buffer) => {
+      if (pdf.equals(first.bytes)) await new Promise((r) => setTimeout(r, 20));
+      return recordedTableRows(pdf);
+    });
+    const rows = await extractPdfRows(MV_PDF, MV);
+    const recorded = await Promise.all(
+      (await splitPdf(MV_PDF)).map((c) => recordedTableRows(c.bytes))
+    );
     expect(rows.map((r) => r.mark as string | null)).toEqual(
       recorded.flatMap((r) => (r as Cells[]).map((c) => c.mark))
     );
@@ -466,7 +513,15 @@ describe('extractPdfRows extraction cache', () => {
     const stored = await storedForMv();
     expect(Object.keys(stored.entries)).toHaveLength(2);
     const { cache, write } = cacheOf(stored);
-    await extractPdfRows(MV_PDF, { ...options, cache });
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await extractPdfRows(MV_PDF, { ...options, cache });
+      expect(logSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
+        'level=info event=pdf_extract_cache_hit source=mv-caa chunks=2'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
     expect(requestTableRows).not.toHaveBeenCalled();
     expect(write).not.toHaveBeenCalled();
   });
