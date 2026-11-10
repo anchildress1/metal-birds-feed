@@ -34,6 +34,14 @@ describe('splitPdf', () => {
     const pdf = await pdfOf(7);
     const [a, b] = await Promise.all([splitPdf(pdf), splitPdf(pdf)]);
     expect(a.map((c, i) => c.bytes.equals(b[i].bytes))).toEqual([true, true]);
+    // Two splits inside one second would match even with dates stamped; their absence is the proof.
+    const docs = await Promise.all(
+      a.map((c) => PDFDocument.load(c.bytes, { updateMetadata: false }))
+    );
+    expect(docs.map((d) => [d.getCreationDate(), d.getModificationDate()])).toEqual([
+      [undefined, undefined],
+      [undefined, undefined],
+    ]);
   });
 
   it('rejects bytes that are not a PDF', async () => {

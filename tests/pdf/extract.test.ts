@@ -177,7 +177,10 @@ describe('extractPdfRows', () => {
     const rows = await tailRows();
     rows[0].mark = 'V IO';
     requestTableRows.mockResolvedValue(rows);
-    await expect(extractPdfRows(TAIL_PDF, OPTIONS)).resolves.toHaveLength(5);
+    const extracted = await extractPdfRows(TAIL_PDF, OPTIONS);
+    expect(extracted).toHaveLength(5);
+    // Only the comparison ignores whitespace; the row keeps the model's text for the transforms.
+    expect(extracted[0]?.mark).toBe('V IO');
   });
 
   // register.pdf prints "PZO" as its own line inside an owner cell; it matches the bare mark pattern.
@@ -480,7 +483,15 @@ describe('extractPdfRows extraction cache', () => {
     const stored = await storedFor();
     const [key] = Object.keys(stored.entries);
     const { cache, write } = cacheOf({ entries: { [key]: (await tailRows()).slice(0, 4) } });
-    await expect(extractPdfRows(TAIL_PDF, { ...OPTIONS, cache })).resolves.toHaveLength(5);
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(extractPdfRows(TAIL_PDF, { ...OPTIONS, cache })).resolves.toHaveLength(5);
+      expect(logSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
+        'level=warn event=pdf_extract_cache_invalid source=hr-ccaa pages=1-1'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
     expect(requestTableRows).toHaveBeenCalledTimes(1);
     expect(write).toHaveBeenCalledWith(stored);
   });
@@ -498,9 +509,18 @@ describe('extractPdfRows extraction cache', () => {
     );
     const { cache, write } = cacheOf(null);
     write.mockRejectedValue(new Error('PUT 500'));
-    await expect(extractPdfRows(MV_PDF, { ...options, cache })).rejects.toThrow(
-      '1 of 2 PDF chunks failed; pages 6-8: 503'
-    );
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      await expect(extractPdfRows(MV_PDF, { ...options, cache })).rejects.toThrow(
+        '1 of 2 PDF chunks failed; pages 6-8: 503'
+      );
+      // The swallowed PUT failure is the only record that the next run re-bills this chunk.
+      expect(logSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
+        'level=error event=pdf_extract_cache_write_failed source=mv-caa error="PUT 500"'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it('fails the source when the cache cannot be read', async () => {

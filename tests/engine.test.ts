@@ -5128,8 +5128,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
   });
 
   // HA-MKG's operator starts on the first line of its page ("RSZ-COOP"); HA-HML's owner ends on the
-  // last line of its own ("KFT."). Both pages sit inside one chunk, so a line lost at a page break
-  // would not trip the per-chunk mark check.
+  // last line of its own ("KFT."). A lost non-mark line never trips the mark check.
   it('keeps an outermost record’s wrapped party name whole at both ends of a page', () => {
     expect(huRecords.get('HA-MKG')!.operator.name).toBe(
       'RSZ-COOP LÉGISZOLGÁLTATÓ ÉS KERESKEDELMI KFT.'
@@ -5194,7 +5193,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
   // a wider render is the same failure mode already observed — and an unmatched mark drops out of
   // the text-layer count that cross-checks the extracted rows.
   it('matches a mark however many spaces the glyph runs put around the hyphen', () => {
-    // Wrapped as extractPdfRows compiles it: the pattern matches whole text items.
+    // A config check only: tests/pdf/extract.test.ts pins that extraction compiles it this way.
     const pattern = new RegExp(`^(?:${loadSourceConfig(HU_CONFIG).pdf!.mark_pattern})$`);
     for (const mark of ['HA-GZQ', 'HA- GZQ', 'HA -GZQ', 'HA  -  GZQ', 'HA-YFKA', 'HA - 742'])
       expect(pattern.test(mark)).toBe(true);

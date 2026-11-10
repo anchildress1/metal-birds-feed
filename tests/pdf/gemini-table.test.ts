@@ -144,6 +144,14 @@ describe('requestTableRows', () => {
     }
   });
 
+  it('keeps its own transport-only retry predicate over a caller-supplied one', async () => {
+    generateContent.mockRejectedValue(new MockApiError(403));
+    await expect(
+      requestTableRows(PDF, COLUMNS, { ...FAST_RETRY, isRetryable: () => true })
+    ).rejects.toThrow('status 403');
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
   it('does not retry a rejected key', async () => {
     generateContent.mockRejectedValue(new MockApiError(403));
     await expect(requestTableRows(PDF, COLUMNS, FAST_RETRY)).rejects.toThrow('status 403');
