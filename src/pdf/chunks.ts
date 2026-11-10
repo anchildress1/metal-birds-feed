@@ -11,19 +11,16 @@ export interface PdfChunk {
 }
 
 /**
- * Splits a PDF into consecutive standalone PDFs of up to `pagesPerChunk` pages each.
+ * Splits a PDF into consecutive standalone PDFs of up to `PAGES_PER_CHUNK` pages each.
  * Byte-identical output for identical input: metadata dates are not stamped.
  */
-export const splitPdf = async (
-  pdf: Buffer,
-  pagesPerChunk = PAGES_PER_CHUNK
-): Promise<PdfChunk[]> => {
+export const splitPdf = async (pdf: Buffer): Promise<PdfChunk[]> => {
   const source = await PDFDocument.load(pdf, { updateMetadata: false });
   const count = source.getPageCount();
   const ranges: number[][] = [];
-  for (let start = 0; start < count; start += pagesPerChunk)
+  for (let start = 0; start < count; start += PAGES_PER_CHUNK)
     ranges.push(
-      Array.from({ length: Math.min(pagesPerChunk, count - start) }, (_, i) => start + i)
+      Array.from({ length: Math.min(PAGES_PER_CHUNK, count - start) }, (_, i) => start + i)
     );
   return Promise.all(
     ranges.map(async (pages) => {

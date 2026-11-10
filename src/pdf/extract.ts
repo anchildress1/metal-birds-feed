@@ -11,9 +11,8 @@ import { splitPdf, type PdfChunk } from './chunks.js';
 import { PDF_EXTRACT_FINGERPRINT, requestTableRows } from './gemini-table.js';
 
 // Validated Gemini responses for a source, one per chunk, keyed by `chunkKey`.
-export interface PdfExtraction {
-  entries: Record<string, unknown>;
-}
+export const PdfExtractionSchema = z.object({ entries: z.record(z.string(), z.unknown()) });
+export type PdfExtraction = z.infer<typeof PdfExtractionSchema>;
 
 export interface PdfExtractionCache {
   read(): Promise<PdfExtraction | null>;
@@ -116,8 +115,8 @@ const validateChunk = (
 };
 
 interface ChunkResult {
-  key?: string;
-  raw?: unknown;
+  key: string;
+  raw: unknown;
   fresh: boolean;
   rows: Row[];
 }
@@ -187,10 +186,10 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
       pages: pageSpan(chunk.pages),
     });
   const settled = await Promise.allSettled(
-    chunks.map(async (chunk): Promise<ChunkResult> => {
+    chunks.map(async (chunk): Promise<ChunkResult | null> => {
       const printed = chunk.pages.flatMap((p) => pageMarks[p]);
       // A page run printing no mark holds no row the check could admit; skip the paid call.
-      if (printed.length === 0) return { fresh: false, rows: [] };
+      if (printed.length === 0) return null;
       const key = chunkKey(
         chunk.pages.map((p) => pages[p]),
         options.columns
@@ -218,17 +217,15 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
     })
   );
 
-  const done = settled.flatMap((s) => (s.status === 'fulfilled' ? [s.value] : []));
-  const hits = done.filter((c) => c.key !== undefined && !c.fresh).length;
+  const done = settled.flatMap((s) => (s.status === 'fulfilled' && s.value ? [s.value] : []));
+  const hits = done.filter((c) => !c.fresh).length;
   if (hits > 0) log('info', 'pdf_extract_cache_hit', { source: options.source, chunks: hits });
   const failures = settled.flatMap((s, i) => (s.status === 'rejected' ? [{ i, s }] : []));
   // Paid chunks persist even when another chunk fails, so a rerun re-bills only the failures.
   // Rebuilt from this document's chunks alone, which drops entries for pages no longer printed.
   if (done.some((c) => c.fresh)) {
     const write = options.cache?.write({
-      entries: Object.fromEntries(
-        done.flatMap((c) => (c.key === undefined ? [] : [[c.key, c.raw]]))
-      ),
+      entries: Object.fromEntries(done.map((c) => [c.key, c.raw])),
     });
     // The chunk failure is the actionable error; a failed PUT only costs a re-bill.
     if (failures.length === 0) await write;

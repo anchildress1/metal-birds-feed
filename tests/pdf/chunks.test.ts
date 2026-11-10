@@ -29,11 +29,6 @@ describe('splitPdf', () => {
     expect(await widths(chunks[0].bytes)).toEqual([100, 101, 102]);
   });
 
-  it('honors a smaller chunk size', async () => {
-    const chunks = await splitPdf(await pdfOf(3), 2);
-    expect(chunks.map((c) => c.pages)).toEqual([[0, 1], [2]]);
-  });
-
   // The recorded fixtures key on chunk bytes.
   it('produces byte-identical chunks for identical input', async () => {
     const pdf = await pdfOf(7);

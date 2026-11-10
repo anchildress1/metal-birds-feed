@@ -1,5 +1,5 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, NoSuchKey } from '@aws-sdk/client-s3';
-import { z, type ZodType } from 'zod';
+import type { ZodType } from 'zod';
 import type { Aircraft } from './schema.js';
 import { FeedSliceSchema, serializeFeedSlice, type FeedSlice } from './feed.js';
 import { buildSqlite, hashArtifact, readArtifactRows, toRow, DB_SCHEMA_VERSION } from './db.js';
@@ -13,7 +13,7 @@ import {
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
-import type { PdfExtraction, PdfExtractionCache } from './pdf/extract.js';
+import { PdfExtractionSchema, type PdfExtraction, type PdfExtractionCache } from './pdf/extract.js';
 import {
   emptyTranslationCache,
   ParsedTranslationCacheSchema,
@@ -36,8 +36,6 @@ export const isTransientS3Error = (err: unknown): boolean => {
 // Enough to show the failing field and whether more than one thing is wrong; the total count is
 // logged alongside, so nothing is silently truncated.
 const MAX_LOGGED_ISSUES = 5;
-
-const PdfExtractionSchema = z.object({ entries: z.record(z.string(), z.unknown()) });
 
 const S3_RETRY: RetryOptions = {
   isRetryable: isTransientS3Error,
@@ -429,19 +427,19 @@ export class R2ArtifactWriter {
     );
   }
 
-  pdfExtractionCache(source: string): PdfExtractionCache {
-    return {
-      read: () => this.readPdfExtraction(source),
-      write: (extraction) => this.writePdfExtraction(source, extraction),
-    };
-  }
-
   async writePdfExtraction(source: string, extraction: PdfExtraction): Promise<void> {
     await this.put(
       `aircraft/_pdf_extraction/${source}.json`,
       JSON.stringify(extraction),
       'application/json'
     );
+  }
+
+  pdfExtractionCache(source: string): PdfExtractionCache {
+    return {
+      read: () => this.readPdfExtraction(source),
+      write: (extraction) => this.writePdfExtraction(source, extraction),
+    };
   }
 
   // Per-source feed slice, the build intermediate main() merges into the consolidated DB.
