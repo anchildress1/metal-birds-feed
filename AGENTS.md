@@ -111,7 +111,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - A row printed across a chunk boundary fails the run (mark-less continuation row). Never relax the check or overlap chunks to pass it; re-chunking is a design change.
   - A non-mark text item matching the pattern (a wrapped continuation line) goes in `mark_pattern_exclusions`, verbatim. Never loosen the check to a count budget.
   - A mark printed as split glyph runs: widen `mark_pattern` (`\s*`), never drop the item.
-- A page printing no mark escapes the check, so any mark-less page outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call. Budget only trailing pages the register genuinely prints without marks (a header-only last page); never widen it to mid-document pages.
+- A page printing no mark escapes the check, so any mark-less page outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call. Budget only trailing pages the register genuinely prints without marks (a header-only last page); never widen it to mid-document pages. Record the residual gap in the YAML beside a nonzero budget.
 - pdf.js (text layer) and pdf-lib (chunks) count pages independently; a disagreement fails the run, since a page only one sees is never checked.
 - Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
 - Retry transport errors only, each attempt under a request timeout. A non-STOP finish, malformed JSON, or schema break fails the run.
@@ -146,7 +146,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
 - Never serve reads from R2; it is a build and intermediate store. Bake the DB into the Cloud Run image and serve it in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
 - `make refresh` writes R2; `make deploy` assembles from R2 and ships — never chain a refresh into deploy. Assembly always rebuilds from R2 slices, never an on-disk copy. `deploy` sequences assemble → deploy-only in its recipe, not as prerequisites, so `make -j` cannot ship before assembly ends. Publish fails closed if any slice is missing.
-- The Makefile sources `.env` inside each recipe and re-applies command-line variables after it; never let `.env` beat `make <target> VAR=x`.
+- The Makefile sources `.env` inside every recipe that reads credentials (`LOAD_ENV`) and re-applies command-line variables after it; never let `.env` beat `make <target> VAR=x`.
 
 ### Version markers
 

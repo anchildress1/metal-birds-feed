@@ -32,7 +32,7 @@ format: pdf
 # The mark prints as separately positioned glyph runs, so the text layer sees stray internal spaces
 # ("HA- GZQ", "HA -MEI", "HA - 742") — `\s*`, not `\s?`, because a run rendered with two spaces would
 # otherwise drop out of the mark count. The suffix is 3 or 4 characters: HA-YFKA sits in the same
-# publication as HA-YFK, so `{3}` would miss real rows.
+# publication as HA-YFK, so `{3}` would fail the mark check on every 4-character mark.
 pdf:
   mark_field: mark
   # The register also prints "HU-16" (an EC135 P3 whose serial and owner repeat HA-HUN's) inside

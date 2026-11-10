@@ -195,7 +195,7 @@ Leave everything else alone for now.
 
 Gemini does two jobs here. It reads the register table out of every `format: pdf` source, whatever
 its language: one call per five pages, paced at `GEMINI_REQUESTS_PER_MINUTE`, and each five-page chunk
-containing a mark, owner names and addresses included, goes to Google. It also renders a few descriptive
+containing a mark, owner names and addresses included where the register prints them, goes to Google. It also renders a few descriptive
 fields in English for any source whose `language:` is not `en`. Read the selected source's YAML instead of relying on a copied list.
 
 Skip this if you're only pulling English, non-PDF sources. Otherwise:
@@ -290,7 +290,7 @@ warnings apply:
 
 Want to see what it would do without writing anything? Set `DRY_RUN=true` in `.env`. It downloads,
 parses and compares, but it does **not** translate. A PDF source still calls Gemini to read the
-table, and because a dry run never saves what it reads, it pays for every page not already stored
+table, and because a dry run never saves what it reads, it pays for every five-page chunk not already stored
 by a real run, every time. For a non-PDF
 source a dry run cannot tell you whether your `GEMINI_API_KEY` works.
 Treat it as a shape check, not a rehearsal.

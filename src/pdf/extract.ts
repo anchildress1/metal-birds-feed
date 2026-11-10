@@ -127,9 +127,10 @@ interface ChunkResult {
  * columns, model, and prompt are unchanged and that still validates; requests the rest at
  * `GEMINI_REQUESTS_PER_MINUTE`. Saves each requested chunk to `cache` as soon as it validates.
  * @throws when the file is not a PDF, its text layer prints no mark, a page prints no mark outside
- *   the trailing `markless_pages`, its two page counts disagree, the cache cannot be read, or any
- *   chunk's response breaks the schema, has a row without a mark, or disagrees with the marks its
- *   pages print.
+ *   the trailing `markless_pages`, its two page counts disagree, the cache cannot be read, any
+ *   chunk's request fails (see `requestTableRows`) or its response breaks the schema, has a row
+ *   without a mark, or disagrees with the marks its pages print, or the end-of-run cache rewrite
+ *   of an otherwise clean run fails.
  */
 export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): Promise<Row[]> {
   // A register behind a maintenance or error page answers 200 with HTML. The header may follow

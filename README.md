@@ -90,7 +90,7 @@ Deeper mechanics — R2 key layout, version markers, duplicate resolution, the d
 | `make deploy`            | Assemble `feed.sqlite` from R2 and deploy it to Cloud Run (does not refresh)                           |
 | `make secret-scan`       | Scan for accidentally committed secrets                                                                |
 
-`make help` is the default target and lists these plus `clean`. The steps `check` and `deploy` chain (`format`, `lint`, `typecheck`, `test`, `build`, `deploy-only`) also run on their own.
+`make help` is the default target and lists these plus `clean`. The steps `check` and `deploy` chain (`format-check`, `lint`, `typecheck`, `test`, `build`, `deploy-only`) also run on their own, as does `format`.
 
 ## Deploying your own copy
 

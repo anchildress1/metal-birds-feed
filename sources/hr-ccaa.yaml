@@ -33,6 +33,8 @@ pdf:
   mark_pattern_exclusions: [PZO]
   # The register ends on a page holding only the repeated column header and the page footer when
   # its record count lands exactly on a page boundary.
+  # Residual gap: a month without that page whose last data page both opens its own five-page chunk
+  # and loses its text-layer marks passes as budgeted; the chunk is never sent and its rows drop.
   markless_pages: 1
 
 columns:

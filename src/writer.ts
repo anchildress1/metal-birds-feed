@@ -308,15 +308,14 @@ export class R2ArtifactWriter {
   }
 
   // Distinguishes "present but corrupt" from a normal thrown R2 error so a caller that opted into
-  // `rethrowOnCorruption` (translation-cache reads, where corruption must not look like "nothing
-  // cached yet") doesn't get double-logged when the outer catch below also logs on the way out.
+  // `rethrowOnCorruption` (a cache read, where corruption must not look like "nothing cached yet")
+  // doesn't get double-logged when the outer catch below also logs on the way out.
   private static readonly CorruptJsonError = class extends Error {};
 
-  // Shared by readState/readFeedRows/readTranslationCache: GET, parse, validate, self-heal to
-  // `fallback` on absence/corruption, rethrow a real R2 error for the caller to handle.
-  // `rethrowOnCorruption` trades that self-heal for a throw specifically on invalid-JSON/schema
-  // failures (not on genuine absence) — state and feed slices want the self-heal, but a corrupt
-  // translation cache must not read back as an empty-but-legitimate one; see readTranslationCache.
+  // GET, parse, validate, self-heal to `fallback` on absence/corruption, rethrow a real R2 error
+  // for the caller to handle. `rethrowOnCorruption` trades that self-heal for a throw specifically
+  // on invalid-JSON/schema failures (not on genuine absence) — state and feed slices want the
+  // self-heal, but a corrupt translation or extraction cache read back as empty re-bills everything.
   private async readJson<T>(
     key: string,
     schema: ZodType<T>,

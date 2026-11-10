@@ -117,11 +117,11 @@ table; dry runs included) or a non-English `language:` (translation). Inspect th
 declarations in `sources/*.yaml`; do not copy a source list into this skill. Defer the key until
 such a source is actually requested; a missing key throws rather than degrading, so it fails loudly
 when it matters. State before the first PDF source runs that each five-page chunk containing a mark,
-owner names and addresses included, is sent to Google.
+owner names and addresses included where the register prints them, is sent to Google.
 
 ## Phase 5 — First pull: one small source
 
-Set the existing empty `REFRESH_SOURCE=` line in `.env` to `nl-ilt` — ~3k records, `language: en`,
+Set the existing empty `REFRESH_SOURCE=` line in `.env` to `nl-ilt` — `language: en`,
 no Gemini key, under a minute. Edit that line in place; the Makefile sources the file with `set -a`,
 so a duplicate key further down silently wins and triggers the full pull. Do not offer the full pull
 here, but state up front that Phase 6 needs every source, so the user knows Phase 5 is a checkpoint

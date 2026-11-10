@@ -53,7 +53,8 @@ const responseSchema = (columns: string[]) => ({
  * Asks Gemini for every row of the PDF's table, one object per row keyed by `columns`, after
  * waiting `delayMs` (through `retryOptions.sleep` when given). `trace` tags each retry log.
  * @returns the parsed, unvalidated JSON response.
- * @throws when the response did not finish with STOP, has no text, or is not JSON.
+ * @throws when GEMINI_API_KEY is unset, a transport error is not retryable or outlasts the
+ *   retries, or the response did not finish with STOP, has no text, or is not JSON.
  */
 export const requestTableRows = async (
   pdf: Buffer,
