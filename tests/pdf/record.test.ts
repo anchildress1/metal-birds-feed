@@ -2,6 +2,7 @@ import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { PDFDocument } from 'pdf-lib';
 import { splitPdf } from '../../src/pdf/chunks.js';
 import { recordedTableRows } from './recorded-extraction.js';
 
@@ -65,22 +66,39 @@ describe('recordExtraction', () => {
     expect(requestTableRows.mock.calls.map((c) => c[3])).toEqual([0, 2000]);
   });
 
-  it('writes the chunks that validated, null for the one that failed, then throws', async () => {
+  it('leaves a PDF’s previous recording untouched when any of its chunks fails', async () => {
     stage('mv-caa', { 'a.pdf': TWO_CHUNKS });
+    const out = join(root, 'mv-caa', 'extraction', 'a.pdf.json');
+    mkdirSync(join(root, 'mv-caa', 'extraction'));
+    writeFileSync(out, 'previous');
     const [first] = await splitPdf(TWO_CHUNKS);
     requestTableRows.mockImplementation((pdf: Buffer) =>
       pdf.equals(first.bytes) ? recordedTableRows(pdf) : Promise.reject(new Error('MAX_TOKENS'))
     );
     await expect(recordExtraction('mv-caa', root)).rejects.toThrow('MAX_TOKENS');
-    const [firstRecorded] = await recorded(TWO_CHUNKS);
-    expect(read(join(root, 'mv-caa', 'extraction', 'a.pdf.json'))).toEqual([firstRecorded, null]);
+    expect(readFileSync(out, 'utf8')).toBe('previous');
   });
 
-  it('writes nothing for a PDF whose every chunk fails the mark check', async () => {
-    stage('mv-caa', { 'a.pdf': TWO_CHUNKS });
-    requestTableRows.mockResolvedValue([]);
-    await expect(recordExtraction('mv-caa', root)).rejects.toThrow('PDF marks disagree');
-    expect(readdirSync(join(root, 'mv-caa', 'extraction'))).toEqual([]);
+  it('records null for a trailing chunk that prints no mark, which is never sent', async () => {
+    // Five marked hr-ccaa pages, then the header-only kind of page markless_pages: 1 budgets.
+    const HR = resolve(import.meta.dirname, '..', '..', 'fixtures', 'hr-ccaa', 'input');
+    const doc = await PDFDocument.create();
+    const parts = ['register.pdf', 'register-rotated.pdf', 'register-tail.pdf'].map((f) =>
+      readFileSync(join(HR, f))
+    );
+    for (const part of parts) {
+      const source = await PDFDocument.load(part);
+      for (const page of await doc.copyPages(source, source.getPageIndices())) doc.addPage(page);
+    }
+    doc.addPage();
+    const rows = (await Promise.all(parts.map(recorded))).flat(2);
+    requestTableRows.mockResolvedValue(rows);
+    stage('hr-ccaa', { 'a.pdf': Buffer.from(await doc.save()) });
+
+    const [out] = await recordExtraction('hr-ccaa', root);
+
+    expect(read(out)).toEqual([rows, null]);
+    expect(requestTableRows).toHaveBeenCalledTimes(1);
   });
 
   it.each(['', '../hr-ccaa', 'hr_ccaa', 'HR-CCAA'])(

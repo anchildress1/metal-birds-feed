@@ -121,7 +121,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - A failed PUT alongside a chunk failure is logged; the chunk failure is the thrown error.
   - `make ingest` maps through the same cache, so its forced refresh bills nothing new.
 - A dry run reads the cache but suppresses the PUT like every other write, so it re-bills every uncached chunk on every run. Verify a PDF change with a real refresh, never repeated dry runs.
-- `fixtures/<id>/extraction/<pdf>.json` is the recorded model response per chunk, in chunk order (null for an unsent mark-less chunk); engine tests map from it. `make record-extraction` runs the real extraction — paced, mark-checked, validated chunks written even when one fails. Re-record with `make record-extraction SOURCE=<id>` on any model or prompt change, review the diff by hand against the PDF, and commit it with that change.
+- `fixtures/<id>/extraction/<pdf>.json` is the recorded model response per chunk, in chunk order (null for an unsent mark-less chunk); engine tests map from it. `make record-extraction` runs the real extraction — paced and mark-checked; a PDF with any failed chunk keeps its previous recording. Re-record with `make record-extraction SOURCE=<id>` on any model or prompt change, review the diff by hand against the PDF, and commit it with that change.
 - A failing mark check on a live refresh: read the named marks against the PDF. A real row the model missed is a prompt or model problem, never an exclusion.
 
 ### Values

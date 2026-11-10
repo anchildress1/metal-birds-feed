@@ -12,11 +12,12 @@ import {
 
 /**
  * Records Gemini's validated response for every page chunk of every
- * `<fixturesRoot>/<id>/input/*.pdf`, in chunk order (null for a chunk printing no mark), into
- * `<fixturesRoot>/<id>/extraction/<pdf>.json`. Billed: one paced call per marked chunk.
+ * `<fixturesRoot>/<id>/input/*.pdf`, in chunk order (null for a chunk printing no mark, which is
+ * never sent), into `<fixturesRoot>/<id>/extraction/<pdf>.json`. Billed: one paced call per marked
+ * chunk.
  * @returns the written paths.
  * @throws when the id is malformed, the source is not a PDF source, it has no fixture PDF, or a
- *   chunk fails extraction (its validated siblings are still written).
+ *   chunk fails extraction; that PDF's existing recording is left untouched.
  */
 export const recordExtraction = async (
   sourceId: string,
@@ -38,35 +39,31 @@ export const recordExtraction = async (
     // Sequential: each extraction paces its own chunks from zero, so concurrent PDFs would stack
     // their first requests past the RPM.
     const bytes = readFileSync(join(inputDir, pdf));
-    let captured: PdfExtraction | undefined;
+    const recorded: PdfExtraction = { entries: {} };
     const options = pdfExtractOptions(config, {
       // A recording is a fresh answer, never a replay of the last one.
       read: () => Promise.resolve(null),
       write: (extraction) => {
-        captured = extraction;
+        recorded.entries = extraction.entries;
         return Promise.resolve();
       },
     });
-    try {
-      await extractPdfRows(bytes, options);
-    } finally {
-      if (captured !== undefined) {
-        const [pages, chunks] = await Promise.all([textLayerPages(bytes), splitPdf(bytes)]);
-        const entries = captured.entries;
-        const responses = chunks.map(
-          (c) =>
-            entries[
-              chunkKey(
-                c.pages.map((p) => pages[p]),
-                options.columns
-              )
-            ] ?? null
-        );
-        const out = join(outDir, `${pdf}.json`);
-        writeFileSync(out, `${JSON.stringify(responses, null, 2)}\n`);
-        written.push(out);
-      }
-    }
+    // Throws before writing: a partial recording would replace good responses with gaps a test
+    // cannot tell from unsent chunks.
+    await extractPdfRows(bytes, options);
+    const [pages, chunks] = await Promise.all([textLayerPages(bytes), splitPdf(bytes)]);
+    const responses = chunks.map(
+      (c) =>
+        recorded.entries[
+          chunkKey(
+            c.pages.map((p) => pages[p]),
+            options.columns
+          )
+        ] ?? null
+    );
+    const out = join(outDir, `${pdf}.json`);
+    writeFileSync(out, `${JSON.stringify(responses, null, 2)}\n`);
+    written.push(out);
   }
   return written;
 };
