@@ -139,7 +139,8 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
 - Never serve reads from R2; it is a build and intermediate store. Bake the DB into the Cloud Run image and serve it in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
-- Assembly always rebuilds from R2 slices, never an on-disk copy, and sequences through the recipe rather than prerequisites so `make -j` cannot assemble mid-refresh. Publish fails closed if any slice is missing.
+- `make refresh` writes R2; `make deploy` assembles from R2 and ships — never chain a refresh into deploy. Assembly always rebuilds from R2 slices, never an on-disk copy. `deploy` sequences assemble → deploy-only in its recipe, not as prerequisites, so `make -j` cannot ship before assembly ends. Publish fails closed if any slice is missing.
+- The Makefile sources `.env` inside each recipe and re-applies command-line variables after it; never let `.env` beat `make <target> VAR=x`.
 
 ### Version markers
 

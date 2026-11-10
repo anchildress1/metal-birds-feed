@@ -367,9 +367,7 @@ server needs an assistant restart before its tools load.
 | Message                                                 | Cause                                    | Action                                                                   |
 | ------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
 | `command not found: bun`                                | PATH not reloaded                        | New shell, re-run Phase 0                                                |
-| `.env not found`                                        | Phase 4 skipped                          | `cp .env.example .env`                                                   |
-| `MBF_R2_<KEY> missing from .env` (refresh)              | That line is blank                       | Quote the named key; user fills it                                       |
-| `MBF_R2_<KEY> is required` (assemble-feed / deploy)     | Same cause, different target's wording   | Quote the named key; user fills it                                       |
+| `Missing required environment variable: MBF_R2_<KEY>`   | `.env` absent (Phase 4 skipped) or blank | `cp .env.example .env` if absent; quote the named key; user fills it     |
 | `Missing feed rows for: <sources>`                      | Only some sources pulled yet             | Expected after a single-source pull; offer the full refresh, never retry |
 | `Missing required environment variable: GEMINI_API_KEY` | Non-English source in scope              | Add the key, or set `REFRESH_SOURCE` to an `en` source                   |
 | `GEMINI_API_KEY rejected by Gemini`                     | Revoked / wrong project / billing off    | Setup bug, not transient — do not retry                                  |

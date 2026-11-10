@@ -483,7 +483,7 @@ export const publishFeed = async (sources: string[], dryRun: boolean): Promise<s
     // almost always ordering: slices are written by the refresh, and this only assembles them.
     if (missing.length > 0)
       throw new Error(
-        `Missing feed rows for: ${missing.join(', ')}. Run \`make refresh\` (or \`make build-feed\` to refresh and assemble in one step) — these sources have not written a feed slice yet.`
+        `Missing feed rows for: ${missing.join(', ')}. Run \`make refresh\` — these sources have not written a feed slice yet.`
       );
     const groups = loaded.filter((group): group is FeedSlice => group !== null);
     const rows = mergeFeedRows(groups);

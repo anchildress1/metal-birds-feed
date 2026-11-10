@@ -88,8 +88,8 @@ jobs:
           test "$package_version" = "$RELEASE_VERSION"
           test "$RELEASE_TAG" = "v$RELEASE_VERSION"
 
-      # assemble-feed, not build-feed: the refresh matrix has already written every slice, and
-      # build-feed would re-download every register. Emits `changed` and `hash` to $GITHUB_OUTPUT.
+      # Assembles only: the refresh matrix has already written every slice. Emits `changed` and `hash`
+      # to $GITHUB_OUTPUT.
       - name: Assemble feed
         id: feed
         env:
