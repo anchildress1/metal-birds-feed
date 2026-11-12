@@ -330,7 +330,11 @@ export class R2ArtifactWriter {
         S3_RETRY
       );
       const body = await res.Body?.transformToString();
-      if (!body) return fallback;
+      if (!body) {
+        if (!rethrowOnCorruption) return fallback;
+        log('error', `${eventPrefix}_parse_failed`, { ...logContext, reason: 'empty_body' });
+        throw new R2ArtifactWriter.CorruptJsonError(key);
+      }
       let json: unknown;
       try {
         json = JSON.parse(body);

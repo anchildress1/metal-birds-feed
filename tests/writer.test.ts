@@ -1067,6 +1067,7 @@ describe('R2ArtifactWriter — pdf extraction cache', () => {
   });
 
   it.each([
+    ['an empty body', ''],
     ['invalid JSON', '{not json'],
     ['a body breaking the schema', JSON.stringify({ key: HASH64, rows: [] })],
   ])('fails on %s rather than read it as empty and re-bill every chunk', async (_label, text) => {
@@ -1122,10 +1123,12 @@ describe('R2ArtifactWriter — translation cache', () => {
     expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
   });
 
-  it('returns an empty cache for an empty body', async () => {
+  it('throws for an empty body so localization does not rebill the whole source', async () => {
     mockSend.mockResolvedValueOnce({ Body: { transformToString: () => Promise.resolve('') } });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
   });
 
   it('throws for invalid JSON so localization does not rebill the whole source', async () => {

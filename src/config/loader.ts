@@ -183,9 +183,18 @@ const SourceConfigSchema = z
     pdf: z
       .strictObject({
         mark_field: z.string().min(1),
-        mark_pattern: z.string().min(1).refine(isValidRegex, {
-          message: 'pdf.mark_pattern must be a valid regular expression',
-        }),
+        mark_pattern: z
+          .string()
+          .min(1)
+          .refine(isValidRegex, { message: 'pdf.mark_pattern must be a valid regular expression' })
+          // pdf.js emits blank text items; matching '' marks every page and defeats the free checks.
+          .refine(
+            (p) =>
+              !isValidRegex(p) ||
+              // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+              !new RegExp(`^(?:${p})$`).test(''),
+            { message: 'pdf.mark_pattern must not match an empty text item' }
+          ),
         // Compared against trimmed text items, so an entry with edge whitespace never matches.
         mark_pattern_exclusions: z
           .array(
@@ -310,6 +319,12 @@ const SourceConfigSchema = z
   .refine((c) => (c.format === 'pdf') === (c.pdf !== undefined), {
     message: 'a pdf config block goes with format pdf, and only with it',
   })
+  .refine(
+    (c) =>
+      c.format !== 'pdf' ||
+      (c.record_count === undefined && c.skip_rows === undefined && c.sheet === undefined),
+    { message: 'record_count, skip_rows, and sheet do not apply to format pdf' }
+  )
   // A list-valued source_id trims every column and joins them; a transform would be silently ignored.
   .refine((c) => !Array.isArray(c.source_id) || c.source_id_transform === undefined, {
     message: 'source_id_transform is not supported on a list-valued source_id',

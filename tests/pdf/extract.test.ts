@@ -573,17 +573,39 @@ describe('extractPdfRows extraction cache', () => {
   });
 
   it('retries a cache write that failed mid-run once every chunk validated', async () => {
-    const stored = await storedForMv();
+    const stored = await storedFor();
     const { cache, write } = cacheOf(null);
     write.mockRejectedValueOnce(new Error('PUT 500'));
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
-      await expect(extractPdfRows(MV_PDF, { ...options, cache })).resolves.toHaveLength(
-        Object.values(stored.entries).flat().length
-      );
+      await expect(extractPdfRows(TAIL_PDF, { ...OPTIONS, cache })).resolves.toHaveLength(5);
     } finally {
       logSpy.mockRestore();
     }
+    expect(write.mock.calls).toEqual([[stored], [stored]]);
+  });
+
+  it('lands each cache write after the one before it, the end-of-run rewrite last', async () => {
+    const stored = await storedForMv();
+    requestTableRows.mockImplementation(recordedTableRows);
+    const { cache, write } = cacheOf({ entries: { stale: [] } });
+    const { promise: gate, resolve: release } = Promise.withResolvers<void>();
+    const landed: string[][] = [];
+    write.mockImplementationOnce(async (e) => {
+      await gate;
+      landed.push(Object.keys(e.entries));
+    });
+    write.mockImplementation((e) => {
+      landed.push(Object.keys(e.entries));
+      return Promise.resolve();
+    });
+    const run = extractPdfRows(MV_PDF, { ...options, cache });
+    await new Promise((settle) => setTimeout(settle, 20));
+    expect(requestTableRows).toHaveBeenCalledTimes(2);
+    expect(write).toHaveBeenCalledTimes(1);
+    release();
+    await run;
+    expect(landed.map((keys) => keys.length)).toEqual([2, 3, 2]);
     expect(write).toHaveBeenLastCalledWith(stored);
   });
 

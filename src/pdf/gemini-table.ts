@@ -32,10 +32,8 @@ const SYSTEM_INSTRUCTION = `<role>You transcribe one table from an aircraft-regi
 // Per attempt. An aborted request is still billed and retried: keep it far above a dense chunk.
 const REQUEST_TIMEOUT_MS = 600_000;
 
-// Keys the cache, so a model or prompt change invalidates it.
-export const PDF_EXTRACT_FINGERPRINT = createHash('sha256')
-  .update(`${PDF_EXTRACT_MODEL}\n${SYSTEM_INSTRUCTION}`)
-  .digest('hex');
+const USER_PART = { text: 'Based on the document above, return every aircraft row of its table.' };
+const THINKING_CONFIG = { thinkingLevel: ThinkingLevel.LOW };
 
 const responseSchema = (columns: string[]) => ({
   type: Type.ARRAY,
@@ -46,6 +44,19 @@ const responseSchema = (columns: string[]) => ({
     propertyOrdering: columns,
   },
 });
+
+// Keys the cache: every request input but the PDF and columns, which the chunk key carries.
+export const PDF_EXTRACT_FINGERPRINT = createHash('sha256')
+  .update(
+    JSON.stringify([
+      PDF_EXTRACT_MODEL,
+      SYSTEM_INSTRUCTION,
+      USER_PART,
+      THINKING_CONFIG,
+      responseSchema(['']),
+    ])
+  )
+  .digest('hex');
 
 export interface TableRequestOptions {
   retryOptions?: RetryOptions;
@@ -76,7 +87,7 @@ export const requestTableRows = async (
             role: 'user',
             parts: [
               { inlineData: { mimeType: 'application/pdf', data: pdf.toString('base64') } },
-              { text: 'Based on the document above, return every aircraft row of its table.' },
+              USER_PART,
             ],
           },
         ],
@@ -84,7 +95,7 @@ export const requestTableRows = async (
           systemInstruction: SYSTEM_INSTRUCTION,
           responseMimeType: 'application/json',
           responseSchema: responseSchema(columns),
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          thinkingConfig: THINKING_CONFIG,
           httpOptions: { timeout: REQUEST_TIMEOUT_MS },
         },
       }),

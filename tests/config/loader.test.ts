@@ -651,6 +651,26 @@ describe('loadSourceConfig', () => {
       /pdf\.mark_pattern_exclusions entries carry no leading or trailing whitespace/,
     ],
     [
+      'a mark_pattern that matches an empty text item',
+      "  mark_field: mark\n  mark_pattern: '[A-Z]*'\n",
+      /pdf\.mark_pattern must not match an empty text item/,
+    ],
+    [
+      'a top-level record_count',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\nrecord_count: { pattern: '(\\d+)' }\n",
+      /record_count, skip_rows, and sheet do not apply to format pdf/,
+    ],
+    [
+      'a top-level skip_rows',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\nskip_rows: 1\n",
+      /record_count, skip_rows, and sheet do not apply to format pdf/,
+    ],
+    [
+      'a top-level sheet',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\nsheet: 0\n",
+      /record_count, skip_rows, and sheet do not apply to format pdf/,
+    ],
+    [
       'a leftover geometry key',
       "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  anchor_pattern: '8Q-[A-Z]{3}'\n",
       /invalid source config/i,
