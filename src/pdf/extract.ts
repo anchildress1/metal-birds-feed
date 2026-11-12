@@ -11,7 +11,10 @@ import { splitPdf, type PdfChunk } from './chunks.js';
 import { PDF_EXTRACT_FINGERPRINT, requestTableRows } from './gemini-table.js';
 
 // Validated Gemini responses for a source, one per chunk, keyed by `chunkKey`.
-export const PdfExtractionSchema = z.object({ entries: z.record(z.string(), z.unknown()) });
+export const PdfExtractionSchema = z.object({
+  // A successful run always stores a chunk; an empty record read as a cache re-bills everything.
+  entries: z.record(z.string(), z.unknown()).refine((e) => Object.keys(e).length > 0, 'no entries'),
+});
 export type PdfExtraction = z.infer<typeof PdfExtractionSchema>;
 
 export interface PdfExtractionCache {

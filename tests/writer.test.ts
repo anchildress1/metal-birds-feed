@@ -1070,6 +1070,7 @@ describe('R2ArtifactWriter — pdf extraction cache', () => {
     ['an empty body', ''],
     ['invalid JSON', '{not json'],
     ['a body breaking the schema', JSON.stringify({ key: HASH64, rows: [] })],
+    ['an extraction with no entries', JSON.stringify({ entries: {} })],
   ])('fails on %s rather than read it as empty and re-bill every chunk', async (_label, text) => {
     mockSend.mockResolvedValueOnce(body(text));
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
