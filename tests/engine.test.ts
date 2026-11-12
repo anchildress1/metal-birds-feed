@@ -3036,9 +3036,7 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
     hrStats = result.stats;
   });
 
-  // The fixture's two real pages carry 33 real aircraft. A wrapped owner-cell line reading "PZO"
-  // matches the mark pattern; `mark_pattern_exclusions` keeps it out of the mark count (see the MORH
-  // test below for what that line belongs to).
+  // A wrapped owner line "PZO" matches the mark pattern; the exclusion drops it.
   it('maps all 33 real rows with no failures', () => {
     expect(hrStats).toEqual({ total: 33, ok: 33, failed: 0, skipped: 0, duplicateSkipped: 0 });
     expect(hrRecords.size).toBe(33);
@@ -3120,8 +3118,7 @@ describe('CCAA Croatia fixture mapping (PDF)', () => {
   it('marks every row unknown (register publishes no status)', () =>
     expect([...hrRecords.values()].every((r) => r.status === 'unknown')).toBe(true));
 
-  // The last page holds five tall rows directly under the repeated column header, which must not
-  // read as a row or a cell.
+  // Five tall rows directly under a repeated header.
   it('keeps the column header out of the first record on a sparse last page', async () => {
     const tail = await mapPdf(
       loadSourceConfig(HR_CONFIG),
@@ -3174,8 +3171,7 @@ describe('CCAA Croatia rotated publication, same config', () => {
   it('keeps the tail of the last record on the page', () =>
     expect(rotated.get('CAU')!.owner.name).toBe('Key Issuer Designated Activity Company'));
 
-  // The last data page ends on a three-line disclaimer; the page after it holds only the repeated
-  // column header and the footer, within hr-ccaa's markless_pages budget.
+  // Disclaimer, then a header-only page inside the markless_pages budget.
   it('drops the trailing disclaimer and tolerates the header-only last page', async () => {
     const tail = await mapPdf(
       loadSourceConfig(HR_CONFIG),
@@ -5053,8 +5049,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(huRecords.size).toBe(184);
   });
 
-  // The page carrying "HU-16" is in the fixture: it extracts as its own row, budgets out under
-  // allowed_missing_source_id_rows, and HA-TWN maps whole instead of absorbing it.
+  // "HU-16" extracts as its own row and is budgeted out; HA-TWN maps whole.
   it('keeps HA-TWN whole beside the HU-16 row', () => {
     const r = huRecords.get('HA-TWN')!;
     expect(r.model).toBe('AS 355 F2');
@@ -5134,8 +5129,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
     expect(r.manufacturer).toBeNull();
   });
 
-  // HA-MKG's operator starts on the first line of its page ("RSZ-COOP"); HA-HML's owner ends on the
-  // last line of its own ("KFT."). A lost non-mark line never trips the mark check.
+  // Page-edge lines: a lost non-mark line never trips the mark check.
   it('keeps an outermost record’s wrapped party name whole at both ends of a page', () => {
     expect(huRecords.get('HA-MKG')!.operator.name).toBe(
       'RSZ-COOP LÉGISZOLGÁLTATÓ ÉS KERESKEDELMI KFT.'
@@ -5195,10 +5189,7 @@ describe('Közlekedési Hatóság Hungary fixture mapping (PDF)', () => {
   it('publishes no ICAO hex — the register prints none', () =>
     expect([...huRecords.values()].every((r) => r.icao_hex === null)).toBe(true));
 
-  // The fixture only renders zero or one space around the hyphen, so the `\s*` the config declares
-  // is not exercised by the rows above. The mark prints as independently positioned glyph runs, so
-  // a wider render is the same failure mode already observed — and an unmatched mark drops out of
-  // the text-layer count that cross-checks the extracted rows.
+  // The fixture never renders two spaces, so the rows above leave `\s*` unexercised.
   it('matches a mark however many spaces the glyph runs put around the hyphen', () => {
     // A config check only: tests/pdf/extract.test.ts pins that extraction compiles it this way.
     const pattern = new RegExp(`^(?:${loadSourceConfig(HU_CONFIG).pdf!.mark_pattern})$`);

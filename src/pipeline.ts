@@ -562,8 +562,7 @@ export const evaluatePausedStaleness = async (): Promise<void> => {
 };
 
 /**
- * Appends the sources a refresh resolves to `$GITHUB_OUTPUT`: `sources` (run concurrently) and
- * `gemini_sources` (run one at a time), each a JSON array.
+ * Appends `sources` and `gemini_sources` JSON arrays to `$GITHUB_OUTPUT`.
  * @throws on an unnamed FORCE_REFRESH, an invalid source id, or a config that fails to load.
  */
 export const writeDiscoveredSources = async (): Promise<void> => {
@@ -582,9 +581,7 @@ export async function main(): Promise<void> {
   const sources = resolveSources();
   // A lone source has nothing to queue behind, and a named one may not exist: run() reports that.
   const gemini = sources.length > 1 ? geminiSources(sources) : new Set<string>();
-  // Gemini's RPM is per project and each source paces from zero at the full rate, so concurrent
-  // Gemini sources draw 429s that outlast the retry budget: they run one after another, beside the
-  // rest. The chain swallows only for sequencing; each run's own promise still settles below.
+  // Per-project RPM: concurrent Gemini sources 429. The catch only sequences; runs settle below.
   let geminiChain: Promise<unknown> = Promise.resolve();
   const results = await Promise.allSettled(
     sources.map((sourceId) => {

@@ -209,19 +209,13 @@ export interface RecordCountCheck {
   count_matches?: boolean;
 }
 
-// A PDF register read by Gemini (src/pdf/extract.ts), one row per printed record. The mark fields
-// cross-check the extracted rows against the PDF's own text layer.
 export interface PdfConfig {
-  // Column of `columns[primary]` holding the registration mark.
   mark_field: string;
-  // Matches a printed mark as one whole text item (anchored implicitly). Every match must be an
-  // extracted row's mark, and every extracted mark a match.
+  // Anchored implicitly to a whole text item.
   mark_pattern: string;
-  // Text items matching `mark_pattern` that are not marks, verbatim (a wrapped continuation line in
-  // another column that reads like one).
+  // Verbatim non-mark text items the pattern matches.
   mark_pattern_exclusions?: string[];
-  // Trailing pages expected to print no mark (a header-only final page). Default 0: any other
-  // mark-less page fails the run, since rows there escape the mark check.
+  // Trailing mark-less pages allowed; rows there escape the mark check.
   markless_pages?: number;
 }
 

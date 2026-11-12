@@ -6,8 +6,7 @@ import { splitPdf } from '../../src/pdf/chunks.js';
 const FIXTURES = resolve(import.meta.dirname, '..', '..', 'fixtures');
 const sha = (b: Buffer): string => createHash('sha256').update(b).digest('hex');
 
-// Every fixture PDF chunk's recorded Gemini response (`make record-extraction`), keyed by the
-// chunk's bytes. Built on first use: a top-level await here races Bun's mock.module evaluation.
+// Built lazily: a top-level await races Bun's mock.module evaluation.
 const loadRecorded = async (): Promise<Map<string, unknown>> => {
   const recorded = new Map<string, unknown>();
   await Promise.all(

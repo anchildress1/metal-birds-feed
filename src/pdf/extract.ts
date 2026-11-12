@@ -23,8 +23,7 @@ export interface ExtractPdfOptions extends PdfConfig {
   source: string;
   columns: string[];
   trim: boolean;
-  // Gemini output varies run to run on the same bytes; without a cache an unchanged PDF would
-  // advance upstream_hash and churn history and staleness.
+  // Gemini varies run to run: uncached, an unchanged PDF advances upstream_hash.
   cache: PdfExtractionCache;
   retryOptions?: RetryOptions;
 }
@@ -35,8 +34,7 @@ export const pdfExtractOptions = (
   cache?: PdfExtractionCache
 ): ExtractPdfOptions => {
   const columns = config.columns?.[config.primary];
-  // The loader guarantees the block and columns for format pdf; this narrows them. The cache is
-  // optional only on mapRows, whose other formats never read it.
+  // Narrows loader-guaranteed fields; the cache is optional only on mapRows.
   if (config.pdf === undefined || columns === undefined || cache === undefined)
     throw new Error(
       `Source "${config.id}" needs a pdf block, primary columns, and an extraction cache`
@@ -50,8 +48,7 @@ const noWhitespace = (s: string): string => s.replace(/\s+/g, '');
 
 /** Every page's text items, in reading order. */
 export const textLayerPages = async (pdf: Buffer): Promise<string[][]> => {
-  // unpdf ships canvas/DOM-typed declarations our tsconfig cannot resolve (masked by skipLibCheck),
-  // so its exports surface as untyped at this call boundary.
+  // unpdf's DOM-typed declarations don't resolve under this tsconfig.
   const { items } = (await extractTextItems(await getDocumentProxy(new Uint8Array(pdf)))) as {
     items: { str: string }[][];
   };
@@ -87,8 +84,7 @@ const cellText = (value: string, trim: boolean): string =>
         .join('\n')
     : value;
 
-// Checks one chunk's rows one for one against the marks its pages print. The text layer is the
-// count the model cannot fake: a model that stops early or merges rows still reports STOP.
+// A model that stops early or merges rows still reports STOP; the text layer cannot fake a count.
 const validateChunk = (
   raw: unknown,
   printedMarks: string[],
@@ -125,26 +121,18 @@ interface ChunkResult {
 }
 
 /**
- * Extracts the register table from a PDF via Gemini, one Row per printed record, in page chunks
- * (one response cannot hold a large register). Reuses a cached response for any chunk whose pages,
- * columns, model, and prompt are unchanged and that still validates; requests the rest at
- * `GEMINI_REQUESTS_PER_MINUTE`. Saves each requested chunk to `cache` as soon as it validates.
- * @throws when the file is not a PDF, its text layer prints no mark, a page prints no mark outside
- *   the trailing `markless_pages`, its two page counts disagree, the cache cannot be read, any
- *   chunk's request fails (see `requestTableRows`) or its response breaks the schema, has a row
- *   without a mark, or disagrees with the marks its pages print, or the end-of-run cache rewrite
- *   of an otherwise clean run fails.
+ * Extracts one Row per printed record via Gemini, per chunk, reusing valid cached chunks.
+ * @throws on a non-PDF, a mark-less text layer or unbudgeted page, a page-count mismatch, an
+ *   unreadable cache, a failed or invalid chunk, or a failed end-of-run cache rewrite.
  */
 export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): Promise<Row[]> {
-  // A register behind a maintenance or error page answers 200 with HTML. The header may follow
-  // leading bytes: readers accept it anywhere in the first 1024.
+  // A maintenance page answers 200 with HTML; readers accept the header in the first 1024 bytes.
   if (!pdf.subarray(0, 1024).includes('%PDF-'))
     throw new Error(
       `Downloaded file is not a PDF (starts with "${pdf.subarray(0, 40).toString('latin1').replace(/\s+/g, ' ').trim()}")`
     );
   const pages = await textLayerPages(pdf);
-  // Pattern source is `sources/<id>.yaml`, repo-controlled config validated by the loader. Wrapped
-  // whole: an alternation anchored only at its ends leaves the inner branches matching substrings.
+  // Repo-controlled pattern. Wrapped whole: end anchors alone leave inner alternatives unanchored.
   // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
   const re = new RegExp(`^(?:${options.mark_pattern})$`);
   const excluded = new Set(options.mark_pattern_exclusions);
@@ -155,9 +143,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const markless = pageMarks.flatMap((marks, i) => (marks.length === 0 ? [i + 1] : []));
   if (markless.length === pages.length)
     throw new Error('PDF text layer has no item matching pdf.mark_pattern (scanned or drifted)');
-  // Rows on a page printing no mark never reach the mark check, and PDF sources cannot use
-  // record_count: an appended scanned page or a new mark series would drop its rows silently. The
-  // budget covers trailing pages only, so a mid-document page losing its marks can never spend it.
+  // Rows on a mark-less page escape the mark check; only trailing pages may spend the budget.
   const allowed = options.markless_pages ?? 0;
   const lastMarked = pageMarks.findLastIndex((marks) => marks.length > 0);
   const firstBudgeted = Math.max(lastMarked + 1, pages.length - allowed) + 1;
@@ -182,9 +168,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const validated: Record<string, unknown> = {};
   let writeFailed = false;
   let writes = Promise.resolve();
-  // Saved as each paid chunk lands: a job killed at its timeout mid-document would otherwise lose
-  // every response it already paid for, and a slow register would re-bill them on every run.
-  // Chained so a slower PUT never overwrites a later, fuller one.
+  // Saved per chunk so a killed job keeps what it paid for; chained so a slow PUT never wins.
   const persist = (): void => {
     const snapshot = { entries: { ...cached, ...validated } };
     writes = writes
@@ -198,8 +182,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
       });
   };
   let requested = 0;
-  // Starts spaced at the project's RPM: firing every chunk at once draws 429s that outlast the
-  // retry budget.
+  // Unpaced, 429s outlast the retry budget.
   const request = (chunk: PdfChunk): Promise<unknown> =>
     requestTableRows(chunk.bytes, options.columns, {
       retryOptions: options.retryOptions,
@@ -224,8 +207,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
             rows: validateChunk(cached[key], printed, schema, options),
           };
         } catch (err) {
-          // A mark_field/pattern change can invalidate a response its key still matches; left in
-          // place it would fail every run with no request to replace it.
+          // A mark_field/pattern change keeps the key; left, it fails every run.
           log('warn', 'pdf_extract_cache_invalid', {
             source: options.source,
             pages: pageSpan(chunk.pages),
@@ -248,17 +230,14 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const failures = settled.flatMap<{ pages: string; reason: unknown }>((s, i) =>
     s.status === 'rejected' ? [{ pages: pageSpan(chunks[i].pages), reason: s.reason }] : []
   );
-  // A clean run rewrites the cache from this document's chunks alone, dropping entries for pages
-  // no longer printed, and retries a PUT that failed mid-run; that one failing throws. After a
-  // chunk failure the chunk is the actionable error, and the saved chunks already cut the re-bill.
+  // Drops stale entries and retries a failed mid-run PUT; a chunk failure outranks it.
   const current = Object.fromEntries(done.map((c) => [c.key, c.raw]));
   const stale = Object.keys(cached).some((k) => !Object.hasOwn(current, k));
   if (failures.length === 0 && (stale || writeFailed))
     await options.cache.write({ entries: current });
 
   if (failures.length > 0) {
-    // The thrown error carries one cause; the others may be different faults (a 503 beside a real
-    // mark mismatch) that a rerun would bill again unseen.
+    // The thrown error carries one cause; the rest would re-bill unseen.
     for (const { pages: span, reason } of failures)
       log('error', 'pdf_extract_chunk_failed', {
         source: options.source,

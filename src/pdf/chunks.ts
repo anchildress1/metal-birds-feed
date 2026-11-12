@@ -1,7 +1,6 @@
 import { PDFDocument } from 'pdf-lib';
 
-// One response tops out near 65k output tokens; a dense register page runs ~3k. Five pages keeps
-// every chunk well under the cap and lets an append near the end re-bill one chunk.
+// Well under the output-token cap per response; an append re-bills only the last chunk.
 export const PAGES_PER_CHUNK = 5;
 
 export interface PdfChunk {
@@ -10,10 +9,7 @@ export interface PdfChunk {
   bytes: Buffer;
 }
 
-/**
- * Splits a PDF into consecutive standalone PDFs of up to `PAGES_PER_CHUNK` pages each.
- * Byte-identical output for identical input: metadata dates are not stamped.
- */
+/** Splits a PDF into standalone `PAGES_PER_CHUNK`-page PDFs, byte-identical for identical input. */
 export const splitPdf = async (pdf: Buffer): Promise<PdfChunk[]> => {
   const source = await PDFDocument.load(pdf, { updateMetadata: false });
   const count = source.getPageCount();

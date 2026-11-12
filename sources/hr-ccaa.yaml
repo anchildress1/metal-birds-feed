@@ -23,18 +23,14 @@ primary: register
 delimiter: ','
 format: pdf
 
-# Records carry the bare 3-letter mark (REG. OZNAKA); Croatia's table never repeats the 9A-
-# nationality prefix, so `hr_ccaa_registration` restores it.
+# The table omits the 9A- prefix; `hr_ccaa_registration` restores it.
 pdf:
   mark_field: mark
   mark_pattern: '[A-Z]{3}'
-  # A VLASNIK (owner) cell wraps onto its own line reading exactly "PZO" (continuing "MORH
-  # Zapovjedništvo HRZ I", a military unit name), which the bare mark pattern also matches.
+  # A wrapped VLASNIK line ("MORH Zapovjedništvo HRZ I" / "PZO") matches the mark pattern.
   mark_pattern_exclusions: [PZO]
-  # The register ends on a page holding only the repeated column header and the page footer when
-  # its record count lands exactly on a page boundary.
-  # Residual gap: a month without that page whose last data page both opens its own five-page chunk
-  # and loses its text-layer marks passes as budgeted; the chunk is never sent and its rows drop.
+  # A header-only last page prints when the rows end on a page boundary.
+  # Residual gap: without it, a mark-less last data page opening its own chunk drops its rows.
   markless_pages: 1
 
 columns:

@@ -169,8 +169,7 @@ const dateMonthDYyyyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(m[3], String(month).padStart(2, '0'), m[2].padStart(2, '0'));
 };
 
-// First physical line of a multi-line cell (PDF extraction keeps each printed line, joined with
-// "\n"), e.g. the name line of an owner/mortgagee address block. Blank → null.
+// The name line of a multi-line party cell; the rest is address.
 const firstLineOrNull = (value: string): string | null => trimOrNull(value.split('\n')[0] ?? '');
 
 // Collapses internal newlines/runs of whitespace to single spaces and trims; blank → null. Flattens

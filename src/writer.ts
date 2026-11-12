@@ -412,9 +412,7 @@ export class R2ArtifactWriter {
     );
   }
 
-  // Corruption throws rather than reading as empty: an empty cache re-bills every chunk, and fresh
-  // responses can differ in cells the mark check never compares, advancing upstream_hash on an
-  // unchanged PDF.
+  // Corruption throws: read as empty it re-bills every chunk and drifts unchecked cells.
   async readPdfExtraction(source: string): Promise<PdfExtraction | null> {
     return this.readJson(
       `aircraft/_pdf_extraction/${source}.json`,

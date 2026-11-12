@@ -6,8 +6,7 @@ import { retry, type RetryOptions } from '../retry.js';
 import { isRetryableGeminiError } from '../localize/gemini-client.js';
 import { errorMessage, log } from '../logger.js';
 
-// Chosen by bake-off against every fixture PDF: both Flash-Lite tiers varied run to run on dense
-// tables, and one returned 1 of 137 rows while still reporting STOP.
+// Flash-Lite tiers dropped rows on dense tables while reporting STOP.
 export const PDF_EXTRACT_MODEL = 'gemini-3.8-flash';
 
 const SYSTEM_INSTRUCTION = `<role>You transcribe one table from an aircraft-register PDF into JSON rows.</role>
@@ -33,7 +32,7 @@ const SYSTEM_INSTRUCTION = `<role>You transcribe one table from an aircraft-regi
 // Per attempt. An aborted request is still billed and retried: keep it far above a dense chunk.
 const REQUEST_TIMEOUT_MS = 600_000;
 
-// Changes with the model or the prompt, so a cached extraction from either never outlives them.
+// Keys the cache, so a model or prompt change invalidates it.
 export const PDF_EXTRACT_FINGERPRINT = createHash('sha256')
   .update(`${PDF_EXTRACT_MODEL}\n${SYSTEM_INSTRUCTION}`)
   .digest('hex');
@@ -57,10 +56,8 @@ export interface TableRequestOptions {
 }
 
 /**
- * Asks Gemini for every row of the PDF's table, one object per row keyed by `columns`.
- * @returns the parsed, unvalidated JSON response.
- * @throws when GEMINI_API_KEY is unset, a transport error is not retryable or outlasts the
- *   retries, or the response did not finish with STOP, has no text, or is not JSON.
+ * @returns the parsed, unvalidated rows Gemini reads from the PDF's table.
+ * @throws on a missing key, a failed transport, or a non-STOP, empty, or non-JSON response.
  */
 export const requestTableRows = async (
   pdf: Buffer,
@@ -69,8 +66,7 @@ export const requestTableRows = async (
 ): Promise<unknown> => {
   const ai = new GoogleGenAI({ apiKey: requireEnv('GEMINI_API_KEY') });
   if (delayMs > 0) await (retryOptions?.sleep ?? setTimeout)(delayMs);
-  // Only transport failures retry. A truncated or malformed answer is billed again in full, and a
-  // second answer to the same pages is no more trustworthy than the first.
+  // Transport only: a second answer to the same pages is billed in full and no more trustworthy.
   const response = await retry(
     () =>
       ai.models.generateContent({

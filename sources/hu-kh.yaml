@@ -29,14 +29,10 @@ primary: register
 delimiter: ','
 format: pdf
 
-# The mark prints as separately positioned glyph runs, so the text layer sees stray internal spaces
-# ("HA- GZQ", "HA -MEI", "HA - 742") — `\s*`, not `\s?`, because a run rendered with two spaces would
-# otherwise drop out of the mark count. The suffix is 3 or 4 characters: HA-YFKA sits in the same
-# publication as HA-YFK, so `{3}` would fail the mark check on every 4-character mark.
+# Glyph runs put stray spaces around the hyphen ("HA - 742"): `\s*`, not `\s?`. Suffix: 3–4 chars.
 pdf:
   mark_field: mark
-  # The register also prints "HU-16" (an EC135 P3 whose serial and owner repeat HA-HUN's) inside
-  # HA-TWN's cell block. It extracts as its own row, skipped below because it is not an HA- mark.
+  # "HU-16" prints inside HA-TWN's cell block and extracts as its own row, skipped below.
   mark_pattern: 'HA\s*-\s*[A-Z0-9]{3,4}|HU\s*-\s*\d{2}'
 
 columns:

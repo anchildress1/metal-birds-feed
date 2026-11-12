@@ -53,9 +53,7 @@ jobs:
       - name: Build
         run: make build
 
-      # The pipeline's own resolver and config loader, so the matrix split matches a local fleet
-      # refresh: unnamed force refused, paused sources skipped unless named, a misnamed source fails
-      # here, and sources that call Gemini go to the serialized job.
+      # The pipeline's own loader, so the split matches a local fleet refresh.
       - name: Enumerate sources
         id: list
         env:
@@ -127,8 +125,7 @@ jobs:
       issues: write
     strategy:
       fail-fast: false
-      # Each job paces its own calls at the full project RPM, and a 429 outlasts the retry budget
-      # (seconds against a 60s window), so parallel Gemini jobs fail chunks instead of waiting.
+      # Each job paces at the full project RPM; parallel jobs draw 429s past the retry budget.
       max-parallel: 1
       matrix:
         source: ${{ fromJson(needs.discover.outputs.gemini_sources) }}
@@ -178,9 +175,8 @@ jobs:
   # uses, so there is one deploy definition with two entry points. force is false: the called
   # workflow assembles the feed and deploys only when the result differs from `_deployed.json`, so an
   # all-unchanged run costs one assemble and no deploy.
-  # `!cancelled()` runs this even if a source failed — that source reuses its prior slice, so one
-  # register's outage never blocks shipping another's update. A failed discover skips both refresh
-  # jobs, which `!cancelled()` alone would read as nothing to wait for.
+  # `!cancelled()`: a failed source reuses its prior slice. A failed discover skips both refresh
+  # jobs, which `!cancelled()` alone reads as nothing to wait for.
   deploy:
     needs: [discover, refresh, refresh-gemini]
     if: ${{ !cancelled() && needs.discover.result == 'success' && github.ref_name == github.event.repository.default_branch && (inputs.dry_run || 'false') != 'true' }}

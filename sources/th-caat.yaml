@@ -21,8 +21,7 @@ primary: register
 delimiter: ','
 format: pdf
 
-# `HS-` is the national mark and `U-` the ultralight register CAAT prints in the same table; both
-# are full marks with their prefix.
+# `U-` is the ultralight register printed in the same table.
 pdf:
   mark_field: mark
   mark_pattern: '(?:HS|U)-[A-Z0-9]{3}'

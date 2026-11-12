@@ -28,8 +28,7 @@ primary: register
 delimiter: ','
 format: pdf
 
-# Thirteen-column publications print no basis/other-specifics/IDERA cell; those fields extract as
-# null there.
+# Thirteen-column publications print no basis/other-specifics/IDERA cell: null there.
 pdf:
   mark_field: mark
   mark_pattern: '8Q-[A-Z]{3}'

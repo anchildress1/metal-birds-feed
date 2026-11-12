@@ -25,9 +25,7 @@ RUN_SA ?= metal-birds-feed-run
 # the project, where a cleanup policy cannot be scoped to this service alone.
 RUN_ARTIFACT_REPO ?= metal-birds-feed
 
-# Optional: CI passes the same variables directly. Sourcing it inside a recipe would overwrite the
-# command-line variables make already exported (`make refresh REFRESH_SOURCE=x`), so those are
-# re-applied after it, single-quoted with any embedded quote escaped (a drop filename can hold one).
+# Sourcing .env overwrites command-line vars: re-applied after it, quote-escaped.
 ENV_FILE ?= .env
 CLI_VARS := $(foreach v,$(.VARIABLES),$(if $(filter command line,$(origin $v)),$v))
 LOAD_ENV = set -a; if [ -f "$(abspath $(ENV_FILE))" ]; then . "$(abspath $(ENV_FILE))"; fi; \
@@ -64,9 +62,7 @@ check: format-check lint typecheck test ## Everything CI gates on, in one comman
 refresh: build ## Update R2: download, map, and write every source (REFRESH_SOURCE=<id> for one)
 	@$(LOAD_ENV); $(BUN) run dist/pipeline.js
 
-# For a `download.manual` source: stores FILE in R2 only when it maps cleanly, then forces that one
-# source's refresh. A dry run stores nothing, so it stops after the mapping check: a chained refresh
-# would read the previous stored drop instead of this file.
+# A dry run stops after the mapping check: a chained refresh would read the previous stored drop.
 ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drops/<file>) and refresh it
 	@$(LOAD_ENV); \
 		if [ -z "$${SOURCE:-}" ] || [ -z "$${FILE:-}" ]; then echo "usage: make ingest SOURCE=<id> FILE=drops/<file>"; exit 1; fi; \
@@ -74,8 +70,7 @@ ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drop
 		if [ "$${DRY_RUN:-false}" = true ]; then echo "DRY_RUN=true: the file maps cleanly; nothing was stored."; exit 0; fi; \
 		REFRESH_SOURCE="$$SOURCE" FORCE_REFRESH=true $(BUN) run dist/pipeline.js
 
-# Billed: one paced Gemini call per marked five-page chunk of each fixture PDF. `git diff fixtures/`
-# afterwards is the accuracy check.
+# Billed: one Gemini call per marked chunk. Review `git diff fixtures/` against the PDFs.
 record-extraction: build ## Re-record Gemini's response for a PDF source's fixtures (SOURCE=<id>)
 	@$(LOAD_ENV); $(BUN) run dist/record-extraction.js "$${SOURCE:-}"
 
