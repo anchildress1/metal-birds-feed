@@ -65,10 +65,29 @@ describe('extractPdfRows', () => {
     expect(rows.map((r) => r.mark)).toEqual(['VIO', 'XCA', 'XGB', 'ZAG', 'ZYZ']);
     expect(rows[2]?.owner).toBe('Karting centar-Zagreb i\nZagrebački prometni zavod\nd.o.o.');
     expect(requestTableRows).toHaveBeenCalledWith(TAIL_CHUNK.bytes, COLUMNS, {
-      retryOptions: undefined,
+      retryOptions: { baseDelayMs: 60_000 / DEFAULT_REQUESTS_PER_MINUTE },
       delayMs: 0,
       trace: { source: 'hr-ccaa', pages: '1-1' },
     });
+  });
+
+  it('backs a retry off from one request slot unless the caller sets its own base delay', async () => {
+    process.env.GEMINI_REQUESTS_PER_MINUTE = '10';
+    const sleep = () => Promise.resolve();
+    await extractPdfRows(TAIL_PDF, OPTIONS);
+    await extractPdfRows(TAIL_PDF, { ...OPTIONS, retryOptions: { baseDelayMs: 0, sleep } });
+    expect(requestTableRows).toHaveBeenNthCalledWith(
+      1,
+      TAIL_CHUNK.bytes,
+      COLUMNS,
+      expect.objectContaining({ retryOptions: { baseDelayMs: 6000 } })
+    );
+    expect(requestTableRows).toHaveBeenNthCalledWith(
+      2,
+      TAIL_CHUNK.bytes,
+      COLUMNS,
+      expect.objectContaining({ retryOptions: { baseDelayMs: 0, sleep } })
+    );
   });
 
   it('omits a null cell, as an empty printed cell yields no value', async () => {

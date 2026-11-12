@@ -182,10 +182,10 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
       });
   };
   let requested = 0;
-  // Unpaced, 429s outlast the retry budget.
+  // Unpaced, 429s outlast the retry budget; the backoff starts at one request slot for the same reason.
   const request = (chunk: PdfChunk): Promise<unknown> =>
     requestTableRows(chunk.bytes, options.columns, {
-      retryOptions: options.retryOptions,
+      retryOptions: { baseDelayMs: intervalMs, ...options.retryOptions },
       delayMs: requested++ * intervalMs,
       trace: { source: options.source, pages: pageSpan(chunk.pages) },
     });
