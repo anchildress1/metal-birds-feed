@@ -1,6 +1,6 @@
 import { PDFDocument } from 'pdf-lib';
 
-// Well under the output-token cap per response; an append re-bills only the last chunk.
+// Well under the output-token cap; an append re-bills only the old last chunk and new ones.
 export const PAGES_PER_CHUNK = 5;
 
 export interface PdfChunk {

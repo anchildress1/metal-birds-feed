@@ -215,7 +215,7 @@ export interface PdfConfig {
   mark_pattern: string;
   // Verbatim non-mark text items the pattern matches.
   mark_pattern_exclusions?: string[];
-  // Trailing mark-less pages allowed; rows there escape the mark check.
+  // Trailing mark-less pages allowed; a mark-less chunk is never sent, so its rows drop unseen.
   markless_pages?: number;
 }
 

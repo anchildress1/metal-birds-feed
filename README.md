@@ -32,8 +32,7 @@ Before you copy it, three things decide whether you can:
 > it. Check current R2 pricing and your account usage before pulling data.
 
 > [!NOTE]
-> Gemini billing. Every `format: pdf` source is read by Gemini, five pages per request. Measured on
-> the fixture registers, a page runs about 560 input and 1,100–3,200 output tokens: roughly
+> Gemini billing. Every `format: pdf` source is read by Gemini, five pages per request. Roughly
 > **$0.50–$1.30 USD per 100 pages** at November 2026 Gemini 3.8 Flash pricing, plus thinking tokens;
 > check Google's current rate. A source's first extraction pays for every page; after that, only
 > five-page chunks whose text changed are billed again. A dry run reads the stored extraction but

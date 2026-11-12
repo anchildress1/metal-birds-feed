@@ -70,7 +70,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 ## Engine
 
 - Use existing extension points; never edit row-mapping logic for one source. A new registry is a new YAML, plus a transform or parser path when needed.
-- Never retry a mapping failure — deterministic on the same bytes (PDF extraction via its cache); fix the mapping so a signal exists.
+- Never retry a mapping failure; fix the mapping so a signal exists. A failed PDF chunk is never cached, so a rerun re-bills it and can pass by chance: diagnose, never rerun for a pass.
 
 ### Fetching
 
@@ -89,7 +89,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - Use the separate-endpoint form for any paged API that cannot self-report truncation. A publication landing between the two responses fails the run — rerun, never relax.
   - Count against parsed rows where the published total covers history `latest_snapshot_by` filters.
   - `count_matches: true` counts pattern matches in the endpoint response, for a register stating no total but listing one entry per row elsewhere (a sitemap). Verify the listing equals the rows, and pattern only per-row entries.
-  - PDF sources cannot use it. `download.manual` sources cannot use the endpoint form.
+  - PDF sources cannot use it (the loader rejects it, with `skip_rows` and `sheet`). `download.manual` sources cannot use the endpoint form.
 - Zero rows always fails.
 - Merge blocks (`merge_duplicates`, `joins[].merge_duplicates`) are for registers emitting one row per co-registered party; never drop the extra rows.
   - A join merge names raw upstream columns and runs before row mapping: stamp the register's own vocabulary and add it to the lookup, never a canonical value.
@@ -108,21 +108,22 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 - `mark_pattern` is compiled as `^(?:…)$` and matches whole text items; write it unanchored.
 - Extraction runs per 5-page chunk (`src/pdf/chunks.ts`): one response cannot hold a large register before `MAX_TOKENS`. Chunk requests start paced at `GEMINI_REQUESTS_PER_MINUTE`; a mark-less chunk is never sent.
 - The text-layer mark check is the row guard, per chunk: every text item on the chunk's pages matching `mark_pattern` must be an extracted mark and vice versa, counted one for one. A model can stop early or merge rows and still report STOP.
-  - A row printed across a chunk boundary fails the run (mark-less continuation row). Never relax the check or overlap chunks to pass it; re-chunking is a design change.
+  - A row printed across a chunk boundary fails the run (a mark-less row) or loses its continuation lines unchecked. Never relax the check or overlap chunks to pass it; re-chunking is a design change.
   - A non-mark text item matching the pattern (a wrapped continuation line) goes in `mark_pattern_exclusions`, verbatim. Never loosen the check to a count budget.
   - A mark printed as split glyph runs: widen `mark_pattern` (`\s*`), never drop the item.
-- A mark-less page escapes the check, so one outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call.
+- The mark check cannot see a mark-less page, and a mark-less chunk is never sent, so a mark-less page outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call.
+- `mark_pattern` must not match `''`: pdf.js emits blank text items, so it would mark every page (the loader rejects it).
   - Budget only trailing pages the register genuinely prints without marks (a header-only last page); never mid-document pages.
   - Record the residual gap in the YAML beside a nonzero budget.
 - pdf.js (text layer) and pdf-lib (chunks) count pages independently; a disagreement fails the run, since a page only one sees is never checked.
 - Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
 - Retry transport errors only, each attempt under a request timeout. A non-STOP finish, malformed JSON, or schema break fails the run.
   - An aborted request is still billed and then retried: keep the timeout several times the slowest chunk's normal generation, never near it.
-- Extraction cache `aircraft/_pdf_extraction/<id>.json`: one entry per chunk; key = pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model + prompt); value = stored response, re-validated on read. Gemini varies run to run, so without it an unchanged PDF advances `upstream_hash`.
+- Extraction cache `aircraft/_pdf_extraction/<id>.json`: one entry per chunk; key = pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model, system instruction, user prompt, thinking config, schema shape; any change re-bills every source once); value = stored response, re-validated on read. Gemini varies run to run, so without it an unchanged PDF advances `upstream_hash`.
   - Store only validated chunks, each as it validates: a run killed at the job timeout or failing another chunk re-bills only chunks it never got back.
   - A cached response that no longer validates (a `mark_field`/pattern change keeps its key) is re-requested and replaced, never left to fail every run.
-  - A corrupt cache fails the source, like the translation cache: read as empty it re-bills everything and drifts cells the mark check never compares.
-  - A failed mid-run PUT is logged. A clean run rewrites the cache at the end, which retries it and throws on a second failure; after a chunk failure, the chunk failure is the thrown error.
+  - A corrupt or empty cache fails the source, like the translation cache: read as empty it re-bills everything and drifts cells the mark check never compares.
+  - A failed mid-run PUT is logged. A clean run with stale entries or a failed PUT rewrites the cache at the end and throws if that fails; after a chunk failure, the chunk failure is the thrown error.
   - `make ingest` maps through the same cache, so its forced refresh bills nothing new.
 - A dry run reads the cache but suppresses the PUT like every other write, so it re-bills every uncached chunk on every run. Verify a PDF change with a real refresh, never repeated dry runs.
 - `fixtures/<id>/extraction/<pdf>.json`: recorded model response per chunk, in chunk order (null for an unsent mark-less chunk); engine tests map from it.
@@ -209,7 +210,7 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 - A cadence skip requires the source's slice to exist; a missing slice forces the run.
 - Exactly three things bypass the cadence gate: `DRY_RUN`, `FORCE_REFRESH`, and overdue escalation. No fourth.
   - Overdue escalation uses the staleness issue's own threshold — one threshold, never two. A source stuck escalated means `cadence_days` is wrong.
-  - `FORCE_REFRESH` without `REFRESH_SOURCE` throws at the pipeline boundary, since `make refresh` never passes through the workflow guard.
+  - `FORCE_REFRESH` without `REFRESH_SOURCE` throws in `resolveSources()`: the one guard for CI discovery and `make refresh`.
 - Staleness issues open and close on level, evaluated every CI run.
   - Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
   - A paused source is outside the matrix: the `paused-staleness` job reads its stored state without fetching; `main()` never evaluates one.

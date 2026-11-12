@@ -55,7 +55,7 @@ export const textLayerPages = async (pdf: Buffer): Promise<string[][]> => {
   return items.map((page) => page.map((i) => i.str));
 };
 
-/** Cache key for one chunk's response: what it answered (its pages' text, the columns asked for) and who answered (model + prompt). */
+/** Cache key for one chunk's response: what it answered (its pages' text, the columns asked for) and who answered (`PDF_EXTRACT_FINGERPRINT`). */
 export const chunkKey = (pageTexts: string[][], columns: string[]): string =>
   createHash('sha256')
     .update(
@@ -143,7 +143,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const markless = pageMarks.flatMap((marks, i) => (marks.length === 0 ? [i + 1] : []));
   if (markless.length === pages.length)
     throw new Error('PDF text layer has no item matching pdf.mark_pattern (scanned or drifted)');
-  // Rows on a mark-less page escape the mark check; only trailing pages may spend the budget.
+  // The mark check cannot see a mark-less page; only trailing pages may spend the budget.
   const allowed = options.markless_pages ?? 0;
   const lastMarked = pageMarks.findLastIndex((marks) => marks.length > 0);
   const firstBudgeted = Math.max(lastMarked + 1, pages.length - allowed) + 1;
@@ -168,7 +168,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const validated: Record<string, unknown> = {};
   let writeFailed = false;
   let writes = Promise.resolve();
-  // Saved per chunk so a killed job keeps what it paid for; chained so a slow PUT never wins.
+  // Saved per chunk so a killed job keeps what it paid; chained so no old snapshot lands last.
   const persist = (): void => {
     const snapshot = { entries: { ...cached, ...validated } };
     writes = writes
@@ -230,7 +230,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const failures = settled.flatMap<{ pages: string; reason: unknown }>((s, i) =>
     s.status === 'rejected' ? [{ pages: pageSpan(chunks[i].pages), reason: s.reason }] : []
   );
-  // Drops stale entries and retries a failed mid-run PUT; a chunk failure outranks it.
+  // Drops stale entries, retries a failed mid-run PUT; skipped on a chunk failure so that throws.
   const current = Object.fromEntries(done.map((c) => [c.key, c.raw]));
   const stale = Object.keys(cached).some((k) => !Object.hasOwn(current, k));
   if (failures.length === 0 && (stale || writeFailed))
@@ -239,7 +239,7 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
     });
 
   if (failures.length > 0) {
-    // The thrown error carries one cause; the rest would re-bill unseen.
+    // The thrown error names one chunk; unlogged, the others re-bill next run with no cause.
     for (const { pages: span, reason } of failures)
       log('error', 'pdf_extract_chunk_failed', {
         source: options.source,

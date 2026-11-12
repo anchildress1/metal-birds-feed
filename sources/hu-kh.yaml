@@ -29,7 +29,8 @@ primary: register
 delimiter: ','
 format: pdf
 
-# Glyph runs put stray spaces around the hyphen ("HA - 742"): `\s*`, not `\s?`. Suffix: 3–4 chars.
+# Glyph runs can put two spaces around the hyphen ("HA - 742"), so `\s*`. HA-YFKA and HA-YFK share
+# a publication, so the suffix is `{3,4}`: `{3}` leaves a 4-char mark unmatched and fails the check.
 pdf:
   mark_field: mark
   # "HU-16" prints inside HA-TWN's cell block and extracts as its own row, skipped below.

@@ -107,7 +107,7 @@ export const requestTableRows = async (
     }
   );
   const finish = response.candidates?.[0]?.finishReason;
-  // MAX_TOKENS is truncated JSON that may still parse after a repair: never treat it as complete.
+  // Any non-STOP finish is an incomplete answer, even when its text parses.
   if (finish !== FinishReason.STOP) {
     const blocked = response.promptFeedback?.blockReason;
     const why =

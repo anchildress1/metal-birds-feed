@@ -47,12 +47,12 @@ Everything up to it runs on your laptop.
 
 ## What It Costs 💸
 
-| Service            | Required?                   | Cost                                                                                                                                                                 |
-| ------------------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare R2      | Yes                         | The operator's observed bill for the first data load was approximately $6.50 USD in R2 charges. That is not a guaranteed quote; your charge may differ               |
-| Google AI (Gemini) | PDF and non-English sources | PDF reading: roughly $0.50–$1.30 USD per 100 pages on first extraction at November 2026 pricing; later runs bill only changed five-page chunks. Translation is small |
-| Google Cloud Run   | Only if you deploy          | Scale-to-zero; pennies unless you send it real traffic                                                                                                               |
-| GitHub             | Only for automation         | Free                                                                                                                                                                 |
+| Service            | Required?                   | Cost                                                                                                                                                                                                              |
+| ------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare R2      | Yes                         | The operator's observed bill for the first data load was approximately $6.50 USD in R2 charges. That is not a guaranteed quote; your charge may differ                                                            |
+| Google AI (Gemini) | PDF and non-English sources | PDF reading: roughly $0.50–$1.30 USD per 100 pages on first extraction at November 2026 pricing; later runs bill only changed five-page chunks. Translation sends only a few descriptive fields, for changed rows |
+| Google Cloud Run   | Only if you deploy          | Scale-to-zero; pennies unless you send it real traffic                                                                                                                                                            |
+| GitHub             | Only for automation         | Free                                                                                                                                                                                                              |
 
 R2 bills object operations and stored bytes, not aircraft rows. This is not a claim about which
 billing dimension caused the observed charge. Step 7 starts with one registry first.
@@ -251,7 +251,7 @@ warnings apply:
   call Gemini (PDF registers and non-English ones) queue one behind another so they stay under
   your Gemini rate limit. A routine run is quick because most sources are already current and skip
   their download. Budget longer for a genuine first pull, where every source downloads and either
-  the FAA register, the largest, or the queue of PDF registers being read page by page dominates.
+  the FAA register, the largest, or the queue of PDF registers being read five pages per Gemini call dominates.
 
   You may see "30 minutes" quoted for this elsewhere. That is the `timeout-minutes` this project
   sets on its own CI refresh job — not a GitHub limit (hosted runners allow 6 hours) and not a

@@ -848,8 +848,8 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // A declared `default` absorbs any value the lookup table doesn't recognize, including a
 // genuinely new/drifted upstream code — the schema still represents it (via the default), but
 // with zero signal that a value the config author never anticipated came through. Every other
-// bounded-skip mechanism in this engine (missing-id budget, ragged-row budget, anchorless-page
-// budget) logs when it fires; this warns for the same reason, so a source that starts emitting an
+// bounded-skip mechanism in this engine (missing-id budget, ragged-row budget) logs when it
+// fires; this warns for the same reason, so a source that starts emitting an
 // unrecognized code is visible in the run log instead of silently blending into "other".
 // Counted per distinct (field, value) for the run, not logged per row. An unrecognized code is a
 // property of the register, so one row and 300,000 rows carry the same information — and at FAA's

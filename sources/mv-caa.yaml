@@ -28,11 +28,11 @@ primary: register
 delimiter: ','
 format: pdf
 
-# Thirteen-column publications print no basis/other-specifics/IDERA cell: null there.
 pdf:
   mark_field: mark
   mark_pattern: '8Q-[A-Z]{3}'
 
+# Thirteen-column publications print no basis/other-specifics/IDERA cell; Gemini returns null.
 columns:
   register:
     - sn

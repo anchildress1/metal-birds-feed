@@ -175,8 +175,8 @@ jobs:
   # uses, so there is one deploy definition with two entry points. force is false: the called
   # workflow assembles the feed and deploys only when the result differs from `_deployed.json`, so an
   # all-unchanged run costs one assemble and no deploy.
-  # `!cancelled()`: a failed source reuses its prior slice. A failed discover skips both refresh
-  # jobs, which `!cancelled()` alone reads as nothing to wait for.
+  # `!cancelled()`: a failed source reuses its prior slice. A failed discover only skips the
+  # refresh jobs, which `!cancelled()` does not stop on; hence the explicit discover check.
   deploy:
     needs: [discover, refresh, refresh-gemini]
     if: ${{ !cancelled() && needs.discover.result == 'success' && github.ref_name == github.event.repository.default_branch && (inputs.dry_run || 'false') != 'true' }}

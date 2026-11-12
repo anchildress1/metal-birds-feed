@@ -303,8 +303,7 @@ const resolvePausedSources = (): Set<string> =>
 
 const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
-  // The refresh.yml guard only covers workflow_dispatch; `make refresh` reaches here directly with
-  // whatever .env exports, and an unnamed force is a fleet-wide cadence bypass either way.
+  // Sole guard for CI discovery and `make refresh`: an unnamed force bypasses cadence fleet-wide.
   if (sourceEnv === '' && process.env['FORCE_REFRESH'] === 'true')
     throw new Error('FORCE_REFRESH requires REFRESH_SOURCE to name a single source');
   if (sourceEnv) return [sourceEnv];

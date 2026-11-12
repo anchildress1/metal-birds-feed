@@ -30,7 +30,7 @@ pdf:
   # A wrapped VLASNIK line ("MORH Zapovjedništvo HRZ I" / "PZO") matches the mark pattern.
   mark_pattern_exclusions: [PZO]
   # A header-only last page prints when the rows end on a page boundary.
-  # Residual gap: without it, a mark-less last data page opening its own chunk drops its rows.
+  # Residual gap: a data page that lost its text-layer marks, alone last in its chunk, is never sent.
   markless_pages: 1
 
 columns:
@@ -43,8 +43,8 @@ columns:
     - owner
     - address
 
-# The bare mark is the only column proven unique across the live document (0 collisions in ~400
-# rows); "REDNI BROJ U REGISTRU" (seq) looked like a better candidate — a permanent sequence number,
+# The bare mark is the only column proven unique across the live document (no collisions);
+# "REDNI BROJ U REGISTRU" (seq) looked like a better candidate — a permanent sequence number,
 # FAA-UNIQUE-ID-style — but two different aircraft in the same publication share a seq value, so it
 # fails as a key even within one snapshot and is left unmapped.
 source_id: mark
