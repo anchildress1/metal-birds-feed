@@ -30,11 +30,10 @@ const SYSTEM_INSTRUCTION = `<role>You transcribe one table from an aircraft-regi
 
 <output>A JSON array of row objects matching the schema.</output>`;
 
-// Changes with the model or the prompt, so a cached extraction from either never outlives them.
-// The SDK arms it per attempt. Without one a hung request holds its chunk until the job timeout
-// kills the run; aborted, it fails with no HTTP status, which retries as transport.
-const REQUEST_TIMEOUT_MS = 180_000;
+// Per attempt. An aborted request is still billed and retried: keep it far above a dense chunk.
+const REQUEST_TIMEOUT_MS = 600_000;
 
+// Changes with the model or the prompt, so a cached extraction from either never outlives them.
 export const PDF_EXTRACT_FINGERPRINT = createHash('sha256')
   .update(`${PDF_EXTRACT_MODEL}\n${SYSTEM_INSTRUCTION}`)
   .digest('hex');

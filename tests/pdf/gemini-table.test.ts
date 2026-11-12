@@ -95,8 +95,8 @@ describe('requestTableRows', () => {
       .mockResolvedValueOnce(response('[]'));
     await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).resolves.toEqual([]);
     expect(generateContent.mock.calls.map((c) => c[0].config.httpOptions)).toEqual([
-      { timeout: 180_000 },
-      { timeout: 180_000 },
+      { timeout: 600_000 },
+      { timeout: 600_000 },
     ]);
   });
 

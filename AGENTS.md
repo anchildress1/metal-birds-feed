@@ -115,6 +115,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 - pdf.js (text layer) and pdf-lib (chunks) count pages independently; a disagreement fails the run, since a page only one sees is never checked.
 - Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
 - Retry transport errors only, each attempt under a request timeout. A non-STOP finish, malformed JSON, or schema break fails the run.
+  - An aborted request is still billed and then retried: keep the timeout several times the slowest chunk's normal generation, never near it.
 - The extraction cache (`aircraft/_pdf_extraction/<id>.json`) is what makes extraction deterministic: one entry per chunk, keyed on its pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model + prompt) → the stored response, re-validated. Gemini varies run to run; without it an unchanged PDF advances `upstream_hash`. Only a validated chunk is stored, saved as it validates, so a run killed at the job timeout or failing another chunk re-bills only what it never got back.
   - A cached response that no longer validates (a `mark_field`/pattern change keeps its key) is re-requested and replaced, never left to fail every run.
   - A corrupt cache fails the source, like the translation cache: read as empty it re-bills everything and drifts cells the mark check never compares.
