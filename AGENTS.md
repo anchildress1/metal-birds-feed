@@ -119,7 +119,8 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 - Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
 - Retry transport errors only, each attempt under a request timeout. A non-STOP finish, malformed JSON, or schema break fails the run.
   - An aborted request is still billed and then retried: keep the timeout several times the slowest chunk's normal generation, never near it.
-- Extraction cache `aircraft/_pdf_extraction/<id>.json`: one entry per chunk; key = pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model, system instruction, user prompt, thinking config, schema shape; any change re-bills every source once); value = stored response, re-validated on read. Gemini varies run to run, so without it an unchanged PDF advances `upstream_hash`.
+- Extraction cache `aircraft/_pdf_extraction/<id>.json`: one entry per chunk; key = pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model + system instruction; any change re-bills every source once); value = stored response, re-validated on read. Gemini varies run to run, so without it an unchanged PDF advances `upstream_hash`.
+  - The fingerprint omits the user prompt, thinking config, and schema shape: editing one serves stale answers. The next fingerprint change must also hash `USER_PART`, `THINKING_CONFIG`, and `responseSchema([''])` (TTD.md) — widening it alone re-bills every source for nothing.
   - Store only validated chunks, each as it validates: a run killed at the job timeout or failing another chunk re-bills only chunks it never got back.
   - A cached response that no longer validates (a `mark_field`/pattern change keeps its key) is re-requested and replaced, never left to fail every run.
   - A corrupt or empty cache fails the source, like the translation cache: read as empty it re-bills everything and drifts cells the mark check never compares.

@@ -200,22 +200,12 @@ describe('requestTableRows', () => {
     expect(sleep).not.toHaveBeenCalled();
   });
 
-  it('fingerprints every request input but the PDF and the columns', async () => {
+  it('fingerprints the model and the system instruction', async () => {
     generateContent.mockResolvedValue(response('[]'));
-    await requestTableRows(PDF, ['']);
+    await requestTableRows(PDF, COLUMNS);
     const req = generateContent.mock.calls[0][0];
     expect(PDF_EXTRACT_FINGERPRINT).toBe(
-      createHash('sha256')
-        .update(
-          JSON.stringify([
-            req.model,
-            req.config.systemInstruction,
-            req.contents[0]?.parts[1],
-            req.config.thinkingConfig,
-            req.config.responseSchema,
-          ])
-        )
-        .digest('hex')
+      createHash('sha256').update(`${req.model}\n${req.config.systemInstruction}`).digest('hex')
     );
   });
 });

@@ -45,17 +45,9 @@ const responseSchema = (columns: string[]) => ({
   },
 });
 
-// Keys the cache: every request input but the PDF and columns, which the chunk key carries.
+// Keys the cache, so a model or system-instruction change invalidates it. Narrower than the request: see AGENTS.md.
 export const PDF_EXTRACT_FINGERPRINT = createHash('sha256')
-  .update(
-    JSON.stringify([
-      PDF_EXTRACT_MODEL,
-      SYSTEM_INSTRUCTION,
-      USER_PART,
-      THINKING_CONFIG,
-      responseSchema(['']),
-    ])
-  )
+  .update(`${PDF_EXTRACT_MODEL}\n${SYSTEM_INSTRUCTION}`)
   .digest('hex');
 
 export interface TableRequestOptions {

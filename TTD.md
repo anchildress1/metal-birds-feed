@@ -49,3 +49,7 @@
 ## PDF orientation
 
 - [ ] es-aesa, hu-kh, th-caat declare only the `x` layout; the other orientation is unmeasured and cannot be derived. Declare it from the first real file that arrives flipped, using that file's own measurements
+
+## PDF extraction cache
+
+- [ ] With the next model or system-instruction change (it re-bills anyway): widen `PDF_EXTRACT_FINGERPRINT` in `src/pdf/gemini-table.ts` to hash `USER_PART`, `THINKING_CONFIG`, and `responseSchema([''])` too, so editing one invalidates the cache. Done alone it re-bills all 5 PDF sources for identical answers.
