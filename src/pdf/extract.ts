@@ -31,7 +31,6 @@ export interface ExtractPdfOptions extends PdfConfig {
   retryOptions?: RetryOptions;
 }
 
-/** A PDF source's extraction options, from its config. */
 export const pdfExtractOptions = (
   config: SourceConfig,
   cache?: PdfExtractionCache
@@ -49,7 +48,6 @@ const pageSpan = (pages: number[]): string => `${pages[0] + 1}-${pages[pages.len
 
 const noWhitespace = (s: string): string => s.replace(/\s+/g, '');
 
-/** Every page's text items, in reading order. */
 export const textLayerPages = async (pdf: Buffer): Promise<string[][]> => {
   // unpdf's DOM-typed declarations don't resolve under this tsconfig.
   const { items } = (await extractTextItems(await getDocumentProxy(new Uint8Array(pdf)))) as {

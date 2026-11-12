@@ -9,7 +9,6 @@ export interface PdfChunk {
   bytes: Buffer;
 }
 
-/** Splits a PDF into standalone `PAGES_PER_CHUNK`-page PDFs, byte-identical for identical input. */
 export const splitPdf = async (pdf: Buffer): Promise<PdfChunk[]> => {
   const source = await PDFDocument.load(pdf, { updateMetadata: false });
   const count = source.getPageCount();
