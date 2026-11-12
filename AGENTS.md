@@ -111,18 +111,23 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
   - A row printed across a chunk boundary fails the run (mark-less continuation row). Never relax the check or overlap chunks to pass it; re-chunking is a design change.
   - A non-mark text item matching the pattern (a wrapped continuation line) goes in `mark_pattern_exclusions`, verbatim. Never loosen the check to a count budget.
   - A mark printed as split glyph runs: widen `mark_pattern` (`\s*`), never drop the item.
-- A page printing no mark escapes the check, so any mark-less page outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call. Budget only trailing pages the register genuinely prints without marks (a header-only last page); never widen it to mid-document pages. Record the residual gap in the YAML beside a nonzero budget.
+- A mark-less page escapes the check, so one outside the trailing `pdf.markless_pages` (default 0) fails the run before any paid call.
+  - Budget only trailing pages the register genuinely prints without marks (a header-only last page); never mid-document pages.
+  - Record the residual gap in the YAML beside a nonzero budget.
 - pdf.js (text layer) and pdf-lib (chunks) count pages independently; a disagreement fails the run, since a page only one sees is never checked.
 - Cells keep every printed line, joined with `\n`: `first_line_or_null` and party transforms read the name off line one; a joined address leaks into the name.
 - Retry transport errors only, each attempt under a request timeout. A non-STOP finish, malformed JSON, or schema break fails the run.
   - An aborted request is still billed and then retried: keep the timeout several times the slowest chunk's normal generation, never near it.
-- The extraction cache (`aircraft/_pdf_extraction/<id>.json`) is what makes extraction deterministic: one entry per chunk, keyed on its pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model + prompt) → the stored response, re-validated. Gemini varies run to run; without it an unchanged PDF advances `upstream_hash`. Only a validated chunk is stored, saved as it validates, so a run killed at the job timeout or failing another chunk re-bills only what it never got back.
+- Extraction cache `aircraft/_pdf_extraction/<id>.json`: one entry per chunk; key = pages' text + columns + `PDF_EXTRACT_FINGERPRINT` (model + prompt); value = stored response, re-validated on read. Gemini varies run to run, so without it an unchanged PDF advances `upstream_hash`.
+  - Store only validated chunks, each as it validates: a run killed at the job timeout or failing another chunk re-bills only chunks it never got back.
   - A cached response that no longer validates (a `mark_field`/pattern change keeps its key) is re-requested and replaced, never left to fail every run.
   - A corrupt cache fails the source, like the translation cache: read as empty it re-bills everything and drifts cells the mark check never compares.
   - A failed mid-run PUT is logged. A clean run rewrites the cache at the end, which retries it and throws on a second failure; after a chunk failure, the chunk failure is the thrown error.
   - `make ingest` maps through the same cache, so its forced refresh bills nothing new.
 - A dry run reads the cache but suppresses the PUT like every other write, so it re-bills every uncached chunk on every run. Verify a PDF change with a real refresh, never repeated dry runs.
-- `fixtures/<id>/extraction/<pdf>.json` is the recorded model response per chunk, in chunk order (null for an unsent mark-less chunk); engine tests map from it. `make record-extraction` runs the real extraction — paced and mark-checked; a PDF with any failed chunk keeps its previous recording. Re-record with `make record-extraction SOURCE=<id>` on any model or prompt change, review the diff by hand against the PDF, and commit it with that change.
+- `fixtures/<id>/extraction/<pdf>.json`: recorded model response per chunk, in chunk order (null for an unsent mark-less chunk); engine tests map from it.
+  - `make record-extraction` runs the real extraction, paced and mark-checked; a PDF with any failed chunk keeps its previous recording.
+  - On any model or prompt change: `make record-extraction SOURCE=<id>`, review the diff by hand against the PDF, commit it with that change.
 - A failing mark check on a live refresh: read the named marks against the PDF. A real row the model missed is a prompt or model problem, never an exclusion.
 
 ### Values
@@ -142,11 +147,15 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 - `mapRows()` (`map_*`) is column mapping; `localizeRecords()` (`localize_*`) is the Gemini pass. Never call mapping "translate", prose included.
 - Every state field is required. Never add an optional-field fallback for an older shape.
 - A per-source artifact keeps its closed rows (`removed_on` set); live rows regenerate from source. A closed row is data the register no longer holds, not cache; it migrates, never resets.
-  - A live row closes on the second consecutive fetched run that misses it, on a later UTC day, dated to the first miss. A cadence skip or a failed run counts as neither a miss nor a return. The artifact PUT is the last write before state, so a failed slice never advances history. Never serve `first_seen`.
+  - Close a live row on the second consecutive fetched run that misses it, on a later UTC day; date it to the first miss. A cadence skip or a failed run is neither a miss nor a return.
+  - The artifact PUT is the last write before state: a failed slice never advances history.
+  - Never serve `first_seen`.
   - A stored artifact that cannot be fetched or read fails that source. Only an absent one starts history over. Never reset to get past an error.
   - A schema bump migrates closed rows via `db.ts` `MIGRATIONS`, keyed by the version rows leave, chained hop by hop to current; a missing entry fails closed. An additive bump ships an identity entry (`(rows) => rows`) in the same commit — the new column stores NULL; anything else ships a real transform.
-- Never serve reads from R2; it is a build and intermediate store. Bake the DB into the Cloud Run image and serve it in-memory (single instance, scale-to-zero, no runtime fetch): data reaches production only by redeploying an image.
-- `make refresh` writes R2; `make deploy` assembles from R2 and ships — never chain a refresh into deploy. Assembly always rebuilds from R2 slices, never an on-disk copy. `deploy` sequences assemble → deploy-only in its recipe, not as prerequisites, so `make -j` cannot ship before assembly ends. Publish fails closed if any slice is missing.
+- Never serve reads from R2 (build and intermediate store only). Bake the DB into the Cloud Run image, serve in-memory: single instance, scale-to-zero, no runtime fetch. Data reaches production only by redeploying an image.
+- `make refresh` writes R2; `make deploy` assembles from R2 and ships. Never chain a refresh into deploy.
+  - Assembly always rebuilds from R2 slices, never an on-disk copy. Publish fails closed if any slice is missing.
+  - `deploy` sequences assemble → deploy-only in its recipe, never as prerequisites: `make -j` would ship before assembly ends.
 - The Makefile sources `.env` inside every recipe that reads credentials (`LOAD_ENV`) and re-applies command-line variables after it; never let `.env` beat `make <target> VAR=x`.
 
 ### Version markers
@@ -179,8 +188,12 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 ### Hashes and translation
 
 - `content_hash` covers the written artifact and gates the PUT, so a translation-only improvement still ships. `upstream_hash` covers the pre-localization records and drives `changed`, so a late translation never stamps `last_content_change`.
-- `language:` is required, never defaulted: it decides whether a source is billed to Gemini. `language: en` skips the pass — rendering English as English rewords curated labels and invents meaning for bare codes. The per-field exclusion guards collection and application alike, so an older cache entry cannot overwrite the mapping.
-- `<field>_source_text` is captured at parse time, before any English rendering, satisfying licenses that forbid distorting source meaning. A field already rendered English by a parse-time transform must declare its source-text mapping explicitly, or the raw value is lost. A cache miss falls back to source text, never null.
+- `language:` is required, never defaulted: it decides whether a source is billed to Gemini.
+  - `language: en` skips the pass: rendering English as English rewords curated labels and invents meaning for bare codes.
+  - The per-field exclusion guards collection and application alike, so an older cache entry cannot overwrite the mapping.
+- Capture `<field>_source_text` at parse time, before any English rendering: licenses forbid distorting source meaning.
+  - A field a parse-time transform already renders English must declare its source-text mapping explicitly, or the raw value is lost.
+  - A cache miss falls back to source text, never null.
 - The translation cache persists independently of the content-hash gate; a contract-version mismatch invalidates the whole prior generation.
 - A translating run writes the cache back before calling Gemini and skips the batch when that write fails. An unwritable cache re-bills the identical delta every run; that PUT guards spend — never remove it as redundant.
 - A party NAME is never a translation candidate.
@@ -188,14 +201,18 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 
 ## Refresh and staleness
 
-- Where declared cadence and observed rhythm differ, run at the more frequent and record both in `DATA_LICENSES.md` `## Update cadence`. A source publishing faster than the cron needs its own workflow. Every run is a full fetch; the content hash gates the PUT.
+- Declared cadence ≠ observed rhythm: run at the more frequent; record both in `DATA_LICENSES.md` `## Update cadence`.
+- A source publishing faster than the cron gets its own workflow.
+- Every run is a full fetch; the content hash gates the PUT.
 - Sources that call Gemini (`format: pdf` or a non-English `language:`) run one at a time against the project RPM: `main()` chains them in a fleet run, `refresh-gemini` (`max-parallel: 1`) in CI. `writeDiscoveredSources` splits the CI matrix with the pipeline's own loader; never classify sources by grepping YAML.
 - Cadence compares whole UTC days, never an ms window: `last_run` is stamped at completion, so a strict window drifts every cycle a day later.
 - A cadence skip requires the source's slice to exist; a missing slice forces the run.
 - Exactly three things bypass the cadence gate: `DRY_RUN`, `FORCE_REFRESH`, and overdue escalation. No fourth.
   - Overdue escalation uses the staleness issue's own threshold — one threshold, never two. A source stuck escalated means `cadence_days` is wrong.
   - `FORCE_REFRESH` without `REFRESH_SOURCE` throws at the pipeline boundary, since `make refresh` never passes through the workflow guard.
-- Staleness issues open and close on level, evaluated every CI run. A paused source is outside the matrix, so the `paused-staleness` job reads its stored state without fetching; `main()` never evaluates one. Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
+- Staleness issues open and close on level, evaluated every CI run.
+  - Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
+  - A paused source is outside the matrix: the `paused-staleness` job reads its stored state without fetching; `main()` never evaluates one.
 
 ## GitHub Actions
 
@@ -256,7 +273,8 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 
 ### `DATA_LICENSES.md`
 
-Update it on every source addition or posture change; it is the single record for correspondence and posture. Keep it a flat tracker, never a reply archive — the email thread is the verbatim record.
+- Update on every source addition or posture change: sole record of correspondence and posture.
+- Flat tracker, never a reply archive; the email thread is the verbatim record.
 
 | Section                    | Holds                                                                          | Never holds                                                                        |
 | -------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
