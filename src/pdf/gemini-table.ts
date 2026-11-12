@@ -108,10 +108,15 @@ export const requestTableRows = async (
   );
   const finish = response.candidates?.[0]?.finishReason;
   // MAX_TOKENS is truncated JSON that may still parse after a repair: never treat it as complete.
-  if (finish !== FinishReason.STOP)
-    throw new Error(
-      `Gemini PDF extraction ended with ${finish ?? `no finish reason (prompt blocked: ${response.promptFeedback?.blockReason ?? 'unknown'})`}, not STOP`
-    );
+  if (finish !== FinishReason.STOP) {
+    const blocked = response.promptFeedback?.blockReason;
+    const why =
+      finish ??
+      (blocked === undefined
+        ? `no finish reason (${response.candidates?.length ?? 0} candidates)`
+        : `a blocked prompt (${blocked})`);
+    throw new Error(`Gemini PDF extraction ended with ${why}, not STOP`);
+  }
   const text = response.text;
   if (text === undefined) throw new Error('Gemini PDF extraction returned no text');
   try {

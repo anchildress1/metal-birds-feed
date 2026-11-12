@@ -1,6 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSourceConfig } from '../config/loader.js';
+import { errorMessage } from '../logger.js';
 import { splitPdf } from './chunks.js';
 import {
   chunkKey,
@@ -43,8 +44,11 @@ export const recordExtraction = async (
         return Promise.resolve();
       },
     });
-    // A partial recording's gaps read as unsent chunks.
-    await extractPdfRows(bytes, options);
+    // A failed chunk throws before the write, so this PDF keeps its previous recording.
+    await extractPdfRows(bytes, options).catch((err: unknown) => {
+      const done = written.length > 0 ? written.join(', ') : 'none';
+      throw new Error(`${pdf}: ${errorMessage(err)} (already written: ${done})`, { cause: err });
+    });
     const [pages, chunks] = await Promise.all([textLayerPages(bytes), splitPdf(bytes)]);
     const responses = chunks.map(
       (c) =>

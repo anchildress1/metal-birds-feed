@@ -75,7 +75,9 @@ describe('recordExtraction', () => {
     requestTableRows.mockImplementation((pdf: Buffer) =>
       pdf.equals(first.bytes) ? recordedTableRows(pdf) : Promise.reject(new Error('MAX_TOKENS'))
     );
-    await expect(recordExtraction('mv-caa', root)).rejects.toThrow('MAX_TOKENS');
+    await expect(recordExtraction('mv-caa', root)).rejects.toThrow(
+      /^a\.pdf: .*MAX_TOKENS \(already written: none\)$/
+    );
     expect(readFileSync(out, 'utf8')).toBe('previous');
   });
 

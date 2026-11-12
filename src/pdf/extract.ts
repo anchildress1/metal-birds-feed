@@ -234,7 +234,9 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
   const current = Object.fromEntries(done.map((c) => [c.key, c.raw]));
   const stale = Object.keys(cached).some((k) => !Object.hasOwn(current, k));
   if (failures.length === 0 && (stale || writeFailed))
-    await options.cache.write({ entries: current });
+    await options.cache.write({ entries: current }).catch((err: unknown) => {
+      throw new Error(`PDF extraction cache rewrite failed: ${errorMessage(err)}`, { cause: err });
+    });
 
   if (failures.length > 0) {
     // The thrown error carries one cause; the rest would re-bill unseen.
@@ -245,8 +247,9 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
         error: errorMessage(reason),
       });
     const [first] = failures;
+    const sent = settled.filter((s) => s.status === 'rejected' || s.value !== null).length;
     throw new Error(
-      `${failures.length} of ${chunks.length} PDF chunks failed; pages ${first.pages}: ${errorMessage(first.reason)}`,
+      `${failures.length} of ${sent} sent PDF chunks failed; pages ${first.pages}: ${errorMessage(first.reason)}`,
       { cause: first.reason }
     );
   }

@@ -207,7 +207,7 @@ describe('extractPdfRows', () => {
     const error = await extractPdfRows(TAIL_PDF, OPTIONS).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toBe(
-      '1 of 1 PDF chunks failed; pages 1-1: Gemini PDF extraction ended with MAX_TOKENS, not STOP'
+      '1 of 1 sent PDF chunks failed; pages 1-1: Gemini PDF extraction ended with MAX_TOKENS, not STOP'
     );
     expect((error as Error).cause).toBe(cause);
   });
@@ -335,7 +335,7 @@ describe('extractPdfRows page chunks', () => {
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
       await expect(extractPdfRows(MV_PDF, MV)).rejects.toThrow(
-        '2 of 2 PDF chunks failed; pages 1-5: 503'
+        '2 of 2 sent PDF chunks failed; pages 1-5: 503'
       );
       const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
       expect(logged).toContain('event=pdf_extract_chunk_failed source=mv-caa pages=1-5 error=503');
@@ -354,7 +354,7 @@ describe('extractPdfRows page chunks', () => {
     requestTableRows
       .mockResolvedValueOnce([...first, second[0]])
       .mockResolvedValueOnce(second.slice(1));
-    await expect(extractPdfRows(MV_PDF, MV)).rejects.toThrow('2 of 2 PDF chunks failed');
+    await expect(extractPdfRows(MV_PDF, MV)).rejects.toThrow('2 of 2 sent PDF chunks failed');
   });
 
   // TAIL_PDF's page followed by five blank pages: a whole chunk printing no mark.
@@ -407,6 +407,13 @@ describe('extractPdfRows page chunks', () => {
       })
     ).rejects.toThrow('at the end only): pages 2');
     expect(requestTableRows).not.toHaveBeenCalled();
+  });
+
+  it('counts only sent chunks in a failure, never an unsent mark-less one', async () => {
+    requestTableRows.mockRejectedValue(new Error('503'));
+    await expect(
+      extractPdfRows(await withBlankChunk(), { ...OPTIONS, markless_pages: 5 })
+    ).rejects.toThrow('1 of 1 sent PDF chunks failed');
   });
 
   it('skips the paid call for a chunk whose pages print no mark, within markless_pages', async () => {
@@ -543,7 +550,7 @@ describe('extractPdfRows extraction cache', () => {
     );
     const { cache, write } = cacheOf(null);
     await expect(extractPdfRows(MV_PDF, { ...options, cache })).rejects.toThrow(
-      '1 of 2 PDF chunks failed; pages 6-8: 503'
+      '1 of 2 sent PDF chunks failed; pages 6-8: 503'
     );
     expect(Object.values(write.mock.calls[0][0].entries)).toEqual([
       await recordedTableRows(first.bytes),
@@ -629,7 +636,9 @@ describe('extractPdfRows extraction cache', () => {
   it('throws a failed cache write when every chunk validated', async () => {
     const { cache, write } = cacheOf(null);
     write.mockRejectedValue(new Error('PUT 500'));
-    await expect(extractPdfRows(TAIL_PDF, { ...OPTIONS, cache })).rejects.toThrow('PUT 500');
+    await expect(extractPdfRows(TAIL_PDF, { ...OPTIONS, cache })).rejects.toThrow(
+      'PDF extraction cache rewrite failed: PUT 500'
+    );
   });
 
   it('reports the chunk failure, not a failed cache write, when both happen', async () => {
@@ -642,7 +651,7 @@ describe('extractPdfRows extraction cache', () => {
     const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     try {
       await expect(extractPdfRows(MV_PDF, { ...options, cache })).rejects.toThrow(
-        '1 of 2 PDF chunks failed; pages 6-8: 503'
+        '1 of 2 sent PDF chunks failed; pages 6-8: 503'
       );
       // The swallowed PUT failure is the only record that the next run re-bills this chunk.
       expect(logSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(

@@ -110,7 +110,7 @@ describe('requestTableRows', () => {
 
   it.each([
     ['MAX_TOKENS', 'Gemini PDF extraction ended with MAX_TOKENS, not STOP'],
-    [null, 'ended with no finish reason (prompt blocked: unknown), not STOP'],
+    [null, 'ended with no finish reason (0 candidates), not STOP'],
   ])('throws without retrying when the response finished with %p', async (finish, message) => {
     generateContent.mockResolvedValue(response('[{"mark":"VIO"', finish));
     await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).rejects.toThrow(
@@ -122,7 +122,7 @@ describe('requestTableRows', () => {
   it('names the block reason of a blocked prompt', async () => {
     generateContent.mockResolvedValue(response(undefined, null, 'PROHIBITED_CONTENT'));
     await expect(requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY })).rejects.toThrow(
-      'prompt blocked: PROHIBITED_CONTENT'
+      'ended with a blocked prompt (PROHIBITED_CONTENT), not STOP'
     );
   });
 
