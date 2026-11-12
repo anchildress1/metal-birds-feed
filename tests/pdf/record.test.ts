@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -47,8 +47,13 @@ describe('recordExtraction', () => {
   it('writes each fixture PDF’s validated per-chunk responses beside it, in chunk order', async () => {
     stage('mv-caa', { 'a.pdf': TWO_CHUNKS, 'b.pdf': ALSO_TWO_CHUNKS, 'notes.txt': 'skip me' });
 
+    const logSpy = spyOn(console, 'log').mockImplementation(() => {});
     // readdir order is filesystem-defined.
     const written = (await recordExtraction('mv-caa', root)).sort();
+    const logged = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    logSpy.mockRestore();
+    for (const path of written)
+      expect(logged).toContain(`event=pdf_extraction_recorded source=mv-caa path=${path}`);
 
     expect(written).toEqual([
       join(root, 'mv-caa', 'extraction', 'a.pdf.json'),

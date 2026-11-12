@@ -1,7 +1,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSourceConfig } from '../config/loader.js';
-import { errorMessage } from '../logger.js';
+import { errorMessage, log } from '../logger.js';
 import { splitPdf } from './chunks.js';
 import {
   chunkKey,
@@ -12,7 +12,7 @@ import {
 } from './extract.js';
 
 /**
- * Writes each fixture PDF's per-chunk responses to `extraction/<pdf>.json`. Billed.
+ * Writes each fixture PDF's per-chunk responses to `extraction/<pdf>.json`, logging each path. Billed.
  * @returns the written paths.
  * @throws on a bad id, a non-PDF source, no fixture PDF, or a failed chunk (recording untouched).
  */
@@ -61,6 +61,7 @@ export const recordExtraction = async (
     );
     const out = join(outDir, `${pdf}.json`);
     writeFileSync(out, `${JSON.stringify(responses, null, 2)}\n`);
+    log('info', 'pdf_extraction_recorded', { source: sourceId, path: out });
     written.push(out);
   }
   return written;
