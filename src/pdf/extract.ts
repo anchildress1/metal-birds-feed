@@ -140,12 +140,12 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
     items.map((s) => s.trim()).filter((s) => re.test(s) && !excluded.has(s))
   );
   // Before any paid call: a scanned or drifted PDF fails here for free.
-  const markless = pageMarks.flatMap((marks, i) => (marks.length === 0 ? [i + 1] : []));
-  if (markless.length === pages.length)
+  const lastMarked = pageMarks.findLastIndex((marks) => marks.length > 0);
+  if (lastMarked === -1)
     throw new Error('PDF text layer has no item matching pdf.mark_pattern (scanned or drifted)');
   // The mark check cannot see a mark-less page; only trailing pages may spend the budget.
   const allowed = options.markless_pages ?? 0;
-  const lastMarked = pageMarks.findLastIndex((marks) => marks.length > 0);
+  const markless = pageMarks.flatMap((marks, i) => (marks.length === 0 ? [i + 1] : []));
   const firstBudgeted = Math.max(lastMarked + 1, pages.length - allowed) + 1;
   const unbudgeted = markless.filter((page) => page < firstBudgeted);
   if (unbudgeted.length > 0)

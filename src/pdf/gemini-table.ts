@@ -73,7 +73,7 @@ export interface TableRequestOptions {
 export const requestTableRows = async (
   pdf: Buffer,
   columns: string[],
-  { retryOptions, delayMs = 0, trace = {} }: TableRequestOptions = {}
+  { retryOptions, delayMs = 0, trace }: TableRequestOptions = {}
 ): Promise<unknown> => {
   const ai = new GoogleGenAI({ apiKey: requireEnv('GEMINI_API_KEY') });
   if (delayMs > 0) await (retryOptions?.sleep ?? setTimeout)(delayMs);
