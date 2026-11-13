@@ -613,11 +613,18 @@ describe('extractPdfRows extraction cache', () => {
 
   it('lands each cache write after the one before it, the end-of-run rewrite last', async () => {
     const stored = await storedForMv();
-    requestTableRows.mockImplementation(recordedTableRows);
+    const answered: Promise<unknown>[] = [];
+    requestTableRows.mockImplementation((pdf: Buffer) => {
+      const answer = recordedTableRows(pdf);
+      answered.push(answer);
+      return answer;
+    });
     const { cache, write } = cacheOf({ entries: { stale: [] } });
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
+    const { promise: firstWrite, resolve: entered } = Promise.withResolvers<void>();
     const landed: string[][] = [];
     write.mockImplementationOnce(async (e) => {
+      entered();
       await gate;
       landed.push(Object.keys(e.entries));
     });
@@ -626,7 +633,10 @@ describe('extractPdfRows extraction cache', () => {
       return Promise.resolve();
     });
     const run = extractPdfRows(MV_PDF, { ...options, cache });
-    await new Promise((settle) => setTimeout(settle, 20));
+    // A wall-clock wait races PDF parsing on a slow runner; wait on both chunks having validated.
+    await firstWrite;
+    await Promise.all(answered);
+    await new Promise((settle) => setImmediate(settle));
     expect(requestTableRows).toHaveBeenCalledTimes(2);
     expect(write).toHaveBeenCalledTimes(1);
     release();
