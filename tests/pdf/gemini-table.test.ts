@@ -143,24 +143,23 @@ describe('requestTableRows', () => {
     expect(gemini.sent).toHaveLength(1);
   });
 
-  it('waits delayMs through the injected sleep before the request', async () => {
+  it('awaits pace before every attempt, a retry included', async () => {
     const order: string[] = [];
-    const sleep = mock((ms: number) => {
-      order.push(`sleep ${ms}`);
+    const pace = mock(() => {
+      order.push('pace');
       return Promise.resolve();
     });
-    gemini.respond.mockImplementation(() => {
-      order.push('request');
-      return geminiReply('[]');
-    });
-    await requestTableRows(PDF, COLUMNS, { retryOptions: { ...FAST_RETRY, sleep }, delayMs: 2000 });
-    expect(order).toEqual(['sleep 2000', 'request']);
-  });
-
-  it('does not sleep for a zero delay', async () => {
-    const sleep = mock(() => Promise.resolve());
-    await requestTableRows(PDF, COLUMNS, { retryOptions: { ...FAST_RETRY, sleep } });
-    expect(sleep).not.toHaveBeenCalled();
+    gemini.respond
+      .mockImplementationOnce(() => {
+        order.push('request');
+        return geminiStatus(503);
+      })
+      .mockImplementationOnce(() => {
+        order.push('request');
+        return geminiReply('[]');
+      });
+    await requestTableRows(PDF, COLUMNS, { retryOptions: FAST_RETRY, pace });
+    expect(order).toEqual(['pace', 'request', 'pace', 'request']);
   });
 
   it('fingerprints the model and the system instruction', async () => {

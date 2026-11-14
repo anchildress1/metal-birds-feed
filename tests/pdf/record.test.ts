@@ -7,7 +7,7 @@ import { splitPdf } from '../../src/pdf/chunks.js';
 import { recordedTableRows } from './recorded-extraction.js';
 
 const requestTableRows =
-  mock<(pdf: Buffer, columns: string[], opts?: { delayMs?: number }) => Promise<unknown>>(
+  mock<(pdf: Buffer, columns: string[], opts?: { pace?: () => Promise<void> }) => Promise<unknown>>(
     recordedTableRows
   );
 void mock.module('../../src/pdf/gemini-table.js', () => ({
@@ -65,10 +65,14 @@ describe('recordExtraction', () => {
     expect(requestTableRows).toHaveBeenCalledTimes(4);
   });
 
-  it('paces each PDF’s chunk requests at GEMINI_REQUESTS_PER_MINUTE', async () => {
-    stage('mv-caa', { 'a.pdf': TWO_CHUNKS });
+  it('paces each PDF’s chunk requests through one gate of its own', async () => {
+    stage('mv-caa', { 'a.pdf': TWO_CHUNKS, 'b.pdf': ALSO_TWO_CHUNKS });
     await recordExtraction('mv-caa', root);
-    expect(requestTableRows.mock.calls.map((c) => c[2]?.delayMs)).toEqual([0, 2000]);
+    const [a1, a2, b1, b2] = requestTableRows.mock.calls.map((c) => c[2]?.pace);
+    expect(a1).toBeFunction();
+    expect(a2).toBe(a1);
+    expect(b2).toBe(b1);
+    expect(b1).not.toBe(a1);
   });
 
   it('leaves a PDF’s previous recording untouched when any of its chunks fails', async () => {

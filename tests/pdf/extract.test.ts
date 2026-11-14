@@ -44,6 +44,16 @@ const [TAIL_CHUNK] = await splitPdf(TAIL_PDF);
 const tailRows = async (): Promise<Cells[]> =>
   structuredClone((await recordedTableRows(TAIL_CHUNK.bytes)) as Cells[]);
 
+// Takes its slot like the real request, so the extraction's pacing sleeps are observable.
+const pacedRecording = async (
+  pdf: Buffer,
+  _columns: string[],
+  { pace }: { pace: () => Promise<void> }
+): Promise<unknown> => {
+  await pace();
+  return recordedTableRows(pdf);
+};
+
 const savedRpm = process.env.GEMINI_REQUESTS_PER_MINUTE;
 beforeEach(() => {
   requestTableRows.mockReset();
@@ -64,11 +74,14 @@ describe('extractPdfRows', () => {
     const rows = await extractPdfRows(TAIL_PDF, OPTIONS);
     expect(rows.map((r) => r.mark)).toEqual(['VIO', 'XCA', 'XGB', 'ZAG', 'ZYZ']);
     expect(rows[2]?.owner).toBe('Karting centar-Zagreb i\nZagrebački prometni zavod\nd.o.o.');
-    expect(requestTableRows).toHaveBeenCalledWith(TAIL_CHUNK.bytes, COLUMNS, {
-      retryOptions: { baseDelayMs: 60_000 / DEFAULT_REQUESTS_PER_MINUTE },
-      delayMs: 0,
-      trace: { source: 'hr-ccaa', pages: '1-1' },
-    });
+    expect(requestTableRows).toHaveBeenCalledWith(
+      TAIL_CHUNK.bytes,
+      COLUMNS,
+      expect.objectContaining({
+        retryOptions: { baseDelayMs: 60_000 / DEFAULT_REQUESTS_PER_MINUTE },
+        trace: { source: 'hr-ccaa', pages: '1-1' },
+      })
+    );
   });
 
   it('backs a retry off from one request slot unless the caller sets its own base delay', async () => {
@@ -329,22 +342,61 @@ describe('extractPdfRows page chunks', () => {
   });
 
   it('spaces request starts at GEMINI_REQUESTS_PER_MINUTE', async () => {
+    requestTableRows.mockImplementation(pacedRecording);
     process.env.GEMINI_REQUESTS_PER_MINUTE = '30';
-    await extractPdfRows(MV_PDF, MV);
-    expect(
-      requestTableRows.mock.calls
-        .map((c) => (c[2] as { delayMs: number }).delayMs)
-        .sort((a, b) => a - b)
-    ).toEqual([0, 2000]);
+    const sleep = mock<(ms: number) => Promise<void>>(() => Promise.resolve());
+    await extractPdfRows(MV_PDF, { ...MV, retryOptions: { sleep } });
+    expect(sleep.mock.calls).toEqual([[2000]]);
   });
 
   it('spaces at the default rate when GEMINI_REQUESTS_PER_MINUTE is unset', async () => {
-    await extractPdfRows(MV_PDF, MV);
-    expect(
-      requestTableRows.mock.calls
-        .map((c) => (c[2] as { delayMs: number }).delayMs)
-        .sort((a, b) => a - b)
-    ).toEqual([0, Math.ceil(60_000 / DEFAULT_REQUESTS_PER_MINUTE)]);
+    requestTableRows.mockImplementation(pacedRecording);
+    const sleep = mock<(ms: number) => Promise<void>>(() => Promise.resolve());
+    await extractPdfRows(MV_PDF, { ...MV, retryOptions: { sleep } });
+    expect(sleep.mock.calls).toEqual([[Math.ceil(60_000 / DEFAULT_REQUESTS_PER_MINUTE)]]);
+  });
+
+  it('queues a retry behind the slots already taken, each slot opening one interval after the last', async () => {
+    process.env.GEMINI_REQUESTS_PER_MINUTE = '30';
+    const [first] = await splitPdf(MV_PDF);
+    const held: (() => void)[] = [];
+    const sleep = mock((ms: number) => {
+      expect(ms).toBe(2000);
+      return new Promise<void>((resolve) => held.push(resolve));
+    });
+    const order: string[] = [];
+    const attempt = async (label: string, pace: () => Promise<void>) => {
+      await pace();
+      order.push(label);
+    };
+    requestTableRows.mockImplementation(
+      async (pdf: Buffer, _columns: string[], { pace }: { pace: () => Promise<void> }) => {
+        const chunk = pdf.equals(first.bytes) ? 'first' : 'second';
+        await attempt(chunk, pace);
+        if (chunk === 'first') await attempt('first retry', pace);
+        return recordedTableRows(pdf);
+      }
+    );
+    const tick = () => new Promise((settle) => setImmediate(settle));
+    const until = async (ready: () => boolean): Promise<void> => {
+      if (ready()) return;
+      await tick();
+      return until(ready);
+    };
+    const run = extractPdfRows(MV_PDF, { ...MV, retryOptions: { sleep } });
+    await until(() => held.length > 0);
+    await tick();
+    // Independent waits would start every slot's sleep at once.
+    expect(held).toHaveLength(1);
+    expect(order).toEqual(['first']);
+    held[0]();
+    await until(() => held.length > 1);
+    await tick();
+    expect(held).toHaveLength(2);
+    expect(order).toEqual(['first', 'second']);
+    held[1]();
+    await run;
+    expect(order).toEqual(['first', 'second', 'first retry']);
   });
 
   it('logs every failed chunk, not only the one the error names', async () => {
@@ -556,9 +608,11 @@ describe('extractPdfRows extraction cache', () => {
     const stored = await storedForMv();
     const [firstKey] = Object.keys(stored.entries);
     const { cache, write } = cacheOf({ entries: { [firstKey]: stored.entries[firstKey] } });
-    await extractPdfRows(MV_PDF, { ...options, cache });
+    const sleep = mock<(ms: number) => Promise<void>>(() => Promise.resolve());
+    requestTableRows.mockImplementation(pacedRecording);
+    await extractPdfRows(MV_PDF, { ...options, cache, retryOptions: { sleep } });
     expect(requestTableRows).toHaveBeenCalledTimes(1);
-    expect(requestTableRows.mock.calls[0][2]).toMatchObject({ delayMs: 0 });
+    expect(sleep).not.toHaveBeenCalled();
     expect(write).toHaveBeenCalledWith(stored);
   });
 

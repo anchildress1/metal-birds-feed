@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { setTimeout } from 'node:timers/promises';
 import { FinishReason, GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import { requireEnv } from '../env.js';
 import { retry, type RetryOptions } from '../retry.js';
@@ -52,8 +51,8 @@ export const PDF_EXTRACT_FINGERPRINT = createHash('sha256')
 
 export interface TableRequestOptions {
   retryOptions?: RetryOptions;
-  /** Wait before the request, through `retryOptions.sleep` when given. */
-  delayMs?: number;
+  /** Awaited before every attempt, retries included. */
+  pace?: () => Promise<void>;
   /** Tags each retry log. */
   trace?: Record<string, string>;
 }
@@ -65,14 +64,14 @@ export interface TableRequestOptions {
 export const requestTableRows = async (
   pdf: Buffer,
   columns: string[],
-  { retryOptions, delayMs = 0, trace }: TableRequestOptions = {}
+  { retryOptions, pace = () => Promise.resolve(), trace }: TableRequestOptions = {}
 ): Promise<unknown> => {
   const ai = new GoogleGenAI({ apiKey: requireEnv('GEMINI_API_KEY') });
-  if (delayMs > 0) await (retryOptions?.sleep ?? setTimeout)(delayMs);
   // Transport only: a second answer to the same pages is billed in full and no more trustworthy.
   const response = await retry(
-    () =>
-      ai.models.generateContent({
+    async () => {
+      await pace();
+      return ai.models.generateContent({
         model: PDF_EXTRACT_MODEL,
         contents: [
           {
@@ -90,7 +89,8 @@ export const requestTableRows = async (
           thinkingConfig: THINKING_CONFIG,
           httpOptions: { timeout: REQUEST_TIMEOUT_MS },
         },
-      }),
+      });
+    },
     {
       onRetry: (attempt, err) =>
         log('warn', 'pdf_extract_retry', { ...trace, attempt, error: errorMessage(err) }),

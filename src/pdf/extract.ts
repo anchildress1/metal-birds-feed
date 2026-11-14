@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { setTimeout } from 'node:timers/promises';
 import { extractTextItems, getDocumentProxy } from 'unpdf';
 import { z } from 'zod';
 import { readPositiveIntegerEnv } from '../env.js';
@@ -182,12 +183,19 @@ export async function extractPdfRows(pdf: Buffer, options: ExtractPdfOptions): P
         });
       });
   };
-  let requested = 0;
+  const sleep = options.retryOptions?.sleep ?? setTimeout;
+  let slot: Promise<void> | null = null;
+  // One queue for first attempts and retries: a retry timed by its own backoff lands between
+  // reserved slots and pushes the minute over the RPM.
+  const pace = (): Promise<void> => {
+    slot = slot === null ? Promise.resolve() : slot.then(() => sleep(intervalMs));
+    return slot;
+  };
   // Unpaced, 429s outlast the retry budget; the backoff starts at one request slot for the same reason.
   const request = (chunk: PdfChunk): Promise<unknown> =>
     requestTableRows(chunk.bytes, options.columns, {
       retryOptions: { baseDelayMs: intervalMs, ...options.retryOptions },
-      delayMs: requested++ * intervalMs,
+      pace,
       trace: { source: options.source, pages: pageSpan(chunk.pages) },
     });
   const settled = await Promise.allSettled(
