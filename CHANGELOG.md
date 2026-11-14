@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/anchildress1/metal-birds-feed/compare/v3.0.0...v3.0.1) (2026-11-14)
+
+
+### Bug Fixes
+
+* **sources:** poll lt-tka at its observed publication rhythm ([#248](https://github.com/anchildress1/metal-birds-feed/issues/248)) ([d435590](https://github.com/anchildress1/metal-birds-feed/commit/d4355905814cff9fbb187b92fe2ee6e29ac045e9))
+
 ## [3.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.3.0...v3.0.0) (2026-11-14)
 
 
