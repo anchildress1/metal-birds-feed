@@ -31,9 +31,7 @@ export const recordExtraction = async (
   const outDir = join(fixturesRoot, sourceId, 'extraction');
   mkdirSync(outDir, { recursive: true });
 
-  const written: string[] = [];
-  for (const pdf of pdfs) {
-    // Sequential: each extraction paces from zero, so concurrent PDFs exceed the RPM.
+  const recordOne = async (pdf: string, written: string[]): Promise<string> => {
     const bytes = readFileSync(join(inputDir, pdf));
     const recorded: PdfExtraction = { entries: {} };
     const options = pdfExtractOptions(config, {
@@ -62,7 +60,12 @@ export const recordExtraction = async (
     const out = join(outDir, `${pdf}.json`);
     writeFileSync(out, `${JSON.stringify(responses, null, 2)}\n`);
     log('info', 'pdf_extraction_recorded', { source: sourceId, path: out });
-    written.push(out);
-  }
-  return written;
+    return out;
+  };
+
+  // Chained, not concurrent: each extraction paces from zero, so concurrent PDFs exceed the RPM.
+  return pdfs.reduce<Promise<string[]>>(
+    (prior, pdf) => prior.then(async (written) => [...written, await recordOne(pdf, written)]),
+    Promise.resolve([])
+  );
 };

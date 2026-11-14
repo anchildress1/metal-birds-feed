@@ -44,7 +44,7 @@ export const pdfExtractOptions = (
   return { ...config.pdf, source: config.id, columns, trim: config.trim_all, cache };
 };
 
-const pageSpan = (pages: number[]): string => `${pages[0] + 1}-${pages[pages.length - 1] + 1}`;
+const pageSpan = (pages: number[]): string => `${pages[0] + 1}-${(pages.at(-1) ?? pages[0]) + 1}`;
 
 const noWhitespace = (s: string): string => s.replace(/\s+/g, '');
 
