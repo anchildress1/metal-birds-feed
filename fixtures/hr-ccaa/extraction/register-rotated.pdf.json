@@ -1,0 +1,337 @@
+[
+  [
+    {
+      "mark": "ABC",
+      "seq": "662",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "30667",
+      "owner": "ILFC Aircraft 73B-30667\nLimited",
+      "address": "4450 Atlantic Avenue, Westpark,\nShanon, Co. Clare, Ireland"
+    },
+    {
+      "mark": "ADV",
+      "seq": "550",
+      "mfr": "Cessna Aircraft Company",
+      "model": "U206G",
+      "serial": "U206-06796",
+      "owner": "Adventure Driven Vacations\nd.o.o.",
+      "address": "Graščica 2n, 10 000 Zagreb"
+    },
+    {
+      "mark": "ATR",
+      "seq": "773",
+      "mfr": "ATR-GIE Avions de Transport\nRegional",
+      "model": "ATR 72-212A",
+      "serial": "1387",
+      "owner": "Avation Pacific Leasing III\nPTE. LTD.",
+      "address": "Kampong Bahru Road 65, 169370\nSingapore, Singapore"
+    },
+    {
+      "mark": "BAA",
+      "seq": "266",
+      "mfr": "Polakie Zaklady Lotnicze\n(PZL)",
+      "model": "Antonov AN - 2",
+      "serial": "1G-11036",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BDG",
+      "seq": "394",
+      "mfr": "Cirrus Design Corporation",
+      "model": "SR-22",
+      "serial": "1252",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BDM",
+      "seq": "153",
+      "mfr": "Cessna Remmis Aviation",
+      "model": "Cessna 172H",
+      "serial": "0351",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BER",
+      "seq": "674",
+      "mfr": "Airbus S.A.S.",
+      "model": "A319-112",
+      "serial": "3950",
+      "owner": "ACS Aero 4 Delta Limited",
+      "address": "Fenian Street, Cumberland Place\n2, 2 Dublin, Ireland"
+    },
+    {
+      "mark": "BFT",
+      "seq": "117",
+      "mfr": "PZL WSK Mielec",
+      "model": "Antonov AN - 2",
+      "serial": "1G-9916",
+      "owner": "Padobranski klub \"Krila\nKvarnera\"",
+      "address": "Verdijeva 11, 51 000 Rijeka"
+    },
+    {
+      "mark": "BKA",
+      "seq": "204",
+      "mfr": "Polskie Zaklady Lotnicze",
+      "model": "Antonov AN-2",
+      "serial": "1G-16705",
+      "owner": "Geodetski zavod d.d.",
+      "address": "L. Jagera 4, 31 000 Osijek"
+    },
+    {
+      "mark": "BKK",
+      "seq": "247",
+      "mfr": "Melets, PZL",
+      "model": "Antonov AN - 2",
+      "serial": "1G-18528",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BKP",
+      "seq": "26",
+      "mfr": "Textron Aviation Inc.",
+      "model": "A188B Agtruck",
+      "serial": "18802875T",
+      "owner": "Poljodar Tim d.o.o.",
+      "address": "J. Jelačića 77, 43 500 Daruvar"
+    },
+    {
+      "mark": "BMZ",
+      "seq": "798",
+      "mfr": "Piper Aircraft Inc.",
+      "model": "PA-28R-201",
+      "serial": "2844130",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BNA",
+      "seq": "122",
+      "mfr": "Let",
+      "model": "Turbolet L410 UVP",
+      "serial": "851518",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BOS",
+      "seq": "697",
+      "mfr": "Fabrika vazduhoplova - Soko",
+      "model": "Galeb G-2A",
+      "serial": "FVS-G-23112",
+      "owner": "Fizička osoba",
+      "address": null
+    },
+    {
+      "mark": "BPR",
+      "seq": "27",
+      "mfr": "Reims Aviation",
+      "model": "Cessna 172 FR Rocket",
+      "serial": "0578",
+      "owner": "Zračno pristanište Mali Lošinj\nd.o.o.",
+      "address": "Privlaka 19, 51 550 Mali Lošinj"
+    },
+    {
+      "mark": "BTH",
+      "seq": "637",
+      "mfr": "Airbus",
+      "model": "A320-214",
+      "serial": "1454",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika\nGorica"
+    },
+    {
+      "mark": "BTI",
+      "seq": "653",
+      "mfr": "Airbus SAS",
+      "model": "A320-214",
+      "serial": "2189",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika Gorica"
+    },
+    {
+      "mark": "BTK",
+      "seq": "691",
+      "mfr": "Airbus Industrie",
+      "model": "A320-200",
+      "serial": "2569",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika Gorica"
+    },
+    {
+      "mark": "BTL",
+      "seq": "735",
+      "mfr": "Airbus S.A.S.",
+      "model": "Airbus A320-214",
+      "serial": "03337",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika Gorica"
+    },
+    {
+      "mark": "BTM",
+      "seq": "764",
+      "mfr": "Airbus S.A.S.",
+      "model": "A320-216",
+      "serial": "03921",
+      "owner": "Trade Air d.o.o.",
+      "address": "V. Nazora 5, 10 410 Velika Gorica"
+    },
+    {
+      "mark": "BTT",
+      "seq": "310",
+      "mfr": "Cessna Aircraft Company",
+      "model": "Cessna F172M",
+      "serial": "0972",
+      "owner": "North Adria Aviation",
+      "address": "Aldo Negri 44, 52 450 Vrsar"
+    },
+    {
+      "mark": "BWK",
+      "seq": "707",
+      "mfr": "Airbus S.A.S.",
+      "model": "A319-112",
+      "serial": "4663",
+      "owner": "ACS Aero 4 Delta Limited",
+      "address": "Fenian Street, Cumberland Place 2,\n2 Dublin, Ireland"
+    },
+    {
+      "mark": "BZG",
+      "seq": "183",
+      "mfr": "Piper Aircraft Corporation",
+      "model": "Piper PA-31T1",
+      "serial": "31T-8104032",
+      "owner": "Geofoto d.o.o",
+      "address": "Buzinski prilaz 28, 10 000 Zagreb"
+    },
+    {
+      "mark": "CAE",
+      "seq": "730",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55290",
+      "owner": "ALC Clover Ireland Limited",
+      "address": "22 Earlsfort Terrace, Dublin, Ireland"
+    },
+    {
+      "mark": "CAF",
+      "seq": "198",
+      "mfr": "Champion Belanca",
+      "model": "Champion Citabria 7\nGCBC",
+      "serial": "255-70",
+      "owner": "Jedriličarski klub \"Krila\nKvarnera\" Rijeka",
+      "address": "Velebitska 8, 51 000 Rijeka"
+    },
+    {
+      "mark": "CAI",
+      "seq": "739",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55324",
+      "owner": "ALC Clover Ireland Limited",
+      "address": "22 Earlsfort Terrace, Dublin, Ireland"
+    },
+    {
+      "mark": "CAL",
+      "seq": "755",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55350",
+      "owner": "Amergin Aviation Ireland\nHoldings Limited",
+      "address": "27-28 Herbert Place, Dublin 2, Irska"
+    },
+    {
+      "mark": "CAM",
+      "seq": "751",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "553357",
+      "owner": "ALC Clover Ireland Limited",
+      "address": "22 Earlsfort Terrace, Dublin, Ireland"
+    },
+    {
+      "mark": "CAN",
+      "seq": "752",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55363",
+      "owner": "ALC Clover Ireland Limited",
+      "address": "22 Earlsfort Terrace, Dublin, Ireland"
+    },
+    {
+      "mark": "CAO",
+      "seq": "753",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A10",
+      "serial": "50087",
+      "owner": "ALC Clover Ireland Limited",
+      "address": "22 Earlsfort Terrace, Dublin, Ireland"
+    },
+    {
+      "mark": "CAP",
+      "seq": "756",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55380",
+      "owner": "Azorra Soar Tlb Aircraft\nIreland 1 Limited",
+      "address": "Lower Baggot Street 118, 2 Dublin,\nIreland"
+    },
+    {
+      "mark": "CAR",
+      "seq": "775",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55456",
+      "owner": "Azorra Finance Aircraft\nIreland 1 Limited",
+      "address": "1st Floor 118 Baggot Street Lower,\nDublin, Irska"
+    },
+    {
+      "mark": "CAS",
+      "seq": "776",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55465",
+      "owner": "Key Issuer Designated\nActivity Company",
+      "address": "1st Floor, Universal House,\nShannon Free Zone , V14 T213"
+    },
+    {
+      "mark": "CAX",
+      "seq": "779",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55481",
+      "owner": "Beg Issuer Designated\nActivity Company",
+      "address": "1st Floor, Universal House,\nShannon Free Zone , V14 T213"
+    },
+    {
+      "mark": "CAQ",
+      "seq": "754",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A10",
+      "serial": "50088",
+      "owner": "ALC Clover Ireland Limited",
+      "address": "22 Earlsfort Terrace, Dublin 2, Irska"
+    },
+    {
+      "mark": "CAT",
+      "seq": "714",
+      "mfr": "American Champion Aircraft\nCorporation",
+      "model": "7GCBC",
+      "serial": "1970",
+      "owner": "Air Medulin d.o.o.",
+      "address": "Kavrerski put 19, 52100 Pula,"
+    },
+    {
+      "mark": "CAU",
+      "seq": "777",
+      "mfr": "Airbus Canada Limited\nPartnership",
+      "model": "BD-500-1A11",
+      "serial": "55473",
+      "owner": "Key Issuer Designated\nActivity Company",
+      "address": "1st Floor, Universal House,\nShannon Free Zone , V14 T213\nShannon, Ireland"
+    }
+  ]
+]

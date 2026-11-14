@@ -28,6 +28,7 @@ const mockWriteFeedRows = mock();
 const mockReadFeedRows = mock();
 const mockReadDeployedFeedHash = mock();
 const mockReadDrop = mock();
+const mockPdfExtractionCache = mock();
 const mockWriteDeployedFeedHash = mock();
 const mockLog = mock();
 const mockLocalizeRecords = mock();
@@ -58,6 +59,7 @@ void mock.module('../src/writer.js', () => ({
     readFeedRows = mockReadFeedRows;
     readDeployedFeedHash = mockReadDeployedFeedHash;
     readDrop = mockReadDrop;
+    pdfExtractionCache = mockPdfExtractionCache;
     writeDeployedFeedHash = mockWriteDeployedFeedHash;
   },
   // pipeline.ts reads this to decide whether a run is trustworthy enough to prune the translation
@@ -76,6 +78,7 @@ const {
   markFeedDeployed,
   resolveFeedOutputPath,
   run,
+  writeDiscoveredSources,
 } = await import('../src/pipeline.js');
 
 const CONFIG: SourceConfig = {
@@ -176,6 +179,7 @@ beforeEach(() => {
   mockDownload.mockReset();
   mockFetchPublishedTotal.mockReset();
   mockMapRows.mockReset();
+  mockPdfExtractionCache.mockReset();
   mockR2Write.mockReset();
   mockR2Constructor.mockReset();
   mockReadState.mockReset();
@@ -275,14 +279,29 @@ describe('run', () => {
       'https://example.test/count',
       CONFIG.download.headers
     );
-    expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), '17571');
+    expect(mockMapRows).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Map),
+      '17571',
+      undefined
+    );
   });
 
   it('skips the count fetch for a source that declares no endpoint', async () => {
     await run('faa');
 
     expect(mockFetchPublishedTotal).not.toHaveBeenCalled();
-    expect(mockMapRows).toHaveBeenCalledWith(expect.anything(), expect.any(Map), undefined);
+    expect(mockMapRows.mock.calls[0]?.[2]).toBeUndefined();
+  });
+
+  it("hands the engine the writer's extraction cache for the source", async () => {
+    const cache = { read: mock(), write: mock() };
+    mockPdfExtractionCache.mockReturnValue(cache);
+
+    await run('hr-ccaa');
+
+    expect(mockPdfExtractionCache).toHaveBeenCalledWith('hr-ccaa');
+    expect(mockMapRows.mock.calls[0]?.[3]).toBe(cache);
   });
 
   it('maps the stored drop instead of fetching for a manual source', async () => {
@@ -909,6 +928,73 @@ describe('main', () => {
     await main();
 
     expect(mockDownload.mock.calls).toHaveLength(ids.length - 1);
+  });
+
+  describe('Gemini-calling sources', () => {
+    // In run order, so ids[0] heads the Gemini chain.
+    const ids = readdirSync('sources')
+      .filter((f) => f.endsWith('.yaml'))
+      .map((f) => f.replace(/\.yaml$/, ''))
+      .sort((a, b) => a.localeCompare(b));
+    const idOf = (path: string): string => path.replace(/^.*[/\\]/, '').replace(/\.yaml$/, '');
+    // Each download reports its own id via the url, and holds briefly so overlap is observable.
+    const track = (gemini: Set<string>) => {
+      const seen = { geminiPeak: 0, peak: 0 };
+      let active = 0;
+      let geminiActive = 0;
+      mockDownload.mockImplementation(async ({ url }: { url: string }) => {
+        const isGemini = gemini.has(url);
+        active++;
+        if (isGemini) geminiActive++;
+        seen.peak = Math.max(seen.peak, active);
+        seen.geminiPeak = Math.max(seen.geminiPeak, geminiActive);
+        await new Promise((r) => setTimeout(r, 5));
+        active--;
+        if (isGemini) geminiActive--;
+        return new Map([['master', Buffer.from('')]]);
+      });
+      return seen;
+    };
+    const configFor = (gemini: Set<string>, pdf: Set<string>) => (path: string) => {
+      const id = idOf(path);
+      return {
+        ...CONFIG,
+        id,
+        language: gemini.has(id) && !pdf.has(id) ? 'hr' : 'en',
+        ...(pdf.has(id) ? { format: 'pdf' } : {}),
+        download: { ...CONFIG.download, url: id },
+      };
+    };
+
+    it('runs them one at a time, beside the other sources', async () => {
+      const gemini = new Set(ids.slice(0, 3));
+      mockLoadSourceConfig.mockImplementation(configFor(gemini, new Set([ids[0]])));
+      const seen = track(gemini);
+
+      await main();
+
+      expect(mockDownload.mock.calls).toHaveLength(ids.length);
+      expect(seen.geminiPeak).toBe(1);
+      expect(seen.peak).toBeGreaterThan(1);
+    });
+
+    it('keeps the chain going after a Gemini source fails', async () => {
+      const gemini = new Set(ids.slice(0, 2));
+      mockLoadSourceConfig.mockImplementation(configFor(gemini, new Set()));
+      mockDownload.mockImplementation(({ url }: { url: string }) =>
+        url === ids[0]
+          ? Promise.reject(new Error('register 404'))
+          : Promise.resolve(new Map([['master', Buffer.from('')]]))
+      );
+      const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      try {
+        await main();
+        expect(exitSpy).toHaveBeenCalledWith(1);
+      } finally {
+        exitSpy.mockRestore();
+      }
+      expect(mockDownload.mock.calls.map(([dl]) => (dl as { url: string }).url)).toContain(ids[1]);
+    });
   });
 
   // An explicit REFRESH_SOURCE overrides the pause, which is how a restored upstream is tested
@@ -1570,5 +1656,75 @@ describe('main', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mockDownload).toHaveBeenCalledTimes(1);
     expect(mockR2Write).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('writeDiscoveredSources', () => {
+  const ids = readdirSync('sources')
+    .filter((f) => f.endsWith('.yaml'))
+    .map((f) => f.replace(/\.yaml$/, ''))
+    .sort((a, b) => a.localeCompare(b));
+  const idOf = (path: string): string => path.replace(/^.*[/\\]/, '').replace(/\.yaml$/, '');
+  let output: string;
+  beforeEach(() => {
+    output = join(tmpdir(), `mbf-discover-${process.pid}-${Math.random()}`);
+    writeFileSync(output, 'earlier=1\n');
+    process.env['GITHUB_OUTPUT'] = output;
+  });
+  afterEach(() => rmSync(output, { force: true }));
+  const written = (): Record<string, unknown> =>
+    Object.fromEntries(
+      readFileSync(output, 'utf8')
+        .trim()
+        .split('\n')
+        .map((line) => line.split('='))
+        .map(([k, v]) => [k, k === 'earlier' ? v : JSON.parse(v)])
+    );
+
+  it('splits the unpaused fleet into concurrent and Gemini-calling sources, appending', async () => {
+    const [pdf, translated, parked] = ids;
+    mockLoadSourceConfig.mockImplementation((path: string) => {
+      const id = idOf(path);
+      if (id === pdf) return { ...CONFIG, format: 'pdf' };
+      if (id === translated) return { ...CONFIG, language: 'pt' };
+      if (id === parked) return { ...CONFIG, language: 'pt', paused: true };
+      return CONFIG;
+    });
+
+    await writeDiscoveredSources();
+
+    expect(written()).toEqual({
+      earlier: '1',
+      sources: ids.slice(3),
+      gemini_sources: [pdf, translated],
+    });
+  });
+
+  it('routes a named source to the list its config puts it in, paused or not', async () => {
+    process.env['REFRESH_SOURCE'] = ' hr-ccaa ';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, format: 'pdf', paused: true });
+    await writeDiscoveredSources();
+    expect(written()).toMatchObject({ sources: [], gemini_sources: ['hr-ccaa'] });
+  });
+
+  it('fails on a named source whose config does not load', async () => {
+    process.env['REFRESH_SOURCE'] = 'no-such-source';
+    mockLoadSourceConfig.mockImplementation(() => {
+      throw new Error('ENOENT: no-such-source.yaml');
+    });
+    await expect(writeDiscoveredSources()).rejects.toThrow('ENOENT');
+  });
+
+  it('rejects a traversal-bearing name before reading any config', async () => {
+    process.env['REFRESH_SOURCE'] = '../secrets';
+    await expect(writeDiscoveredSources()).rejects.toThrow();
+    expect(mockLoadSourceConfig).not.toHaveBeenCalled();
+  });
+
+  it('refuses FORCE_REFRESH without a named source', async () => {
+    process.env['FORCE_REFRESH'] = 'true';
+    await expect(writeDiscoveredSources()).rejects.toThrow(
+      'FORCE_REFRESH requires REFRESH_SOURCE to name a single source'
+    );
   });
 });

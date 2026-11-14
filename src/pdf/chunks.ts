@@ -1,0 +1,27 @@
+import { PDFDocument } from 'pdf-lib';
+
+// Well under the output-token cap; an append re-bills only the old last chunk and new ones.
+export const PAGES_PER_CHUNK = 5;
+
+export interface PdfChunk {
+  // 0-based page indices this chunk carries, in order.
+  pages: number[];
+  bytes: Buffer;
+}
+
+export const splitPdf = async (pdf: Buffer): Promise<PdfChunk[]> => {
+  const source = await PDFDocument.load(pdf, { updateMetadata: false });
+  const count = source.getPageCount();
+  const ranges: number[][] = [];
+  for (let start = 0; start < count; start += PAGES_PER_CHUNK)
+    ranges.push(
+      Array.from({ length: Math.min(PAGES_PER_CHUNK, count - start) }, (_, i) => start + i)
+    );
+  return Promise.all(
+    ranges.map(async (pages) => {
+      const chunk = await PDFDocument.create({ updateMetadata: false });
+      for (const page of await chunk.copyPages(source, pages)) chunk.addPage(page);
+      return { pages, bytes: Buffer.from(await chunk.save()) };
+    })
+  );
+};

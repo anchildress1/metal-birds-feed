@@ -1,7 +1,15 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { setImmediate } from 'node:timers/promises';
+import { ApiError } from '@google/genai';
+import { z } from 'zod';
 import type { RetryOptions } from '../../src/retry.js';
-import type { TranslationItem } from '../../src/localize/gemini-client.js';
+import {
+  translateBatch,
+  isRetryableGeminiError,
+  isGeminiAuthError,
+  type TranslationItem,
+} from '../../src/localize/gemini-client.js';
+import { fakeGeminiHttp, geminiReply, geminiStatus, type SentRequest } from '../gemini-http.js';
 
 // No-op sleep keeps backoff out of the test clock, mirroring tests/downloader.test.ts's FAST_RETRY.
 const FAST_RETRY: RetryOptions = { baseDelayMs: 0, sleep: async () => {} };
@@ -11,37 +19,32 @@ type ChunkCallback = (
   requested: TranslationItem[]
 ) => Promise<void>;
 
-const generateContent = mock();
+const apiError = (status: number) => new ApiError({ message: `status ${status}`, status });
+const textResponse = (body: unknown) => geminiReply(JSON.stringify(body));
+// The SDK sends a string `contents` as one user text part.
+const sentItems = (req: SentRequest): { id: string; text: string }[] =>
+  z
+    .array(z.object({ id: z.string(), text: z.string() }))
+    .parse(JSON.parse(String(req.body.contents[0].parts[0].text)));
 
-class MockApiError extends Error {
-  constructor(readonly status: number) {
-    super(`status ${status}`);
-  }
-}
-
-void mock.module('@google/genai', () => ({
-  GoogleGenAI: class {
-    models = { generateContent };
-  },
-  Type: { ARRAY: 'ARRAY', OBJECT: 'OBJECT', STRING: 'STRING' },
-  ThinkingLevel: { MINIMAL: 'MINIMAL', LOW: 'LOW' },
-}));
-
-const { translateBatch, isRetryableGeminiError, isGeminiAuthError } =
-  await import('../../src/localize/gemini-client.js');
-
-const textResponse = (body: unknown) => ({ text: JSON.stringify(body) });
+let gemini: ReturnType<typeof fakeGeminiHttp>;
+beforeEach(() => {
+  gemini = fakeGeminiHttp();
+});
+afterEach(() => {
+  gemini.restore();
+});
 
 describe('isRetryableGeminiError', () => {
   it('treats 429/5xx as retryable', () => {
     for (const status of [429, 500, 502, 503, 504]) {
-      expect(isRetryableGeminiError(new MockApiError(status))).toBe(true);
+      expect(isRetryableGeminiError(apiError(status))).toBe(true);
     }
   });
 
   it('treats 4xx auth/request errors as terminal', () => {
     for (const status of [400, 401, 403, 404]) {
-      expect(isRetryableGeminiError(new MockApiError(status))).toBe(false);
+      expect(isRetryableGeminiError(apiError(status))).toBe(false);
     }
   });
 
@@ -58,11 +61,11 @@ describe('isRetryableGeminiError', () => {
 
 describe('isGeminiAuthError', () => {
   it.each([401, 403])('treats %i as an auth failure', (status) => {
-    expect(isGeminiAuthError(new MockApiError(status))).toBe(true);
+    expect(isGeminiAuthError(apiError(status))).toBe(true);
   });
 
   it.each([400, 404, 429, 500, 503])('does not treat %i as an auth failure', (status) => {
-    expect(isGeminiAuthError(new MockApiError(status))).toBe(false);
+    expect(isGeminiAuthError(apiError(status))).toBe(false);
   });
 
   it.each([
@@ -77,19 +80,41 @@ describe('isGeminiAuthError', () => {
 });
 
 describe('translateBatch', () => {
-  beforeEach(() => {
-    generateContent.mockReset();
-  });
-
   it('returns empty results without calling the API for an empty batch', async () => {
     const result = await translateBatch([], { apiKey: 'k' });
     expect(result.translated.size).toBe(0);
     expect(result.errors).toEqual([]);
-    expect(generateContent).not.toHaveBeenCalled();
+    expect(gemini.sent).toEqual([]);
+  });
+
+  it('sends the items as JSON under the key, with an {id, text} array schema', async () => {
+    const items: TranslationItem[] = [
+      { id: 'a', field: 'cancellation_reason', text: 'AERONAVE EXPORTADA' },
+    ];
+    gemini.respond.mockImplementation(() => textResponse([{ id: 'a', text: 'Aircraft exported' }]));
+    await translateBatch(items, { apiKey: 'k' });
+
+    const [req] = gemini.sent;
+    expect(req.url).toEndWith('/models/gemini-3.1-flash-lite:generateContent');
+    expect(req.headers['x-goog-api-key']).toBe('k');
+    expect(JSON.parse(String(req.body.contents[0].parts[0].text))).toEqual(items);
+    expect(req.body.generationConfig).toEqual({
+      responseMimeType: 'application/json',
+      thinkingConfig: { thinkingLevel: 'LOW' },
+      responseSchema: {
+        type: 'ARRAY',
+        items: {
+          type: 'OBJECT',
+          properties: { id: { type: 'STRING' }, text: { type: 'STRING' } },
+          required: ['id', 'text'],
+          propertyOrdering: ['id', 'text'],
+        },
+      },
+    });
   });
 
   it('translates a batch and maps id -> text', async () => {
-    generateContent.mockResolvedValue(
+    gemini.respond.mockImplementation(() =>
       textResponse([
         { id: 'a', text: 'Aircraft exported' },
         { id: 'b', text: 'Lien released' },
@@ -107,14 +132,14 @@ describe('translateBatch', () => {
     expect(translated.get('a')).toBe('Aircraft exported');
     expect(translated.get('b')).toBe('Lien released');
     expect(errors).toEqual([]);
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(gemini.sent).toHaveLength(1);
   });
 
   it('splits batches larger than the chunk cap into separate calls', async () => {
     const rateLimitSleep = mock(() => Promise.resolve());
-    generateContent.mockImplementation((args: { contents: string }) => {
-      const items = JSON.parse(args.contents) as { id: string; text: string }[];
-      return Promise.resolve(textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` }))));
+    gemini.respond.mockImplementation((req: SentRequest) => {
+      const items = sentItems(req);
+      return textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` })));
     });
 
     const items: TranslationItem[] = Array.from({ length: 201 }, (_, i) => ({
@@ -128,7 +153,7 @@ describe('translateBatch', () => {
       rateLimitSleep,
     });
 
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(gemini.sent).toHaveLength(2);
     expect(translated.get('id0')).toBe('EN:text0');
     expect(translated.get('id200')).toBe('EN:text200');
     expect(errors).toEqual([]);
@@ -136,10 +161,10 @@ describe('translateBatch', () => {
   });
 
   it('keeps a failing chunk from discarding another chunk that succeeded', async () => {
-    generateContent.mockImplementation((args: { contents: string }) => {
-      const items = JSON.parse(args.contents) as { id: string; text: string }[];
-      if (items.some((i) => i.id === 'fails')) return Promise.reject(new MockApiError(400));
-      return Promise.resolve(textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` }))));
+    gemini.respond.mockImplementation((req: SentRequest) => {
+      const items = sentItems(req);
+      if (items.some((i) => i.id === 'fails')) return geminiStatus(400);
+      return textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` })));
     });
 
     // 201 items forces 2 chunks (cap is 200): the first chunk always contains 'fails' and rejects,
@@ -166,8 +191,7 @@ describe('translateBatch', () => {
   });
 
   it('stops sending chunks once the key is rejected', async () => {
-    const rejected = new MockApiError(401);
-    generateContent.mockRejectedValue(rejected);
+    gemini.respond.mockImplementation(() => geminiStatus(401));
     const items: TranslationItem[] = Array.from({ length: 401 }, (_, i) => ({
       id: `id${i}`,
       field: 'cancellation_reason',
@@ -180,13 +204,13 @@ describe('translateBatch', () => {
       rateLimitSleep: async () => {},
     });
 
-    expect(generateContent).toHaveBeenCalledTimes(1);
-    expect(errors).toEqual([rejected]);
+    expect(gemini.sent).toHaveLength(1);
+    expect(errors).toEqual([expect.objectContaining({ status: 401 })]);
     expect(translated.size).toBe(0);
   });
 
   it('exhausts its attempts on a persistent 503 and reports the chunk as an error', async () => {
-    generateContent.mockImplementation(() => Promise.reject(new MockApiError(503)));
+    gemini.respond.mockImplementation(() => geminiStatus(503));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -195,14 +219,14 @@ describe('translateBatch', () => {
 
     expect(translated.size).toBe(0);
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toBeInstanceOf(MockApiError);
-    expect(generateContent).toHaveBeenCalledTimes(3);
+    expect(errors[0]).toBeInstanceOf(ApiError);
+    expect(gemini.sent).toHaveLength(3);
   });
 
   describe('onChunkTranslated', () => {
-    const echo = (args: { contents: string }) => {
-      const items = JSON.parse(args.contents) as { id: string; text: string }[];
-      return Promise.resolve(textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` }))));
+    const echo = (req: SentRequest) => {
+      const items = sentItems(req);
+      return textResponse(items.map((i) => ({ id: i.id, text: `EN:${i.text}` })));
     };
     const manyItems = (n: number): TranslationItem[] =>
       Array.from({ length: n }, (_, i) => ({
@@ -212,7 +236,7 @@ describe('translateBatch', () => {
       }));
 
     it("fires once per successful chunk with that chunk's translations and requested items", async () => {
-      generateContent.mockImplementation(echo);
+      gemini.respond.mockImplementation(echo);
       const onChunkTranslated = mock<ChunkCallback>(() => Promise.resolve());
 
       await translateBatch(manyItems(201), {
@@ -240,9 +264,9 @@ describe('translateBatch', () => {
         const onChunkTranslated = mock<ChunkCallback>(async () => {
           if (boundary === 'checkpoint') await blocked.promise;
         });
-        generateContent.mockImplementation(async (args: { contents: string }) => {
+        gemini.respond.mockImplementation(async (req: SentRequest) => {
           if (boundary === 'provider') await blocked.promise;
-          return echo(args);
+          return echo(req);
         });
 
         const pending = translateBatch(manyItems(401), {
@@ -253,7 +277,7 @@ describe('translateBatch', () => {
         });
         // Yield the event loop so any incorrectly concurrent chunk can reach the boundary.
         await setImmediate();
-        expect(generateContent).toHaveBeenCalledTimes(1);
+        expect(gemini.sent).toHaveLength(1);
         expect(rateLimitSleep).not.toHaveBeenCalled();
         expect(onChunkTranslated).toHaveBeenCalledTimes(boundary === 'checkpoint' ? 1 : 0);
 
@@ -262,14 +286,14 @@ describe('translateBatch', () => {
         expect(onChunkTranslated).toHaveBeenCalledTimes(1);
         expect(rateLimitSleep).toHaveBeenCalledTimes(1);
         expect(rateLimitSleep).toHaveBeenCalledWith(5_000);
-        expect(generateContent).toHaveBeenCalledTimes(1);
+        expect(gemini.sent).toHaveLength(1);
 
         interval.resolve();
         const { translated, errors } = await pending;
         expect(errors).toEqual([]);
         expect(translated.size).toBe(401);
         expect(translated.get('id400')).toBe('EN:text400');
-        expect(generateContent).toHaveBeenCalledTimes(3);
+        expect(gemini.sent).toHaveLength(3);
         expect(rateLimitSleep).toHaveBeenCalledTimes(2);
         expect(onChunkTranslated.mock.calls.map(([, items]) => items[0].id)).toEqual([
           'id0',
@@ -280,11 +304,9 @@ describe('translateBatch', () => {
     );
 
     it('does not fire for a chunk that failed', async () => {
-      generateContent.mockImplementation((args: { contents: string }) => {
-        const items = JSON.parse(args.contents) as { id: string }[];
-        return items.some((i) => i.id === 'id0')
-          ? Promise.reject(new MockApiError(400))
-          : echo(args);
+      gemini.respond.mockImplementation((req: SentRequest) => {
+        const items = sentItems(req);
+        return items.some((i) => i.id === 'id0') ? geminiStatus(400) : echo(req);
       });
       const onChunkTranslated = mock<ChunkCallback>(() => Promise.resolve());
 
@@ -301,7 +323,7 @@ describe('translateBatch', () => {
     });
 
     it('swallows a throwing callback so no chunk result is lost or double-recorded', async () => {
-      generateContent.mockImplementation(echo);
+      gemini.respond.mockImplementation(echo);
       const onChunkTranslated = mock(() => Promise.reject(new Error('cache write failed')));
 
       const { translated, errors } = await translateBatch(manyItems(201), {
@@ -318,9 +340,9 @@ describe('translateBatch', () => {
 
   it('retries a retryable failure then succeeds', async () => {
     const rateLimitSleep = mock(() => Promise.resolve());
-    generateContent
-      .mockImplementationOnce(() => Promise.reject(new MockApiError(503)))
-      .mockImplementationOnce(() => Promise.resolve(textResponse([{ id: 'a', text: 'ok' }])));
+    gemini.respond
+      .mockImplementationOnce(() => geminiStatus(503))
+      .mockImplementationOnce(() => textResponse([{ id: 'a', text: 'ok' }]));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -329,14 +351,14 @@ describe('translateBatch', () => {
 
     expect(translated.get('a')).toBe('ok');
     expect(errors).toEqual([]);
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(gemini.sent).toHaveLength(2);
     expect(rateLimitSleep).toHaveBeenCalledWith(5_000);
   });
 
   it('retries a wrong-shaped response then accepts a valid response', async () => {
-    generateContent
-      .mockResolvedValueOnce(textResponse({ not: 'an array' }))
-      .mockResolvedValueOnce(textResponse([{ id: 'a', text: 'ok' }]));
+    gemini.respond
+      .mockImplementationOnce(() => textResponse({ not: 'an array' }))
+      .mockImplementationOnce(() => textResponse([{ id: 'a', text: 'ok' }]));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -345,11 +367,11 @@ describe('translateBatch', () => {
 
     expect(translated.get('a')).toBe('ok');
     expect(errors).toEqual([]);
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(gemini.sent).toHaveLength(2);
   });
 
   it('reports a terminal error as a chunk error without retrying', async () => {
-    generateContent.mockImplementation(() => Promise.reject(new MockApiError(401)));
+    gemini.respond.mockImplementation(() => geminiStatus(401));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -358,11 +380,11 @@ describe('translateBatch', () => {
 
     expect(translated.size).toBe(0);
     expect(errors).toHaveLength(1);
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(gemini.sent).toHaveLength(1);
   });
 
   it('reports a missing response text as a chunk error', async () => {
-    generateContent.mockResolvedValue({ text: undefined });
+    gemini.respond.mockImplementation(() => geminiReply(undefined));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -374,7 +396,7 @@ describe('translateBatch', () => {
   });
 
   it('reports a response that is not an array as a chunk error', async () => {
-    generateContent.mockResolvedValue(textResponse({ not: 'an array' }));
+    gemini.respond.mockImplementation(() => textResponse({ not: 'an array' }));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -386,7 +408,7 @@ describe('translateBatch', () => {
   });
 
   it('drops a blank translation without caching it or failing the chunk', async () => {
-    generateContent.mockResolvedValue(textResponse([{ id: 'a', text: '  ' }]));
+    gemini.respond.mockImplementation(() => textResponse([{ id: 'a', text: '  ' }]));
 
     const { translated, errors } = await translateBatch(
       [{ id: 'a', field: 'cancellation_reason', text: 'x' }],
@@ -398,7 +420,7 @@ describe('translateBatch', () => {
   });
 
   it('keeps the first of a duplicated result ID rather than the model contradicting itself', async () => {
-    generateContent.mockResolvedValue(
+    gemini.respond.mockImplementation(() =>
       textResponse([
         { id: 'a', text: 'first' },
         { id: 'a', text: 'second' },
@@ -417,7 +439,7 @@ describe('translateBatch', () => {
   // The reason per-item validation exists: an all-or-nothing parse discarded every good
   // translation in the chunk, which then got re-billed on the next run.
   it('keeps the good items when one item in the chunk is malformed', async () => {
-    generateContent.mockResolvedValue(
+    gemini.respond.mockImplementation(() =>
       textResponse([{ id: 'a', text: 'alpha' }, { id: 'b' }, { id: 'c', text: 'gamma' }])
     );
 
@@ -440,6 +462,6 @@ describe('translateBatch', () => {
       })
     ).rejects.toThrow('requestsPerMinute must be a positive integer');
 
-    expect(generateContent).not.toHaveBeenCalled();
+    expect(gemini.sent).toEqual([]);
   });
 });

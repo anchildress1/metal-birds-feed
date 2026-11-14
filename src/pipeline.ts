@@ -1,6 +1,6 @@
 import { resolve, sep } from 'node:path';
 import { readdirSync } from 'node:fs';
-import { rename, rm, writeFile } from 'node:fs/promises';
+import { appendFile, rename, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadSourceConfig } from './config/loader.js';
 import { download, fetchPublishedTotal } from './downloader.js';
@@ -102,7 +102,12 @@ export async function run(sourceId: string): Promise<RunResult> {
     countUrl === undefined
       ? undefined
       : await fetchPublishedTotal(countUrl, config.download.headers);
-  const { records, stats } = await mapRows(config, files, publishedTotal);
+  const { records, stats } = await mapRows(
+    config,
+    files,
+    publishedTotal,
+    writer.pdfExtractionCache(sourceId)
+  );
 
   log('info', 'map_summary', { source: sourceId, ...stats });
   if (stats.failed > 0)
@@ -298,8 +303,7 @@ const resolvePausedSources = (): Set<string> =>
 
 const resolveSources = (): string[] => {
   const sourceEnv = process.env['REFRESH_SOURCE']?.trim() ?? '';
-  // The refresh.yml guard only covers workflow_dispatch; `make refresh` reaches here directly with
-  // whatever .env exports, and an unnamed force is a fleet-wide cadence bypass either way.
+  // Sole guard for CI discovery and `make refresh`: an unnamed force bypasses cadence fleet-wide.
   if (sourceEnv === '' && process.env['FORCE_REFRESH'] === 'true')
     throw new Error('FORCE_REFRESH requires REFRESH_SOURCE to name a single source');
   if (sourceEnv) return [sourceEnv];
@@ -308,6 +312,15 @@ const resolveSources = (): string[] => {
   for (const id of paused) log('warn', 'source_paused', { source: id });
   return active;
 };
+
+// Gemini reads every PDF's table and translates a non-English register.
+const geminiSources = (ids: string[]): Set<string> =>
+  new Set(
+    ids.filter((id) => {
+      const config = loadSourceConfig(resolve('sources', `${id}.yaml`));
+      return config.format === 'pdf' || config.language !== 'en';
+    })
+  );
 
 const closeWithLogging = async (source: string, token: string, repo: string): Promise<void> => {
   try {
@@ -483,7 +496,7 @@ export const publishFeed = async (sources: string[], dryRun: boolean): Promise<s
     // almost always ordering: slices are written by the refresh, and this only assembles them.
     if (missing.length > 0)
       throw new Error(
-        `Missing feed rows for: ${missing.join(', ')}. Run \`make refresh\` (or \`make build-feed\` to refresh and assemble in one step) — these sources have not written a feed slice yet.`
+        `Missing feed rows for: ${missing.join(', ')}. Run \`make refresh\` — these sources have not written a feed slice yet.`
       );
     const groups = loaded.filter((group): group is FeedSlice => group !== null);
     const rows = mergeFeedRows(groups);
@@ -547,11 +560,36 @@ export const evaluatePausedStaleness = async (): Promise<void> => {
   );
 };
 
+/**
+ * Appends `sources` and `gemini_sources` JSON arrays to `$GITHUB_OUTPUT`.
+ * @throws on an unnamed FORCE_REFRESH, an invalid source id, or a config that fails to load.
+ */
+export const writeDiscoveredSources = async (): Promise<void> => {
+  const ids = resolveSources();
+  // A named dispatch is user input that reaches a path before run() would validate it.
+  for (const id of ids) validateSourceId(id);
+  const gemini = geminiSources(ids);
+  const plain = ids.filter((id) => !gemini.has(id));
+  await appendFile(
+    requireEnv('GITHUB_OUTPUT'),
+    `sources=${JSON.stringify(plain)}\ngemini_sources=${JSON.stringify([...gemini])}\n`
+  );
+};
+
 export async function main(): Promise<void> {
   const sources = resolveSources();
-  // Wrapped rather than `sources.map(run)`: map passes (value, index, array) positionally, so any
-  // second parameter `run` grows would silently receive the index.
-  const results = await Promise.allSettled(sources.map((sourceId) => run(sourceId)));
+  // A lone source has nothing to queue behind, and a named one may not exist: run() reports that.
+  const gemini = sources.length > 1 ? geminiSources(sources) : new Set<string>();
+  // Per-project RPM: concurrent Gemini sources 429. The catch only sequences; runs settle below.
+  let geminiChain: Promise<unknown> = Promise.resolve();
+  const results = await Promise.allSettled(
+    sources.map((sourceId) => {
+      if (!gemini.has(sourceId)) return run(sourceId);
+      const next = geminiChain.then(() => run(sourceId));
+      geminiChain = next.catch(() => undefined);
+      return next;
+    })
+  );
   const now = new Date();
   const dryRun = process.env['DRY_RUN'] === 'true';
   const gh: GitHubCtx = {

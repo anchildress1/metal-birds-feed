@@ -169,8 +169,7 @@ const dateMonthDYyyyOrNull = (value: string): string | null => {
   return validateAndFormatYMD(m[3], String(month).padStart(2, '0'), m[2].padStart(2, '0'));
 };
 
-// First physical line of a multi-line cell (positioned-PDF extraction joins wrapped lines with
-// "\n"), e.g. the name line of an owner/mortgagee address block. Blank → null.
+// The name line of a multi-line party cell; the rest is address.
 const firstLineOrNull = (value: string): string | null => trimOrNull(value.split('\n')[0] ?? '');
 
 // Collapses internal newlines/runs of whitespace to single spaces and trims; blank → null. Flattens
@@ -301,8 +300,8 @@ const casaEngineDetailOrNull = (value: string): string | null => {
 };
 
 // AESA writes sentinels for absent values instead of leaving cells blank: "NO DISPONIBLE" / "N/A"
-// (serial), "NO TIENE" (no engine), "DESCONOCIDO" (engine model unknown). Positioned-PDF extraction
-// wraps "NO DISPONIBLE" across two lines, so whitespace is collapsed before the sentinel test. Real
+// (serial), "NO TIENE" (no engine), "DESCONOCIDO" (engine model unknown). The PDF prints
+// "NO DISPONIBLE" wrapped across two lines, so whitespace is collapsed before the sentinel test. Real
 // values pass through collapsed and case-preserved.
 const ES_AESA_SENTINELS = new Set(['NO DISPONIBLE', 'N/A', 'NO TIENE', 'DESCONOCIDO']);
 const esAesaDetailOrNull = (value: string): string | null => {
@@ -362,7 +361,7 @@ const clRegistration = (value: string): string | null => {
 // Everything ahead of it is street/suburb/postcode and stays dropped — this reads the one component
 // the PII rule permits rather than keeping the address to get at it.
 const lastCommaSegmentOrNull = (value: string): string | null => {
-  // Collapse internal whitespace (including the "\n" a wrapped positioned-PDF cell joins on)
+  // Collapse internal whitespace (including the "\n" a multi-line PDF cell joins on)
   // before splitting, so a multi-word segment that wraps mid-name ("Republika\nIrska") still
   // matches a caller's `lookup` on its single-line form ("Republika Irska").
   const segments = value

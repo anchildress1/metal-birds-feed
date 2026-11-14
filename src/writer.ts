@@ -13,6 +13,7 @@ import {
 import { log, errorMessage } from './logger.js';
 import { retry, type RetryOptions } from './retry.js';
 import { SourceStateSchema, type SourceState } from './cadence.js';
+import { PdfExtractionSchema, type PdfExtraction, type PdfExtractionCache } from './pdf/extract.js';
 import {
   emptyTranslationCache,
   ParsedTranslationCacheSchema,
@@ -307,15 +308,14 @@ export class R2ArtifactWriter {
   }
 
   // Distinguishes "present but corrupt" from a normal thrown R2 error so a caller that opted into
-  // `rethrowOnCorruption` (translation-cache reads, where corruption must not look like "nothing
-  // cached yet") doesn't get double-logged when the outer catch below also logs on the way out.
+  // `rethrowOnCorruption` (a cache read, where corruption must not look like "nothing cached yet")
+  // doesn't get double-logged when the outer catch below also logs on the way out.
   private static readonly CorruptJsonError = class extends Error {};
 
-  // Shared by readState/readFeedRows/readTranslationCache: GET, parse, validate, self-heal to
-  // `fallback` on absence/corruption, rethrow a real R2 error for the caller to handle.
-  // `rethrowOnCorruption` trades that self-heal for a throw specifically on invalid-JSON/schema
-  // failures (not on genuine absence) — state and feed slices want the self-heal, but a corrupt
-  // translation cache must not read back as an empty-but-legitimate one; see readTranslationCache.
+  // GET, parse, validate, self-heal to `fallback` on absence/corruption, rethrow a real R2 error
+  // for the caller to handle. `rethrowOnCorruption` trades that self-heal for a throw specifically
+  // on invalid-JSON/schema failures (not on genuine absence) — state and feed slices want the
+  // self-heal, but a corrupt translation or extraction cache read back as empty re-bills everything.
   private async readJson<T>(
     key: string,
     schema: ZodType<T>,
@@ -330,7 +330,11 @@ export class R2ArtifactWriter {
         S3_RETRY
       );
       const body = await res.Body?.transformToString();
-      if (!body) return fallback;
+      if (!body) {
+        if (!rethrowOnCorruption) return fallback;
+        log('error', `${eventPrefix}_parse_failed`, { ...logContext, reason: 'empty_body' });
+        throw new R2ArtifactWriter.CorruptJsonError(key);
+      }
       let json: unknown;
       try {
         json = JSON.parse(body);
@@ -410,6 +414,33 @@ export class R2ArtifactWriter {
       JSON.stringify(cache),
       'application/json'
     );
+  }
+
+  // Corruption throws: read as empty it re-bills every chunk and drifts unchecked cells.
+  async readPdfExtraction(source: string): Promise<PdfExtraction | null> {
+    return this.readJson(
+      `aircraft/_pdf_extraction/${source}.json`,
+      PdfExtractionSchema,
+      'pdf_extraction',
+      null,
+      { source },
+      true
+    );
+  }
+
+  async writePdfExtraction(source: string, extraction: PdfExtraction): Promise<void> {
+    await this.put(
+      `aircraft/_pdf_extraction/${source}.json`,
+      JSON.stringify(extraction),
+      'application/json'
+    );
+  }
+
+  pdfExtractionCache(source: string): PdfExtractionCache {
+    return {
+      read: () => this.readPdfExtraction(source),
+      write: (extraction) => this.writePdfExtraction(source, extraction),
+    };
   }
 
   // Per-source feed slice, the build intermediate main() merges into the consolidated DB.

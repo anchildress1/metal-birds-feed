@@ -1040,6 +1040,60 @@ describe('R2ArtifactWriter — state', () => {
   });
 });
 
+describe('R2ArtifactWriter — pdf extraction cache', () => {
+  const extraction = { entries: { [HASH64]: [{ mark: 'VIO', owner: null }] } };
+  const body = (text: string) => ({ Body: { transformToString: () => Promise.resolve(text) } });
+
+  it('writes the extraction to aircraft/_pdf_extraction/<source>.json as JSON', async () => {
+    mockAbsentArtifact();
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    await writer.writePdfExtraction('hr-ccaa', extraction);
+
+    const put = putCalls().find((c) => c.input.Key === 'aircraft/_pdf_extraction/hr-ccaa.json');
+    expect(put?.input.ContentType).toBe('application/json');
+    expect(JSON.parse(put?.input.Body as string)).toEqual(extraction);
+  });
+
+  it('reads back a stored extraction', async () => {
+    mockSend.mockResolvedValueOnce(body(JSON.stringify(extraction)));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readPdfExtraction('hr-ccaa')).toEqual(extraction);
+  });
+
+  it('reads an absent extraction as null', async () => {
+    mockSend.mockRejectedValueOnce(noSuchKey());
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    expect(await writer.readPdfExtraction('hr-ccaa')).toBeNull();
+  });
+
+  it.each([
+    ['an empty body', ''],
+    ['invalid JSON', '{not json'],
+    ['a body breaking the schema', JSON.stringify({ key: HASH64, rows: [] })],
+    ['an extraction with no entries', JSON.stringify({ entries: {} })],
+  ])('fails on %s rather than read it as empty and re-bill every chunk', async (_label, text) => {
+    mockSend.mockResolvedValueOnce(body(text));
+    const writer = new R2ArtifactWriter(R2_CONFIG, false);
+    await expect(writer.readPdfExtraction('hr-ccaa')).rejects.toThrow(
+      'aircraft/_pdf_extraction/hr-ccaa.json'
+    );
+  });
+
+  it('serves the source as a cache over its own key, still read but never written in dry-run', async () => {
+    mockSend.mockResolvedValueOnce(body(JSON.stringify(extraction)));
+    const cache = new R2ArtifactWriter(R2_CONFIG, true).pdfExtractionCache('hr-ccaa');
+    expect(await cache.read()).toEqual(extraction);
+    await cache.write(extraction);
+    expect(putCalls()).toEqual([]);
+  });
+
+  it('writes through the source cache outside dry-run', async () => {
+    mockAbsentArtifact();
+    await new R2ArtifactWriter(R2_CONFIG, false).pdfExtractionCache('hr-ccaa').write(extraction);
+    expect(putCalls().map((c) => c.input.Key)).toEqual(['aircraft/_pdf_extraction/hr-ccaa.json']);
+  });
+});
+
 describe('R2ArtifactWriter — translation cache', () => {
   const cache = { version: 2 as const, entries: { [HASH64]: 'Aircraft exported' }, failures: {} };
   const emptyCache = { version: 2 as const, entries: {}, failures: {} };
@@ -1070,10 +1124,12 @@ describe('R2ArtifactWriter — translation cache', () => {
     expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
   });
 
-  it('returns an empty cache for an empty body', async () => {
+  it('throws for an empty body so localization does not rebill the whole source', async () => {
     mockSend.mockResolvedValueOnce({ Body: { transformToString: () => Promise.resolve('') } });
     const writer = new R2ArtifactWriter(R2_CONFIG, false);
-    expect(await writer.readTranslationCache('faa')).toEqual(emptyCache);
+    await expect(writer.readTranslationCache('faa')).rejects.toThrow(
+      'aircraft/_translation_cache/faa.json'
+    );
   });
 
   it('throws for invalid JSON so localization does not rebill the whole source', async () => {

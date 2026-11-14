@@ -7,15 +7,8 @@ import type {
   ScalarTransformName,
 } from './types/config.js';
 import { applyScalar, applyArray, applyCompound, DATE_TRANSFORMS } from './transforms.js';
-import {
-  parseCSV,
-  parseSpreadsheet,
-  parseXls,
-  parseHtml,
-  parseJson,
-  parsePdf,
-  type Row,
-} from './parser.js';
+import { parseCSV, parseSpreadsheet, parseXls, parseHtml, parseJson, type Row } from './parser.js';
+import { extractPdfRows, pdfExtractOptions, type PdfExtractionCache } from './pdf/extract.js';
 import { AircraftSchema, type Aircraft } from './schema.js';
 import { latestKnownDate } from './recency.js';
 import { log, errorMessage } from './logger.js';
@@ -23,7 +16,11 @@ import { log, errorMessage } from './logger.js';
 // Dispatches the primary-file parse based on `config.format`. Each branch routes to the parser for
 // that format; the hucre spreadsheet path (ods/xlsx) is the fallthrough. Joins always read CSV —
 // sources that need spreadsheet joins do not exist yet.
-const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> => {
+const parsePrimary = async (
+  buf: Buffer,
+  config: SourceConfig,
+  pdfCache?: PdfExtractionCache
+): Promise<Row[]> => {
   if (config.format === 'csv') {
     return parseCSV(buf, {
       encoding: config.encoding,
@@ -48,18 +45,7 @@ const parsePrimary = async (buf: Buffer, config: SourceConfig): Promise<Row[]> =
     return parseJson(buf, { encoding: config.encoding, record_path: config.record_path });
   }
   if (config.format === 'pdf') {
-    const pdf = config.pdf;
-    if (!pdf) throw new Error(`Source "${config.id}" has format "pdf" but no pdf config`);
-    const columns = config.columns?.[config.primary] ?? [];
-    return parsePdf(buf, {
-      layouts: pdf.layouts,
-      columns,
-      anchor_pattern: pdf.anchor_pattern,
-      allowed_anchorless_pages: pdf.allowed_anchorless_pages,
-      // Loader validates anchor_field names a real column, so indexOf here is never -1.
-      anchor_column: pdf.anchor_field ? columns.indexOf(pdf.anchor_field) : undefined,
-      trim: config.trim_all,
-    });
+    return extractPdfRows(buf, pdfExtractOptions(config, pdfCache));
   }
   if (config.format === 'html') {
     return parseHtml(buf, {
@@ -225,7 +211,8 @@ export async function mapRows(
   config: SourceConfig,
   files: Map<string, Buffer>,
   // Body of `record_count.url`, fetched by the caller: the engine reads files, never the network.
-  publishedTotal?: string
+  publishedTotal?: string,
+  pdfCache?: PdfExtractionCache
 ): Promise<{ records: Map<string, Aircraft>; stats: EngineStats }> {
   unmatchedLookups.delete(config.id);
   dateTallies.delete(config.id);
@@ -237,7 +224,7 @@ export async function mapRows(
 
   // Before assertJoinHits and the mapping loop, so joins are checked against the rows that will
   // actually be mapped and stats.total counts them rather than the whole accumulated history.
-  const parsedRows = await parsePrimary(primaryBuf, config);
+  const parsedRows = await parsePrimary(primaryBuf, config, pdfCache);
   const rows = keepLatestSnapshot(config, parsedRows);
   assertJoinHits(config, joinMaps, rows, 'the file');
   assertSourceIdColumns(config, rows, joinMaps);
@@ -861,8 +848,8 @@ function mergeJoins(row: Row, config: SourceConfig, joinMaps: Map<string, Map<st
 // A declared `default` absorbs any value the lookup table doesn't recognize, including a
 // genuinely new/drifted upstream code — the schema still represents it (via the default), but
 // with zero signal that a value the config author never anticipated came through. Every other
-// bounded-skip mechanism in this engine (missing-id budget, ragged-row budget, anchorless-page
-// budget) logs when it fires; this warns for the same reason, so a source that starts emitting an
+// bounded-skip mechanism in this engine (missing-id budget, ragged-row budget) logs when it
+// fires; this warns for the same reason, so a source that starts emitting an
 // unrecognized code is visible in the run log instead of silently blending into "other".
 // Counted per distinct (field, value) for the run, not logged per row. An unrecognized code is a
 // property of the register, so one row and 300,000 rows carry the same information — and at FAA's

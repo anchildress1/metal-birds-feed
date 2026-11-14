@@ -10,7 +10,7 @@ on:
         required: false
         default: ''
       dry_run:
-        description: 'Dry run — map and diff, no R2 write and no Gemini pass'
+        description: 'Dry run — map and diff, no R2 write and no translation pass (PDF sources still call Gemini)'
         required: false
         default: 'false'
         type: choice
@@ -36,56 +36,34 @@ jobs:
       contents: read
     outputs:
       sources: ${{ steps.list.outputs.sources }}
+      gemini_sources: ${{ steps.list.outputs.gemini_sources }}
     steps:
       - name: Checkout code
         # GitHub-owned actions intentionally follow the repository's major-tag update policy.
         uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build
+        run: make build
+
+      # The pipeline's own loader, so the split matches a local fleet refresh.
       - name: Enumerate sources
         id: list
         env:
-          INPUT_SOURCE: ${{ inputs.source }}
-          INPUT_FORCE: ${{ inputs.force || 'false' }}
-        run: |
-          set -euo pipefail
-          # Normalize before both the guard and the matrix: pipeline.ts trims REFRESH_SOURCE, so a
-          # whitespace-only input would clear the guard here and then fall back to every source.
-          # Source ids never contain whitespace, so dropping all of it is safe.
-          src="$(printf '%s' "${INPUT_SOURCE:-}" | tr -d '[:space:]')"
-          # Refuse a fleet-wide cadence bypass: it would pull every register at once against the
-          # shared Gemini quota group and the 30-minute job timeout.
-          force="${INPUT_FORCE:-false}"
-          if [ "$force" = "true" ] && [ -z "$src" ]; then
-            echo "::error::force requires a named source"
-            exit 1
-          fi
-          if [ -n "$src" ]; then
-            # A named dispatch is an explicit recovery probe and runs even when paused — that is how
-            # a restored upstream is tested without editing the YAML.
-            sources=$(jq -c -n --arg s "$src" '[$s]')
-          else
-            # Paused sources are excluded from the fleet enumeration, not from the pipeline: every
-            # matrix job exports its own REFRESH_SOURCE, which the pipeline reads as a named run, so
-            # a paused source filtered only in resolveSources() would still be pulled here daily.
-            # nullglob: an unmatched glob stays literal, so an empty sources/ would otherwise emit a
-            # phantom source named "*.yaml" and fan out a matrix job for it.
-            shopt -s nullglob
-            for f in sources/*.yaml; do
-              if grep -qE '^paused:[[:space:]]*true[[:space:]]*$' "$f"; then
-                echo "Skipping paused source: $(basename "$f" .yaml)"
-              fi
-            done
-            sources=$(for f in sources/*.yaml; do
-                if ! grep -qE '^paused:[[:space:]]*true[[:space:]]*$' "$f"; then
-                  basename "$f" .yaml
-                fi
-              done | jq -R -s -c 'split("\n") | map(select(length > 0))')
-          fi
-          echo "sources=$sources" >> "$GITHUB_OUTPUT"
-          echo "Resolved sources: $sources"
+          REFRESH_SOURCE: ${{ inputs.source }}
+          FORCE_REFRESH: ${{ inputs.force || 'false' }}
+        run: bun run dist/discover-sources.js
 
   refresh:
     needs: discover
+    if: ${{ needs.discover.outputs.sources != '[]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -93,15 +71,13 @@ jobs:
       issues: write
     strategy:
       fail-fast: false
-      # Unserialized: only br-anac reaches Gemini, and translateAtRate already paces it. Revisit if
-      # a second translating source lands.
       matrix:
         source: ${{ fromJson(needs.discover.outputs.sources) }}
     concurrency:
       group: refresh-${{ matrix.source }}
       cancel-in-progress: false # never cancel a running refresh mid-write
 
-    steps:
+    steps: &refresh-steps
       - name: Checkout code
         uses: actions/checkout@v7 # nosemgrep: yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag
 
@@ -138,6 +114,26 @@ jobs:
           name: refresh-logs-${{ matrix.source }}-${{ github.run_id }}
           path: logs/
           retention-days: 30
+
+  refresh-gemini:
+    needs: discover
+    if: ${{ needs.discover.outputs.gemini_sources != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    strategy:
+      fail-fast: false
+      # Each job paces at the full project RPM; parallel jobs draw 429s past the retry budget.
+      max-parallel: 1
+      matrix:
+        source: ${{ fromJson(needs.discover.outputs.gemini_sources) }}
+    concurrency:
+      group: refresh-${{ matrix.source }}
+      cancel-in-progress: false # never cancel a running refresh mid-write
+
+    steps: *refresh-steps
 
   # A paused source is outside the matrix, so nothing above reads its state. Local runs (VPN,
   # `make ingest`) still move it, and this job opens or closes its staleness issue from that state
@@ -179,11 +175,11 @@ jobs:
   # uses, so there is one deploy definition with two entry points. force is false: the called
   # workflow assembles the feed and deploys only when the result differs from `_deployed.json`, so an
   # all-unchanged run costs one assemble and no deploy.
-  # `!cancelled()` runs this even if a source failed — that source reuses its prior slice, so one
-  # register's outage never blocks shipping another's update.
+  # `!cancelled()`: a failed source reuses its prior slice. A failed discover only skips the
+  # refresh jobs, which `!cancelled()` does not stop on; hence the explicit discover check.
   deploy:
-    needs: refresh
-    if: ${{ !cancelled() && github.ref_name == github.event.repository.default_branch && (inputs.dry_run || 'false') != 'true' }}
+    needs: [discover, refresh, refresh-gemini]
+    if: ${{ !cancelled() && needs.discover.result == 'success' && github.ref_name == github.event.repository.default_branch && (inputs.dry_run || 'false') != 'true' }}
     permissions:
       contents: read
       id-token: write

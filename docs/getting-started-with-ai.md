@@ -206,23 +206,23 @@ That's enough to trigger the skill. It then works through, in order:
 
 1. **Checks your machine** — Bun, git, make, python3, and what's missing
 2. **Installs the project** — `make install`
-3. **Verifies before you spend anything** — `make check`, ~1,400 tests, no credentials needed
+3. **Verifies before you spend anything** — `make check`, the full test suite, no credentials needed
 4. **Stops and waits** while you create your Cloudflare R2 bucket and API token
 5. **Creates `.env`** and tells you which four lines to paste into
-6. **Pulls one small registry first** — Dutch, ~3,000 records, no translation key, near-zero cost
+6. **Pulls one small registry first** — Dutch, no translation key, near-zero cost
 7. **Stops and tells you** that the local feed API needs every registry still configured in
    `sources/`, not just that one, and lets you decide whether the full pull is worth it
 
 Useful things to say along the way:
 
-| Say this                                 | To get                                                            |
-| ---------------------------------------- | ----------------------------------------------------------------- |
-| "Just get to the point where tests pass" | Stop after step 3 — no accounts, no money                         |
-| "Set up MCP first"                       | Step 4 before anything else                                       |
-| "Use a different first source"           | It inspects that source's `language:` and asks for any needed key |
-| "I want to pull every configured source" | The full load — it will warn you about time and usage             |
-| "Explain what that command just did"     | A plain-language explanation, any time                            |
-| "Stop"                                   | It stops. Nothing is half-applied                                 |
+| Say this                                 | To get                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------- |
+| "Just get to the point where tests pass" | Stop after step 3 — no accounts, no money                                       |
+| "Set up MCP first"                       | Step 4 before anything else                                                     |
+| "Use a different first source"           | It inspects that source's `format:` and `language:` and asks for any needed key |
+| "I want to pull every configured source" | The full load — it will warn you about time and usage                           |
+| "Explain what that command just did"     | A plain-language explanation, any time                                          |
+| "Stop"                                   | It stops. Nothing is half-applied                                               |
 
 ---
 

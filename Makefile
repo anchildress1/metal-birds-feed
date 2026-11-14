@@ -1,4 +1,4 @@
-.PHONY: help install check format format-check lint typecheck test build refresh ingest secret-scan clean serve assemble-feed build-feed deploy-only deploy
+.PHONY: help install check format format-check lint typecheck test build refresh ingest record-extraction secret-scan clean serve assemble-feed deploy-only deploy
 
 .DEFAULT_GOAL := help
 
@@ -6,7 +6,7 @@
 help:
 	@grep -hE '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) \
 		| sort \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-17s %s\n", $$1, $$2}'
 
 # No fallback path: a stray global install would silently run a Bun other than the .tool-versions pin.
 BUN := $(or $(shell command -v bun 2>/dev/null),$(error bun not on PATH — run `mise install`))
@@ -25,13 +25,17 @@ RUN_SA ?= metal-birds-feed-run
 # the project, where a cleanup policy cannot be scoped to this service alone.
 RUN_ARTIFACT_REPO ?= metal-birds-feed
 
+# Sourcing .env overwrites command-line vars: re-applied after it, quote-escaped.
+ENV_FILE ?= .env
+CLI_VARS := $(foreach v,$(.VARIABLES),$(if $(filter command line,$(origin $v)),$v))
+LOAD_ENV = set -a; if [ -f "$(abspath $(ENV_FILE))" ]; then . "$(abspath $(ENV_FILE))"; fi; \
+	$(foreach v,$(CLI_VARS),$v='$(subst ','\'',$($v))';) set +a
+
 install: ## Install dependencies and git hooks
 	$(BUN) install --frozen-lockfile && $(BUNX) lefthook install
 
-
 format:
 	$(BUNX) prettier --write .
-
 
 format-check:
 	$(BUNX) prettier --check .
@@ -55,46 +59,22 @@ build:
 
 check: format-check lint typecheck test ## Everything CI gates on, in one command
 
-ENV_FILE ?= .env
+refresh: build ## Update R2: download, map, and write every source (REFRESH_SOURCE=<id> for one)
+	@$(LOAD_ENV); $(BUN) run dist/pipeline.js
 
-# Reads R2 credentials from $(ENV_FILE) (default .env). Set REFRESH_SOURCE there to do one source.
-refresh: build ## Pull every source: download, map, write artifacts + feed slices
-	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "$(ENV_FILE) not found. Create it with MBF_R2_* and optional REFRESH_SOURCE/DRY_RUN."; \
-		exit 1; \
-	fi
-	@case "$(ENV_FILE)" in /*) src="$(ENV_FILE)" ;; *) src="./$(ENV_FILE)" ;; esac; \
-		set -a; . "$$src"; set +a; \
-		: $${MBF_R2_ACCOUNT_ID:?MBF_R2_ACCOUNT_ID missing from $(ENV_FILE)}; \
-		: $${MBF_R2_ACCESS_KEY_ID:?MBF_R2_ACCESS_KEY_ID missing from $(ENV_FILE)}; \
-		: $${MBF_R2_SECRET_ACCESS_KEY:?MBF_R2_SECRET_ACCESS_KEY missing from $(ENV_FILE)}; \
-		: $${MBF_R2_BUCKET_NAME:?MBF_R2_BUCKET_NAME missing from $(ENV_FILE)}; \
-		DRY_RUN=$${DRY_RUN:-false}; \
-		echo "Bootstrap initial load — source=$${REFRESH_SOURCE:-<all>} dry_run=$$DRY_RUN"; \
-		export REFRESH_SOURCE DRY_RUN; \
-		$(BUN) run dist/pipeline.js
-
-# For a `download.manual` source: maps FILE (under drops/), stores it in R2 only when it maps
-# cleanly, then forces that one source's refresh. A dry run stores nothing, so it stops after the
-# mapping check: a chained refresh would read the previous stored drop instead of this file. Assigned after .env loads so a REFRESH_SOURCE
-# left in .env cannot redirect the forced run at a different source.
+# A dry run stops after the mapping check: a chained refresh would read the previous stored drop.
 ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drops/<file>) and refresh it
-	@if [ -z "$(SOURCE)" ] || [ -z "$(FILE)" ]; then \
-			echo "usage: make ingest SOURCE=<id> FILE=drops/<file>"; exit 1; \
-		fi; \
-		if [ ! -f $(ENV_FILE) ]; then echo "$(ENV_FILE) not found. Create it with MBF_R2_*."; exit 1; fi; \
-		case "$(ENV_FILE)" in /*) src="$(ENV_FILE)" ;; *) src="./$(ENV_FILE)" ;; esac; \
-		set -a; . "$$src"; set +a; \
-		DRY_RUN=$${DRY_RUN:-false}; \
-		INGEST_SOURCE="$(SOURCE)" INGEST_FILE="$(FILE)" DRY_RUN=$$DRY_RUN $(BUN) run dist/ingest.js || exit $$?; \
-		if [ "$$DRY_RUN" = true ]; then \
-			echo "DRY_RUN=true: the file maps cleanly; nothing was stored, so no refresh was run."; exit 0; \
-		fi; \
-		REFRESH_SOURCE="$(SOURCE)" FORCE_REFRESH=true DRY_RUN=$$DRY_RUN $(BUN) run dist/pipeline.js
+	@$(LOAD_ENV); \
+		if [ -z "$${SOURCE:-}" ] || [ -z "$${FILE:-}" ]; then echo "usage: make ingest SOURCE=<id> FILE=drops/<file>"; exit 1; fi; \
+		INGEST_SOURCE="$$SOURCE" INGEST_FILE="$$FILE" $(BUN) run dist/ingest.js || exit $$?; \
+		if [ "$${DRY_RUN:-false}" = true ]; then echo "DRY_RUN=true: the file maps cleanly; nothing was stored."; exit 0; fi; \
+		REFRESH_SOURCE="$$SOURCE" FORCE_REFRESH=true $(BUN) run dist/pipeline.js
 
+# Billed: one Gemini call per marked chunk. Review `git diff fixtures/` against the PDFs.
+record-extraction: build ## Re-record Gemini's response for a PDF source's fixtures (SOURCE=<id>)
+	@$(LOAD_ENV); $(BUN) run dist/record-extraction.js "$${SOURCE:-}"
 
-
-secret-scan:
+secret-scan: ## Scan staged changes for accidentally committed secrets
 	@if command -v gitleaks > /dev/null; then \
 		gitleaks git --staged --redact; \
 	else \
@@ -102,54 +82,27 @@ secret-scan:
 		exit 1; \
 	fi
 
-
 clean: ## Remove build output and local artifacts
 	rm -rf dist coverage node_modules feed.sqlite
 
-# Run the feed service locally against a built feed.sqlite (set MBF_FEED_DB_PATH).
-serve: ## Run the feed service locally against feed.sqlite
+serve: ## Run the feed service locally against feed.sqlite (MBF_FEED_DB_PATH)
 	$(BUN) run src/service/server.ts
 
-# Build a fresh consolidated database from every durable R2 feed slice. Loads .env when present;
-# CI supplies the same credentials directly. Phony by design — a prior local file is never trusted.
-assemble-feed: build
-	@set -eu; \
-		if [ -f "$(ENV_FILE)" ]; then \
-			case "$(ENV_FILE)" in /*) feed_env_source="$(ENV_FILE)" ;; *) feed_env_source="./$(ENV_FILE)" ;; esac; \
-			set -a; . "$$feed_env_source"; set +a; \
-		fi; \
-		: $${MBF_R2_ACCOUNT_ID:?MBF_R2_ACCOUNT_ID is required}; \
-		: $${MBF_R2_ACCESS_KEY_ID:?MBF_R2_ACCESS_KEY_ID is required}; \
-		: $${MBF_R2_SECRET_ACCESS_KEY:?MBF_R2_SECRET_ACCESS_KEY is required}; \
-		: $${MBF_R2_BUCKET_NAME:?MBF_R2_BUCKET_NAME is required}; \
+# Rebuilt from R2 every time: a prior local feed.sqlite is never trusted.
+assemble-feed: build ## Build feed.sqlite from the R2 slices (does not refresh)
+	@set -eu; $(LOAD_ENV); \
 		rm -f feed.sqlite; \
 		MBF_FEED_DB_OUT=feed.sqlite $(BUN) run dist/publish-feed.js; \
 		test -s feed.sqlite
 
-# Sequenced through the recipe, not prerequisites: `make -j build-feed` would otherwise be free to
-# assemble the previous run's slices while the refresh that replaces them is still writing.
-build-feed: ## Refresh every source, then assemble feed.sqlite
-	$(MAKE) refresh
-	$(MAKE) assemble-feed
-
-# Deploy whatever feed.sqlite is on disk. Separate from build-feed so CI (which already built and
-# change-checked the DB) can deploy without a second build; `make deploy` chains both for operators.
-# FEED_TOKEN is bound from the Secret Manager secret ($(FEED_SECRET)) on every deploy — idempotent,
-# so the first deploy works too. Application auth owns the Authorization header.
+# Deploys the feed.sqlite on disk; CI calls it after its own assemble + change check.
 deploy-only:
-	@set -eu; \
-		if [ -f "$(ENV_FILE)" ]; then \
-			case "$(ENV_FILE)" in /*) deploy_env_source="$(ENV_FILE)" ;; *) deploy_env_source="./$(ENV_FILE)" ;; esac; \
-			set -a; . "$$deploy_env_source"; set +a; \
-		fi; \
+	@set -eu; $(LOAD_ENV); \
 		: $${GCP_PROJECT_ID:?GCP_PROJECT_ID is required}; \
 		test -s feed.sqlite; \
 		gcloud run deploy $(SERVICE_NAME) --project "$$GCP_PROJECT_ID" --source . --image "$(REGION)-docker.pkg.dev/$$GCP_PROJECT_ID/$(RUN_ARTIFACT_REPO)/$(SERVICE_NAME)" --region $(REGION) --allow-unauthenticated --min-instances=0 --max-instances=1 --service-account "$(RUN_SA)@$$GCP_PROJECT_ID.iam.gserviceaccount.com" --set-secrets FEED_TOKEN=$(FEED_SECRET):latest --quiet
 
-# Build immediately before deploying so Cloud Run can never receive an ambient stale database.
-# assemble-feed, not build-feed: deploying rebuilds the DB from the slices already in R2 so an
-# ambient stale feed.sqlite is never shipped, but it does not re-pull every register — run
-# `make refresh` first if you want new upstream data in the deploy.
-deploy: ## Assemble the feed from R2 and ship it to Cloud Run
+# Sequenced in the recipe, not as prerequisites, so `make -j` cannot deploy before assembly ends.
+deploy: ## Deploy R2's current data to Cloud Run (does not refresh)
 	$(MAKE) assemble-feed
 	$(MAKE) deploy-only

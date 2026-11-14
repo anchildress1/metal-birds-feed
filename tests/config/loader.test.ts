@@ -271,7 +271,24 @@ describe('loadSourceConfig', () => {
       `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: pdf\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
     );
     try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/requires a pdf config block/);
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /a pdf config block goes with format pdf, and only with it/
+      );
+    } finally {
+      unlinkSync(tmp);
+    }
+  });
+
+  it('rejects a pdf config block on a non-pdf source', () => {
+    const tmp = tmpConfig('_test_pdf_block_csv.yaml');
+    writeFileSync(
+      tmp,
+      `id: t\nlabel: t\ncountry: NL\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.zip\n  format: zip\n  entries: { f: f.txt }\nprimary: f\ndelimiter: ','\nformat: csv\ncolumns:\n  f: [ID]\npdf:\n  mark_field: ID\n  mark_pattern: 'X'\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`
+    );
+    try {
+      expect(() => loadSourceConfig(tmp)).toThrow(
+        /a pdf config block goes with format pdf, and only with it/
+      );
     } finally {
       unlinkSync(tmp);
     }
@@ -578,98 +595,12 @@ describe('loadSourceConfig', () => {
     }
   });
 
-  // `pdfLine` lands at pdf level, `layoutLine` inside the single layout — the reach/pattern pair and
-  // column_pos are per-orientation, while anchor_pattern and the page budget are shared.
-  const pdfYaml = (pdfLine: string, layoutLine = ''): string =>
-    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${pdfLine}  layouts:\n    - field_axis: y\n${layoutLine}      column_pos: [100, 50]\ncolumns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
+  const pdfYaml = (pdfLines: string): string =>
+    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n${pdfLines}columns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
 
-  it('accepts pdf.allowed_anchorless_pages', () => {
-    const tmp = tmpConfig('_test_pdf_anchorless.yaml');
-    writeFileSync(tmp, pdfYaml('  allowed_anchorless_pages: 1\n'));
-    try {
-      const config = loadSourceConfig(tmp);
-      expect(config.pdf?.allowed_anchorless_pages).toBe(1);
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  it('rejects pdf.before_first_anchor_reach without a pattern', () => {
-    const tmp = tmpConfig('_test_pdf_before_first_anchor_reach_without_pattern.yaml');
-    writeFileSync(tmp, pdfYaml('', '      before_first_anchor_reach: 17\n'));
-    try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  it('accepts pdf.before_first_anchor_reach set together with a pattern', () => {
-    const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern.yaml');
-    writeFileSync(
-      tmp,
-      pdfYaml(
-        '',
-        '      before_first_anchor_reach: 17\n      before_first_anchor_pattern: "^Slovenia$"\n'
-      )
-    );
-    try {
-      expect(loadSourceConfig(tmp).pdf?.layouts[0].before_first_anchor_pattern).toBe('^Slovenia$');
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  it('defaults pdf.allowed_anchorless_pages to undefined when omitted', () => {
-    const tmp = tmpConfig('_test_pdf_no_anchorless.yaml');
-    writeFileSync(tmp, pdfYaml(''));
-    try {
-      expect(loadSourceConfig(tmp).pdf?.allowed_anchorless_pages).toBeUndefined();
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  it.each([
-    [
-      'a negative allowed_anchorless_pages',
-      '_test_pdf_neg_anchorless.yaml',
-      '  allowed_anchorless_pages: -1\n',
-      '',
-      /expected number to be >=0/,
-    ],
-    [
-      'a negative before_first_anchor_reach',
-      '_test_pdf_neg_before_first_anchor.yaml',
-      '',
-      '      before_first_anchor_reach: -1\n      before_first_anchor_pattern: "^x$"\n',
-      /expected number to be >=0/,
-    ],
-    [
-      'a non-integer allowed_anchorless_pages',
-      '_test_pdf_frac_anchorless.yaml',
-      '  allowed_anchorless_pages: 1.5\n',
-      '',
-      /expected int, received number/,
-    ],
-  ])('rejects %s', (_description, filename, pdfLine, layoutLine, message) => {
-    const tmp = tmpConfig(filename);
-    writeFileSync(tmp, pdfYaml(pdfLine, layoutLine));
-    try {
-      expect(() => loadSourceConfig(tmp)).toThrow(message);
-    } finally {
-      unlinkSync(tmp);
-    }
-  });
-
-  // Each guard below is the only thing standing between a mis-measured layout and a silently
-  // scrambled parse, so each is pinned by an input that trips exactly that rule.
-  const pdfGuardYaml = (opts: { layouts: string; anchorField?: string }): string =>
-    `id: t\nlabel: t\ncountry: MV\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/x.pdf\n  format: file\n  entries: { register: '.' }\nprimary: register\ndelimiter: ','\nformat: pdf\npdf:\n  anchor_pattern: '^8Q-[A-Z]{3}$'\n${opts.anchorField === undefined ? '' : `  anchor_field: ${opts.anchorField}\n`}  layouts:\n${opts.layouts}columns:\n  register: [value, mark]\nsource_id: mark\nregistration: mark\nmapping:\n  registration: { field: mark }\n`;
-
-  const withPdfGuard = <T>(name: string, yaml: string, run: (path: string) => T): T => {
+  const withPdfYaml = <T>(name: string, pdfLines: string, run: (path: string) => T): T => {
     const tmp = tmpConfig(name);
-    writeFileSync(tmp, yaml);
+    writeFileSync(tmp, pdfYaml(pdfLines));
     try {
       return run(tmp);
     } finally {
@@ -677,140 +608,77 @@ describe('loadSourceConfig', () => {
     }
   };
 
-  it.each([
-    [
-      'a single printed band',
-      '    - field_axis: y\n      column_pos: [100, null]\n      drop_margin_lines: true\n',
-    ],
-    [
-      'bands at one coordinate',
-      '    - field_axis: y\n      column_pos: [100, 100]\n      drop_margin_lines: true\n',
-    ],
-  ])('rejects drop_margin_lines with %s, which gives no direction', (_label, layouts) => {
-    withPdfGuard('_test_pdf_margin_dir.yaml', pdfGuardYaml({ layouts }), (path) => {
-      expect(() => loadSourceConfig(path)).toThrow(
-        /needs printed bands at two different coordinates/
-      );
-    });
-  });
-
-  it('accepts wrap_after_anchor and drop_margin_lines per layout and rejects a non-boolean value', () => {
-    const layouts = (value: string): string =>
-      `    - field_axis: y\n      column_pos: [100, 50]\n      wrap_after_anchor: ${value}\n      drop_margin_lines: ${value}\n    - field_axis: x\n      column_pos: [10, 20]\n`;
-    withPdfGuard('_test_pdf_wrap_ok.yaml', pdfGuardYaml({ layouts: layouts('true') }), (path) => {
-      const config = loadSourceConfig(path);
-      expect(config.pdf?.layouts.map((l) => l.wrap_after_anchor)).toEqual([true, undefined]);
-      expect(config.pdf?.layouts.map((l) => l.drop_margin_lines)).toEqual([true, undefined]);
-    });
-    withPdfGuard(
-      '_test_pdf_wrap_bad.yaml',
-      pdfGuardYaml({ layouts: layouts('yes please') }),
+  it('accepts a pdf block naming the mark column, its pattern, exclusions, and a markless budget', () => {
+    withPdfYaml(
+      '_test_pdf_ok.yaml',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  mark_pattern_exclusions: [PZO]\n  markless_pages: 1\n",
       (path) => {
-        expect(() => loadSourceConfig(path)).toThrow(/invalid source config/i);
+        expect(loadSourceConfig(path).pdf).toEqual({
+          mark_field: 'mark',
+          mark_pattern: '8Q-[A-Z]{3}',
+          mark_pattern_exclusions: ['PZO'],
+          markless_pages: 1,
+        });
       }
     );
   });
 
-  it('accepts one layout per axis and an anchor_field that names a primary column', () => {
-    const yaml = pdfGuardYaml({
-      layouts:
-        '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: x\n      column_pos: [null, 60]\n',
-      anchorField: 'mark',
-    });
-    withPdfGuard('_test_pdf_two_axes.yaml', yaml, (path) => {
-      const config = loadSourceConfig(path);
-      expect(config.pdf?.layouts.map((l) => l.field_axis)).toEqual(['y', 'x']);
-      expect(config.pdf?.anchor_field).toBe('mark');
-    });
-  });
-
-  it('accepts two layouts on one axis when anchor_field names the band that tells them apart', () => {
-    const yaml = pdfGuardYaml({
-      layouts:
-        '    - field_axis: x\n      column_pos: [10, 50]\n    - field_axis: x\n      column_pos: [10, 70]\n',
-      anchorField: 'mark',
-    });
-    withPdfGuard('_test_pdf_same_axis.yaml', yaml, (path) => {
-      expect(loadSourceConfig(path).pdf?.layouts.map((l) => l.field_axis)).toEqual(['x', 'x']);
-    });
-  });
-
-  it('accepts after_last_anchor_pattern alongside its reach, and a reach alone', () => {
-    const layouts =
-      '    - field_axis: y\n      column_pos: [100, 50]\n      after_last_anchor_reach: 14\n      after_last_anchor_pattern: "^(?!Status$)"\n    - field_axis: x\n      column_pos: [10, 20]\n      after_last_anchor_reach: 14\n';
-    withPdfGuard('_test_pdf_after_pattern.yaml', pdfGuardYaml({ layouts }), (path) => {
-      const config = loadSourceConfig(path);
-      expect(config.pdf?.layouts.map((l) => l.after_last_anchor_pattern)).toEqual([
-        '^(?!Status$)',
-        undefined,
-      ]);
-    });
-  });
-
   it.each([
     [
-      'two layouts on one axis without an anchor_field to tell them apart',
-      '_test_pdf_dup_axis.yaml',
-      '    - field_axis: y\n      column_pos: [100, 50]\n    - field_axis: y\n      column_pos: [90, 40]\n',
-      undefined,
-      /layouts sharing a field_axis require pdf.anchor_field/,
+      'a mark_field that is not a column of the primary file',
+      "  mark_field: nope\n  mark_pattern: '8Q-[A-Z]{3}'\n",
+      /pdf\.mark_field must name a column in columns\[primary\]/,
     ],
     [
-      'an after_last_anchor_pattern without a reach',
-      '_test_pdf_after_pattern_no_reach.yaml',
-      '    - field_axis: y\n      column_pos: [100, 50]\n      after_last_anchor_pattern: "^(?!Status$)"\n',
-      undefined,
-      /after_last_anchor_pattern requires pdf.after_last_anchor_reach/,
+      'a mark_pattern that is not a valid regex',
+      "  mark_field: mark\n  mark_pattern: '('\n",
+      /pdf\.mark_pattern must be a valid regular expression/,
+    ],
+    ['a missing mark_pattern', '  mark_field: mark\n', /invalid source config/i],
+    [
+      'a markless_pages budget of zero (omit it instead)',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  markless_pages: 0\n",
+      /invalid source config/i,
     ],
     [
-      'an after_last_anchor_pattern that is not a valid regex',
-      '_test_pdf_after_pattern_bad.yaml',
-      '    - field_axis: y\n      column_pos: [100, 50]\n      after_last_anchor_reach: 14\n      after_last_anchor_pattern: "("\n',
-      undefined,
-      /after_last_anchor_pattern must be a valid regular expression/,
+      'an empty mark_pattern_exclusions list',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  mark_pattern_exclusions: []\n",
+      /invalid source config/i,
     ],
     [
-      'a layout whose column_pos prints no band at all',
-      '_test_pdf_all_null.yaml',
-      '    - field_axis: y\n      column_pos: [null, null]\n',
-      undefined,
-      /must declare at least one printed band/,
+      'a mark_pattern_exclusions entry with edge whitespace',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  mark_pattern_exclusions: [' PZO']\n",
+      /pdf\.mark_pattern_exclusions entries carry no leading or trailing whitespace/,
     ],
     [
-      'a column_pos whose length differs from columns[primary]',
-      '_test_pdf_len_mismatch.yaml',
-      '    - field_axis: y\n      column_pos: [100]\n',
-      undefined,
-      /column_pos length must match columns\[primary\] length/,
+      'a mark_pattern that matches an empty text item',
+      "  mark_field: mark\n  mark_pattern: '[A-Z]*'\n",
+      /pdf\.mark_pattern must not match an empty text item/,
     ],
     [
-      'an anchor_field that is not a column of the primary file',
-      '_test_pdf_bad_anchor_field.yaml',
-      '    - field_axis: y\n      column_pos: [100, 50]\n',
-      'nope',
-      /anchor_field must name a column in columns\[primary\]/,
+      'a top-level record_count',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\nrecord_count: { pattern: '(\\d+)' }\n",
+      /record_count, skip_rows, and sheet do not apply to format pdf/,
     ],
     [
-      'a layout that prints no band for anchor_field',
-      '_test_pdf_unprinted_anchor_field.yaml',
-      '    - field_axis: y\n      column_pos: [100, null]\n',
-      'mark',
-      /must print a band for pdf\.anchor_field/,
+      'a top-level skip_rows',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\nskip_rows: 1\n",
+      /record_count, skip_rows, and sheet do not apply to format pdf/,
     ],
-  ])('rejects %s', (_description, filename, layouts, anchorField, message) => {
-    withPdfGuard(filename, pdfGuardYaml({ layouts, anchorField }), (path) => {
+    [
+      'a top-level sheet',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\nsheet: 0\n",
+      /record_count, skip_rows, and sheet do not apply to format pdf/,
+    ],
+    [
+      'a leftover geometry key',
+      "  mark_field: mark\n  mark_pattern: '8Q-[A-Z]{3}'\n  anchor_pattern: '8Q-[A-Z]{3}'\n",
+      /invalid source config/i,
+    ],
+  ])('rejects %s', (_description, pdfLines, message) => {
+    withPdfYaml('_test_pdf_bad.yaml', pdfLines, (path) => {
       expect(() => loadSourceConfig(path)).toThrow(message);
     });
-  });
-
-  it('rejects pdf.before_first_anchor_pattern without a reach', () => {
-    const tmp = tmpConfig('_test_pdf_before_first_anchor_pattern_without_reach.yaml');
-    writeFileSync(tmp, pdfYaml('', '      before_first_anchor_pattern: "^Slovenia$"\n'));
-    try {
-      expect(() => loadSourceConfig(tmp)).toThrow(/must be set together/i);
-    } finally {
-      unlinkSync(tmp);
-    }
   });
 
   it('accepts discover_url + discover_pattern when set together', () => {
@@ -1112,7 +980,7 @@ describe('loadSourceConfig — header_text', () => {
         '_test_header_pdf.yaml',
         BASE(
           'US',
-          `format: pdf\nskip_rows: 1\n${COLS}header_text: ['Mark', 'Owner']\npdf:\n  anchor_pattern: '^X'\n  layouts:\n    - { field_axis: x, column_pos: [1, 2] }\n`
+          `format: pdf\nskip_rows: 1\n${COLS}header_text: ['Mark', 'Owner']\npdf:\n  mark_field: ID\n  mark_pattern: 'X'\n`
         )
       )
     ).toThrow(/header_text requires/);

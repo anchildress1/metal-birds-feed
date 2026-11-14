@@ -1,0 +1,1276 @@
+[
+  [
+    {
+      "status": "Registered",
+      "mark": "HS-IPA",
+      "mfr": "Honda Aircraft Company LLC",
+      "model": "HA-420",
+      "serial": "42000233",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-PCA",
+      "mfr": "Textron Aviation Inc.",
+      "model": "182S",
+      "serial": "18280869",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-PLE",
+      "mfr": "SONEX AIRCRAFT, LLC",
+      "model": "SONEX",
+      "serial": "1028",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-FFB",
+      "mfr": "Costruzioni Aeronautiche Tecnam S.p.A.",
+      "model": "P2002-JF",
+      "serial": "119",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-WMV",
+      "mfr": "Kitfox Aircraft, LLC.",
+      "model": "S7",
+      "serial": "KA17042344",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-RMS",
+      "mfr": "Cirrus Design Corporation",
+      "model": "SR22T",
+      "serial": "2015",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-FPD",
+      "mfr": "American Champion Aircraft Corp.",
+      "model": "7GCAA",
+      "serial": "258-73",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-UKY",
+      "mfr": "Aviat Aircraft Inc.",
+      "model": "A-1C-180",
+      "serial": "3012",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BUA",
+      "mfr": "True Flight Holdings LLC",
+      "model": "AA-5B",
+      "serial": "AA5B-0674",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-NAX",
+      "mfr": "Textron Aviation Inc.",
+      "model": "172M",
+      "serial": "17264062",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BAK",
+      "mfr": "Textron Aviation Inc.",
+      "model": "172P",
+      "serial": "17274972",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SEX",
+      "mfr": "Textron Aviation Inc.",
+      "model": "172P",
+      "serial": "17274624",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-MCX",
+      "mfr": "Piper Aircraft, Inc.",
+      "model": "PA-28-161",
+      "serial": "28-8316052",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LOW",
+      "mfr": "AIRBUS POLAND S.A.",
+      "model": "PZL-104 Wilga 35",
+      "serial": "86226",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-RAM",
+      "mfr": "REMOS Aircraft GmbH, Franzfelde, Pasewalk, Germany",
+      "model": "REMOS GX",
+      "serial": "278",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-AWS",
+      "mfr": "Commander Aircraft Corporation",
+      "model": "114",
+      "serial": "14118",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-MVK",
+      "mfr": "Bell Textron Inc.",
+      "model": "BELL 412EP",
+      "serial": "36333",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CPV",
+      "mfr": "Bell Textron Inc.",
+      "model": "BELL 412EP",
+      "serial": "36332",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-DEH",
+      "mfr": "CORVUS AIRCRAFT LTD.",
+      "model": "CORVUS CA-21 PHANTOM",
+      "serial": "CA21/021",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-FAH",
+      "mfr": "Flight Design GmbH., Germany",
+      "model": "CTSW ADVANCED LSA",
+      "serial": "07-05-22",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TAO",
+      "mfr": "Honda Aircraft Company LLC",
+      "model": "HA-420",
+      "serial": "42000286",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-MHS",
+      "mfr": "Cameron Balloons Ltd.",
+      "model": "Thunder AX8-105 Series 2",
+      "serial": "10439",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-KUN",
+      "mfr": "Textron Aviation Inc.",
+      "model": "172K",
+      "serial": "17258357",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-PKT",
+      "mfr": "PIPISTREL D.O.O.",
+      "model": "SINUS 912",
+      "serial": "1174 SFNM 912",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-NUM",
+      "mfr": "SONEX AIRCRAFT,LLC",
+      "model": "SONEX",
+      "serial": "940",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-WOW",
+      "mfr": "BRM AERO, s.r.o.",
+      "model": "Bristell HD Classic",
+      "serial": "447/2019",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CSR",
+      "mfr": "Textron Aviation Inc.",
+      "model": "T182T",
+      "serial": "T18208223",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-USA",
+      "mfr": "Alpi Aviation s.r.l.",
+      "model": "Pioneer 300",
+      "serial": "366",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-PTM",
+      "mfr": "Diamond Aircraft Industries GmbH",
+      "model": "DA 42 NG",
+      "serial": "42.N407",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BTM",
+      "mfr": "Textron Aviation Inc.",
+      "model": "182T",
+      "serial": "18283037",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-OXY",
+      "mfr": "ULTRAVIA AERO INTERNATIONAL INC., CANADA",
+      "model": "PELICAN PL",
+      "serial": "683",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-AMM",
+      "mfr": "Flight Design GmbH., Germany",
+      "model": "CTLS-ELA",
+      "serial": "F-10-11-07",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TNP",
+      "mfr": "Textron Aviation Inc.",
+      "model": "550",
+      "serial": "550-1103",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-PAX",
+      "mfr": "RANS Designs, Inc",
+      "model": "RANS S-21 OUTBOUND",
+      "serial": "4220249",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-KDX",
+      "mfr": "Textron Aviation Inc.",
+      "model": "T182T",
+      "serial": "T18208895",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-RWB",
+      "mfr": "Diamond Aircraft Industries Inc.",
+      "model": "DA 40 F",
+      "serial": "40.FC005",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VCP",
+      "mfr": "B & F TECHNIK VERTRIEBS GMBH SPEYER",
+      "model": "FK 9 MARK IV",
+      "serial": "09-04SW-366",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-MIC",
+      "mfr": "Textron Aviation Inc.",
+      "model": "172N",
+      "serial": "17267742",
+      "operator": "PRIVATE AIRCRAFT"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-NUT",
+      "mfr": "Commander Aircraft Corporation",
+      "model": "Commander 114B",
+      "serial": "14570",
+      "operator": "QPC SOUTHEAST ASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TYW",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "9313",
+      "operator": "ROYAL THAI AIR FORCE"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TRN",
+      "mfr": "Honda Aircraft Company LLC",
+      "model": "HA-420",
+      "serial": "42000209",
+      "operator": "SADUAK SABUY COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFO",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "31758",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFP",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "31798",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFQ",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "31843",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFR",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "31770",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFD",
+      "mfr": "Sikorsky Aircraft Corporation",
+      "model": "Sikorsky S-76C",
+      "serial": "760590",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFE",
+      "mfr": "Sikorsky Aircraft Corporation",
+      "model": "Sikorsky S-76C",
+      "serial": "760592",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFJ",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "41310",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SFC",
+      "mfr": "Sikorsky Aircraft Corporation",
+      "model": "Sikorsky S-76C",
+      "serial": "760577",
+      "operator": "SFS AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CPG",
+      "mfr": "Textron Aviation Inc.",
+      "model": "Hawker 850XP",
+      "serial": "258833",
+      "operator": "SIAM LAND FLYING COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CPH",
+      "mfr": "Textron Aviation Inc.",
+      "model": "HAWKER 800XP",
+      "serial": "258615",
+      "operator": "SIAM LAND FLYING COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CPA",
+      "mfr": "Textron Aviation Inc.",
+      "model": "B300",
+      "serial": "FL-590",
+      "operator": "SIAM LAND FLYING COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SSP",
+      "mfr": "Textron Aviation Inc.",
+      "model": "208B",
+      "serial": "208B5076",
+      "operator": "SIAM SEAPLANE COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-SEA",
+      "mfr": "NZSkydive Ltd",
+      "model": "750XL",
+      "serial": "110",
+      "operator": "SKYEXTREME CO.,LTD"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-AAH",
+      "mfr": "G1 AVIATION SAS",
+      "model": "G1 SPYL-XL",
+      "serial": "205",
+      "operator": "THAI AEROSPACE GROUP FLYING CLUB"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABM",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4278",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABA",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "3277",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABN",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4302",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABO",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4333",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABP",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4367",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABQ",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4386",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABR",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4390",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBD",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "7911",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBI",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "8391",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABC",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "3338",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABD",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "3394",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABJ",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4019",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABZ",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5283",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBB",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5353",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBC",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5468",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBA",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "7624",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABT",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4557",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABU",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4807",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABV",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4979",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABW",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "4980",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBG",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5812",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBH",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5839",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBI",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5851",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBJ",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5866",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBL",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5959",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBO",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "6240",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBP",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "6405",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBQ",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "6428",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBR",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "6676",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBT",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5420",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBU",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "7030",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBV",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "7057",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBW",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "7164",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBM",
+      "mfr": "AIRBUS",
+      "model": "A320-216",
+      "serial": "5619",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBR",
+      "mfr": null,
+      "model": "A320-216",
+      "serial": "3679",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABX",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "4917",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-ABY",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "4964",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBA",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "5344",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBF",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "7949",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBX",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "7195",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBY",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "7417",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-BBZ",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "7508",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBJ",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "8513",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBK",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "8487",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBE",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "7921",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBG",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "8016",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBH",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "8052",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-CBB",
+      "mfr": "AIRBUS",
+      "model": "A320-251N",
+      "serial": "7591",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-EAF",
+      "mfr": "AIRBUS",
+      "model": "A321-251NX",
+      "serial": "12465",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-EAG",
+      "mfr": "AIRBUS",
+      "model": "A321-251NX",
+      "serial": "12494",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-EAA",
+      "mfr": "AIRBUS",
+      "model": "A321-251NX",
+      "serial": "9217",
+      "operator": "THAI AIRASIA COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LUU",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "38681",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LUY",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "38750",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LGI",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "37294",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LGL",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "43211",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LGJ",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "43209",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LGK",
+      "mfr": "The Boeing Company",
+      "model": "737-800",
+      "serial": "43210",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-LVK",
+      "mfr": "The Boeing Company",
+      "model": "737-900ER",
+      "serial": "38299",
+      "operator": "THAI LION MENTARI COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TSP",
+      "mfr": "Textron Aviation Inc.",
+      "model": "208",
+      "serial": "20800551",
+      "operator": "THAI SEAPLANE COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-EFS",
+      "mfr": "Pilatus Aircraft Ltd.",
+      "model": "PC-6/B2-H4",
+      "serial": "2026",
+      "operator": "THAI SKY ADVENTURES CO., LTD."
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-FFS",
+      "mfr": "Daher Aircraft Design, LLC",
+      "model": "Kodiak 100",
+      "serial": "100-0053",
+      "operator": "THAI SKY ADVENTURES CO., LTD."
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-WTF",
+      "mfr": "Pilatus Aircraft Ltd.",
+      "model": "PC-6/B2-H4",
+      "serial": "963",
+      "operator": "THAI SKY ADVENTURES CO., LTD."
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKL",
+      "mfr": "AIRBUS",
+      "model": "A321-211",
+      "serial": "7680",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKC",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "6878",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKD",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "4907",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKS",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "6184",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKT",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "5879",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKN",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "6242",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKH",
+      "mfr": "AIRBUS",
+      "model": "A321-211",
+      "serial": "6852",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKJ",
+      "mfr": "AIRBUS",
+      "model": "A321-211",
+      "serial": "8032",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKM",
+      "mfr": "AIRBUS",
+      "model": "A321-211",
+      "serial": "7715",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKR",
+      "mfr": "AIRBUS",
+      "model": "A321-211",
+      "serial": "6968",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKG",
+      "mfr": "AIRBUS",
+      "model": "A321-211",
+      "serial": "6696",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKB",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "6378",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZE",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63901",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZF",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63911",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZA",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63900",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZB",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63898",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZG",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63904",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZH",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63905",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZJ",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63906",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZK",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63914",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VKF",
+      "mfr": "AIRBUS",
+      "model": "A320-214",
+      "serial": "4475",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VZC",
+      "mfr": "The Boeing Company",
+      "model": "737-8",
+      "serial": "63903",
+      "operator": "THAI VIETJET AIR JOINT STOCK COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TSI",
+      "mfr": "The Airplane Factory ltd.",
+      "model": "SLING 4 TSI",
+      "serial": "462S",
+      "operator": "THAILAND'S AVIATION CLUB ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-TNK",
+      "mfr": "Diamond Aircraft Industries Inc.",
+      "model": "DA 62",
+      "serial": "62.181",
+      "operator": "TNK LOGISTICS COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-UOL",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "31863",
+      "operator": "UNITED OFFSHORE AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-UOM",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "31871",
+      "operator": "UNITED OFFSHORE AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-PDG",
+      "mfr": "Robinson Helicopter Company",
+      "model": "R44 II",
+      "serial": "14890",
+      "operator": "UNITED OFFSHORE AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-UOA",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "32096",
+      "operator": "UNITED OFFSHORE AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-UON",
+      "mfr": "Leonardo S.p.A.",
+      "model": "AW139",
+      "serial": "32113",
+      "operator": "UNITED OFFSHORE AVIATION COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "HS-VIP",
+      "mfr": "Textron Aviation Inc.",
+      "model": "510",
+      "serial": "510-0117",
+      "operator": "VIP JETS LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-B26",
+      "mfr": "Avid Aircraft Inc.",
+      "model": "AVID FLYER",
+      "serial": "577",
+      "operator": "BFA FLYING COMPANY LIMITED"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-A49",
+      "mfr": "Cyclone Airsports Ltd.,",
+      "model": "Pegasus Quantum 15-912",
+      "serial": "7842",
+      "operator": "BURAPHA-THID FLYING ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-B17",
+      "mfr": "QUICKSILVER",
+      "model": "Sport 2S",
+      "serial": "77",
+      "operator": "BURAPHA-THID FLYING ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-S89",
+      "mfr": "FLY SYNTHESIS SRL",
+      "model": "STORCH CL",
+      "serial": "A-67",
+      "operator": "BURAPHA-THID FLYING ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-P30",
+      "mfr": "Air Creation Aerodrome De Lanas, France",
+      "model": "GTE TWIN",
+      "serial": "T04021",
+      "operator": "BURAPHA-THID FLYING ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-P61",
+      "mfr": "Airborne Windsports Pty Ltd.",
+      "model": "XT 912",
+      "serial": "XT912-027",
+      "operator": "BURAPHA-THID FLYING ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-A56",
+      "mfr": "QUICKSILVER",
+      "model": "MX II SPRINT",
+      "serial": "5436",
+      "operator": "BURAPHA-THID FLYING ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-S37",
+      "mfr": "AEROCRUISE PRAYOTE, THAILAND",
+      "model": "AEROCRUISE PRAYOTE",
+      "serial": "0515-020",
+      "operator": "CHIANG MAI SKY ADVENTURE ASSOCIATION, CSAA"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-E04",
+      "mfr": "Flightstar Aviation",
+      "model": "Flightstar II SC",
+      "serial": "RD444",
+      "operator": "FRIENDS FLYING CLUB"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-N88",
+      "mfr": "AutoGyro GmbH",
+      "model": "CAVALON",
+      "serial": "V00466",
+      "operator": "HIGH SOUL ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-M88",
+      "mfr": "AutoGyro GmbH",
+      "model": "MTO SPORT 2017",
+      "serial": "M01885",
+      "operator": "HIGH SOUL ASSOCIATION"
+    },
+    {
+      "status": "Registered",
+      "mark": "U-C11",
+      "mfr": "QUICKSILVER",
+      "model": "MX II Sprint",
+      "serial": "SPRINT II 0616",
+      "operator": "MAE HONG SON AVIATION CLUB"
+    }
+  ]
+]

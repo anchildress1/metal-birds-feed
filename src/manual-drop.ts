@@ -41,12 +41,6 @@ export async function ingest(sourceId: string, file: string, dryRun: boolean): P
 
   const bytes = await readFile(resolveDropPath(file));
   const [alias] = Object.keys(config.download.entries);
-  const { records, stats } = await mapRows(config, new Map([[alias, bytes]]));
-  if (stats.failed > 0 || records.size === 0)
-    throw new Error(
-      `${file} mapped ${records.size} records with ${stats.failed} failures for ${sourceId}; not stored`
-    );
-
   const writer = new R2ArtifactWriter(
     {
       accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
@@ -56,6 +50,18 @@ export async function ingest(sourceId: string, file: string, dryRun: boolean): P
     },
     dryRun
   );
+  // The forced refresh after a store maps the same bytes; the shared cache bills them once.
+  const { records, stats } = await mapRows(
+    config,
+    new Map([[alias, bytes]]),
+    undefined,
+    writer.pdfExtractionCache(sourceId)
+  );
+  if (stats.failed > 0 || records.size === 0)
+    throw new Error(
+      `${file} mapped ${records.size} records with ${stats.failed} failures for ${sourceId}; not stored`
+    );
+
   assertRecordCountForWrite(records.size, sourceId, await writer.readState(sourceId));
   await writer.writeDrop(sourceId, bytes);
   log('info', dryRun ? 'drop_validated' : 'drop_stored', {

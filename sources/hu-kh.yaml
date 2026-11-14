@@ -29,51 +29,12 @@ primary: register
 delimiter: ','
 format: pdf
 
-# A3 landscape table, bilingual (HU/EN) header repeated per page, no cover page.
-#
-# The mark prints as separately positioned glyph runs, so the anchor pattern must tolerate the stray
-# internal spaces the extractor sees ("HA- GZQ", "HA -MEI", "HA - 742") — `\s*`, not `\s?`, because
-# a run rendered with two spaces would otherwise match no anchor at all, and a PDF source has no
-# record_count to notice the row going missing. The suffix is 3 or 4
-# characters: HA-YFKA sits in the same publication as HA-YFK, so `{3}` would truncate real rows into
-# phantom duplicates.
-#
-# Only the unrotated orientation has been observed; measure the bands against a real file in the
-# other one before adding a second layout.
+# Glyph runs can put two spaces around the hyphen ("HA - 742"), so `\s*`. HA-YFKA and HA-YFK share
+# a publication, so the suffix is `{3,4}`: `{3}` leaves a 4-char mark unmatched and fails the check.
 pdf:
-  # The register also prints a second line, "HU-16" (an EC135 P3 whose serial and owner repeat HA-HUN's),
-  # inside HA-TWN's record. Unanchored it fused into HA-TWN and nulled that record's mark, failing
-  # the run; anchored it is its own record, skipped below because it is not an HA- mark.
-  anchor_pattern: '^(?:HA\s*-\s*[A-Z0-9]{3,4}|HU\s*-\s*\d{2})$'
-  anchor_field: mark
-  layouts:
-    - field_axis: x
-      # Cells centre on their row, so a multi-line one reaches both above and below its own mark.
-      # The tightest mark-to-mark gap is 18.84pt, and that default 9.42pt reach clips a wrapped party
-      # name on a page's outermost record. Measured against the live file: mapped columns reach 12pt
-      # below the bottom mark and 11.88pt above the top one, the page footer 39.8pt below and the
-      # column header 28.92pt above. Only an owner-address line (29.67pt above, dropped as PII)
-      # falls outside 20pt.
-      before_first_anchor_reach: 20
-      # The reach already stops short of the footer; the pattern names it so a publication that moves
-      # it up cannot feed it into the last record.
-      before_first_anchor_pattern: '^(?!Méret:|Frissítési dátum|\d+/\d+$).'
-      after_last_anchor_reach: 20
-      # Values are centred, so each band is the centre of that column's observed x spread. `year` is
-      # declared left of its own ink (278.5–287.1): the wide owner column beside it (336.5–469.8)
-      # would otherwise pull the midpoint between the two bands inside the owner's spread.
-      column_pos:
-        - 83 # mark
-        - 143 # type
-        - 212 # serial
-        - 260 # year
-        - 403 # owner
-        - 558 # owner_addr (PII — read only so the column cannot swallow its neighbours)
-        - 711 # operator
-        - 822 # operator_addr (PII — same)
-        - 916 # reg_date
-        - 990 # arc_expiry
-        - 1068 # arc_issue
+  mark_field: mark
+  # "HU-16" prints inside HA-TWN's cell block and extracts as its own row, skipped below.
+  mark_pattern: 'HA\s*-\s*[A-Z0-9]{3,4}|HU\s*-\s*\d{2}'
 
 columns:
   register:

@@ -1,0 +1,49 @@
+[
+  [
+    {
+      "mark": "VIO",
+      "seq": "732",
+      "mfr": "Diamond Aircraft Industries\nGmbH Austrija",
+      "model": "DA40 NG",
+      "serial": "40.N652",
+      "owner": "Aviotrade d.o.o.",
+      "address": "Kučanska 24, Varaždin"
+    },
+    {
+      "mark": "XCA",
+      "seq": "478",
+      "mfr": "Aero-klub Zagreb",
+      "model": "CA-10 (Penkala)",
+      "serial": "001",
+      "owner": "Aero-klub Zagreb",
+      "address": "Jurišićeva 5, 10 000 Zagreb"
+    },
+    {
+      "mark": "XGB",
+      "seq": "306",
+      "mfr": "Soko Mostar",
+      "model": "N-60",
+      "serial": "23122",
+      "owner": "Karting centar-Zagreb i\nZagrebački prometni zavod\nd.o.o.",
+      "address": "G.Krkleca 23, 10 000 Zagreb\nLjubljanska avenija 1, 10 000 Zagreb"
+    },
+    {
+      "mark": "ZAG",
+      "seq": "693",
+      "mfr": "Airbus S.A.S.",
+      "model": "A319-111",
+      "serial": "3443",
+      "owner": "ACS AERO 4 ALPHA\nLIMITED",
+      "address": "Block A, George's Quay Plaza,\nGeorge's Quay , Dublin 2"
+    },
+    {
+      "mark": "ZYZ",
+      "seq": "661",
+      "mfr": "SG AVIATION",
+      "model": "Storm Century 04",
+      "serial": "S5-01S0047",
+      "owner": "Fizička osoba",
+      "address": null
+    }
+  ]
+]
