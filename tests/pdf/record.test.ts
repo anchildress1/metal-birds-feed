@@ -120,6 +120,16 @@ describe('recordExtraction', () => {
     }
   );
 
+  it('rejects a fixtures root with a .. segment, even one resolving to real fixtures', async () => {
+    stage('mv-caa', { 'a.pdf': TWO_CHUNKS });
+    const traversing = join(root, 'mv-caa') + '/../.';
+    await expect(recordExtraction('mv-caa', traversing)).rejects.toThrow(
+      `Path traversal rejected: ${traversing}`
+    );
+    expect(requestTableRows).not.toHaveBeenCalled();
+    expect(readdirSync(join(root, 'mv-caa'))).toEqual(['input']);
+  });
+
   it('rejects a source that is not a PDF source', async () => {
     await expect(recordExtraction('faa', root)).rejects.toThrow('Source "faa" is not a PDF source');
     expect(readdirSync(root)).toEqual([]);
