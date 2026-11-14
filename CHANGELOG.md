@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.3.0...v3.0.0) (2026-11-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* status-less registers serve `unknown` instead of `valid`; feed.sqlite user_version 11.
+
+### Features
+
+* read PDF registers with Gemini instead of page geometry ([#247](https://github.com/anchildress1/metal-birds-feed/issues/247)) ([f13d682](https://github.com/anchildress1/metal-birds-feed/commit/f13d682d29a200bed931dbe66eb4bc51b58230ae))
+
+
+### Bug Fixes
+
+* settle ZIP streams and preserve translation sequencing ([#234](https://github.com/anchildress1/metal-birds-feed/issues/234)) ([fff2f7a](https://github.com/anchildress1/metal-birds-feed/commit/fff2f7ae6b8b44164f8f458d17ce8c7d16465837))
+* unknown status, first_seen ranking, mv-caa parsing, image repo ([3374915](https://github.com/anchildress1/metal-birds-feed/commit/3374915306d4873891395fbb44b88202def8259c))
+
 ## [2.3.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.2.0...v2.3.0) (2026-10-25)
 
 
