@@ -1,8 +1,10 @@
-.gcloudignore
-.git
-.gitignore
-gha-creds-*.json
-#!include:.gitignore
-
-# The generated database is intentionally untracked but required by Dockerfile.
-!feed.sqlite
+# Allowlist: the Dockerfile COPYs only these, and anything added to the repo stays out of the
+# upload by default. A new COPY source must be re-included here or the build fails.
+/*
+!/Dockerfile
+!/feed.sqlite
+!/src/
+/src/*
+!/src/service/
+!/src/feed-row.ts
+!/src/registration.ts
