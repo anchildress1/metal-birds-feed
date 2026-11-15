@@ -290,4 +290,5 @@ commands are identical — the only difference is who types them.
 | Understand how the pipeline works     | [README.md](../README.md#how-it-works)   |
 | Check whether I may use a registry    | [DATA_LICENSES.md](../DATA_LICENSES.md)  |
 | Know the rules assistants follow here | [AGENTS.md](../AGENTS.md)                |
+| Check when a source last refreshed    | `make state SOURCE=<id>`                 |
 | See every available command           | `make help`                              |

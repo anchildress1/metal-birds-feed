@@ -549,4 +549,5 @@ Still stuck? Open an issue with the command you ran and the last 20 lines of `lo
 | Understand how the pipeline works  | [README.md](../README.md#how-it-works)                   |
 | Check whether I may use a registry | [DATA_LICENSES.md](../DATA_LICENSES.md)                  |
 | Add a registry of my own           | [README.md](../README.md#adding-a-registry-source)       |
+| Check when a source last refreshed | `make state SOURCE=<id>`                                 |
 | See every available command        | `make help`                                              |

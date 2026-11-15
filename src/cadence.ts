@@ -35,6 +35,11 @@ const FUTURE_TOLERANCE_MS = 10 * 60_000;
 // A source is considered overdue once it has been silent for 1.5× its declared cadence.
 export const STALENESS_MULTIPLIER = 1.5;
 
+// Unrounded on purpose: every reader of the threshold must see the figure isOverdue compares, or a
+// rounded one reads as not yet crossed while the source is already overdue.
+export const stalenessThresholdDays = (cadenceDays: number): number =>
+  cadenceDays * STALENESS_MULTIPLIER;
+
 // Epoch 0 is a UTC midnight, so flooring ms to days yields the UTC day number.
 const utcDay = (d: Date): number => Math.floor(d.getTime() / MS_PER_DAY);
 
@@ -48,7 +53,7 @@ export const isOverdue = (state: SourceState | null, cadenceDays: number, now: D
   const changedAt = new Date(state.last_content_change).getTime();
   // Fail open: returning false here would disarm the staleness alarm for that source.
   if (unusable(changedAt, now)) return true;
-  return now.getTime() - changedAt > cadenceDays * STALENESS_MULTIPLIER * MS_PER_DAY;
+  return now.getTime() - changedAt > stalenessThresholdDays(cadenceDays) * MS_PER_DAY;
 };
 
 export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
@@ -66,6 +71,14 @@ export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: 
   return utcDay(now) - utcDay(lastRun) < cadenceDays;
 };
 
+export const daysSinceChange = (lastChange: string | null, now: Date): number | null => {
+  const changedAt = lastChange === null ? Number.NaN : new Date(lastChange).getTime();
+  // Null is exactly the cases isOverdue treats as unknown; skew within the tolerance clamps to 0.
+  return unusable(changedAt, now)
+    ? null
+    : Math.max(0, Math.floor((now.getTime() - changedAt) / MS_PER_DAY));
+};
+
 export const buildStalenessEntry = (
   source: string,
   cadenceDays: number,
@@ -73,16 +86,11 @@ export const buildStalenessEntry = (
   now: Date
 ): StalenessEntry => {
   const lastChange = state?.last_content_change ?? null;
-  const changedAt = lastChange === null ? Number.NaN : new Date(lastChange).getTime();
-  // Null is exactly the cases isOverdue treats as unknown; skew within the tolerance clamps to 0.
-  const daysSinceChange = unusable(changedAt, now)
-    ? null
-    : Math.max(0, Math.floor((now.getTime() - changedAt) / MS_PER_DAY));
   return {
     source,
     cadence_days: cadenceDays,
     last_content_change: lastChange,
-    days_since_change: daysSinceChange,
+    days_since_change: daysSinceChange(lastChange, now),
     overdue: isOverdue(state, cadenceDays, now),
   };
 };

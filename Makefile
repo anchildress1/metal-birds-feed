@@ -1,4 +1,4 @@
-.PHONY: help install check format format-check lint typecheck test build refresh ingest record-extraction secret-scan clean serve assemble-feed deploy-only deploy
+.PHONY: help install check format format-check lint typecheck test build refresh ingest record-extraction state secret-scan clean serve assemble-feed deploy-only deploy
 
 .DEFAULT_GOAL := help
 
@@ -73,6 +73,9 @@ ingest: build ## Store a browser-downloaded register file (SOURCE=<id> FILE=drop
 # Billed: one Gemini call per marked chunk. Review `git diff fixtures/` against the PDFs.
 record-extraction: build ## Re-record Gemini's response for a PDF source's fixtures (SOURCE=<id>)
 	@$(LOAD_ENV); $(BUN) run dist/record-extraction.js "$${SOURCE:-}"
+
+state: build ## Show a source's stored refresh state against its staleness threshold (SOURCE=<id>, else .env REFRESH_SOURCE)
+	@$(LOAD_ENV); $(BUN) run dist/source-state.js "$${SOURCE:-$${REFRESH_SOURCE:-}}"
 
 secret-scan: ## Scan staged changes for accidentally committed secrets
 	@if command -v gitleaks > /dev/null; then \

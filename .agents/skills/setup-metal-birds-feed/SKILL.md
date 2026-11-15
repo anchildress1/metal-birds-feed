@@ -132,9 +132,12 @@ rather than the finish line.
 make refresh
 ```
 
-Success is `event=pipeline_complete` in `logs/pipeline.log`. Confirm the object landed:
-`aircraft/nl-ilt.sqlite` in the bucket (via the Cloudflare MCP server if configured, otherwise ask
-the user to look).
+Success, all three:
+
+- `event=pipeline_complete` in `logs/pipeline.log`.
+- `aircraft/nl-ilt.sqlite` in the bucket (via the Cloudflare MCP server if configured, otherwise ask
+  the user to look).
+- `make state SOURCE=nl-ilt` logs `event=source_state` with a non-null `last_run`.
 
 **Full configured-source pull — confirm all five before running:**
 

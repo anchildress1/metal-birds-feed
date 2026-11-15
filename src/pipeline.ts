@@ -15,7 +15,7 @@ import {
   shouldSkip,
   buildStalenessEntry,
   buildSummaryMarkdown,
-  STALENESS_MULTIPLIER,
+  stalenessThresholdDays,
 } from './cadence.js';
 import type { SourceState, StalenessEntry } from './cadence.js';
 
@@ -204,7 +204,7 @@ const createStalenessIssue = async (
   const existing = (await listRes.json()) as Array<{ title: string }>;
   if (existing.some((i) => isStalenessIssueFor(i.title, entry.source))) return;
 
-  const threshold = Math.round(entry.cadence_days * STALENESS_MULTIPLIER);
+  const threshold = stalenessThresholdDays(entry.cadence_days);
   const body = [
     '## Source cadence alert',
     '',
