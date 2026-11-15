@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0](https://github.com/anchildress1/metal-birds-feed/compare/v3.0.0...v3.1.0) (2026-11-15)
+
+
+### Features
+
+* add make state to report a source's staleness standing ([#252](https://github.com/anchildress1/metal-birds-feed/issues/252)) ([7904678](https://github.com/anchildress1/metal-birds-feed/commit/790467888807d1a6c842b81319f3355a6bcdc8f9))
+
+
+### Bug Fixes
+
+* **sources:** poll lt-tka at its observed publication rhythm ([#248](https://github.com/anchildress1/metal-birds-feed/issues/248)) ([d435590](https://github.com/anchildress1/metal-birds-feed/commit/d4355905814cff9fbb187b92fe2ee6e29ac045e9))
+
 ## [3.0.0](https://github.com/anchildress1/metal-birds-feed/compare/v2.3.0...v3.0.0) (2026-11-14)
 
 
