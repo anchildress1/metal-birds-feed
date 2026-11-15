@@ -23,6 +23,7 @@ make state SOURCE=<id>   # or bare `make state` when .env sets REFRESH_SOURCE
 | `last_run`            | last completed run that wrote state                                      |
 | `last_content_change` | last run whose pre-localization records differed (`upstream_hash`)       |
 | `paused`              | outside the scheduled matrix; refreshed only by hand                     |
+| `manual`              | every refresh re-maps the stored browser download; never fetches         |
 | `threshold_days`      | `cadence_days × 1.5`, unrounded: overdue once `days_since_change` passes |
 | `days_since_change`   | whole days, floored; can read below `threshold_days` while overdue       |
 | `overdue`             | what the next CI evaluation decides: trust it over the two figures       |
@@ -33,11 +34,12 @@ make state SOURCE=<id>   # or bare `make state` when .env sets REFRESH_SOURCE
 
 ## 2. Classify
 
-| Evidence                                                      | Cause                            | Go to |
-| ------------------------------------------------------------- | -------------------------------- | ----- |
-| `paused=false`, `last_run` before today's scheduled refresh   | refresh failing                  | 3a    |
-| `paused=true`, `last_run` old                                 | blocked upstream; manual refresh | 3b    |
-| `last_run` current, `last_content_change` unmoved by that run | upstream published nothing new   | 4     |
+| Evidence                                                                      | Cause                            | Go to |
+| ----------------------------------------------------------------------------- | -------------------------------- | ----- |
+| `paused=false`, `last_run` before today's scheduled refresh                   | refresh failing                  | 3a    |
+| `paused=true`, `last_run` old                                                 | blocked upstream; manual refresh | 3b    |
+| `manual=true`, `last_content_change` unmoved                                  | no newer file ingested           | 3c    |
+| `manual=false`, `last_run` current, `last_content_change` unmoved by that run | upstream published nothing new   | 4     |
 
 - Never key on `artifact_unchanged`: it follows `content_hash`, so a translation-only rewrite skips it while `last_content_change` stays put.
 
@@ -50,6 +52,13 @@ make state SOURCE=<id>   # or bare `make state` when .env sets REFRESH_SOURCE
 
 - The user runs it from a network that reaches the upstream (VPN for lt-tka): `REFRESH_SOURCE=<id>` in `.env`, then `make refresh`, then `make state`.
 - `last_content_change` unmoved → step 4.
+
+### 3c. Manual-download source
+
+- A current `last_run` proves only that the stored drop was re-mapped, never that the agency is silent.
+- Check the agency page (`download.url`) for a file newer than the last ingest.
+- Newer file → the user downloads it in a browser, then `make ingest SOURCE=<id> FILE=drops/<file>`, then `make state`.
+- No newer file → step 4.
 
 ## 4. Verify upstream before blaming cadence
 

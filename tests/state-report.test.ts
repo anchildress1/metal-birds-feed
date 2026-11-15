@@ -24,11 +24,15 @@ const state = (lastChange: string): SourceState => ({
   content_hash: 'a'.repeat(64),
   upstream_hash: 'b'.repeat(64),
 });
-const config = (cadence_days?: number, paused?: boolean) => () => ({ cadence_days, paused });
+const config = (cadence_days?: number, paused?: boolean, manual?: boolean) => () => ({
+  cadence_days,
+  paused,
+  download: { manual },
+});
 // Config is injected, not read from sources/: a cadence edit there must not move these assertions.
-const deps = (s: SourceState | null, cadence?: number, paused?: boolean) => ({
+const deps = (s: SourceState | null, cadence?: number, paused?: boolean, manual?: boolean) => ({
   readState: () => Promise.resolve(s),
-  loadConfig: config(cadence, paused),
+  loadConfig: config(cadence, paused, manual),
   now: NOW,
 });
 
@@ -48,6 +52,7 @@ describe('reportSourceState', () => {
       record_count: 2955,
       cadence_days: 41,
       paused: true,
+      manual: false,
       threshold_days: 61.5,
       days_since_change: 20,
       overdue: false,
@@ -77,10 +82,16 @@ describe('reportSourceState', () => {
     expect(report).toMatchObject({
       cadence_days: null,
       paused: false,
+      manual: false,
       threshold_days: null,
       days_since_change: 12,
       overdue: false,
     });
+  });
+
+  it('flags a manual-download source', async () => {
+    const report = await reportSourceState('xx-test', deps(null, 30, false, true));
+    expect(report.manual).toBe(true);
   });
 
   it('flags overdue past the unrounded threshold, before the rounded one', async () => {

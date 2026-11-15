@@ -13,6 +13,7 @@ export interface StateReport {
   record_count: number | null;
   cadence_days: number | null;
   paused: boolean;
+  manual: boolean;
   threshold_days: number | null;
   days_since_change: number | null;
   overdue: boolean;
@@ -20,7 +21,9 @@ export interface StateReport {
 
 export interface StateReportDeps {
   readState: (source: string) => Promise<SourceState | null>;
-  loadConfig: (source: string) => Pick<SourceConfig, 'cadence_days' | 'paused'>;
+  loadConfig: (
+    source: string
+  ) => Pick<SourceConfig, 'cadence_days' | 'paused'> & { download: { manual?: boolean } };
   now: Date;
 }
 
@@ -48,6 +51,7 @@ export const reportSourceState = async (
     record_count: state?.record_count ?? null,
     cadence_days: cadence,
     paused: config.paused === true,
+    manual: config.download.manual === true,
     threshold_days: cadence === null ? null : stalenessThresholdDays(cadence),
     days_since_change: daysSinceChange(state?.last_content_change ?? null, now),
     overdue: cadence !== null && isOverdue(state, cadence, now),
