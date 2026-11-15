@@ -3,6 +3,7 @@ import { daysSinceChange, isOverdue, stalenessThresholdDays, type SourceState } 
 import { loadSourceConfig } from './config/loader.js';
 import { log } from './logger.js';
 import { r2ConfigFromEnv, validateSourceId } from './pipeline.js';
+import type { SourceConfig } from './types/config.js';
 import { R2ArtifactWriter } from './writer.js';
 
 export interface StateReport {
@@ -17,18 +18,27 @@ export interface StateReport {
   overdue: boolean;
 }
 
-const readFromR2 = (source: string): Promise<SourceState | null> =>
-  new R2ArtifactWriter(r2ConfigFromEnv()).readState(source);
+export interface StateReportDeps {
+  readState: (source: string) => Promise<SourceState | null>;
+  loadConfig: (source: string) => Pick<SourceConfig, 'cadence_days' | 'paused'>;
+  now: Date;
+}
+
+const defaults = (): StateReportDeps => ({
+  readState: (source) => new R2ArtifactWriter(r2ConfigFromEnv()).readState(source),
+  loadConfig: (source) => loadSourceConfig(resolve('sources', `${source}.yaml`)),
+  now: new Date(),
+});
 
 export const reportSourceState = async (
   source: string,
-  readState: (source: string) => Promise<SourceState | null> = readFromR2,
-  now = new Date()
+  deps: Partial<StateReportDeps> = {}
 ): Promise<StateReport> => {
+  const { readState, loadConfig, now } = { ...defaults(), ...deps };
   validateSourceId(source);
   if (source === '')
     throw new Error('usage: make state SOURCE=<id>, or set REFRESH_SOURCE in .env');
-  const config = loadSourceConfig(resolve('sources', `${source}.yaml`));
+  const config = loadConfig(source);
   const cadence = config.cadence_days ?? null;
   const state = await readState(source);
   const report: StateReport = {
