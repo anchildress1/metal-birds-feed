@@ -42,7 +42,8 @@ describe('reportSourceState', () => {
       last_content_change: '2026-10-24T13:24:31.179Z',
       record_count: 2955,
       cadence_days: 41,
-      threshold_days: 62,
+      paused: true,
+      threshold_days: 61.5,
       days_since_change: 20,
       overdue: false,
     });
@@ -66,9 +67,20 @@ describe('reportSourceState', () => {
     });
   });
 
-  it('reports no threshold for a source with no cadence', async () => {
-    const report = await reportSourceState('au-casa', reader(state('2020-01-01T00:00:00Z')), NOW);
-    expect(report).toMatchObject({ cadence_days: null, threshold_days: null, overdue: false });
+  it('reports a change age but no threshold for a source with no cadence', async () => {
+    const report = await reportSourceState('au-casa', reader(state('2026-11-02T12:00:00Z')), NOW);
+    expect(report).toMatchObject({
+      cadence_days: null,
+      paused: false,
+      threshold_days: null,
+      days_since_change: 12,
+      overdue: false,
+    });
+  });
+
+  it('flags overdue past the unrounded threshold, before the rounded one', async () => {
+    const report = await reportSourceState('lt-tka', reader(state('2026-09-13T18:00:00Z')), NOW);
+    expect(report).toMatchObject({ threshold_days: 61.5, days_since_change: 61, overdue: true });
   });
 
   it.each([
@@ -90,17 +102,21 @@ describe('reportSourceState', () => {
   });
 
   it('reads the stored state from R2 by default', async () => {
-    const saved = { ...process.env };
-    Object.assign(process.env, {
+    const env = {
       MBF_R2_ACCOUNT_ID: 'a',
       MBF_R2_ACCESS_KEY_ID: 'k',
       MBF_R2_SECRET_ACCESS_KEY: 's',
       MBF_R2_BUCKET_NAME: 'b',
-    });
+    };
+    const saved = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, env);
     try {
       await reportSourceState('lt-tka');
     } finally {
-      process.env = saved;
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
     }
     expect(r2Constructor).toHaveBeenCalledWith({
       accountId: 'a',
