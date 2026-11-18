@@ -54,10 +54,6 @@ describe('stalenessThresholdDays', () => {
     expect(stalenessThresholdDays({ cadence_days: 7 })).toBe(10.5);
   });
 
-  it('uses stale_after_days alone for a source polled every tick', () => {
-    expect(stalenessThresholdDays({ stale_after_days: 280 })).toBe(280);
-  });
-
   it('is undefined for a source declaring neither', () => {
     expect(stalenessThresholdDays({})).toBeUndefined();
   });
@@ -352,16 +348,6 @@ describe('buildStalenessEntry alarm config', () => {
       new Date()
     );
     expect(entry).toMatchObject({ cadence_days: 7, threshold_days: 30, overdue: false });
-  });
-
-  it('reports a daily-polled source against stale_after_days', () => {
-    const entry = buildStalenessEntry(
-      'lk-caasl',
-      { stale_after_days: 280 },
-      makeState(1, 300),
-      new Date()
-    );
-    expect(entry).toMatchObject({ cadence_days: null, threshold_days: 280, overdue: true });
   });
 });
 

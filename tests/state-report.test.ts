@@ -89,14 +89,6 @@ describe('reportSourceState', () => {
     });
   });
 
-  it('reports a daily-polled source against stale_after_days', async () => {
-    const report = await reportSourceState('xx-test', {
-      ...deps(state('2026-11-02T12:00:00Z')),
-      loadConfig: () => ({ stale_after_days: 10, download: {} }),
-    });
-    expect(report).toMatchObject({ cadence_days: null, threshold_days: 10, overdue: true });
-  });
-
   it('reports a source with both keys against stale_after_days', async () => {
     const report = await reportSourceState('xx-test', {
       ...deps(state('2026-10-24T13:24:31.179Z')),

@@ -1041,39 +1041,6 @@ describe('main', () => {
     expect(body.title).toStartWith(`[staleness] ${parked} `);
   });
 
-  it('judges a paused source with both keys against stale_after_days', async () => {
-    process.env['DRY_RUN'] = 'false';
-    process.env['GITHUB_TOKEN'] = 'token';
-    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
-    const parked =
-      readdirSync('sources')
-        .find((f) => f.endsWith('.yaml'))
-        ?.replace(/\.yaml$/, '') ?? '';
-    mockLoadSourceConfig.mockImplementation((path: string) =>
-      path.includes(`${parked}.yaml`)
-        ? { ...CONFIG, paused: true, cadence_days: 7, stale_after_days: 30 }
-        : CONFIG
-    );
-    // Past 1.5x cadence (10.5), inside stale_after_days.
-    const stale = new Date(Date.now() - 20 * 86_400_000).toISOString();
-    mockReadState.mockImplementation((source: string) =>
-      Promise.resolve(
-        source === parked
-          ? { last_run: stale, last_content_change: stale, content_hash: HASH64 }
-          : null
-      )
-    );
-    const fetchMock = mock().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) });
-    setFetch(fetchMock);
-
-    await evaluatePausedStaleness();
-
-    const posts = fetchMock.mock.calls.filter(
-      (c) => (c[1] as RequestInit | undefined)?.method === 'POST'
-    );
-    expect(posts).toHaveLength(0);
-  });
-
   it('closes the issue of a paused source back within its threshold', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';

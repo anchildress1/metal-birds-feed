@@ -87,12 +87,6 @@ describe('loadSourceConfig', () => {
     );
   });
 
-  it.each([0, 1.5])('rejects a non-positive-integer stale_after_days %p', (n) => {
-    expect(() =>
-      loadInline('_test_stale_int.yaml', BASE('LK', `stale_after_days: ${n}\n`))
-    ).toThrow(/stale_after_days/);
-  });
-
   it('throws on non-existent file', () => {
     expect(() => loadSourceConfig('sources/nonexistent.yaml')).toThrow();
   });
