@@ -270,7 +270,8 @@ const SourceConfigSchema = z
     source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
     registration: z.string().min(1),
     cadence_days: z.number().int().positive().optional(),
-    stale_after_days: z.number().int().positive().optional(),
+    // A register silent for a year is stale whatever its history.
+    stale_after_days: z.number().int().positive().max(365).optional(),
     merge_duplicates: z
       .strictObject({
         fields: z.array(z.string().min(1)).min(1),

@@ -4,9 +4,8 @@ country: LK
 language: en
 encoding: utf8
 trim_all: true
-# Polled daily: editions since 2023-09-18 land 118 to 337 days apart, too uneven for a poll window.
-# The alarm is 1.5x the longest of those gaps; see DATA_LICENSES.md "Update cadence".
-stale_after_days: 506
+# No cadence_days: editions land too unevenly for a poll window; see DATA_LICENSES.md "Update cadence".
+stale_after_days: 365
 
 download:
   # Each edition lands under a new month folder and dated filename

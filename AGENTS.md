@@ -215,7 +215,7 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
   - `FORCE_REFRESH` without `REFRESH_SOURCE` throws in `resolveSources()`: the one guard for CI discovery and `make refresh`.
 - Every source declares an alarm: `cadence_days` (alarm at 1.5×) or `stale_after_days` (a loader test enforces it).
   - `stale_after_days` overrides the 1.5× threshold. Set it where observed gaps run past 1.5× the poll interval. Without `cadence_days` the source polls every tick.
-  - Set it to 1.5× the longest observed gap. It must exceed `cadence_days` (the loader rejects it otherwise).
+  - Set it to 1.5× the longest observed gap, at most 365. It must exceed `cadence_days`; the loader enforces both.
 - Staleness issues open and close on level, evaluated every CI run.
   - Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
   - A paused source is outside the matrix: the `paused-staleness` job reads its stored state without fetching; `main()` never evaluates one.
