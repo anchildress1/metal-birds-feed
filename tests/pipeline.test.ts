@@ -1041,6 +1041,39 @@ describe('main', () => {
     expect(body.title).toStartWith(`[staleness] ${parked} `);
   });
 
+  it('judges a paused source with both keys against stale_after_days', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    const parked =
+      readdirSync('sources')
+        .find((f) => f.endsWith('.yaml'))
+        ?.replace(/\.yaml$/, '') ?? '';
+    mockLoadSourceConfig.mockImplementation((path: string) =>
+      path.includes(`${parked}.yaml`)
+        ? { ...CONFIG, paused: true, cadence_days: 7, stale_after_days: 30 }
+        : CONFIG
+    );
+    // Past 1.5x cadence (10.5), inside stale_after_days.
+    const stale = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    mockReadState.mockImplementation((source: string) =>
+      Promise.resolve(
+        source === parked
+          ? { last_run: stale, last_content_change: stale, content_hash: HASH64 }
+          : null
+      )
+    );
+    const fetchMock = mock().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) });
+    setFetch(fetchMock);
+
+    await evaluatePausedStaleness();
+
+    const posts = fetchMock.mock.calls.filter(
+      (c) => (c[1] as RequestInit | undefined)?.method === 'POST'
+    );
+    expect(posts).toHaveLength(0);
+  });
+
   it('closes the issue of a paused source back within its threshold', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
@@ -1079,6 +1112,35 @@ describe('main', () => {
 
   // Escalation makes an overdue source run instead of skip, and a silent register is often silent
   // because its download broke — so a rejected run must still report a staleness reading.
+  it('still opens a staleness issue for a failed daily-polled source past stale_after_days', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    mockLoadSourceConfig.mockReturnValue({ ...CONFIG, stale_after_days: 20 });
+    mockReadState.mockResolvedValue({
+      last_run: new Date(Date.now() - 86_400_000).toISOString(),
+      last_content_change: new Date(Date.now() - 25 * 86_400_000).toISOString(),
+      content_hash: HASH64,
+    });
+    mockDownload.mockRejectedValue(new Error('unable to verify the first certificate'));
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockResolvedValueOnce({ ok: true });
+    setFetch(fetchMock);
+    const exitSpy = spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    try {
+      await main();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+      const body = JSON.parse(createCall.body as string) as { title: string };
+      expect(body.title).toContain('[staleness] faa');
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
   it('still opens a staleness issue when the run itself fails', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
@@ -1242,6 +1304,33 @@ describe('main', () => {
     const body = JSON.parse(createCall.body as string) as { title: string; body: string };
     expect(body.title).toContain('[staleness] faa');
     expect(body.body).toContain('cadence gate is bypassed');
+  });
+
+  it('opens a staleness issue for a daily-polled source past stale_after_days', async () => {
+    process.env['DRY_RUN'] = 'false';
+    process.env['GITHUB_TOKEN'] = 'token';
+    process.env['GITHUB_REPOSITORY'] = 'owner/repo';
+    process.env['REFRESH_SOURCE'] = 'faa';
+    mockLoadSourceConfig.mockReturnValueOnce({ ...CONFIG, stale_after_days: 20 });
+    mockReadState.mockResolvedValueOnce({
+      last_run: new Date(Date.now() - 86_400_000).toISOString(),
+      last_content_change: new Date(Date.now() - 25 * 86_400_000).toISOString(),
+      content_hash: HASH64,
+    });
+    const fetchMock = mock()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) }) // list open issues
+      .mockResolvedValueOnce({ ok: true }); // create issue
+    setFetch(fetchMock);
+
+    await main();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [[, createCall]] = [fetchMock.mock.calls[1]] as [[string, RequestInit]];
+    const body = JSON.parse(createCall.body as string) as { title: string; body: string };
+    expect(body.body).toContain('**Cadence:** daily');
+    expect(body.body).toContain('(threshold: 20 days)');
+    expect(body.body).toContain('raise `stale_after_days`');
+    expect(body.body).not.toContain('cadence gate is bypassed');
   });
 
   it('logs and skips issue creation when the open-issues list fetch fails', async () => {
@@ -1507,7 +1596,7 @@ describe('main', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('makes no fetch calls when source has no cadence_days', async () => {
+  it('makes no fetch calls when source declares no alarm', async () => {
     process.env['DRY_RUN'] = 'false';
     process.env['GITHUB_TOKEN'] = 'token';
     process.env['GITHUB_REPOSITORY'] = 'owner/repo';

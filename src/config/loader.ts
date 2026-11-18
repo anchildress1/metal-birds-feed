@@ -270,6 +270,7 @@ const SourceConfigSchema = z
     source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
     registration: z.string().min(1),
     cadence_days: z.number().int().positive().optional(),
+    stale_after_days: z.number().int().positive().optional(),
     merge_duplicates: z
       .strictObject({
         fields: z.array(z.string().min(1)).min(1),
@@ -427,7 +428,15 @@ const SourceConfigSchema = z
   // total would describe today's register rather than the dropped file's.
   .refine((c) => c.download.manual !== true || c.record_count?.url === undefined, {
     message: 'record_count.url is not supported with download.manual',
-  });
+  })
+  // At or below the poll interval the alarm trips before a scheduled poll could see new content.
+  .refine(
+    (c) =>
+      c.stale_after_days === undefined ||
+      c.cadence_days === undefined ||
+      c.stale_after_days > c.cadence_days,
+    { message: 'stale_after_days must exceed cadence_days' }
+  );
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 

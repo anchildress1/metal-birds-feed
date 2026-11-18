@@ -21,9 +21,12 @@ export interface StateReport {
 
 export interface StateReportDeps {
   readState: (source: string) => Promise<SourceState | null>;
-  loadConfig: (
-    source: string
-  ) => Pick<SourceConfig, 'cadence_days' | 'paused'> & { download: { manual?: boolean } };
+  loadConfig: (source: string) => Pick<
+    SourceConfig,
+    'cadence_days' | 'stale_after_days' | 'paused'
+  > & {
+    download: { manual?: boolean };
+  };
   now: Date;
 }
 
@@ -42,19 +45,19 @@ export const reportSourceState = async (
   if (source === '')
     throw new Error('usage: make state SOURCE=<id>, or set REFRESH_SOURCE in .env');
   const config = loadConfig(source);
-  const cadence = config.cadence_days ?? null;
+  const threshold = stalenessThresholdDays(config) ?? null;
   const state = await readState(source);
   const report: StateReport = {
     source,
     last_run: state?.last_run ?? null,
     last_content_change: state?.last_content_change ?? null,
     record_count: state?.record_count ?? null,
-    cadence_days: cadence,
+    cadence_days: config.cadence_days ?? null,
     paused: config.paused === true,
     manual: config.download.manual === true,
-    threshold_days: cadence === null ? null : stalenessThresholdDays(cadence),
+    threshold_days: threshold,
     days_since_change: daysSinceChange(state?.last_content_change ?? null, now),
-    overdue: cadence !== null && isOverdue(state, cadence, now),
+    overdue: threshold !== null && isOverdue(state, threshold, now),
   };
   log('info', 'source_state', { ...report });
   return report;

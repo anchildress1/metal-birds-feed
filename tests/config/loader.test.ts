@@ -62,6 +62,37 @@ describe('loadSourceConfig', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('gives every shipped source a staleness alarm', () => {
+    const files = readdirSync(resolve(REPO_ROOT, 'sources')).filter((f) => f.endsWith('.yaml'));
+    const silent = files.filter((f) => {
+      const c = loadSourceConfig(`sources/${f}`);
+      return c.cadence_days === undefined && c.stale_after_days === undefined;
+    });
+    expect(silent).toEqual([]);
+  });
+
+  it.each([
+    ['alone', 'stale_after_days: 280\n', 280],
+    ['above cadence_days', 'cadence_days: 30\nstale_after_days: 31\n', 31],
+  ])('accepts stale_after_days %s', (_label, extra, expected) => {
+    expect(loadInline('_test_stale_ok.yaml', BASE('LK', extra)).stale_after_days).toBe(expected);
+  });
+
+  it.each([
+    ['equal to cadence_days', 'cadence_days: 30\nstale_after_days: 30\n'],
+    ['below cadence_days', 'cadence_days: 30\nstale_after_days: 20\n'],
+  ])('rejects stale_after_days %s', (_label, extra) => {
+    expect(() => loadInline('_test_stale_bad.yaml', BASE('LK', extra))).toThrow(
+      /stale_after_days must exceed cadence_days/
+    );
+  });
+
+  it.each([0, 1.5])('rejects a non-positive-integer stale_after_days %p', (n) => {
+    expect(() =>
+      loadInline('_test_stale_int.yaml', BASE('LK', `stale_after_days: ${n}\n`))
+    ).toThrow(/stale_after_days/);
+  });
+
   it('throws on non-existent file', () => {
     expect(() => loadSourceConfig('sources/nonexistent.yaml')).toThrow();
   });

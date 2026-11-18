@@ -2,11 +2,11 @@
 name: staleness-triage
 description: >
   Diagnose an open `[staleness] <source> has not updated in N days` issue in metal-birds-feed and
-  land the right outcome: an upstream that is genuinely silent, a cadence_days that is too short, a
-  broken or blocked fetch, or a wrong download URL. Trigger on "staleness issue", "[staleness]",
-  "why does <source> still say N days", "<source> isn't updating", "I refreshed but the issue is
-  still open", or a link to a data-staleness issue. Do NOT trigger for onboarding a new source,
-  a failing mapping (map_error), or a deploy.
+  land the right outcome: an upstream that is genuinely silent, a cadence_days or stale_after_days
+  that is too short, a broken or blocked fetch, or a wrong download URL. Trigger on "staleness
+  issue", "[staleness]", "why does <source> still say N days", "<source> isn't updating", "I
+  refreshed but the issue is still open", or a link to a data-staleness issue. Do NOT trigger for
+  onboarding a new source, a failing mapping (map_error), or a deploy.
 ---
 
 - Staleness counts from `last_content_change`, never `last_run`: a run finding identical upstream records advances `last_run` only, so the issue stays open.
@@ -18,15 +18,15 @@ description: >
 make state SOURCE=<id>   # or bare `make state` when .env sets REFRESH_SOURCE
 ```
 
-| Field                 | Meaning                                                                  |
-| --------------------- | ------------------------------------------------------------------------ |
-| `last_run`            | last completed run that wrote state                                      |
-| `last_content_change` | last run whose pre-localization records differed (`upstream_hash`)       |
-| `paused`              | outside the scheduled matrix; refreshed only by hand                     |
-| `manual`              | every refresh re-maps the stored browser download; never fetches         |
-| `threshold_days`      | `cadence_days × 1.5`, unrounded: overdue once `days_since_change` passes |
-| `days_since_change`   | whole days, floored; can read below `threshold_days` while overdue       |
-| `overdue`             | what the next CI evaluation decides: trust it over the two figures       |
+| Field                 | Meaning                                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
+| `last_run`            | last completed run that wrote state                                        |
+| `last_content_change` | last run whose pre-localization records differed (`upstream_hash`)         |
+| `paused`              | outside the scheduled matrix; refreshed only by hand                       |
+| `manual`              | every refresh re-maps the stored browser download; never fetches           |
+| `threshold_days`      | `stale_after_days`, else `cadence_days × 1.5` (unrounded); overdue past it |
+| `days_since_change`   | whole days, floored; can read below `threshold_days` while overdue         |
+| `overdue`             | what the next CI evaluation decides: trust it over the two figures         |
 
 - `state_parse_failed` logged before the report → the nulls mean corrupt state, not none; the next successful refresh rewrites it.
 - Ignore the issue title's day count: written once at open, never updated.
@@ -68,19 +68,20 @@ make state SOURCE=<id>   # or bare `make state` when .env sets REFRESH_SOURCE
 
 ## 5. Decide
 
-Target `cadence_days` = the more frequent of declared vs observed (AGENTS.md § Refresh and staleness).
+Target `cadence_days` = the more frequent of declared vs observed (AGENTS.md § Refresh and staleness). Target `stale_after_days`: same section.
 
 | Finding                                                                         | Action                                                                    |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `cadence_days` already equals the target                                        | Real staleness: upstream behind its own rhythm. Leave open; comment (6).  |
 | `cadence_days` shorter than the target (lt-tka: 7 vs observed 41, declared 122) | `fix/*` PR raising `cadence_days` to the target.                          |
+| alarm below the target while polling is right (gaps too uneven for one window)  | `fix/*` PR setting `stale_after_days` to the target.                      |
 | URL drifted                                                                     | `fix/*` PR updating `download.url` with the catalog evidence in the body. |
 
-- Never raise `cadence_days` past the target to silence an issue: the declared or observed rhythm is the floor on polling.
+- Never raise `cadence_days` past the target to silence an issue: the declared or observed rhythm is the floor on polling. An alarm tripping on ordinary observed gaps takes `stale_after_days`.
 - Cadence PR: add/update the source's `DATA_LICENSES.md` `## Update cadence` line.
   - Declared rhythm + observed gaps between **named** publications (`gaps between the 2025-04-29 and 2026-03-09 publications ran 41, 41, 92, and 139 days`).
   - Never "silent since", "N days stale", or any figure that ages; that belongs in the issue comment.
-  - YAML comment beside `cadence_days`: one WHY line pointing to `DATA_LICENSES.md`.
+  - YAML comment beside `cadence_days` / `stale_after_days`: one WHY line pointing to `DATA_LICENSES.md`.
 
 ## 6. Comment on the issue
 

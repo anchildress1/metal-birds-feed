@@ -211,8 +211,11 @@ Key collapse on `icao_hex` where published and on `registration_key` where not; 
 - Cadence compares whole UTC days, never an ms window: `last_run` is stamped at completion, so a strict window drifts every cycle a day later.
 - A cadence skip requires the source's slice to exist; a missing slice forces the run.
 - Exactly three things bypass the cadence gate: `DRY_RUN`, `FORCE_REFRESH`, and overdue escalation. No fourth.
-  - Overdue escalation uses the staleness issue's own threshold — one threshold, never two. A source stuck escalated means `cadence_days` is wrong.
+  - Overdue escalation uses the staleness issue's own threshold — one threshold, never two. A source stuck escalated means `cadence_days` or `stale_after_days` is wrong.
   - `FORCE_REFRESH` without `REFRESH_SOURCE` throws in `resolveSources()`: the one guard for CI discovery and `make refresh`.
+- Every source declares an alarm: `cadence_days` (alarm at 1.5×) or `stale_after_days` (a loader test enforces it).
+  - `stale_after_days` overrides the 1.5× threshold. Set it where observed gaps run past 1.5× the poll interval. Without `cadence_days` the source polls every tick.
+  - Set it to 1.5× the longest observed gap. It must exceed `cadence_days` (the loader rejects it otherwise).
 - Staleness issues open and close on level, evaluated every CI run.
   - Never close only on the run that saw new content: a run without a GitHub token (local, VPN, `make ingest`) moves state with nobody to close the issue.
   - A paused source is outside the matrix: the `paused-staleness` job reads its stored state without fetching; `main()` never evaluates one.

@@ -8,8 +8,10 @@ trim_all: true
 # data.gov.lt geoblocks CI and answers with a challenge page on a 500, so no URL, header or
 # User-Agent change here reaches it. Reachable over VPN only; see DATA_LICENSES.md.
 paused: true
-# The shortest observed gap between publications; declared vs observed in DATA_LICENSES.md.
+# Polls at the shortest observed gap between publications and alarms at 1.5x the longest; declared vs
+# observed in DATA_LICENSES.md.
 cadence_days: 41
+stale_after_days: 209
 
 download:
   url: https://get.data.gov.lt/datasets/gov/tka/registras/Irasas/:format/csv

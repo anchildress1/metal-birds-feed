@@ -276,7 +276,11 @@ export interface SourceConfig {
   source_id: string | string[];
   source_id_transform?: ScalarTransformName;
   registration: string;
+  // Poll rhythm. Without stale_after_days it also sets the alarm, at 1.5×.
   cadence_days?: number;
+  // Replaces the 1.5x alarm, wherever observed gaps run past 1.5x the poll interval or no
+  // cadence_days is set.
+  stale_after_days?: number;
   merge_duplicates?: MergeDuplicatesConfig;
   mapping: Record<string, FieldMapping>;
 }

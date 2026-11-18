@@ -5,8 +5,9 @@ language: en
 encoding: utf8
 # Marks and cells carry stray trailing tabs.
 trim_all: true
-# No cadence_days: no declared cadence and no stamp on the table; see DATA_LICENSES.md
-# "Update cadence".
+# Polled daily: no declared cadence and no stamp on the table. No rhythm observed yet, so the alarm
+# is a year; see DATA_LICENSES.md "Update cadence".
+stale_after_days: 365
 
 download:
   # The register is one server-rendered TablePress <table>; there is no CSV/XLSX/API channel.
