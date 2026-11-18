@@ -36,7 +36,6 @@ const MS_PER_DAY = 86_400_000;
 // Runs on different machines stamp last_content_change against their own clocks, so a timestamp a
 // few minutes ahead is skew; beyond this it is corrupt state and must not silence the alarm.
 const FUTURE_TOLERANCE_MS = 10 * 60_000;
-// Without `stale_after_days`, a source is overdue once silent for 1.5× its poll cadence.
 export const STALENESS_MULTIPLIER = 1.5;
 
 // Unrounded on purpose: every reader of the threshold must see the figure isOverdue compares, or a
@@ -61,7 +60,6 @@ export const isOverdue = (state: SourceState | null, thresholdDays: number, now:
   return now.getTime() - changedAt > thresholdDays * MS_PER_DAY;
 };
 
-// False for a source with no cadence_days: it polls every tick.
 export const shouldSkip = (state: SourceState | null, config: AlarmConfig, now: Date): boolean => {
   const cadenceDays = config.cadence_days;
   const thresholdDays = stalenessThresholdDays(config);
@@ -87,7 +85,6 @@ export const daysSinceChange = (lastChange: string | null, now: Date): number | 
     : Math.max(0, Math.floor((now.getTime() - changedAt) / MS_PER_DAY));
 };
 
-// Null: the source declares no alarm.
 export const buildStalenessEntry = (
   source: string,
   config: AlarmConfig,

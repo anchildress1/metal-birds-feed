@@ -8,11 +8,8 @@ trim_all: true
 stale_after_days: 365
 
 download:
-  # Each edition lands under a new month folder and dated filename
-  # (/images/pdf/2026_August/1_Civil_aircraft_registered_in_sri_lanka_as_at_26082026.pdf), and the
-  # folder's casing varies between editions, so the register page is re-read for the current link.
-  # `url` is schema-required and unused while discovery is declared; it names the register page so it
-  # never goes stale.
+  # Each edition lands under a new dated folder and filename whose casing varies.
+  # Unused while discovery is declared; a page URL cannot go stale.
   url: https://www.caa.lk/en/downloads/sl-aircraft-register
   format: file
   # caa.lk sends a superseded Sectigo chain instead of the DV R36 intermediate its certificate names;
@@ -65,7 +62,7 @@ mapping:
   country:
     constant: LK
 
-  # Balloon makes wrap onto a second line ("CAMERON - Hot Air" / "Balloon"); collapsed to one line, every token kept.
+  # Balloon makes wrap onto a second line.
   manufacturer:
     field: make
     transform: collapse_ws_or_null
@@ -117,7 +114,6 @@ mapping:
   engine.thrust_lbs:
     constant: ~
 
-  # The register prints the operator only, and no address.
   owner.name:
     constant: ~
 

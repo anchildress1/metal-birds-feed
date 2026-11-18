@@ -176,8 +176,6 @@ export interface DownloadConfig {
   // every refresh, CI included, maps that stored copy instead of fetching. Keeping it in R2 rather
   // than pausing the source is what lets a schema bump regenerate the slice with nobody present.
   manual?: boolean;
-  // A PEM file under `sources/certs/` holding intermediates the host fails to send. Appended to the
-  // bundled roots for this source's requests only.
   ca_file?: string;
   discover_url?: string;
   discover_pattern?: string;
@@ -276,10 +274,7 @@ export interface SourceConfig {
   source_id: string | string[];
   source_id_transform?: ScalarTransformName;
   registration: string;
-  // Poll rhythm. Without stale_after_days it also sets the alarm, at 1.5×.
   cadence_days?: number;
-  // Replaces the 1.5x alarm, wherever observed gaps run past 1.5x the poll interval or no
-  // cadence_days is set.
   stale_after_days?: number;
   merge_duplicates?: MergeDuplicatesConfig;
   mapping: Record<string, FieldMapping>;

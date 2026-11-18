@@ -4,8 +4,7 @@ country: NL
 language: en
 encoding: utf8
 trim_all: true
-# Polled daily: ILT publishes about weekly on no fixed day. The alarm is 1.5x the longest observed
-# gap; see DATA_LICENSES.md "Update cadence".
+# No cadence_days: ILT publishes about weekly on no fixed day; see DATA_LICENSES.md "Update cadence".
 stale_after_days: 11
 format: ods
 sheet: 0
@@ -17,8 +16,7 @@ sheet: 0
 skip_rows: 1
 
 download:
-  # Schema-required and unused while discovery is declared; the filename embeds the publication
-  # date, so this names the listing page rather than a file that goes stale.
+  # Unused while discovery is declared; a page URL cannot go stale.
   url: https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data
   format: file
   entries:
