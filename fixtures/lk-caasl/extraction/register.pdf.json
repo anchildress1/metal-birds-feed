@@ -1,0 +1,578 @@
+[
+  [
+    {
+      "ref_no": "1",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ABL",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "2",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ABM",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "3",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ABN",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "4",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ABO",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "5",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ABS",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "6",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ABT",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "7",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-MRE",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "8",
+      "make": "AIRBUS",
+      "model": "A330",
+      "mark": "4R-ALH",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "9",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R-ALL",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "10",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R-ALM",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "11",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R-ALN",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "12",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R-ALO",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "13",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R-ALP",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "14",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R-ALQ",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "15",
+      "make": "AIRBUS",
+      "model": "A 330",
+      "mark": "4R- ALR",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "16",
+      "make": "AIRBUS",
+      "model": "A330",
+      "mark": "4R-ALS",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "17",
+      "make": "AIRBUS",
+      "model": "A330",
+      "mark": "4R-ALT",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "18",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ANA",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "19",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-ANB",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "20",
+      "make": "AIRBUS",
+      "model": "A321",
+      "mark": "4R-ANC",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "21",
+      "make": "AIRBUS",
+      "model": "A321",
+      "mark": "4R-AND",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "22",
+      "make": "AIRBUS",
+      "model": "A321",
+      "mark": "4R-ANE",
+      "operator": "SriLankan Airlines Ltd."
+    },
+    {
+      "ref_no": "23",
+      "make": "AIRBUS",
+      "model": "A321",
+      "mark": "4R-ANF",
+      "operator": "SriLankan Airlines Ltd"
+    },
+    {
+      "ref_no": "24",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-EXR",
+      "operator": "Fits Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "25",
+      "make": "AIRBUS",
+      "model": "A320",
+      "mark": "4R-EXS",
+      "operator": "Fits Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "26",
+      "make": "CESSNA",
+      "model": "208",
+      "mark": "4R-CAE",
+      "operator": "Saffron Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "27",
+      "make": "CESSNA",
+      "model": "208",
+      "mark": "4R-CAF",
+      "operator": "Saffron Aviation (Pvt) Ltd."
+    },
+    {
+      "ref_no": "28",
+      "make": "CESSNA",
+      "model": "208 B",
+      "mark": "4R-CAG",
+      "operator": "Saffron Aviation (Pvt) Ltd."
+    },
+    {
+      "ref_no": "29",
+      "make": "CESSNA",
+      "model": "208B",
+      "mark": "4R-DPA",
+      "operator": "DP Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "30",
+      "make": "AIRBUS HELICOPTER",
+      "model": "AS350 B3",
+      "mark": "4R-MSS",
+      "operator": "Senok Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "31",
+      "make": "AIRBUS HELICOPTER",
+      "model": "AS350 B3",
+      "mark": "4R-MVS",
+      "operator": "Senok Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "32",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-FAB",
+      "operator": "Flying Angel’s Flight Academy"
+    },
+    {
+      "ref_no": "33",
+      "make": "CESSNA",
+      "model": "150 J",
+      "mark": "4R-FAC",
+      "operator": "Flying Angel’s Flight Academy"
+    },
+    {
+      "ref_no": "34",
+      "make": "CESSNA",
+      "model": "172M",
+      "mark": "4R-ADI",
+      "operator": "Flying Angel’s Flight Academy"
+    },
+    {
+      "ref_no": "35",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-DAD",
+      "operator": "Redbird Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "36",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-DRA",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "37",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-DLJ",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "38",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-DOM",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "39",
+      "make": "CESSNA",
+      "model": "172 R",
+      "mark": "4R-DRM",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "40",
+      "make": "PIPER",
+      "model": "PA 34-200T",
+      "mark": "4R-SAS",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "41",
+      "make": "CESSNA",
+      "model": "172 RG",
+      "mark": "4R-HRA",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "42",
+      "make": "CESSNA",
+      "model": "172 N",
+      "mark": "4R-FSA",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "43",
+      "make": "CESSNA",
+      "model": "172",
+      "mark": "4R-RSW",
+      "operator": "Fly Southern (Pvt) Ltd"
+    },
+    {
+      "ref_no": "44",
+      "make": "GIPPES AERO",
+      "model": "GA 8",
+      "mark": "4R-SRD",
+      "operator": "Lakwin Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "45",
+      "make": "PIPER SENECA",
+      "model": "PA 34 – 200 T",
+      "mark": "4R-SJA",
+      "operator": "Lakwin Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "46",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-LWB",
+      "operator": "Lakwin Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "47",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-LWC",
+      "operator": "Lakwin Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "48",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-LWR",
+      "operator": "Lakwin Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "49",
+      "make": "ROBINSON",
+      "model": "R 66",
+      "mark": "4R-ASK",
+      "operator": "Lakwin Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "50",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R- MDA",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "51",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-MDB",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "52",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-MDC",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "53",
+      "make": "CESSNA",
+      "model": "172R",
+      "mark": "4R-MDD",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "54",
+      "make": "PIPER CHEROKEE",
+      "model": "PA28-140",
+      "mark": "4R- MDE",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "55",
+      "make": "PIPER CHEROKEE",
+      "model": "PA-28-140",
+      "mark": "4R-MDF",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "56",
+      "make": "PIPER CHEROKEE",
+      "model": "PA-28-140",
+      "mark": "4R-MDG",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "57",
+      "make": "PIPER",
+      "model": "PA 34-200T",
+      "mark": "4R-ENC",
+      "operator": "Openskies Flight Training (Pvt) Ltd."
+    },
+    {
+      "ref_no": "58",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-SAB",
+      "operator": "Skyline Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "59",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-SAY",
+      "operator": "Skyline Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "60",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-SAZ",
+      "operator": "Skyline Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "61",
+      "make": "PIPER",
+      "model": "PA 38-112",
+      "mark": "4R-ASE",
+      "operator": "Sakurai Aviation Ltd"
+    },
+    {
+      "ref_no": "62",
+      "make": "PIPER",
+      "model": "PA-38–112",
+      "mark": "4R-ASJ",
+      "operator": "Sakurai Aviation Ltd"
+    },
+    {
+      "ref_no": "63",
+      "make": "PIPER",
+      "model": "PA-34–220T",
+      "mark": "4R-WRM",
+      "operator": "Sakurai Aviation Ltd"
+    },
+    {
+      "ref_no": "64",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-ACJ",
+      "operator": "Asian Aviation Centre (Pvt) Ltd."
+    },
+    {
+      "ref_no": "65",
+      "make": "CESSNA",
+      "model": "152",
+      "mark": "4R-ACV",
+      "operator": "Asian Aviation Centre (Pvt) Ltd."
+    },
+    {
+      "ref_no": "66",
+      "make": "PIPER",
+      "model": "PA - 34",
+      "mark": "4R-ACE",
+      "operator": "Asian Aviation Centre (Pvt) Ltd."
+    },
+    {
+      "ref_no": "67",
+      "make": "AIRBUS HELICOPTER",
+      "model": "EC120B",
+      "mark": "4R-CSM",
+      "operator": "Aaaaaiaa Aiiaaiiia Aaaaaaaaia"
+    },
+    {
+      "ref_no": "68",
+      "make": "AIRBUS HELICOPTER",
+      "model": "EC130B4",
+      "mark": "4R-CVT",
+      "operator": "Aaaaaiaa Aiiaaiiia Aaaaaaaaia"
+    },
+    {
+      "ref_no": "69",
+      "make": "XIAN",
+      "model": "MA 60",
+      "mark": "4R-HTN",
+      "operator": "Helitours (pvt) Ltd"
+    },
+    {
+      "ref_no": "70",
+      "make": "XIAN",
+      "model": "MA 60",
+      "mark": "4R-HTO",
+      "operator": "Helitours (pvt) Ltd"
+    },
+    {
+      "ref_no": "71",
+      "make": "CAMERON - Hot Air\nBalloon",
+      "model": "Z-210",
+      "mark": "4R-ISN",
+      "operator": "Sun Rise Ballooning (Pvt) Ltd."
+    },
+    {
+      "ref_no": "72",
+      "make": "ULTRA MAGIC- Hot Air\nBalloon",
+      "model": "LBL-105A",
+      "mark": "4R-OSY",
+      "operator": "Sun Rise Ballooning (Pvt) Ltd"
+    },
+    {
+      "ref_no": "73",
+      "make": "LINDSTRAND - Hot Air\nBalloon",
+      "model": "LBL-360A",
+      "mark": "4R-ULR",
+      "operator": "Lanka Ballooning (Pvt) Ltd"
+    },
+    {
+      "ref_no": "74",
+      "make": "LINDSTRAND-Hot Air\nBalloon",
+      "model": "LBL-240A",
+      "mark": "4R-BLN",
+      "operator": "Lanka Ballooning (Pvt) Ltd"
+    },
+    {
+      "ref_no": "75",
+      "make": "ULTRA MAGIC- Hot Air\nBalloon",
+      "model": "N-355",
+      "mark": "4R-SLB",
+      "operator": "Lanka Ballooning (Pvt) Ltd"
+    },
+    {
+      "ref_no": "76",
+      "make": "ULTRA MAGIC- Hot Air\nBalloon",
+      "model": "N-355",
+      "mark": "4R-BTL",
+      "operator": "Lanka Ballooning (Pvt) Ltd"
+    },
+    {
+      "ref_no": "77",
+      "make": "AIRBUS HELICOPTER",
+      "model": "EC 130 T2",
+      "mark": "4R-DAC",
+      "operator": "Daya Aviation (Pvt) Ltd"
+    },
+    {
+      "ref_no": "78",
+      "make": "CESSNA",
+      "model": "182 P",
+      "mark": "4R-LUV",
+      "operator": "Capt. Aaii Aaaaaiaaaa"
+    },
+    {
+      "ref_no": "79",
+      "make": "CESSNA",
+      "model": "150",
+      "mark": "4R-RPG",
+      "operator": "Aaaiia Aiiaaaiaa Aaaaaiiiiaaa"
+    },
+    {
+      "ref_no": "80",
+      "make": "CESSNA",
+      "model": "310R",
+      "mark": "4R-DBS",
+      "operator": "Aiiaaaiaa Aaaaaiai Aiiiaaaaa"
+    },
+    {
+      "ref_no": "81",
+      "make": "QUAD CITY",
+      "model": "CHALLENGER II",
+      "mark": "4R-ELM",
+      "operator": "Aaaaaa Aaaiia Aaaaiaiaa"
+    },
+    {
+      "ref_no": "82",
+      "make": "QUAD CITY",
+      "model": "CHALLENGER II",
+      "mark": "4R-KPW",
+      "operator": "Aaaaaaaaia Aiaaia Aaaiaiaaaa"
+    }
+  ]
+]

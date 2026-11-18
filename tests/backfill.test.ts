@@ -213,9 +213,10 @@ describe('backfillHistory', () => {
 
     await backfillHistory('lt-tka', false);
 
-    expect(mockFetchPublishedTotal).toHaveBeenCalledWith('https://example.com/count', {
-      'X-Key': 'k',
-    });
+    expect(mockFetchPublishedTotal).toHaveBeenCalledWith(
+      'https://example.com/count',
+      expect.objectContaining({ headers: { 'X-Key': 'k' } })
+    );
     expect(mockMapSnapshots.mock.calls[0]?.[2]).toBe('{"count()": 3}');
   });
 

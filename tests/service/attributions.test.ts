@@ -65,6 +65,10 @@ describe('attributionFor', () => {
       'Source data from the Jamaica Civil Aviation Authority (JCAA) — https://www.jcaa.gov.jm/aircraft-registry-page/; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
     ],
     [
+      'lk-caasl',
+      'Source data from the Civil Aviation Authority of Sri Lanka (CAASL) — https://www.caa.lk/en/downloads/sl-aircraft-register; publicly accessible with no specified license and treated as Private-use, normalized into this project schema without implying endorsement.',
+    ],
+    [
       'au-casa',
       'Source data from the Civil Aviation Safety Authority (CASA), Australia, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/); changed by normalization into this project schema, without implying endorsement.',
     ],

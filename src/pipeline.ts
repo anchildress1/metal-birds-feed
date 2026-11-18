@@ -99,9 +99,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   // After the register itself, so the two responses bracket as little publishing time as possible:
   // a publication landing between them reports a total the download predates, which fails the run.
   const publishedTotal =
-    countUrl === undefined
-      ? undefined
-      : await fetchPublishedTotal(countUrl, config.download.headers);
+    countUrl === undefined ? undefined : await fetchPublishedTotal(countUrl, config.download);
   const { records, stats } = await mapRows(
     config,
     files,

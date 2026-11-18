@@ -1,9 +1,12 @@
 import { setImmediate } from 'node:timers/promises';
 import { describe, it, expect, mock, afterEach } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { X509Certificate } from 'node:crypto';
+import { rootCertificates } from 'node:tls';
 import { resolve } from 'node:path';
 import { crc32, deflateRawSync } from 'node:zlib';
 import {
+  CERTS_ROOT,
   download,
   fetchPublishedTotal,
   STREAM_THRESHOLD_BYTES,
@@ -114,7 +117,9 @@ describe('fetchPublishedTotal', () => {
     const fn = mock().mockResolvedValue(new Response('{"_data":[{"count()":17571}]}'));
     setFetch(fn);
 
-    const body = await fetchPublishedTotal('https://example.test/count', { 'x-k': 'v' });
+    const body = await fetchPublishedTotal('https://example.test/count', {
+      headers: { 'x-k': 'v' },
+    });
 
     expect(body).toContain('17571');
     const [, init] = fn.mock.calls[0] as [string, RequestInit];
@@ -126,9 +131,9 @@ describe('fetchPublishedTotal', () => {
     const fn = mock().mockResolvedValue(new Response('nope', { status: 500 }));
     setFetch(fn);
 
-    await expect(
-      fetchPublishedTotal('https://example.test/count', undefined, FAST_RETRY)
-    ).rejects.toThrow(/Record count fetch failed: 500/);
+    await expect(fetchPublishedTotal('https://example.test/count', {}, FAST_RETRY)).rejects.toThrow(
+      /Record count fetch failed: 500/
+    );
     expect(fn).toHaveBeenCalledTimes(DEFAULT_ATTEMPTS);
   });
 
@@ -136,9 +141,9 @@ describe('fetchPublishedTotal', () => {
     const fn = mock().mockResolvedValue(new Response('no', { status: 404 }));
     setFetch(fn);
 
-    await expect(
-      fetchPublishedTotal('https://example.test/count', undefined, FAST_RETRY)
-    ).rejects.toThrow(/Record count fetch failed: 404/);
+    await expect(fetchPublishedTotal('https://example.test/count', {}, FAST_RETRY)).rejects.toThrow(
+      /Record count fetch failed: 404/
+    );
     expect(fn).toHaveBeenCalledTimes(1);
   });
 });
@@ -1042,5 +1047,127 @@ describe('prime_url cookie priming', () => {
     expect(fn).toHaveBeenCalledTimes(1);
     const init = fn.mock.calls[0]?.[1] as RequestInit;
     expect((init.headers as Record<string, string> | undefined)?.Cookie).toBeUndefined();
+  });
+});
+
+describe('ca_file', () => {
+  const CA_CONFIG: DownloadConfig = {
+    url: 'https://www.example.lk/register.pdf',
+    format: 'file',
+    ca_file: 'lk-caasl.pem',
+    entries: { register: 'register.pdf' },
+  };
+  const PEM = readFileSync(resolve(CERTS_ROOT, 'lk-caasl.pem'), 'utf8');
+  type TlsInit = { tls?: { ca?: string[] } };
+
+  it('passes the shipped intermediate as the extra CA', async () => {
+    mockFetch(Buffer.from('%PDF'));
+    const fn = globalThis.fetch as unknown as ReturnType<typeof mock>;
+    await download(CA_CONFIG, FAST_RETRY);
+
+    const ca = (fn.mock.calls[0]?.[1] as TlsInit).tls?.ca;
+    expect(ca).toEqual([PEM]);
+  });
+
+  it('applies to the discovery request as well as the download', async () => {
+    const fn = mock();
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      text: () => Promise.resolve('<a href="/register.pdf">register</a>'),
+    });
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(4)),
+    });
+    setFetch(fn);
+    await download(
+      {
+        ...CA_CONFIG,
+        discover_url: 'https://www.example.lk/downloads',
+        discover_pattern: 'href="([^"]+\\.pdf)"',
+      },
+      FAST_RETRY
+    );
+
+    expect(fn).toHaveBeenCalledTimes(2);
+    for (const call of fn.mock.calls) expect((call[1] as TlsInit).tls?.ca?.at(-1)).toBe(PEM);
+  });
+
+  it('applies to a POST download', async () => {
+    mockFetch(Buffer.from('%PDF'));
+    const fn = globalThis.fetch as unknown as ReturnType<typeof mock>;
+    await download({ ...CA_CONFIG, method: 'POST' }, FAST_RETRY);
+
+    const init = fn.mock.calls[0]?.[1] as TlsInit & RequestInit;
+    expect(init.method).toBe('POST');
+    expect(init.tls?.ca?.at(-1)).toBe(PEM);
+  });
+
+  it('applies to the prime request', async () => {
+    const fn = mock();
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers([['set-cookie', 'k=v; path=/']]),
+      text: () => Promise.resolve(''),
+    });
+    fn.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(4)),
+    });
+    setFetch(fn);
+    await download({ ...CA_CONFIG, prime_url: 'https://www.example.lk/' }, FAST_RETRY);
+
+    expect(fn.mock.calls[0]?.[0]).toBe('https://www.example.lk/');
+    expect((fn.mock.calls[0]?.[1] as TlsInit).tls?.ca?.at(-1)).toBe(PEM);
+  });
+
+  it('applies to the record-count request', async () => {
+    const fn = mock().mockResolvedValue(new Response('17'));
+    setFetch(fn);
+    await fetchPublishedTotal('https://www.example.lk/count', CA_CONFIG, FAST_RETRY);
+
+    expect((fn.mock.calls[0]?.[1] as TlsInit).tls?.ca?.at(-1)).toBe(PEM);
+  });
+
+  // A root or self-signed file here would become a trust anchor for that source with nothing failing.
+  it.each(readdirSync(CERTS_ROOT).filter((f) => f.endsWith('.pem')))(
+    'ships %s as a CA intermediate issued by a bundled root',
+    (file) => {
+      const cert = new X509Certificate(readFileSync(resolve(CERTS_ROOT, file)));
+      expect(cert.ca).toBe(true);
+      expect(cert.issuer).not.toBe(cert.subject);
+      const issuers = rootCertificates
+        .map((pem) => new X509Certificate(pem))
+        .filter((root) => cert.checkIssued(root) && cert.verify(root.publicKey));
+      expect(issuers).toHaveLength(1);
+    }
+  );
+
+  it('sends no tls override when ca_file is absent', async () => {
+    mockFetch(Buffer.from('%PDF'));
+    const fn = globalThis.fetch as unknown as ReturnType<typeof mock>;
+    await download({ ...CA_CONFIG, ca_file: undefined }, FAST_RETRY);
+
+    expect((fn.mock.calls[0]?.[1] as TlsInit).tls).toBeUndefined();
+  });
+
+  it('refuses a ca_file that resolves outside the certs root, before any request', async () => {
+    const fn = mock();
+    setFetch(fn);
+    await expect(
+      download({ ...CA_CONFIG, ca_file: '../lk-caasl.yaml' }, FAST_RETRY)
+    ).rejects.toThrow(/ca_file escapes/);
+    expect(fn).not.toHaveBeenCalled();
   });
 });

@@ -75,6 +75,7 @@ Match the surrounding code. Lint enforces only `no-var` and `prefer-const`; appl
 ### Fetching
 
 - `download.prime_url`: for an edge that answers a cold request with 200 + a challenge page and clears it on a cookie. Primed cookies stay origin-locked — a replayed `Cookie` header has no jar enforcing `Domain`.
+- `download.ca_file`: for a host serving an incomplete TLS chain. Ship only the missing public intermediate under `sources/certs/`; it is appended to the bundled roots. Never ship a root, never disable verification.
 - `download.manual`: for a register behind a JS or CAPTCHA challenge. Never defeat the challenge (solver, proxy pool, fingerprint spoofing) — that is the CC.5 no-scraping case. The operator's browser download goes through `make ingest` into R2; every refresh maps that copy.
   - Never also set `paused`: the stored copy is what lets a `FEED_SLICE_VERSION` bump regenerate the slice unattended.
   - Its staleness issue means a new file is due from the agency, not a broken fetch. Set `cadence_days` to the agency's publication rhythm.

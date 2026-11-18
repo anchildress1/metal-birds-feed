@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { crc32 } from 'node:zlib';
@@ -35,7 +37,7 @@ class TerminalError extends Error {}
 // initial handshake. Composes any caller-provided onRetry rather than clobbering it.
 const readWithRetry = async <T>(
   url: string,
-  init: RequestInit,
+  init: BunFetchRequestInit,
   label: string,
   read: (res: Response) => Promise<T>,
   opts: RetryOptions
@@ -68,16 +70,33 @@ const readWithRetry = async <T>(
   }
 };
 
+export const CERTS_ROOT = resolve('sources', 'certs');
+
+// Bun's `tls.ca` adds to its bundled roots rather than replacing them, so the file only completes a
+// host's chain. Should a Bun upgrade switch to replacing, every request from that source fails loudly.
+const tlsInit = (config: Pick<DownloadConfig, 'ca_file'>): Pick<BunFetchRequestInit, 'tls'> => {
+  if (config.ca_file === undefined) return {};
+  const path = resolve(CERTS_ROOT, config.ca_file);
+  if (!path.startsWith(CERTS_ROOT + sep)) throw new Error(`ca_file escapes ${CERTS_ROOT}: ${path}`);
+  return { tls: { ca: [readFileSync(path, 'utf8')] } };
+};
+
 // Fetches a register's self-published record total (`record_count.url`). Kept out of `download`
 // because it is not part of the artifact: nothing parses it, and it must not land in the files map
 // where an entry alias could collide with it.
 export async function fetchPublishedTotal(
   url: string,
-  headers?: Record<string, string>,
+  config: Pick<DownloadConfig, 'headers' | 'ca_file'>,
   opts: RetryOptions = {}
 ): Promise<string> {
   log('info', 'record_count_fetch', { url });
-  return readWithRetry(url, { headers }, 'Record count fetch failed', (res) => res.text(), opts);
+  return readWithRetry(
+    url,
+    { headers: config.headers, ...tlsInit(config) },
+    'Record count fetch failed',
+    (res) => res.text(),
+    opts
+  );
 }
 
 export async function download(
@@ -128,10 +147,15 @@ const contentLengthOf = (res: Response): number | null => {
 // GET unless the source declares POST (e.g. a search-API register that returns the full set for an
 // empty-query POST). For POST, the JSON body is serialized and Content-Type defaults to
 // application/json unless the source overrides it.
-const buildRequestInit = (config: DownloadConfig, url: string, cookie?: string): RequestInit => {
+const buildRequestInit = (
+  config: DownloadConfig,
+  url: string,
+  cookie?: string
+): BunFetchRequestInit => {
   const headers = withCookie(config.headers, cookie, url, config.prime_url);
-  if (config.method !== 'POST') return { headers };
+  if (config.method !== 'POST') return { headers, ...tlsInit(config) };
   return {
+    ...tlsInit(config),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(config.body ?? {}),
@@ -167,7 +191,7 @@ const primeCookies = async (
   log('info', 'prime_start', { prime_url: config.prime_url });
   const cookie = await readWithRetry(
     config.prime_url,
-    { headers: config.headers },
+    { headers: config.headers, ...tlsInit(config) },
     'Prime fetch failed',
     (res) =>
       Promise.resolve(
@@ -206,6 +230,7 @@ const resolveDownloadUrl = async (
     discoverUrl,
     {
       headers: withCookie(config.headers, cookie, discoverUrl, config.prime_url),
+      ...tlsInit(config),
     },
     'Discovery fetch failed',
     async (res) => {

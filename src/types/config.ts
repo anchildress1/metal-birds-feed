@@ -63,6 +63,7 @@ export const SCALAR_TRANSFORMS = [
   'hu_kh_date_or_null',
   'hu_kh_party_kind',
   'hu_kh_year_range_or_null',
+  'lk_caasl_registration',
 ] as const;
 
 export const ARRAY_TRANSFORMS = ['faa_cert_ops', 'no_airworthiness_classes'] as const;
@@ -175,6 +176,9 @@ export interface DownloadConfig {
   // every refresh, CI included, maps that stored copy instead of fetching. Keeping it in R2 rather
   // than pausing the source is what lets a schema bump regenerate the slice with nobody present.
   manual?: boolean;
+  // A PEM file under `sources/certs/` holding intermediates the host fails to send. Appended to the
+  // bundled roots for this source's requests only.
+  ca_file?: string;
   discover_url?: string;
   discover_pattern?: string;
 }

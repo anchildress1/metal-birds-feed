@@ -1287,6 +1287,19 @@ describe('hu_kh_registration', () => {
   it('returns null for an empty cell', () => expect(run('')).toBeNull());
 });
 
+describe('lk_caasl_registration', () => {
+  const run = (v: string): string | null => applyScalar('lk_caasl_registration', v);
+
+  it('keeps a mark printed without stray spaces', () => expect(run('4R-ABL')).toBe('4R-ABL'));
+  it('strips the space CAASL prints after the hyphen', () => expect(run('4R- ALR')).toBe('4R-ALR'));
+  it('uppercases a lowercased mark', () => expect(run('4r-abl')).toBe('4R-ABL'));
+  it('returns null for a too-short suffix', () => expect(run('4R-AB')).toBeNull());
+  it('returns null for a too-long suffix', () => expect(run('4R-ABLX')).toBeNull());
+  it('returns null for a non-letter suffix', () => expect(run('4R-A1B')).toBeNull());
+  it('returns null for another register’s prefix', () => expect(run('HS-ABL')).toBeNull());
+  it('returns null for an empty cell', () => expect(run('')).toBeNull());
+});
+
 describe('hu_kh_date_or_null', () => {
   const run = (v: string): string | null => applyScalar('hu_kh_date_or_null', v);
 

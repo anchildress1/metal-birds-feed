@@ -277,7 +277,7 @@ describe('run', () => {
 
     expect(mockFetchPublishedTotal).toHaveBeenCalledWith(
       'https://example.test/count',
-      CONFIG.download.headers
+      CONFIG.download
     );
     expect(mockMapRows).toHaveBeenCalledWith(
       expect.anything(),

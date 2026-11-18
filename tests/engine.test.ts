@@ -3289,6 +3289,64 @@ describe('CAAT Thailand fixture mapping (PDF)', () => {
   });
 });
 
+describe('CAASL Sri Lanka fixture mapping (PDF)', () => {
+  const LK_CONFIG = resolve(import.meta.dirname, '..', 'sources', 'lk-caasl.yaml');
+  const LK_PDF = resolve(
+    import.meta.dirname,
+    '..',
+    'fixtures',
+    'lk-caasl',
+    'input',
+    'register.pdf'
+  );
+  let lkRecords: Map<string, Aircraft>;
+  let lkStats: EngineStats;
+
+  beforeAll(async () => {
+    const config = loadSourceConfig(LK_CONFIG);
+    const result = await mapPdf(config, new Map([['register', readFileSync(LK_PDF)]]));
+    lkRecords = result.records;
+    lkStats = result.stats;
+  });
+
+  // The whole register: 46 + 36 rows over two pages.
+  it('maps all 82 real rows with no failures', () => {
+    expect(lkStats).toEqual({ total: 82, ok: 82, failed: 0, skipped: 0, duplicateSkipped: 0 });
+  });
+
+  it('keys on the 4R- mark and maps the airframe columns', () => {
+    const r = lkRecords.get('4R-ABL')!;
+    expect(r.source).toBe('lk-caasl');
+    expect(r.registration).toBe('4R-ABL');
+    expect(r.country).toBe('LK');
+    expect(r.manufacturer).toBe('AIRBUS');
+    expect(r.model).toBe('A320');
+    expect(r.operator.name).toBe('SriLankan Airlines Ltd.');
+    expect(r.icao_hex).toBeNull();
+    expect(r.serial_number).toBeNull();
+  });
+
+  // The document is titled "Civil Aircraft Registered in Sri Lanka as at <date>".
+  it('serves every listed mark as valid', () => {
+    for (const r of lkRecords.values()) expect(r.status).toBe('valid');
+  });
+
+  it('strips the space printed after the hyphen in a mark', () => {
+    const r = lkRecords.get('4R-ALR')!;
+    expect(r.source_id).toBe('4R-ALR');
+    expect(r.registration).toBe('4R-ALR');
+    expect(lkRecords.has('4R- ALR')).toBe(false);
+  });
+
+  it('joins a wrapped make cell onto one line', () =>
+    expect(lkRecords.get('4R-ISN')?.manufacturer).toBe('CAMERON - Hot Air Balloon'));
+
+  it('publishes no owner', () => {
+    for (const r of lkRecords.values())
+      expect(r.owner).toEqual({ name: null, kind: null, state: null, country: null });
+  });
+});
+
 describe('Transpordiamet Estonia (HTML) fixture mapping', () => {
   it('leaves status_source_text null for the constant status', () => {
     expect([...eeRecords.values()].every((r) => r.status_source_text === null)).toBe(true);

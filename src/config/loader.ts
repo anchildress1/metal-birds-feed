@@ -124,6 +124,11 @@ const SourceConfigSchema = z
         headers: z.record(z.string(), z.string()).optional(),
         prime_url: z.url().optional(),
         manual: z.boolean().optional(),
+        // A bare filename: no separator can reach outside `sources/certs/`.
+        ca_file: z
+          .string()
+          .regex(/^[a-z0-9-]+\.pem$/, 'download.ca_file must be a bare .pem filename')
+          .optional(),
         discover_url: z.url().optional(),
         discover_pattern: z
           .string()
@@ -169,10 +174,11 @@ const SourceConfigSchema = z
             d.method === 'GET' &&
             d.prime_url === undefined &&
             d.discover_url === undefined &&
+            d.ca_file === undefined &&
             d.headers === undefined),
         {
           message:
-            'download.manual requires format "file" and no method, headers, prime_url, or discover_url',
+            'download.manual requires format "file" and no method, headers, prime_url, ca_file, or discover_url',
         }
       ),
     primary: z.string().min(1),

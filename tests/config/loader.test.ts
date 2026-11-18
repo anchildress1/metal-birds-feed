@@ -758,6 +758,24 @@ describe('loadSourceConfig', () => {
     expect(config.mapping['airworthiness_class_source_text']).toEqual({ field: 'CLASS' });
   });
 
+  const caYaml = (caFile: string): string =>
+    `id: t\nlabel: t\ncountry: LK\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/r.pdf\n  format: file\n  ca_file: '${caFile}'\n  entries: { register: r.pdf }\nprimary: register\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`;
+
+  it('accepts a bare .pem ca_file', () => {
+    expect(loadInline('_test_ca_ok.yaml', caYaml('lk-caasl.pem')).download.ca_file).toBe(
+      'lk-caasl.pem'
+    );
+  });
+
+  it.each(['../secret.pem', 'sub/x.pem', '/etc/ssl/cert.pem', 'x.crt', '.pem'])(
+    'rejects ca_file %p, which is not a bare .pem filename',
+    (caFile) => {
+      expect(() => loadInline('_test_ca_bad.yaml', caYaml(caFile))).toThrow(
+        /download\.ca_file must be a bare \.pem filename/
+      );
+    }
+  );
+
   it('accepts prime_url when every cookie-bearing request shares its origin', () => {
     const config = loadInline(
       '_test_prime_same_origin.yaml',
@@ -1108,6 +1126,10 @@ describe('loadSourceConfig — download.manual', () => {
       label: 'discover_url',
       download:
         "  manual: true\n  format: file\n  entries: { register: r }\n  discover_url: https://example.com/i\n  discover_pattern: '(x)'\n",
+    },
+    {
+      label: 'ca_file',
+      download: '  manual: true\n  format: file\n  entries: { register: r }\n  ca_file: x.pem\n',
     },
   ])('rejects a manual source carrying $label', ({ download }) => {
     expect(() => load(manualYaml(download))).toThrow(/download\.manual requires format/);
