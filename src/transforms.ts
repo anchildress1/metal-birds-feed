@@ -874,6 +874,13 @@ const noOwnerKind = (value: string): string | null => {
 const huKhYearRangeOrNull = (value: string): string | null =>
   /^\d{4} ?[/-] ?\d{1,4}\.?$/.test(value.trim()) ? value.trim() : null;
 
+// CAASL prints some marks with a space after the hyphen ("4R- ALR"). Null if not the 4R- + 3-letter
+// shape, which fails the row loudly rather than publishing a malformed registration.
+const lkCaaslRegistration = (value: string): string | null => {
+  const v = value.replace(/\s+/g, '').toUpperCase();
+  return /^4R-[A-Z]{3}$/.test(v) ? v : null;
+};
+
 const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | null> = {
   trim,
   trim_or_null: trimOrNull,
@@ -937,6 +944,7 @@ const SCALAR_HANDLERS: Record<ScalarTransformName, (value: string) => string | n
   hu_kh_date_or_null: huKhDateOrNull,
   hu_kh_party_kind: huKhPartyKind,
   hu_kh_year_range_or_null: huKhYearRangeOrNull,
+  lk_caasl_registration: lkCaaslRegistration,
 };
 
 export const applyScalar = (name: ScalarTransformName, value: string): string | null =>

@@ -4,9 +4,8 @@ country: NL
 language: en
 encoding: utf8
 trim_all: true
-# cadence_days intentionally absent: ILT publishes on an irregular schedule
-# (continuous-to-monthly, no fixed date). Running daily and letting the content-hash
-# diff detect actual changes is correct — guessing a cadence window would miss updates.
+# No cadence_days: ILT publishes about weekly on no fixed day; see DATA_LICENSES.md "Update cadence".
+stale_after_days: 11
 format: ods
 sheet: 0
 # ILT's first sheet ships with annotated headers like
@@ -17,7 +16,8 @@ sheet: 0
 skip_rows: 1
 
 download:
-  url: https://www.ilent.nl/site/binaries/site-content/collections/documents/lijsten/luchtvaart/databestanden/luchtvaartregister-data/luchtvaartuigregister.ods
+  # Unused while discovery is declared; a page URL cannot go stale.
+  url: https://www.ilent.nl/documenten/lijsten/luchtvaart/databestanden/luchtvaartregister-data
   format: file
   entries:
     register: '.'

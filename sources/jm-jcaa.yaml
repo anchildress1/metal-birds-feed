@@ -4,8 +4,8 @@ country: JM
 language: en
 encoding: utf8
 trim_all: true
-# No cadence_days: clustered edits with quiet gaps up to 179 days fit no window; see
-# DATA_LICENSES.md "Update cadence".
+# No cadence_days: clustered edits fit no poll window; see DATA_LICENSES.md "Update cadence".
+stale_after_days: 269
 
 download:
   # The registry is server-rendered as one <table id="registry">; DataTables pages and exports it

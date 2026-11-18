@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { SourceConfig } from './types/config.js';
 
 export const SourceStateSchema = z.object({
   last_run: z.string(),
@@ -19,9 +20,12 @@ export const SourceStateSchema = z.object({
 });
 export type SourceState = z.infer<typeof SourceStateSchema>;
 
+export type AlarmConfig = Pick<SourceConfig, 'cadence_days' | 'stale_after_days'>;
+
 export interface StalenessEntry {
   source: string;
-  cadence_days: number;
+  cadence_days: number | null;
+  threshold_days: number;
   last_content_change: string | null;
   // null: no usable last-change timestamp (none recorded, or unparseable).
   days_since_change: number | null;
@@ -32,13 +36,13 @@ const MS_PER_DAY = 86_400_000;
 // Runs on different machines stamp last_content_change against their own clocks, so a timestamp a
 // few minutes ahead is skew; beyond this it is corrupt state and must not silence the alarm.
 const FUTURE_TOLERANCE_MS = 10 * 60_000;
-// A source is considered overdue once it has been silent for 1.5× its declared cadence.
 export const STALENESS_MULTIPLIER = 1.5;
 
 // Unrounded on purpose: every reader of the threshold must see the figure isOverdue compares, or a
 // rounded one reads as not yet crossed while the source is already overdue.
-export const stalenessThresholdDays = (cadenceDays: number): number =>
-  cadenceDays * STALENESS_MULTIPLIER;
+export const stalenessThresholdDays = (config: AlarmConfig): number | undefined =>
+  config.stale_after_days ??
+  (config.cadence_days === undefined ? undefined : config.cadence_days * STALENESS_MULTIPLIER);
 
 // Epoch 0 is a UTC midnight, so flooring ms to days yields the UTC day number.
 const utcDay = (d: Date): number => Math.floor(d.getTime() / MS_PER_DAY);
@@ -48,16 +52,18 @@ const utcDay = (d: Date): number => Math.floor(d.getTime() / MS_PER_DAY);
 const unusable = (changedAt: number, now: Date): boolean =>
   Number.isNaN(changedAt) || changedAt - now.getTime() > FUTURE_TOLERANCE_MS;
 
-export const isOverdue = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
+export const isOverdue = (state: SourceState | null, thresholdDays: number, now: Date): boolean => {
   if (!state) return false;
   const changedAt = new Date(state.last_content_change).getTime();
   // Fail open: returning false here would disarm the staleness alarm for that source.
   if (unusable(changedAt, now)) return true;
-  return now.getTime() - changedAt > stalenessThresholdDays(cadenceDays) * MS_PER_DAY;
+  return now.getTime() - changedAt > thresholdDays * MS_PER_DAY;
 };
 
-export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: Date): boolean => {
-  if (!state) return false;
+export const shouldSkip = (state: SourceState | null, config: AlarmConfig, now: Date): boolean => {
+  const cadenceDays = config.cadence_days;
+  const thresholdDays = stalenessThresholdDays(config);
+  if (!state || cadenceDays === undefined || thresholdDays === undefined) return false;
   const lastRun = new Date(state.last_run);
   if (Number.isNaN(lastRun.getTime())) return false;
   // Shares the staleness issue's threshold so the open issue and the daily polling stay one
@@ -65,7 +71,7 @@ export const shouldSkip = (state: SourceState | null, cadenceDays: number, now: 
   // the alarm armed, but that value does not heal on its own, so escalating on it would disable
   // the gate and refetch the whole register every tick.
   const changedAt = new Date(state.last_content_change).getTime();
-  if (!unusable(changedAt, now) && isOverdue(state, cadenceDays, now)) return false;
+  if (!unusable(changedAt, now) && isOverdue(state, thresholdDays, now)) return false;
   // last_run is stamped at run completion, so a strict ms window falls short on the next cron tick
   // and pushes every cycle a day later.
   return utcDay(now) - utcDay(lastRun) < cadenceDays;
@@ -81,17 +87,20 @@ export const daysSinceChange = (lastChange: string | null, now: Date): number | 
 
 export const buildStalenessEntry = (
   source: string,
-  cadenceDays: number,
+  config: AlarmConfig,
   state: SourceState | null,
   now: Date
-): StalenessEntry => {
+): StalenessEntry | null => {
+  const threshold = stalenessThresholdDays(config);
+  if (threshold === undefined) return null;
   const lastChange = state?.last_content_change ?? null;
   return {
     source,
-    cadence_days: cadenceDays,
+    cadence_days: config.cadence_days ?? null,
+    threshold_days: threshold,
     last_content_change: lastChange,
     days_since_change: daysSinceChange(lastChange, now),
-    overdue: isOverdue(state, cadenceDays, now),
+    overdue: isOverdue(state, threshold, now),
   };
 };
 
@@ -103,13 +112,14 @@ export const buildSummaryMarkdown = (entries: StalenessEntry[]): string => {
       const status = e.overdue ? '⚠️ overdue' : '✅ ok';
       const lastChange = e.last_content_change ?? 'never';
       const days = e.days_since_change === null ? 'unknown' : String(e.days_since_change);
-      return `| ${e.source} | ${e.cadence_days} | ${lastChange} | ${days} | ${status} |`;
+      const cadence = e.cadence_days === null ? 'daily' : String(e.cadence_days);
+      return `| ${e.source} | ${cadence} | ${e.threshold_days} | ${lastChange} | ${days} | ${status} |`;
     });
   return [
     '## Source cadence status',
     '',
-    '| Source | Cadence (days) | Last content change | Days since change | Status |',
-    '| --- | --- | --- | --- | --- |',
+    '| Source | Cadence (days) | Alarm after (days) | Last content change | Days since change | Status |',
+    '| --- | --- | --- | --- | --- | --- |',
     ...rows,
   ].join('\n');
 };

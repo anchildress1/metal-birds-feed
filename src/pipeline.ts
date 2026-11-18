@@ -11,13 +11,8 @@ import { toFeedRows, mergeFeedRows, buildFeedDb, hashFeedRows, type FeedSlice } 
 import { hashRecords } from './db.js';
 import { log, errorMessage } from './logger.js';
 import { requireEnv } from './env.js';
-import {
-  shouldSkip,
-  buildStalenessEntry,
-  buildSummaryMarkdown,
-  stalenessThresholdDays,
-} from './cadence.js';
-import type { SourceState, StalenessEntry } from './cadence.js';
+import { shouldSkip, buildStalenessEntry, buildSummaryMarkdown } from './cadence.js';
+import type { AlarmConfig, SourceState, StalenessEntry } from './cadence.js';
 
 export const r2ConfigFromEnv = (): R2Config => ({
   accountId: requireEnv('MBF_R2_ACCOUNT_ID'),
@@ -49,7 +44,7 @@ async function readDropFiles(
 interface RunResult {
   source: string;
   skipped: boolean;
-  cadence_days: number | undefined;
+  alarm: AlarmConfig;
   new_state: SourceState | null;
 }
 
@@ -71,11 +66,10 @@ export async function run(sourceId: string): Promise<RunResult> {
   const priorState = await writer.readState(sourceId);
   const hasCurrentArtifactState = priorState?.content_hash !== undefined;
   if (
-    config.cadence_days !== undefined &&
     hasCurrentArtifactState &&
     !dryRun &&
     !force &&
-    shouldSkip(priorState, config.cadence_days, new Date()) &&
+    shouldSkip(priorState, config, new Date()) &&
     (await writer.feedRowsExist(sourceId)) &&
     // Checked last: it's the most expensive condition. readArtifactHeader + isArtifactCaughtUp
     // (writer.ts) cover what a plain existence check used to (a missing artifact reads as "not
@@ -87,7 +81,7 @@ export async function run(sourceId: string): Promise<RunResult> {
     return {
       source: sourceId,
       skipped: true,
-      cadence_days: config.cadence_days,
+      alarm: config,
       new_state: priorState,
     };
   }
@@ -99,9 +93,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   // After the register itself, so the two responses bracket as little publishing time as possible:
   // a publication landing between them reports a total the download predates, which fails the run.
   const publishedTotal =
-    countUrl === undefined
-      ? undefined
-      : await fetchPublishedTotal(countUrl, config.download.headers);
+    countUrl === undefined ? undefined : await fetchPublishedTotal(countUrl, config.download);
   const { records, stats } = await mapRows(
     config,
     files,
@@ -171,7 +163,7 @@ export async function run(sourceId: string): Promise<RunResult> {
   return {
     source: sourceId,
     skipped: false,
-    cadence_days: config.cadence_days,
+    alarm: config,
     new_state: newState,
   };
 }
@@ -204,21 +196,27 @@ const createStalenessIssue = async (
   const existing = (await listRes.json()) as Array<{ title: string }>;
   if (existing.some((i) => isStalenessIssueFor(i.title, entry.source))) return;
 
-  const threshold = stalenessThresholdDays(entry.cadence_days);
+  const yaml = `\`sources/${entry.source}.yaml\``;
+  const advice =
+    entry.cadence_days === null
+      ? [`If the register genuinely publishes less often, raise \`stale_after_days\` in ${yaml}.`]
+      : [
+          `While this is open the cadence gate is bypassed: \`${entry.source}\` refreshes on every daily`,
+          `cron tick instead of every ${entry.cadence_days} days. If the register genuinely publishes less`,
+          `often than declared, raise \`cadence_days\` or \`stale_after_days\` in ${yaml} rather than`,
+          'leaving it polling daily.',
+        ];
   const body = [
     '## Source cadence alert',
     '',
     `- **Source:** ${entry.source}`,
-    `- **Cadence:** ${entry.cadence_days} days`,
+    `- **Cadence:** ${entry.cadence_days === null ? 'daily' : `${entry.cadence_days} days`}`,
     `- **Last content change:** ${entry.last_content_change ?? 'never'}`,
     `- **Days since change:** ${entry.days_since_change ?? 'unknown'}`,
     '',
-    `The register has been silent for ${silence} days (threshold: ${threshold} days).`,
+    `The register has been silent for ${silence} days (threshold: ${entry.threshold_days} days).`,
     '',
-    `While this is open the cadence gate is bypassed: \`${entry.source}\` refreshes on every daily`,
-    `cron tick instead of every ${entry.cadence_days} days. If the register genuinely publishes less`,
-    `often than declared, raise \`cadence_days\` in \`sources/${entry.source}.yaml\` rather than`,
-    'leaving it polling daily.',
+    ...advice,
     '',
     '> Auto-opened by the Registry Refresh workflow. Closes automatically on the first run that finds the source back within its threshold.',
   ].join('\n');
@@ -375,9 +373,8 @@ const stalenessFromPriorState = async (
     // run() rejects a traversal-bearing source id, but that rejection lands here with the same
     // unchecked value — and this path resolves it against `sources/` and an R2 key.
     validateSourceId(source);
-    const cadenceDays = loadSourceConfig(resolve('sources', `${source}.yaml`)).cadence_days;
-    if (cadenceDays === undefined) return null;
-    return buildStalenessEntry(source, cadenceDays, await writer.readState(source), now);
+    const config = loadSourceConfig(resolve('sources', `${source}.yaml`));
+    return buildStalenessEntry(source, config, await writer.readState(source), now);
   } catch (err) {
     log('warn', 'staleness_entry_unavailable', { source, msg: errorMessage(err) });
     return null;
@@ -404,9 +401,9 @@ const processResults = async (
       rejected.push(source);
       continue;
     }
-    const { cadence_days, new_state, source } = result.value;
-    if (cadence_days === undefined) continue;
-    stalenessEntries.push(buildStalenessEntry(source, cadence_days, new_state, now));
+    const { alarm, new_state, source } = result.value;
+    const entry = buildStalenessEntry(source, alarm, new_state, now);
+    if (entry !== null) stalenessEntries.push(entry);
   }
   const recovered = await Promise.all(rejected.map((s) => stalenessFromPriorState(s, writer, now)));
   stalenessEntries.push(...recovered.filter((e) => e !== null));

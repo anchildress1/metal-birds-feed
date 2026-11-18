@@ -4,6 +4,8 @@ country: AU
 language: en
 encoding: utf8
 trim_all: true
+# No cadence_days: CASA rewrites the CSV near-daily; see DATA_LICENSES.md "Update cadence".
+stale_after_days: 5
 
 download:
   url: https://services.casa.gov.au/CSV/acrftreg.csv

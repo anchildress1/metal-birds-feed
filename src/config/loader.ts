@@ -124,6 +124,11 @@ const SourceConfigSchema = z
         headers: z.record(z.string(), z.string()).optional(),
         prime_url: z.url().optional(),
         manual: z.boolean().optional(),
+        // A bare filename: no separator can reach outside `sources/certs/`.
+        ca_file: z
+          .string()
+          .regex(/^[a-z0-9-]+\.pem$/, 'download.ca_file must be a bare .pem filename')
+          .optional(),
         discover_url: z.url().optional(),
         discover_pattern: z
           .string()
@@ -169,10 +174,11 @@ const SourceConfigSchema = z
             d.method === 'GET' &&
             d.prime_url === undefined &&
             d.discover_url === undefined &&
+            d.ca_file === undefined &&
             d.headers === undefined),
         {
           message:
-            'download.manual requires format "file" and no method, headers, prime_url, or discover_url',
+            'download.manual requires format "file" and no method, headers, prime_url, ca_file, or discover_url',
         }
       ),
     primary: z.string().min(1),
@@ -264,6 +270,8 @@ const SourceConfigSchema = z
     source_id_transform: z.enum(SCALAR_TRANSFORMS).optional(),
     registration: z.string().min(1),
     cadence_days: z.number().int().positive().optional(),
+    // A register silent for a year is stale whatever its history.
+    stale_after_days: z.number().int().positive().max(365).optional(),
     merge_duplicates: z
       .strictObject({
         fields: z.array(z.string().min(1)).min(1),
@@ -421,7 +429,15 @@ const SourceConfigSchema = z
   // total would describe today's register rather than the dropped file's.
   .refine((c) => c.download.manual !== true || c.record_count?.url === undefined, {
     message: 'record_count.url is not supported with download.manual',
-  });
+  })
+  // At or below the poll interval the alarm trips before a scheduled poll could see new content.
+  .refine(
+    (c) =>
+      c.stale_after_days === undefined ||
+      c.cadence_days === undefined ||
+      c.stale_after_days > c.cadence_days,
+    { message: 'stale_after_days must exceed cadence_days' }
+  );
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 

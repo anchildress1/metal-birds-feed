@@ -37,6 +37,7 @@ Working list for triaging the rest of the world's national aircraft registers, d
 | Luftfartstilsynet (Norway) | Not specified (Ikke oppgitt) — treated as Private-use                                              | Live — `json` feed; cleared via research + elapsed 30-day fallback, no reply needed                                                                          |
 | CAAS (Singapore)           | Open + attribution (CAAS reply 2026-05-12)                                                         | Live — `xlsx` + monthly `discover_url` (Isomer CDN)                                                                                                          |
 | AESA (Spain)               | Open + attribution (Ley 37/2007 / RD 1495/2011)                                                    | Live — `pdf` Gemini extraction; cleared via public reuse licence, no reply needed                                                                            |
+| CAASL (Sri Lanka)          | Not specified ("All Rights Reserved") — treated as Private-use, CC.2 fallback elapsed 2026-06-05   | Live — `pdf` Gemini extraction; `discover_url` over the register page; no ICAO hex                                                                           |
 | FOCA / BAZL (CH)           | Open w/ attribution (FOCA legal grant 2026-05-22)                                                  | Live                                                                                                                                                         |
 | CAA Taiwan                 | Open (OGDL v1.0)                                                                                   | Live                                                                                                                                                         |
 | CAAT (Thailand)            | Private-use + attribution, non-commercial (reply 2026-05-21)                                       | Live — `pdf` Gemini extraction; manual browser drop via `make ingest` (Cloudflare challenge on the whole host); no ICAO hex                                  |
@@ -147,7 +148,6 @@ All awaiting a substantive reply or a completed private-cache research pass. Con
 | CAA Slovenia                              | 2026-05-10 | 2026-06-09 | pending | Yes      |
 | SACAA South Africa                        | 2026-05-11 | 2026-06-10 | pending | Yes      |
 | SSCAA South Sudan                         | 2026-05-11 | 2026-06-10 | pending | Yes      |
-| CAASL Sri Lanka                           | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | CASAS Suriname                            | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | TCAA Tanzania                             | 2026-05-05 | 2026-06-04 | pending | Yes      |
 | Tajikistan CAA                            | 2026-05-11 | 2026-06-10 | pending | Yes      |

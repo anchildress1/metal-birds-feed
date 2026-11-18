@@ -62,6 +62,31 @@ describe('loadSourceConfig', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('gives every shipped source a staleness alarm', () => {
+    const files = readdirSync(resolve(REPO_ROOT, 'sources')).filter((f) => f.endsWith('.yaml'));
+    const silent = files.filter((f) => {
+      const c = loadSourceConfig(`sources/${f}`);
+      return c.cadence_days === undefined && c.stale_after_days === undefined;
+    });
+    expect(silent).toEqual([]);
+  });
+
+  it.each([
+    ['alone', 'stale_after_days: 280\n', 280],
+    ['above cadence_days', 'cadence_days: 30\nstale_after_days: 31\n', 31],
+  ])('accepts stale_after_days %s', (_label, extra, expected) => {
+    expect(loadInline('_test_stale_ok.yaml', BASE('LK', extra)).stale_after_days).toBe(expected);
+  });
+
+  it.each([
+    ['equal to cadence_days', 'cadence_days: 30\nstale_after_days: 30\n'],
+    ['below cadence_days', 'cadence_days: 30\nstale_after_days: 20\n'],
+  ])('rejects stale_after_days %s', (_label, extra) => {
+    expect(() => loadInline('_test_stale_bad.yaml', BASE('LK', extra))).toThrow(
+      /stale_after_days must exceed cadence_days/
+    );
+  });
+
   it('throws on non-existent file', () => {
     expect(() => loadSourceConfig('sources/nonexistent.yaml')).toThrow();
   });
@@ -758,6 +783,24 @@ describe('loadSourceConfig', () => {
     expect(config.mapping['airworthiness_class_source_text']).toEqual({ field: 'CLASS' });
   });
 
+  const caYaml = (caFile: string): string =>
+    `id: t\nlabel: t\ncountry: LK\nlanguage: en\nencoding: utf8\ndownload:\n  url: https://example.com/r.pdf\n  format: file\n  ca_file: '${caFile}'\n  entries: { register: r.pdf }\nprimary: register\ndelimiter: ','\nsource_id: ID\nregistration: ID\nmapping:\n  registration: { field: ID }\n`;
+
+  it('accepts a bare .pem ca_file', () => {
+    expect(loadInline('_test_ca_ok.yaml', caYaml('lk-caasl.pem')).download.ca_file).toBe(
+      'lk-caasl.pem'
+    );
+  });
+
+  it.each(['../secret.pem', 'sub/x.pem', '/etc/ssl/cert.pem', 'x.crt', '.pem'])(
+    'rejects ca_file %p, which is not a bare .pem filename',
+    (caFile) => {
+      expect(() => loadInline('_test_ca_bad.yaml', caYaml(caFile))).toThrow(
+        /download\.ca_file must be a bare \.pem filename/
+      );
+    }
+  );
+
   it('accepts prime_url when every cookie-bearing request shares its origin', () => {
     const config = loadInline(
       '_test_prime_same_origin.yaml',
@@ -1108,6 +1151,10 @@ describe('loadSourceConfig — download.manual', () => {
       label: 'discover_url',
       download:
         "  manual: true\n  format: file\n  entries: { register: r }\n  discover_url: https://example.com/i\n  discover_pattern: '(x)'\n",
+    },
+    {
+      label: 'ca_file',
+      download: '  manual: true\n  format: file\n  entries: { register: r }\n  ca_file: x.pem\n',
     },
   ])('rejects a manual source carrying $label', ({ download }) => {
     expect(() => load(manualYaml(download))).toThrow(/download\.manual requires format/);

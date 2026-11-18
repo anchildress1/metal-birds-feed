@@ -215,6 +215,7 @@ the `sources/<id>.yaml` config stem. Sources that are cleared but not yet contri
 | `no-caa` | Luftfartstilsynet | Norway | ✅ Live |
 | `sg-caas` | CAAS | Singapore | ✅ Live |
 | `es-aesa` | AESA | Spain | ✅ Live |
+| `lk-caasl` | CAASL | Sri Lanka | ✅ Live |
 | `ch-foca` | FOCA / BAZL | Switzerland | ✅ Live |
 | `tw-caa` | CAA Taiwan | Taiwan | ✅ Live |
 | `th-caat` | CAAT | Thailand | ✅ Live — manual browser drop (`make ingest`) |

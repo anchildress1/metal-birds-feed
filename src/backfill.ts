@@ -50,9 +50,7 @@ export async function backfillHistory(sourceId: string, dryRun: boolean): Promis
   const files = await download(config.download);
   const countUrl = config.record_count?.url;
   const publishedTotal =
-    countUrl === undefined
-      ? undefined
-      : await fetchPublishedTotal(countUrl, config.download.headers);
+    countUrl === undefined ? undefined : await fetchPublishedTotal(countUrl, config.download);
   const snapshots = await mapSnapshots(config, files, publishedTotal);
   const { rows, skipped } = replayHistory(sourceId, snapshots);
   const closedRows = rows.filter((r) => r['removed_on'] !== null).length;

@@ -1,0 +1,200 @@
+id: lk-caasl
+label: Civil Aviation Authority of Sri Lanka Aircraft Register
+country: LK
+language: en
+encoding: utf8
+trim_all: true
+# No cadence_days: editions land too unevenly for a poll window; see DATA_LICENSES.md "Update cadence".
+stale_after_days: 365
+
+download:
+  # Each edition lands under a new dated folder and filename whose casing varies.
+  # Unused while discovery is declared; a page URL cannot go stale.
+  url: https://www.caa.lk/en/downloads/sl-aircraft-register
+  format: file
+  # caa.lk sends a superseded Sectigo chain instead of the DV R36 intermediate its certificate names;
+  # browsers repair it from the certificate's AIA URL, Bun does not.
+  ca_file: lk-caasl.pem
+  discover_url: https://www.caa.lk/en/downloads/sl-aircraft-register
+  discover_pattern: 'href="([^"]*[Cc]ivil_[Aa]ircraft_[Rr]egistered_in_[Ss]ri_[Ll]anka[^"]*\.pdf)"'
+  entries:
+    register: register.pdf
+
+primary: register
+delimiter: ','
+format: pdf
+
+# Some marks print with a space after the hyphen ("4R- ALR") inside one text item.
+pdf:
+  mark_field: mark
+  mark_pattern: '4R-\s*[A-Z]{3}'
+
+columns:
+  register:
+    - ref_no
+    - make
+    - model
+    - mark
+    - operator
+
+# No serial, certificate number, or per-aircraft id is published, and Ref.No is the row's position in
+# this edition. The mark is the only key, so a reissued mark cannot be told from its predecessor.
+source_id: mark
+source_id_transform: lk_caasl_registration
+registration: mark
+
+mapping:
+  registration:
+    field: mark
+    transform: lk_caasl_registration
+
+  icao_hex:
+    constant: ~
+
+  icao_type_code:
+    constant: ~
+
+  # No per-row status column; the document is titled "Civil Aircraft Registered in Sri Lanka as at
+  # <date>", which declares every listed row registered.
+  status:
+    constant: valid
+
+  country:
+    constant: LK
+
+  # Balloon makes wrap onto a second line.
+  manufacturer:
+    field: make
+    transform: collapse_ws_or_null
+
+  # Kept as printed: the register spells one type several ways ("A330", "A 330").
+  model:
+    field: model
+    transform: collapse_ws_or_null
+
+  serial_number:
+    constant: ~
+
+  year_manufactured:
+    constant: ~
+
+  airframe_type:
+    constant: ~
+
+  category:
+    constant: ~
+
+  build_certification:
+    constant: ~
+
+  airworthiness_class:
+    constant: ~
+
+  operating_environment:
+    constant: ~
+
+  operational_classes:
+    constant: ~
+
+  engine.manufacturer:
+    constant: ~
+
+  engine.model:
+    constant: ~
+
+  engine.type:
+    constant: ~
+
+  engine.count:
+    constant: ~
+
+  engine.horsepower:
+    constant: ~
+
+  engine.thrust_lbs:
+    constant: ~
+
+  owner.name:
+    constant: ~
+
+  owner.kind:
+    constant: ~
+
+  owner.state:
+    constant: ~
+
+  owner.country:
+    constant: ~
+
+  operator.name:
+    field: operator
+    transform: collapse_ws_or_null
+
+  operator.kind:
+    constant: ~
+
+  operator.state:
+    constant: ~
+
+  operator.country:
+    constant: ~
+
+  legal_owner.name:
+    constant: ~
+
+  legal_owner.kind:
+    constant: ~
+
+  legal_owner.state:
+    constant: ~
+
+  legal_owner.country:
+    constant: ~
+
+  idera_authorised_party:
+    constant: ~
+
+  certification_date:
+    constant: ~
+
+  airworthiness_date:
+    constant: ~
+
+  expiration_date:
+    constant: ~
+
+  last_action_date:
+    constant: ~
+
+  cruise_speed_ktas:
+    constant: ~
+
+  max_takeoff_weight_kg:
+    constant: ~
+
+  seats:
+    constant: ~
+
+  max_passengers:
+    constant: ~
+
+  min_crew:
+    constant: ~
+
+  airworthiness_review_date:
+    constant: ~
+
+  cancellation_reason:
+    constant: ~
+
+  lien_status:
+    constant: ~
+
+  interdiction_code:
+    constant: ~
+
+  emergency_transponder:
+    constant: ~
+
+  remarks:
+    constant: ~
