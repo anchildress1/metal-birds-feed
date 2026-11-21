@@ -19,21 +19,21 @@
     "@types/node": "^26.6.6",
     "@types/unzipper": "^0.10.11",
     "commitlint-plugin-rai": "^1.0.3",
-    "eslint": "^10.14.0",
+    "eslint": "^10.15.0",
     "eslint-plugin-sonarjs": "^4.2.2",
     "lefthook": "^2.2.2",
-    "prettier": "^3.9.10",
+    "prettier": "^3.10.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.72.2"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1164.0",
-    "@google/genai": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.1169.0",
+    "@google/genai": "^3.3.0",
     "csv-parse": "^7.0.3",
     "hucre": "^1.3.0",
     "js-yaml": "^5.4.3",
     "pdf-lib": "^1.17.1",
-    "unpdf": "^2.1.0",
+    "unpdf": "^2.2.0",
     "unzipper": "^0.12.5",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.6.7"
